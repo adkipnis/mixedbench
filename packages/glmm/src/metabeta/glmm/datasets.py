@@ -8,10 +8,12 @@ import subprocess
 import tarfile
 import urllib.error
 import urllib.request
-from collections.abc import Callable
+import zipfile
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
+from urllib.parse import urlparse
 
 import pandas as pd
 from pyreadr import LibrdataError, PyreadrError
@@ -24,8 +26,12 @@ from pyreadr._pyreadr_parser import PyreadrParser
 CRAN = 'https://cloud.r-project.org/src/contrib'
 R_FILES = {'.rda', '.rdata', '.rds'}  # meant for pyreadr
 DATA_FILES = {'.r', '.tab', '.txt', '.csv'}  # meant for utils::data()
+TABLE_FILES = {'.csv', '.tsv', '.tab', '.dat', '.xlsx', '.json', '.dta'}  # meant for pandas
+DOC_FILES = {'.md', '.txt', '.rst', ''}  # text beside a data file
+ARCHIVES = ('.zip', '.tar.gz', '.tgz', '.tar')
 R_ERRORS = (PyreadrError, LibrdataError)  # LibrdataError is not a PyreadrError
-Reader = Literal['pyreadr', 'rscript']
+Reader = Literal['pyreadr', 'rscript', 'pandas']
+ColumnType = Literal['categorical', 'continuous']  # what a registry row may declare
 
 # Reads one data/ file the way utils::data() does and saves each object in it as its own .rds
 # Uses serialization v2 because librdata rejects v3
@@ -60,19 +66,20 @@ for (name in sub(' .*', '', items))
 
 @dataclass(frozen=True)
 class Source:
-    kind: Literal['cran']  # 'git' and 'url' follow in #16
-    name: str  # CRAN package; 'datasets' is base R
-    pin: str  # CRAN version
-    checksum: str | None = None  # sha256 of the archive; None skips the check
+    kind: Literal['cran', 'git', 'url']
+    name: str  # CRAN package ('datasets' is base R), GitHub repository URL, or URL of a file
+    pin: str  # CRAN version, git revision, or the file's sha256
+    checksum: str | None = None  # sha256 of a CRAN or git archive; None skips the check
+    path: str | None = None  # git, url: file or folder inside the tree; None -> all of it
 
 
 @dataclass(frozen=True)
 class DataObject:
-    name: str
+    name: str  # the R object, or the file's path inside the source
     file: str  # relative to the source tree; a label for the survey table, never opened
     n_rows: int | None  # None: pyreadr cannot turn the object into a DataFrame
     n_cols: int | None
-    reader: Reader  # pyreadr read the file itself, or an .rds that Rscript dumped from it
+    reader: Reader  # pyreadr read the file, an .rds that Rscript dumped from it, or pandas did
 
 
 # ==============================================================================================
@@ -89,24 +96,41 @@ class Loader:
         pairs = self._read(source).values()
         return [obj for obj, _ in pairs]
 
-    def load(self, source: Source, name: str) -> pd.DataFrame:
+    def load(
+        self, source: Source, name: str, types: Mapping[str, ColumnType] | None = None
+    ) -> pd.DataFrame:
+        """The object as one typed table: `types` declares what a file format without column
+        types (delimited text, Excel) cannot carry; a categorical gets sorted levels."""
         obj, df = self._read(source)[name]
         if df is None:
             raise ValueError(f'{source.name} {source.pin} {obj.file}: {name!r} is no DataFrame')
-        return df
+        declared = {}
+        for column, kind in (types or {}).items():
+            if kind == 'categorical':
+                declared[column] = df[column].astype('category')
+            else:
+                declared[column] = pd.to_numeric(df[column])
+        return df.assign(**declared)
 
     def help(self, source: Source, name: str) -> str:
-        """The raw Rd page documenting `name`."""
-        pages = sorted((self._tree(source) / 'man').glob('*.Rd'))
-        alias = rf'\\alias\{{{re.escape(name)}\}}'
-        for page in pages:
-            text = page.read_text()
-            if re.search(alias, text):
-                return text
-        raise KeyError(f'{source.name} {source.pin} has no help page for {name!r}')
+        """What documents `name`: the Rd page of a CRAN object; otherwise the text files
+        (README, codebook) in the file's folder, or in the nearest folder above it that has any."""
+        tree = self._tree(source)
+        if source.kind == 'cran':
+            return self._rdPage(source, tree, name)
+        file = tree / self._read(source)[name][0].file
+        folders = [file.parent, *file.parent.parents]
+        for folder in folders:
+            docs = [f for f in sorted(folder.iterdir()) if f.suffix.lower() in DOC_FILES]
+            docs = [f for f in docs if f.is_file()]
+            if docs:
+                return '\n'.join(f'# {f.relative_to(tree)}\n{f.read_text()}' for f in docs)
+            if folder == tree:
+                break
+        raise KeyError(f'{source.name} {source.pin} has no text file beside {name!r}')
 
     # ------------------------------------------------------------------------------------------
-    # pipeline: url -> tarball -> tree -> data files -> frames
+    # pipeline: url -> archive -> tree -> files -> frames
     # ------------------------------------------------------------------------------------------
 
     @staticmethod
@@ -121,67 +145,127 @@ class Loader:
                 return None
             raise
 
-    def _tarball(self, source: Source) -> Path:
-        """Fetched once from CRAN's current location (or after a miss from `Archive/`)."""
-        stem = f'{source.name}_{source.pin}'
-        tarball = self.cache / source.kind / f'{stem}.tar.gz'
-        if not tarball.exists():
-            current = f'{CRAN}/{stem}.tar.gz'
-            archive = f'{CRAN}/Archive/{source.name}/{stem}.tar.gz'
-            data = self.fetch(current)
-            if data is None:  # CRAN moves superseded versions to Archive/
-                data = self.fetch(archive)
+    def _dir(self, source: Source) -> Path:
+        """The source's cache folder: the download, its extracted `tree/`, Rscript's `rds/`."""
+        if source.kind == 'cran':
+            return self.cache / 'cran' / f'{source.name}_{source.pin}'
+        if source.kind == 'git':
+            owner, repo = source.name.removesuffix('.git').rsplit('/', 2)[-2:]
+            return self.cache / 'git' / f'{owner}_{repo}_{source.pin}'
+        return self.cache / 'url' / source.pin
+
+    @staticmethod
+    def _urls(source: Source) -> list[str]:
+        """Where the source's archive is, in the order to try."""
+        if source.kind == 'cran':  # CRAN moves superseded versions to Archive/
+            stem = f'{source.name}_{source.pin}'
+            return [f'{CRAN}/{stem}.tar.gz', f'{CRAN}/Archive/{source.name}/{stem}.tar.gz']
+        if source.kind == 'git':  # GitHub's archive of the tree at a revision
+            return [f'{source.name}/archive/{source.pin}.tar.gz']
+        return [source.name]
+
+    def _download(self, source: Source) -> Path:
+        """Fetched once from the first URL that answers; the digest is checked on cache hits too."""
+        urls = self._urls(source)
+        filename = Path(urlparse(urls[0]).path).name
+        file = self._dir(source) / filename
+        if not file.exists():
+            data = None
+            for url in urls:
+                data = self.fetch(url)
+                if data is not None:
+                    break
             if data is None:
-                raise FileNotFoundError(f'{source.name} {source.pin}: not at {current}, {archive}')
-            tarball.parent.mkdir(parents=True, exist_ok=True)
-            tarball.write_bytes(data)
-        digest = hashlib.sha256(tarball.read_bytes()).hexdigest()  # checked on cache hits too
-        if source.checksum is not None and digest != source.checksum:
-            raise ValueError(f'{tarball} checksum {digest} differs from pinned {source.checksum}')
-        return tarball
+                raise FileNotFoundError(f'{source.name} {source.pin}: not at {", ".join(urls)}')
+            file.parent.mkdir(parents=True, exist_ok=True)
+            file.write_bytes(data)
+        checksum = source.checksum
+        if source.kind == 'url':  # the file's sha256 is its pin
+            checksum = source.pin
+        digest = hashlib.sha256(file.read_bytes()).hexdigest()
+        if checksum is not None and digest != checksum:
+            raise ValueError(f'{file} checksum {digest} differs from pinned {checksum}')
+        return file
 
     def _tree(self, source: Source) -> Path:
-        """The package's source tree (extracted once)."""
-        dir = self.cache / source.kind / f'{source.name}_{source.pin}'
+        """The source's files, extracted once: a CRAN package, a repository at a revision, or
+        what a URL serves (an archive's content, else the file in a folder of its own)."""
+        dir = self._dir(source)
         if source.name == 'datasets':  # base R ships no tarball: R dumps the namespace into data/
-            data = dir / 'datasets' / 'data'
             if not dir.exists():
-                self._rscript(BASE_R, str(data))
+                self._rscript(BASE_R, str(dir / 'datasets' / 'data'))
             return dir / 'datasets'
-        tarball = self._tarball(source)
-        if not dir.exists():
-            with tarfile.open(tarball) as archive:
-                archive.extractall(dir, filter='data')
-        return dir / source.name
+        file = self._download(source)
+        is_archive = file.name.lower().endswith(ARCHIVES)
+        if not is_archive:
+            return dir
+        tree = dir / 'tree'
+        if not tree.exists():
+            self._extract(file, tree)
+        entries = list(tree.iterdir())
+        if len(entries) == 1 and entries[0].is_dir():  # a single top-level folder is layout
+            return entries[0]
+        return tree
+
+    @staticmethod
+    def _extract(archive: Path, dir: Path) -> None:
+        if archive.suffix.lower() == '.zip':
+            with zipfile.ZipFile(archive) as z:
+                z.extractall(dir)
+        else:
+            with tarfile.open(archive) as t:
+                t.extractall(dir, filter='data')
+
+    @staticmethod
+    def _files(source: Source, tree: Path) -> list[Path]:
+        """The files holding data objects: a CRAN package's data/ folder as utils::data() sees
+        it; otherwise the pinned path (a file, or a folder walked) in what R or pandas read."""
+        if source.kind == 'cran':
+            candidates = (tree / 'data').iterdir()  # data() ignores other files (`datalist`)
+            readable = R_FILES | DATA_FILES
+        else:
+            root = tree / (source.path or '')
+            candidates = [root]
+            if root.is_dir():
+                candidates = root.rglob('*')
+            readable = R_FILES | TABLE_FILES
+        files = [f for f in candidates if f.is_file() and f.suffix.lower() in readable]
+        return sorted(files)
 
     def _read(self, source: Source) -> dict[str, tuple[DataObject, pd.DataFrame | None]]:
         """Every data object of the source by name, with its frame."""
         tree = self._tree(source)
-        files = sorted((tree / 'data').iterdir())
         objects = {}
-        for file in files:
-            is_data = file.suffix.lower() in R_FILES | DATA_FILES
-            if not is_data:
-                continue  # data() ignores other files (an index named `datalist`) as well
-            frames, reader = self._readFile(file, tree)
-            label = str(file.relative_to(tree))
+        for file in self._files(source, tree):
+            label = file.relative_to(tree).as_posix()
+            frames, reader = self._readFile(file, source, label)
             for name, df in frames.items():
-                shape = df.shape if df is not None else (None, None)
+                shape = (None, None)
+                if df is not None:
+                    shape = df.shape
                 objects[name] = DataObject(name, label, *shape, reader), df
         return objects
 
-    def _readFile(self, file: Path, tree: Path) -> tuple[dict[str, pd.DataFrame | None], Reader]:
-        """pyreadr reads an R file directly; anything else R first saves object by object as .rds."""
+    def _readFile(
+        self, file: Path, source: Source, label: str
+    ) -> tuple[dict[str, pd.DataFrame | None], Reader]:
+        """pyreadr reads an R file directly; a CRAN data/ file follows utils::data() rules only R
+        knows, so R saves it object by object as .rds first; pandas reads the rest, one object
+        per file named by its path."""
         if file.suffix.lower() in R_FILES:
             return self._readR(file), 'pyreadr'
-        dir = tree.parent / 'rds' / file.stem
+        if source.kind == 'cran':
+            return self._readViaR(file, source), 'rscript'
+        return {label: self._readTable(file)}, 'pandas'
+
+    def _readViaR(self, file: Path, source: Source) -> dict[str, pd.DataFrame | None]:
+        dir = self._dir(source) / 'rds' / file.stem
         if not dir.exists():
             self._rscript(DUMP_R, str(file), str(dir))
-        dumped = sorted(dir.glob('*.rds'))
         frames = {}
-        for rds in dumped:
+        for rds in sorted(dir.glob('*.rds')):
             frames |= self._readR(rds)
-        return frames, 'rscript'
+        return frames
 
     @staticmethod
     def _rscript(script: str, *args: str) -> None:
@@ -210,3 +294,26 @@ class Loader:
                 df[column] = df[column].cat.set_categories(levels)
             frames[name] = df
         return frames
+
+    @staticmethod
+    def _readTable(file: Path) -> pd.DataFrame:
+        """pandas by extension; delimited text has its separator sniffed."""
+        suffix = file.suffix.lower()
+        if suffix == '.xlsx':
+            return pd.read_excel(file)
+        if suffix == '.json':
+            return pd.read_json(file)
+        if suffix == '.dta':
+            return pd.read_stata(file)
+        return pd.read_csv(file, sep=None, engine='python')
+
+    @staticmethod
+    def _rdPage(source: Source, tree: Path, name: str) -> str:
+        """The raw Rd page whose alias is `name`."""
+        pages = sorted((tree / 'man').glob('*.Rd'))
+        alias = rf'\\alias\{{{re.escape(name)}\}}'
+        for page in pages:
+            text = page.read_text()
+            if re.search(alias, text):
+                return text
+        raise KeyError(f'{source.name} {source.pin} has no help page for {name!r}')
