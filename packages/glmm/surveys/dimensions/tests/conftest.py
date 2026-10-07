@@ -47,10 +47,12 @@ def merger(tmp_path: Path) -> Merger:
         CATTLE_URL: zipped('cattle', 'cattle.csv', cattleText),
     }
     sources = {
+        'cap': 40,
+        'seed': 0,
         'tiers': {
             'D': {'herds': {'kind': 'url', 'name': HERDS_URL, 'pin': sha(archives[HERDS_URL])}},
             'R': {'cattle': {'kind': 'url', 'name': CATTLE_URL, 'pin': sha(archives[CATTLE_URL])}},
-        }
+        },
     }
     (tmp_path / 'sources.yaml').write_text(yaml.safe_dump(sources, sort_keys=False))
     (tmp_path / 'shards').mkdir()
