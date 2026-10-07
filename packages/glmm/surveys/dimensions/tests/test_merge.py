@@ -154,3 +154,22 @@ def test_a_confirmed_duplicate_collapses_into_the_earliest_tier_row_listing_both
     mergeShard(merger, FIXTURES / 'registry_herds.csv')
     assert [r['source'] for r in readRows(merger.root / 'registry.csv')] == ['cattle']
     assert len(readRows(merger.root / 'duplicates.csv')) == 1
+
+
+def test_a_dropped_shard_moves_an_object_from_the_exclusions_to_the_registry(merger):
+    """The rival rule leaves no way to re-file a misjudged object; a dropped shard empties
+    both files of it, the re-filing shard then empties dropped.csv again. An object in neither
+    file cannot be dropped."""
+    mergeShard(merger, FIXTURES / 'excluded_cattle.csv')
+    drop = {'source': 'cattle', 'object': 'cattle.csv', 'reason': 'farms are the grouping'}
+    mergeShard(merger, writeShard(merger.root / 'shards' / 'dropped_cattle.csv', [drop]))
+    assert readRows(merger.root / 'excluded.csv') == []
+    assert [(r['object'], r['tier']) for r in readRows(merger.root / 'dropped.csv')] == [
+        ('cattle.csv', 'R')
+    ]
+    mergeShard(merger, FIXTURES / 'registry_cattle.csv')
+    assert [r['source'] for r in readRows(merger.root / 'registry.csv')] == ['cattle']
+    assert readRows(merger.root / 'dropped.csv') == []
+    stray = {'source': 'herds', 'object': 'herds.csv', 'reason': 'never filed'}
+    problems = refusal(merger, writeShard(merger.root / 'shards' / 'dropped_stray.csv', [stray]))
+    assert list(problems['problem']) == ['not in registry.csv or excluded.csv']
