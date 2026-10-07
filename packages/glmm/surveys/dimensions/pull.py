@@ -8,9 +8,10 @@ passing objects than its cap keeps a seeded draw of them. Objects screened out o
 the cap stay listed, so that the screening denominator is known. The help page of every object
 to read lands in the untracked `help/<source>/<object>.txt` for the reading agents, with the
 table's dtypes and first rows appended. Rerunning
-downloads nothing and rewrites the same files. Run from the repo root:
+downloads nothing and rewrites the same files. `--tiers` pulls only those tiers (a ticket's
+pull; the others keep their rows, shard rows and help pages). Run from the repo root:
 
-    uv run python packages/glmm/surveys/dimensions/pull.py
+    uv run python packages/glmm/surveys/dimensions/pull.py [--tiers E O]
 """
 
 from __future__ import annotations
@@ -78,16 +79,21 @@ def screen(df: pd.DataFrame | None) -> str:
 # puller
 # =====================================================================================
 class Puller:
-    def __init__(self, root: Path, loader: Loader | None = None) -> None:
+    def __init__(
+        self, root: Path, loader: Loader | None = None, tiers: tuple[str, ...] = TIERS
+    ) -> None:
         self.root = Path(root)
         self.loader = loader or Loader(self.root / 'cache')
         self.frame = readFrame(self.root)
+        self.tiers = tiers
+        self.labels = [label for label, tier in self.frame.tiers.items() if tier in tiers]
         self.rows: list[dict] = []
 
     def enumerate(self) -> None:
-        """One row per data object of every source, in frame order (tier, then the order of
-        `sources.yaml`), screened, the cap drawn per source among the passing objects."""
-        labels = sorted(self.frame.sources, key=lambda label: TIERS.index(self.frame.tiers[label]))
+        """One row per data object of every source of the pulled tiers, in frame order (tier,
+        then the order of `sources.yaml`), screened, the cap drawn per source among the passing
+        objects."""
+        labels = sorted(self.labels, key=lambda label: TIERS.index(self.frame.tiers[label]))
         for label in labels:
             objects = sorted(self.loader.objects(self.frame.sources[label]), key=lambda o: o.name)
             rows = [self._row(label, obj) for obj in objects]
@@ -102,7 +108,7 @@ class Puller:
     def copyHelp(self) -> None:
         """One page per object to read; a source's folder is rewritten, so a changed cap or
         frame leaves no stale page behind."""
-        for label in self.frame.sources:
+        for label in self.labels:
             shutil.rmtree(self.root / 'help' / label, ignore_errors=True)
         to_read = [row for row in self.rows if row['screen'] == 'pass' and row['capped'] == 'no']
         for row in to_read:
@@ -114,15 +120,20 @@ class Puller:
             file.write_text(f'{page}\n\n{self._firstRows(df)}\n')
 
     def flush(self) -> None:
-        """`candidates.csv` whole, and the screened-out objects as an exclusion shard."""
-        self._write(self.root / 'candidates.csv', CANDIDATE_COLUMNS, self.rows)
-        excluded = [self._exclusion(row) for row in self.rows if row['screen'] != 'pass']
+        """`candidates.csv` whole, and the screened-out objects as an exclusion shard; the rows
+        of tiers not pulled are kept from the existing file, everything in frame order."""
+        rows = self._kept() + self.rows
+        rows.sort(
+            key=lambda row: (TIERS.index(row['tier']), list(self.frame.tiers).index(row['source']))
+        )
+        self._write(self.root / 'candidates.csv', CANDIDATE_COLUMNS, rows)
+        excluded = [self._exclusion(row) for row in rows if row['screen'] != 'pass']
         (self.root / 'shards').mkdir(exist_ok=True)
         shard = self.root / 'shards' / 'excluded_prescreen.csv'
         self._write(shard, EXCLUDED.agentColumns, excluded)
 
     # ---------------------------------------------------------------------------------
-    # pipeline: object -> row -> draw -> shard row -> csv
+    # pipeline: object -> row -> draw -> kept rows -> shard row -> csv
     # ---------------------------------------------------------------------------------
 
     def _row(self, label: str, obj: DataObject) -> dict:
@@ -159,6 +170,15 @@ class Puller:
             return set(names)
         return set(random.Random(self.frame.seed).sample(names, cap))
 
+    def _kept(self) -> list[dict]:
+        """The rows of the tiers this run does not pull, as the last run wrote them."""
+        file = self.root / 'candidates.csv'
+        if not file.exists():
+            return []
+        with open(file, newline='') as f:
+            rows = list(csv.DictReader(f))
+        return [row for row in rows if row['tier'] not in self.tiers]
+
     @staticmethod
     def _exclusion(row: dict) -> dict:
         """The screened-out object as a row of the exclusion shard, verdict kept as detail."""
@@ -186,9 +206,10 @@ if __name__ == '__main__':
     # fmt: off
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('--root', type=Path, default=HERE, help='survey folder holding sources.yaml')
+    parser.add_argument('--tiers', nargs='+', choices=TIERS, default=TIERS, help='tiers to pull; the others keep their rows')
     args = parser.parse_args()
     # fmt: on
-    puller = Puller(args.root)
+    puller = Puller(args.root, tiers=tuple(args.tiers))
     puller.enumerate()
     puller.copyHelp()
     puller.flush()

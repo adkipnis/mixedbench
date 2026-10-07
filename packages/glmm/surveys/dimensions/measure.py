@@ -32,12 +32,16 @@ def splitList(text: str) -> list[str]:
 def withComposites(df: pd.DataFrame, factors: list[str]) -> pd.DataFrame:
     """A grouping factor `a:b` names no column (lme4's `(1|a:b)`, the whole plots of a
     split-plot): the combination of its parts is added under that name, one level per pair of
-    levels present. Built here once, so the merge's checks and the measures see a plain column."""
+    levels present; a row missing a part has no level (the ARM radon survey's rows without a
+    county). Built here once, so the merge's checks and the measures see a plain column."""
     composites = {}
     for factor in factors:
         if ':' in factor:
             parts = factor.split(':')
-            composites[factor] = df[parts].astype(str).agg(':'.join, axis=1)
+            composite = df[parts[0]].astype(str)
+            for part in parts[1:]:
+                composite = composite + ':' + df[part].astype(str)  # missing stays missing
+            composites[factor] = composite
     return df.assign(**composites)
 
 
