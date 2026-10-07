@@ -1,0 +1,5 @@
+"source","object","reason","detail"
+"nlmeU","armd.wide","derived or duplicated table","Wide (one row per subject) twin of armd: the visual4/visual12/visual24/visual52 columns are armd's repeated visual-acuity measurements spread across columns. Help page cross-references armd and armd0."
+"nlmeU","armd0","derived or duplicated table","Long-form ARMD twin of armd that additionally includes the Baseline visit (time.f has a Baseline level, 1107 vs 867 rows); Galecki & Burzykowski model armd. Help page cross-references armd and armd.wide."
+"nlmeU","prt.fiber","derived or duplicated table","Fiber-level component of prt (same fiber rows, subject covariates dropped); prt is the merged modeling table (prt help: prt was obtained by merging prt.subjects and prt.fiber)."
+"nlmeU","prt.subjects","derived or duplicated table","Subject-level twin of prt: one row per the 63 subjects, no within-subject replication; prt is the fiber-level modeling table."
