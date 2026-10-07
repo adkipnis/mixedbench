@@ -64,9 +64,18 @@ index random effects; the **response** is the column a documented model explains
    `ordered` for covariates only: a grouping factor stored as an ordered factor (nlme's
    `groupedData` orders subjects by their mean) is a nominal id, declare nothing for it.
 7. **Published model.** `published_model` is `yes` when a published model specification
-   exists for the dataset (posteriordb, Stan example models, a textbook's worked example), else
-   `no`.
-8. **Domain, confidence, notes.** One domain tag for reporting; `high` confidence when the
+   exists for the dataset: a posteriordb posterior, a Stan example model, a textbook's worked
+   example, or a documentation example (a PyMC or bambi notebook, a Stata manual entry, the
+   MixedModels.jl docs) that states the model fitted to this table (decided 2026-10-07, #24);
+   `no` when the data appear only in tests or a docstring without a model.
+8. **Stan data.** A Stan data dict (posteriordb, the Stan examples) was read as the table of
+   its observation-length arrays; the page says which entries are not in the table (scalars,
+   group-level arrays) and which matrices became numbered columns (`X_1`, `X_2`). Integer
+   index columns (`county`, `subj`) are grouping factors like any other column and need no
+   `types` declaration; a group-level covariate that is not in the table cannot be a
+   covariate and is named in `notes`. The hierarchical term is read from the Stan code the
+   source fits to the data; `formula` renders it in lme4 syntax.
+9. **Domain, confidence, notes.** One domain tag for reporting; `high` confidence when the
    documentation states the model, `medium` when it describes the design but not a model or
    when you recall the model from the book the page cites (name book and section in `notes`),
    `low` when you inferred the grouping factor from column names. Name what you read and any
