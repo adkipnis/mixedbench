@@ -31,36 +31,44 @@ DOC_FILES = {'.md', '.txt', '.rst', ''}  # text beside a data file
 ARCHIVES = ('.zip', '.tar.gz', '.tgz', '.tar')
 R_ERRORS = (PyreadrError, LibrdataError)  # LibrdataError is not a PyreadrError
 Reader = Literal['pyreadr', 'rscript', 'pandas']
+Frames = dict[str, pd.DataFrame | None]  # object name -> its table; None when it has no table
 ColumnType = Literal['categorical', 'ordered', 'continuous']  # what a registry row may declare
 
-# Reads one data/ file the way utils::data() does and saves each object in it as its own .rds
-# Uses serialization v2 because librdata rejects v3
+# Reads one data/ file the way utils::data() does and saves each object in it as its own .rds,
+# in serialization v2, which librdata reads where it rejects some v3 files (geepack's muscatine)
 DUMP_R = """
 args <- commandArgs(trailingOnly = TRUE)
 file <- args[1]
 out <- args[2]
 env <- new.env()
 ext <- tolower(tools::file_ext(file))
+stem <- tools::file_path_sans_ext(basename(file))
 if (ext == 'r') sys.source(file, envir = env, chdir = TRUE) else
 if (ext %in% c('rda', 'rdata')) load(file, envir = env) else
-if (ext %in% c('tab', 'txt')) assign(tools::file_path_sans_ext(basename(file)),
-    read.table(file, header = TRUE, as.is = FALSE), envir = env) else
-if (ext == 'csv') assign(tools::file_path_sans_ext(basename(file)),
-    read.table(file, header = TRUE, sep = ';', as.is = FALSE), envir = env) else
+if (ext == 'rds') assign(stem, readRDS(file), envir = env) else
+if (ext %in% c('tab', 'txt'))
+    assign(stem, read.table(file, header = TRUE, as.is = FALSE), envir = env) else
+if (ext == 'csv')
+    assign(stem, read.table(file, header = TRUE, sep = ';', as.is = FALSE), envir = env) else
     stop(paste('no data() rule for', file))
 dir.create(out, recursive = TRUE, showWarnings = FALSE)
 for (name in ls(env))
     saveRDS(get(name, envir = env), file.path(out, paste0(name, '.rds')), version = 2)
 """
 
-# Saves every object of base R's `datasets` (lazy data, no tarball) as its own .rds
+# Lays out base R's `datasets` (lazy data, no tarball) like a source tree: every object as its
+# own .rds under data/, every help page from R's Rd database under man/
 BASE_R = """
-out <- commandArgs(trailingOnly = TRUE)[1]
-dir.create(out, recursive = TRUE, showWarnings = FALSE)
+tree <- commandArgs(trailingOnly = TRUE)[1]
+dir.create(file.path(tree, 'data'), recursive = TRUE, showWarnings = FALSE)
+dir.create(file.path(tree, 'man'), showWarnings = FALSE)
 items <- data(package = 'datasets')$results[, 'Item']
 for (name in sub(' .*', '', items))
     saveRDS(get(name, envir = as.environment('package:datasets')),
-            file.path(out, paste0(name, '.rds')), version = 2)
+            file.path(tree, 'data', paste0(name, '.rds')), version = 2)
+pages <- tools::Rd_db('datasets')
+for (page in names(pages))
+    writeLines(paste(as.character(pages[[page]]), collapse = ''), file.path(tree, 'man', page))
 """
 
 
@@ -122,13 +130,11 @@ class Loader:
             return self._rdPage(source, tree, name)
         file = tree / self._read(source)[name][0].file
         folders = [file.parent, *file.parent.parents]
-        for folder in folders:
-            docs = [f for f in sorted(folder.iterdir()) if f.suffix.lower() in DOC_FILES]
-            docs = [f for f in docs if f.is_file()]
+        for folder in folders[: folders.index(tree) + 1]:
+            files = sorted(f for f in folder.iterdir() if f.is_file())
+            docs = [f for f in files if f.suffix.lower() in DOC_FILES]
             if docs:
                 return '\n'.join(f'# {f.relative_to(tree)}\n{f.read_text()}' for f in docs)
-            if folder == tree:
-                break
         raise KeyError(f'{source.name} {source.pin} has no text file beside {name!r}')
 
     # ------------------------------------------------------------------------------------------
@@ -193,10 +199,11 @@ class Loader:
         """The source's files, extracted once: a CRAN package, a repository at a revision, or
         what a URL serves (an archive's content, else the file in a folder of its own)."""
         dir = self._dir(source)
-        if source.name == 'datasets':  # base R ships no tarball: R dumps the namespace into data/
-            if not dir.exists():
-                self._rscript(BASE_R, str(dir / 'datasets' / 'data'))
-            return dir / 'datasets'
+        if source.name == 'datasets':  # base R ships no tarball: R lays its namespace out as one
+            tree = dir / 'datasets'
+            if not tree.exists():
+                self._rscript(BASE_R, str(tree))
+            return tree
         file = self._download(source)
         is_archive = file.name.lower().endswith(ARCHIVES)
         if not is_archive:
@@ -222,8 +229,10 @@ class Loader:
     def _files(source: Source, tree: Path) -> list[Path]:
         """The files holding data objects: a CRAN package's data/ folder as utils::data() sees
         it; otherwise the pinned path (a file, or a folder walked) in what R or pandas read."""
-        if source.kind == 'cran':
-            candidates = (tree / 'data').iterdir()  # data() ignores other files (`datalist`)
+        if source.kind == 'cran':  # data() ignores other files (`datalist`)
+            candidates = []
+            if (tree / 'data').exists():  # GLMMadaptive ships no data
+                candidates = (tree / 'data').iterdir()
             readable = R_FILES | DATA_FILES
         else:
             root = tree / (source.path or '')
@@ -254,47 +263,61 @@ class Loader:
                 objects[name] = DataObject(name, label, *shape, reader), df
         return objects
 
-    def _readFile(
-        self, file: Path, source: Source, label: str
-    ) -> tuple[dict[str, pd.DataFrame | None], Reader]:
-        """pyreadr reads an R file directly; a CRAN data/ file follows utils::data() rules only R
-        knows, so R saves it object by object as .rds first; pandas reads the rest, one object
-        per file named by its path."""
+    def _readFile(self, file: Path, source: Source, label: str) -> tuple[Frames, Reader]:
+        """An R file through pyreadr; a CRAN data/ text file follows utils::data() rules only R
+        knows, so R saves it as .rds first; pandas reads the rest, one object per file."""
+        if source.name == 'datasets':  # every file is an .rds R dumped
+            return self._readDumped(file), 'rscript'
         if file.suffix.lower() in R_FILES:
-            return self._readR(file), 'pyreadr'
+            return self._readRFile(file, source)
         if source.kind == 'cran':
             return self._readViaR(file, source), 'rscript'
         return {label: self._readTable(file)}, 'pandas'
 
-    def _readViaR(self, file: Path, source: Source) -> dict[str, pd.DataFrame | None]:
+    def _readRFile(self, file: Path, source: Source) -> tuple[Frames, Reader]:
+        """An R file librdata rejects (geepack's muscatine, a plain data frame) is re-saved by R."""
+        try:
+            return self._readR(file), 'pyreadr'
+        except R_ERRORS:
+            return self._readViaR(file, source), 'rscript'
+
+    def _readViaR(self, file: Path, source: Source) -> Frames:
         dir = self._dir(source) / 'rds' / file.stem
         if not dir.exists():
             self._rscript(DUMP_R, str(file), str(dir))
         frames = {}
         for rds in sorted(dir.glob('*.rds')):
-            frames |= self._readR(rds)
+            frames |= self._readDumped(rds)
         return frames
+
+    def _readDumped(self, rds: Path) -> Frames:
+        """An .rds R saved; what librdata still rejects is no table (boot's cd4.nested, a list)."""
+        try:
+            return self._readR(rds)
+        except R_ERRORS:
+            return {rds.stem: None}
 
     @staticmethod
     def _rscript(script: str, *args: str) -> None:
         subprocess.run(['Rscript', '-e', script, *args], check=True)
 
     @staticmethod
-    def _readR(path: Path) -> dict[str, pd.DataFrame | None]:
-        """`pyreadr.read_r`, except that factor levels keep R's order and that whatever pyreadr
-        cannot turn into a DataFrame is None: arrays beyond two dimensions, files librdata rejects."""
+    def _readR(path: Path) -> Frames:
+        """`pyreadr.read_r`, except that factor levels keep R's order and that an object pyreadr
+        cannot turn into a DataFrame is None; a file librdata rejects raises."""
         parser = PyreadrParser()
-        try:
-            parser.parse(bytes(path))
-        except R_ERRORS:  # base R's Titanic, a 4-d table, is one
-            return {path.stem: None}
+        parser.parse(bytes(path))
         frames = {}
         for table in parser.table_data:
             name = table.name or path.stem  # an .rds carries no object name
-            if table.dim_num > 2:  # pyreadr hands these to xarray
+            if table.dim_num > 2:  # pyreadr hands these to xarray (base R's Titanic)
                 frames[name] = None
                 continue
-            df = table.convert_to_dataframe()
+            try:
+                df = table.convert_to_dataframe()
+            except PyreadrError:  # a matrix column (gamlss.data's aep)
+                frames[name] = None
+                continue
             for position, labels in table.value_labels.items():  # {column: {code: label}}
                 column = df.columns[position]
                 levels = [labels[code] for code in sorted(labels)]  # R orders levels by code
