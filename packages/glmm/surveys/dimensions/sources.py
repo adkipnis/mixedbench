@@ -14,7 +14,7 @@ from metabeta.glmm.datasets import Source
 class Frame:
     tiers: dict[str, str]  # label -> tier
     sources: dict[str, Source]  # label -> pinned source
-    caps: dict[str, int]  # label -> most objects read from it; the rest are enumerated only
+    caps: dict[str, int | None]  # label -> most objects read from it, None for all of them
     seed: int  # of the per-source draw where a source exceeds its cap
 
 
@@ -31,5 +31,5 @@ def readFrame(root: Path) -> Frame:
                 checksum=entry.get('checksum'),
                 path=entry.get('path'),
             )
-            caps[label] = entry.get('cap', file['cap'])
+            caps[label] = entry.get('cap', file.get('cap'))
     return Frame(tiers, sources, caps, file['seed'])
