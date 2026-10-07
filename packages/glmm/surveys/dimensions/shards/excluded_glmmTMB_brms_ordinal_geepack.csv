@@ -1,0 +1,5 @@
+"source","object","reason","detail"
+"ordinal","income","no grouping structure","Weighted ordinal regression clm(income ~ year, weights=pct) on a 2-year by 7-class income distribution (percentages, adopted from McCullagh 1980). year is a 2-level fixed covariate and there is no clustering column; the 14 rows are aggregated percentages, not repeated observations of any group."
+"geepack","respdis","no grouping structure","Wide format: four repeated ordinal responses y1-y4 (the four visits) as columns plus trt, one row per patient, no within-table cluster column. The example reshapes to long and creates id before the ordgee fit (Miller et al. 1993)."
+"geepack","seizure","no grouping structure","Wide format: four 2-week seizure counts y1-y4 and the baseline count base as columns, one row per subject, no within-table cluster column. The example reshapes to long and creates id before the GEE fit (Thall & Vail 1990)."
+"geepack","sitka89","derived or duplicated table","Subset of spruce: the spruce help-page example constructs sitka89 <- spruce[spruce$wave > 5,] (the second growing season). Same source geepack; the full table spruce is kept."
