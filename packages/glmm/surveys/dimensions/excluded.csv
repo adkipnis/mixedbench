@@ -555,3 +555,6 @@
 "datasets","R","treering","no grouping structure","one column"
 "datasets","R","uspop","no grouping structure","one column"
 "datasets","R","women","no grouping structure","no repeated column"
+"faraway","R","pvc","no grouping structure","Faraway fits psize ~ operator * resin, two fixed factors with replication; no grouping factor"
+"lattice","R","singer","no grouping structure","One height per singer, voice.part classifies singers; no grouping factor"
+"faraway","R","motorins","no grouping structure","Zone and Make are tariff rating factors, Insured the exposure; no sampled clustering unit"
