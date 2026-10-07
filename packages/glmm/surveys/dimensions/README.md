@@ -328,5 +328,35 @@ Rules settled from the agents' `RULE GAP` notes:
   `notes` saying the source fits GEE. A censored survival response (brms kidney) stays as
   `continuous` with the censoring indicator in `ignore`.
 - Help pages calling their data "constructed" or "probably constructed" (SASmixed Animal, BIB,
-  IncBlk) stay in the registry: only "simulated" excludes. Aggregate responses on a real
-  grouping (nass.sorghum's state-year yields, lillemo.wheat's mean scores) stay at `low`.
+  IncBlk) stay in the registry: the page itself only guesses, and only data the source states
+  to be simulated are excluded (decided 2026-10-07). Aggregate responses on a real grouping
+  (nass.sorghum's state-year yields, lillemo.wheat's mean scores) stay at `low`.
+- A further `model_index` row only when the response or the grouping factors differ; a nested
+  simplification of the fixed effects is the same model (decided 2026-10-07; five SASmixed
+  model-2 rows dropped). Dataset axes count once per registry row, so a ladder of fits would
+  weight its dataset several times.
+- Plot coordinates of a field layout (`row`, `col`) go in `ignore`, as the pilot's
+  latitude and longitude did; a table whose only candidate grouping is its coordinates has
+  no grouping structure (besag.checks).
+
+Spot check: 20 registry rows drawn with seed 0, stratified by shard in proportion to the rows
+surviving the fold (SASmixed group 8, glmmTMB group 4, agridat a 4 and b 3, MEMSS 1), read by
+Alex against the help pages. Agreed as filed: radon, Genetics, TeachingI, SIIdata,
+gomez.nonnormal2, gomez.splitplot.subsample, snedecor.asparagus, inhaler, muscatine,
+respiratory. Changed:
+
+- Theoph: `Dose;Time` are the covariates (the nonlinear-inputs rule).
+- Cultivation: the formula is written with the whole-plot term `(1|Block:Cult)`; the model-2
+  row left under the new `model_index` rule.
+- WaferTypes: the response is `delta`, which the page defines as `delta ~ 1 | uWafer`;
+  `Thick` is a covariate.
+- fcat: `scorec` is a bounded target score with target-specific maxima, noted; filed as
+  `count` for want of a trials column.
+- besag.checks: excluded; `row` and `col` are coordinates, not groups.
+- connolly.potato, yates.oats and four further agridat rows: coordinates ignored.
+- salmon.bunt: the strong genotype-by-race interaction becomes the random term `bunt:gen`,
+  the layout repeat `rep` a fixed covariate.
+- spruce: the chamber the trees sit in is a second grouping factor (`chamber;id`).
+- muscatine: the page's `cage` and `cage2` are an age polynomial; the registry names the
+  column `age` once, so `d_doc` counts the linear term only. Polynomial and other derived
+  terms on a column are not representable in the registry.
