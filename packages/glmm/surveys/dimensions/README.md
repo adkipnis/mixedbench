@@ -13,6 +13,7 @@ nothing is imported across surveys. Results: [`SUMMARY.md`](SUMMARY.md), regener
 | `sources.yaml` | hand (#19) and discovery (#21) | the frame: tiers of pinned sources, cap, seed, dropped candidates, the Tier O keyword net, see below |
 | `deposits.csv` | `deposits.py` | Tier D: the 60 seeded, stratified draws of the practice survey's deposit-naming papers, see below |
 | `candidates.csv` | `pull.py` | every enumerated data object with its counts, see below |
+| `v05_datasets.csv` | hand (#23) | the 36 R datasets of metabeta v0.5 by `source`, `object` and their v0.5 parquet name; the closing contract test (#27) asserts each is in the registry or the exclusions |
 | `help/`, `cache/` | `pull.py`, loader | untracked: one help page per kept object for the agents, the table's dtypes and first rows appended; downloads and extracted trees |
 | `shards/<table>_<label>.csv` | agents; `pull.py` writes `excluded_prescreen.csv` | one shard per reading run; `table` ∈ `registry`, `excluded`, `duplicates`, `dropped` |
 | `registry.csv` | `merge.py` | one row per dataset and documented model, at most three per object |
@@ -383,3 +384,87 @@ interaction the cited book fits is carried (prt), otherwise the simpler reading 
 
 The lesson for #23 on: a second blind reading of the rendered rows costs one agent pass and
 hands Alex only the grouping disagreements, about one row in eight.
+
+## Census of the general packages (#23)
+
+MASS, carData, lattice, HSAUR3, faraway, boot, gamlss.data, medicaldata, languageR and base
+R's `datasets`, read by twelve Opus agents (faraway in three shards, MASS and carData in two,
+boot with lattice, medicaldata with `datasets`): 628 objects, 160 of them screened out
+mechanically, 468 read, 105 registry rows before the fold and 362 exclusions, 308 of them
+`no grouping structure`, as expected of packages whose tables are mostly one row per unit. One agent read the 17 flagged pairs: 16 are the same dataset (faraway's
+toenail, ohio and semicond beside lme4, geepack and SASmixed; MASS petrol, muscle, oats and
+Rabbit beside nlme; MASS michelson and npk, medicaldata indometh and theoph and base R's
+Orange, Theoph, npk, morley, Indometh beside their MEMSS or MASS twins; faraway abrasion and
+breaking are two Latin squares that share a shape). The fold left 240 rows.
+
+Base R's `CO2` arrived with 468 rows and one column: the loader's Rscript dump had written
+`CO2.rds` and then `co2.rds`, the Mauna Loa series, to the same file on this case-insensitive
+file system, and `co2` had vanished from the enumeration. Fixed in the loader (the second of
+two names differing in case only carries a tilde in the dump, stripped on reading; commit
+439c813), `datasets` re-pulled alone through a scratch script, `CO2` dropped and re-filed, where
+it folds into the MEMSS row; `co2` is a pre-screen exclusion. The pull of #24 and #25 runs over
+the whole frame again.
+
+Second blind reading, now a standard step: the 77 `medium` and `low` rows of these shards
+left after the fold were re-read by three Opus agents into a scratch directory and compared
+by script on response, grouping factors, covariates and interactions; 65 agree on all four.
+Settled by rule: OME gains the covariate `OME`, which the page's `lm(L75 ~ Noise/(Age + OME))`
+names; nepali's inferred list falls to `age;sex`, the simpler reading; weightRatings keeps
+`Frequency`; the interactions proposed for schizophrenia2, amis and ChickWeight are on no page
+and stay out. The response type follows the column, not the Gaussian fit: eggprod's egg totals
+are `count`, the seven-point ratings of sizeRatings and weightRatings `ordinal`. Six grouping
+disagreements (jsp, lawn, leafblotch, motorins, durationsGe, durationsOnt) went to Alex with
+the spot check below.
+
+Rules decided by Alex on 2026-10-07 from the agents' `RULE GAP` notes:
+
+- A multivariate table with a grouping factor and several response variables (carData Soils
+  and Pottery, HSAUR3 pottery and skulls, MANOVA examples) is one registry row per response,
+  up to the cap of three, the responses left out named in the first row's `notes` and every
+  response not filed in `ignore`; the HSAUR3 pair had been excluded and was re-filed.
+- A grouped table whose page documents no response and no model is filed with an inferred
+  response at `low` under a `RESPONSE INFERRED:` note (carData MplsStops, medicaldata
+  covid_testing, faraway worldcup, MASS painters, faraway neighbor, all re-filed); only a table
+  with no defensible response stays `response missing or undocumented` (carData LoBD, the
+  languageR metadata tables).
+- Survey strata and waves a source models as fixed (carData CES11, GSSvocab, HSAUR3 CHFLS,
+  WVS) are no grouping factors: the sample design is not a documented random effect.
+- Wide repeated-measures tables (boot nitrofen, frets; faraway hemoglobin, potuse; MASS
+  anorexia) are excluded as `no grouping structure`, as the nlmeU wide twins were: the
+  grouping unit is no column of the loaded table.
+- The rows and columns of a Latin square (datasets OrchardSprays, faraway abrasion, alfalfa,
+  breaking) are crossed blocking factors, not the ignored coordinates of a field layout.
+- Matched case-control pairs and other conditional-logistic designs (faraway amlxray, HSAUR3
+  backpain, datasets infert, MASS gehan) are rendered with a random intercept on the pair, as
+  GEE fits are rendered with one on the cluster.
+- An area factor is a grouping factor when it has many levels (gamlss.data LGAclaims, 13
+  statistical divisions) and a covariate when it has a handful and is the predictor of
+  interest (faraway infmort's four regions, gamlss.data mviBig).
+- A designed experiment with replication but no replicate column (faraway rats, snail, truck,
+  turtle, seeds, salmonella) has no grouping structure.
+
+Every one of metabeta v0.5's 36 R datasets is in the registry (28 were after #22, the eight of
+MASS, gamlss.data, boot and base R came with this census); `v05_datasets.csv` lists them for
+the closing contract test, and no package had to be added to the frame.
+
+Spot check: 20 registry rows drawn with seed 0, stratified by shard in proportion to the rows
+surviving the fold (faraway 6, MASS 3, languageR 3, carData 2, boot and lattice 2,
+medicaldata and `datasets` 2, HSAUR3 1, gamlss.data 1), handed to Alex as one list with the
+six grouping disagreements, each item linking the rdrr.io page. Agreed as filed: 17 of the 20,
+among them amlxray's eight exposures and troutegg's `low`. Changed:
+
+- lawn: each machine is tested twice at each speed, so `machine:speed` is a second grouping
+  factor, the within-machine stratum (the blind reading had it).
+- pvc: excluded; Faraway fits `psize ~ operator * resin` as two fixed factors with replication.
+- singer: excluded; one height per singer, `voice.part` classifies singers.
+- jsp: `school;school:class`, the blind reading; Faraway's final-year model has no student
+  effect, which appears only in the stacked english and math analysis; `id` and `year` ignored.
+- leafblotch, durationsGe, durationsOnt: the registry stands (site is the block, variety the
+  treatment; one token per word, so Word repeats nothing).
+- motorins: excluded; Zone and Make are tariff rating factors, not sampled clustering units.
+
+Of the six grouping disagreements the registry won three, the blind reading two, and one
+object left the registry; of the 20 drawn rows two left it, both `medium` rows whose
+one-way factor classifies rather than clusters. Tier R closes at 1191 enumerated objects,
+689 read, 252 registry rows over 238 datasets and 559 exclusions.
+

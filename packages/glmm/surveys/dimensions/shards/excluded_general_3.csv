@@ -1,0 +1,4 @@
+"source","object","reason","detail"
+"faraway","pvc","no grouping structure","Faraway fits psize ~ operator * resin, two fixed factors with replication; no grouping factor"
+"lattice","singer","no grouping structure","One height per singer, voice.part classifies singers; no grouping factor"
+"faraway","motorins","no grouping structure","Zone and Make are tariff rating factors, Insured the exposure; no sampled clustering unit"
