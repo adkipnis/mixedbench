@@ -301,8 +301,7 @@ class Loader:
     def _rscript(script: str, *args: str) -> None:
         subprocess.run(['Rscript', '-e', script, *args], check=True)
 
-    @staticmethod
-    def _readR(path: Path) -> Frames:
+    def _readR(self, path: Path) -> Frames:
         """`pyreadr.read_r`, except that factor levels keep R's order and that an object pyreadr
         cannot turn into a DataFrame is None; a file librdata rejects raises."""
         parser = PyreadrParser()
@@ -323,8 +322,19 @@ class Loader:
                 levels = [labels[code] for code in sorted(labels)]  # R orders levels by code
                 # pyreadr used astype('category'), which sorts levels and drops unused ones
                 df[column] = df[column].cat.set_categories(levels)
-            frames[name] = df
+            frames[name] = self._numbersAsFloat(df)
         return frames
+
+    @staticmethod
+    def _numbersAsFloat(df: pd.DataFrame) -> pd.DataFrame:
+        """pyreadr renders an R integer vector with NA as an object column of ints and NaN
+        (mlmRev's `star`); such a column becomes float, a string column stays as it is."""
+        numbers = {}
+        for column in df.columns[df.dtypes == object]:
+            present = df[column].dropna()
+            if present.map(lambda v: isinstance(v, (int, float))).all():
+                numbers[column] = pd.to_numeric(df[column])
+        return df.assign(**numbers)
 
     @staticmethod
     def _readTable(file: Path) -> pd.DataFrame:

@@ -13,6 +13,7 @@ import shutil
 import tarfile
 from pathlib import Path
 
+import pandas as pd
 import pytest
 from metabeta.glmm.datasets import DataObject, Loader, Source
 
@@ -110,6 +111,25 @@ def test_load_keeps_factor_levels_in_r_order(tmp_path):
     scores = loader.load(FIXTURE, 'scores')
     assert list(scores['grade'].cat.categories) == ['low', 'mid', 'high']
     assert not scores['grade'].dtype.ordered
+
+
+@needsRscript
+def test_an_integer_column_with_na_loads_as_float_not_object(tmp_path):
+    """pyreadr renders an R integer vector with NA as an object column of ints and NaN, which
+    no numeric check accepts (mlmRev's `star`); the loader makes it a float column."""
+    rds = tmp_path / 'scores.rds'
+    # R writes a frame with an integer column holding one NA and a plain string column
+    Loader._rscript(
+        "saveRDS(data.frame(score = c(1L, NA, 3L), note = c('a', 'b', 'c')),"
+        ' commandArgs(TRUE)[1], version = 2)',
+        str(rds),
+    )
+    loader = Loader(tmp_path, fetch=serveNothing)
+    frames = loader._readR(rds)
+    scores = frames['scores']
+    assert scores['score'].dtype.kind == 'f'
+    assert scores['score'].isna().sum() == 1
+    assert pd.api.types.is_string_dtype(scores['note'])
 
 
 def test_a_declared_ordered_column_keeps_its_levels_and_becomes_ordered(tmp_path):
