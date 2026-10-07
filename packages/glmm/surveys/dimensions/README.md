@@ -13,7 +13,7 @@ nothing is imported across surveys. Results: [`SUMMARY.md`](SUMMARY.md), regener
 | `sources.yaml` | hand (#19) and discovery (#21) | the frame: tiers of pinned sources, cap, seed, dropped candidates, see below |
 | `candidates.csv` | `pull.py` | every enumerated data object with its counts, see below |
 | `help/`, `cache/` | `pull.py`, loader | untracked: one help page per kept object for the agents; downloads and extracted trees |
-| `shards/<table>_<label>.csv` | agents | one shard per reading run; `table` ∈ `registry`, `excluded`, `duplicates`, `dropped` |
+| `shards/<table>_<label>.csv` | agents; `pull.py` writes `excluded_prescreen.csv` | one shard per reading run; `table` ∈ `registry`, `excluded`, `duplicates`, `dropped` |
 | `registry.csv` | `merge.py` | one row per dataset and documented model, at most three per object |
 | `excluded.csv` | `merge.py` | every screened-out object with a categorical reason |
 | `duplicates.csv` | `merge.py` | candidate pairs the merge flagged and the verdicts agents returned |
@@ -41,12 +41,11 @@ repositories). Under each tier, one entry per source keyed by its **label**, the
 shard row names:
 
 ```yaml
-cap: 40
 seed: 0
 tiers:
   R:
     lme4: {kind: cran, pin: 2.0-6}
-    agridat: {kind: cran, pin: '1.26', cap: 40}
+    agridat: {kind: cran, pin: '1.26', cap: 50}
   E:
     stan_examples: {kind: git, name: https://github.com/stan-dev/example-models, pin: a1b2c3d, path: ARM}
   D:
@@ -58,11 +57,14 @@ dropped:
 `kind` ∈ `cran` / `git` / `url` as the loader's `Source`; `name` defaults to the label (a CRAN
 package name); `pin` is the CRAN version, git revision or the file's sha256 (base R's
 `datasets` is pinned to the R version that dumps it); `checksum` (optional) pins a CRAN or
-git archive; `path` (optional) narrows a git or url tree. `cap` is the most objects read from
-one source, so that no single collection (agridat, about 400 tables) dominates: a source with
-more objects keeps a draw of `cap` of them made with `random.Random(seed)`, `seed` top-level, over its sorted
-object names, the top-level `cap` applying unless the entry sets its own. `dropped` lists every
-candidate source the discovery step (#21) considered and left out, with the reason.
+git archive; `path` (optional) narrows a git or url tree. `cap` (optional, per entry or top-level as a
+default) is the most objects read from one source, so that no single collection dominates: a
+source with more objects passing the pre-screen (below) keeps a draw of `cap` of them made with
+`random.Random(seed)`, `seed` top-level, over their sorted names. Only agridat (about 390 field
+trials, else 38% of the pool) is capped; ten Tier R packages hold more than 40 objects, so a cap
+for all would have discarded grouped tables of faraway and MASS at random (decided 2026-10-07).
+`dropped` lists every candidate source the discovery step (#21) considered and left out, with
+the reason.
 
 Tier R (#19) is a census of two package groups at the CRAN versions of 2026-10-07. Mixed-model
 packages: lme4, nlme, mlmRev, MEMSS, glmmTMB, brms, GLMMadaptive, nlmeU, SASmixed, HLMdiag,
@@ -77,9 +79,20 @@ enumerated data object: `tier`, `source`, `pin`, `object`, `file` (the data file
 source tree), `n_rows`, `n_cols` (blank where the loader cannot make a DataFrame of the
 object, a table of more than two dimensions), the column counts by dtype `n_numeric`,
 `n_categorical`, `n_string`, `n_other` (bool, datetime), `reader` (the loader's route,
-`pyreadr` / `rscript` / `pandas`) and `capped`: `yes` for the objects a source's cap left
-out, which stay listed as the screening denominator but get no help page and are not read.
-The help page of every other object is at `help/<source>/<object>.txt`.
+`pyreadr` / `rscript` / `pandas`), `screen` and `capped`.
+
+`screen` is the verdict of a mechanical pre-screen on what a grouped table needs before an
+agent reads its documentation, conservative by design: `no frame` (the loader cannot make a
+DataFrame of the object), `under 3 rows` (two groups, one with two observations), `one column`
+(a response and a grouping factor), `no repeated column` (no column whose values could index
+groups: not fractional, since R stores integer codes as doubles, two or more distinct values,
+some value repeated), else `pass`. On Tier R it discards 164 of 1190 objects, time series,
+all-continuous tables and one-row-per-study tables among them. The pull writes the discards as
+the shard `shards/excluded_prescreen.csv` (`no frame` under `unreadable format`, the rest under
+`no grouping structure`, the verdict as `detail`), which the merge takes like any agent shard.
+`capped` is `yes` for the passing objects a source's cap left out. Screened-out and capped
+objects stay listed as the screening denominator; agents read the `pass`, `no` rows, whose
+help pages are at `help/<source>/<object>.txt`, rewritten per source on every run.
 
 ## `registry.csv`
 

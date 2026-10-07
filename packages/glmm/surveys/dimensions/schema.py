@@ -71,12 +71,22 @@ DROPPED = Table(
 
 TABLES = {t.name: t for t in (REGISTRY, EXCLUDED, DUPLICATES, DROPPED)}
 
-# One row per data object the pull script enumerates in a kept source; `capped` is `yes` for
-# the objects a source's cap left out, which stay listed as the screening denominator.
+# One row per data object the pull script enumerates in a kept source. `screen` is the
+# mechanical pre-screen's verdict; `capped` is `yes` for the passing objects a source's cap
+# left out. Both stay listed as the screening denominator; agents read `pass` and `no` rows.
 CANDIDATE_COLUMNS = (
     'tier', 'source', 'pin', 'object', 'file', 'n_rows', 'n_cols',
-    'n_numeric', 'n_categorical', 'n_string', 'n_other', 'reader', 'capped',
+    'n_numeric', 'n_categorical', 'n_string', 'n_other', 'reader', 'screen', 'capped',
 )  # fmt: skip
+# What a table needs before an agent reads it: a frame, a response and a possible grouping
+# column. The discards go to `shards/excluded_prescreen.csv` under the reason given here.
+SCREENS = {
+    'pass': None,
+    'no frame': 'unreadable format',
+    'under 3 rows': 'no grouping structure',
+    'one column': 'no grouping structure',
+    'no repeated column': 'no grouping structure',
+}
 MAX_MODELS_PER_OBJECT = 3
 
 # =====================================================================================
