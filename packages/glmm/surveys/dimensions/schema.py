@@ -101,8 +101,8 @@ DOMAINS = (
 )  # fmt: skip
 EXCLUSION_REASONS = (
     'no grouping structure', 'time series without replication', 'fewer than two groups',
-    'response missing or undocumented', 'derived or duplicated table', 'unreadable format',
-    'licence forbids redistribution', 'too large',
+    'response missing or undocumented', 'derived or duplicated table', 'simulated data',
+    'unreadable format', 'licence forbids redistribution', 'too large',
 )  # fmt: skip
 COLUMN_TYPES = ('categorical', 'ordered', 'continuous')  # what `types` may declare: `col=ordered`  # fmt: skip
 
@@ -119,9 +119,10 @@ ALLOWED: dict[str, dict[str, tuple[str, ...]]] = {
 }
 
 # `;`-separated lists of column names of the loaded table
-COLUMN_LIST_COLUMNS = ('grouping_factors', 'covariates', 'ignore')
-# `a:b;a:c`, every part a column name
-INTERACTION_COLUMN = 'interactions'
+COLUMN_LIST_COLUMNS = ('covariates', 'ignore')
+# `;`-separated lists of terms, a term a column name or `a:b` with every part a column name: a
+# grouping factor on the combination of two columns (`(1|Block:Variety)`) or an interaction
+TERM_COLUMNS = ('grouping_factors', 'interactions')
 # `col=categorical;col2=continuous`
 TYPES_COLUMN = 'types'
 
