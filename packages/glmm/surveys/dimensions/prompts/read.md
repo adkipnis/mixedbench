@@ -20,18 +20,27 @@ index random effects; the **response** is the column a documented model explains
    series without replication, or a grouping column has fewer than two groups, the object goes
    to the excluded shard with its reason. Likewise a response that is missing or undocumented,
    a table derived from another object of the same source (a summary, an aggregate, a subset),
-   a format the loader refuses, a licence that forbids redistribution, or a table too large to
-   hold in memory.
+   a table the documentation calls simulated (the survey measures real grouped data), a format
+   the loader refuses, a licence that forbids redistribution, or a table too large to hold in
+   memory.
 2. **The documented model.** The model the documentation fits or describes, verbatim in
    `formula` (lme4 syntax where the source gives one). Its response goes in `response`, what
    that column holds in `response_type` (not the family: a Poisson or negative binomial fit
    over counts is `count`; a binomial fit over successes out of trials is `binomial` with the
-   `trials` column named). Its grouping factors, covariates and interactions as `;`-lists of
-   column names; nested factors as two factors, the merge computes the relation.
+   `trials` column named; a transformed response such as `log(y)` names the raw column `y`).
+   Its grouping factors, covariates and interactions as `;`-lists of column names; nested
+   factors as two factors, the merge computes the relation; a random term on the combination
+   of two columns (`(1|Block:Variety)`, the whole plots of a split-plot) is the term
+   `Block:Variety`, which the merge builds from its parts. An observation-level random effect
+   (`(1|obs)` on a row id) is no grouping factor: its column goes in `ignore`, the term stays
+   in the formula. A nonlinear mixed model (a pharmacokinetic or growth curve fitted with
+   `nlme`) stays in the registry for its grouping: write the model in words with its
+   covariates in `formula`, open `notes` with `NONLINEAR:`, confidence at most `medium`.
 3. **Further documented models.** A second or third documented model is a further row with
    `model_index` 2 or 3; never more than three, the documented model first.
-4. **Columns to ignore.** Row ids, weights, alternate responses and derived columns in
-   `ignore`, so that the full-table column count excludes them.
+4. **Columns to ignore.** Row ids, weights, offsets, alternate responses and derived columns
+   in `ignore`, so that the full-table column count excludes them; an offset stays in the
+   formula as `offset(log(area))`.
 5. **Types the file cannot carry.** For delimited text, Excel and JSON, declare in `types`
    which columns are `categorical`, `ordered` or `continuous` where the documentation says
    so. For R, Stata and SPSS files declare only `ordered` factors (the help page says
@@ -40,7 +49,8 @@ index random effects; the **response** is the column a documented model explains
    exists for the dataset (posteriordb, Stan example models, a textbook's worked example), else
    `no`.
 7. **Domain, confidence, notes.** One domain tag for reporting; `high` confidence when the
-   documentation states the model, `medium` when it describes the design but not a model,
+   documentation states the model, `medium` when it describes the design but not a model or
+   when you recall the model from the book the page cites (name book and section in `notes`),
    `low` when you inferred the grouping factor from column names. Name what you read and any
    case these rules do not settle in `notes`, starting `RULE GAP:`.
 
