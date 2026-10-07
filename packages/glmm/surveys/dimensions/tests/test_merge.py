@@ -193,7 +193,7 @@ def test_every_merge_measures_the_registry_into_dimensions_and_columns(merger):
     assert [(r['model_index'], r['column'], r['type']) for r in columns][:5] == [
         ('1', 'breed', 'categorical'),
         ('1', 'feed', 'categorical'),
-        ('1', 'parity', 'categorical'),
+        ('1', 'parity', 'ordered'),  # declared in the shard: pyreadr drops R's ordering
         ('1', 'sick', 'binary'),
         ('2', 'region', 'categorical'),
     ]

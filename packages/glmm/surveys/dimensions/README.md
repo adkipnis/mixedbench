@@ -70,7 +70,7 @@ Key `source`, `object`, `model_index`. Agent columns, in order:
 | `covariates` | `;`-list of the documented model's covariate columns (main effects) |
 | `interactions` | `;`-list of `a:b` terms, every part a column name |
 | `ignore` | `;`-list of columns no model should use: row ids, weights, alternate responses |
-| `types` | `;`-list of `column=categorical` or `column=continuous` declarations for formats without column types (delimited text, Excel); blank where the file carries types |
+| `types` | `;`-list of `column=categorical`, `column=ordered` or `column=continuous` declarations for formats without column types (delimited text, Excel), and `ordered` for an R ordered factor, which `pyreadr` reads as unordered; blank otherwise |
 | `formula` | the documented model verbatim (lme4 syntax where the source gives one) |
 | `published_model` | `yes` when a published model specification exists (posteriordb, Stan example, textbook); else `no` |
 | `domain` | `ecology_biology` / `psychology_neuroscience` / `biomedicine` / `social_humanities` / `agriculture` / `education` / `economics` / `industry` / `other`; reporting only |
@@ -125,7 +125,7 @@ documented model, `d_all` over every column of `columns.csv`).
 
 Key `source`, `object`, `model_index`, `column`, with `tier`: every column of the table that is
 not the response, the trials, a grouping factor or ignored. `type` by one rule, in order:
-`ordered` for an ordered categorical; `binary` for exactly two distinct values; `categorical`
+`ordered` for an ordered categorical (declared in `types`, see above); `binary` for exactly two distinct values; `categorical`
 with `K` levels for a column the file or `types` declares categorical, a string column, or an
 integer column with at most 10 distinct values not declared continuous; `continuous` otherwise.
 `level` is `group` when the column is constant within every group of some grouping factor

@@ -87,7 +87,7 @@ EXCLUSION_REASONS = (
     'response missing or undocumented', 'derived or duplicated table', 'unreadable format',
     'licence forbids redistribution', 'too large',
 )  # fmt: skip
-COLUMN_TYPES = ('categorical', 'continuous')  # what `types` may declare: `col=categorical`
+COLUMN_TYPES = ('categorical', 'ordered', 'continuous')  # what `types` may declare: `col=ordered`  # fmt: skip
 
 ALLOWED: dict[str, dict[str, tuple[str, ...]]] = {
     'registry': {

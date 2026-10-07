@@ -73,6 +73,19 @@ def test_load_keeps_factor_levels_in_r_order(tmp_path):
     assert pets['age'].dtype.kind == 'i' and pets['weight'].dtype.kind == 'f'
     scores = loader.load(FIXTURE, 'scores')
     assert list(scores['grade'].cat.categories) == ['low', 'mid', 'high']
+    assert not scores['grade'].dtype.ordered
+
+
+def test_a_declared_ordered_column_keeps_its_levels_and_becomes_ordered(tmp_path):
+    """pyreadr cannot tell an ordered factor from a plain one, so the registry declares it:
+    an R factor keeps its level order, a plain column gets sorted levels."""
+    loader = Loader(tmp_path, fetch=serveCurrent)
+    scores = loader.load(FIXTURE, 'scores', types={'grade': 'ordered'})
+    assert scores['grade'].dtype.ordered
+    assert list(scores['grade'].cat.categories) == ['low', 'mid', 'high']
+    pets = loader.load(FIXTURE, 'pets', types={'age': 'ordered'})
+    assert pets['age'].dtype.ordered
+    assert list(pets['age'].cat.categories) == sorted(set(pets['age']))
 
 
 @needsRscript

@@ -33,8 +33,9 @@ index random effects; the **response** is the column a documented model explains
 4. **Columns to ignore.** Row ids, weights, alternate responses and derived columns in
    `ignore`, so that the full-table column count excludes them.
 5. **Types the file cannot carry.** For delimited text, Excel and JSON, declare in `types`
-   which columns are `categorical` and which `continuous` where the documentation says so;
-   leave R, Stata and SPSS files blank.
+   which columns are `categorical`, `ordered` or `continuous` where the documentation says
+   so. For R, Stata and SPSS files declare only `ordered` factors (the help page says
+   "ordered factor"; the reader loses the ordering) and leave the rest blank.
 6. **Published model.** `published_model` is `yes` when a published model specification
    exists for the dataset (posteriordb, Stan example models, a textbook's worked example), else
    `no`.

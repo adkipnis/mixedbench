@@ -31,7 +31,7 @@ DOC_FILES = {'.md', '.txt', '.rst', ''}  # text beside a data file
 ARCHIVES = ('.zip', '.tar.gz', '.tgz', '.tar')
 R_ERRORS = (PyreadrError, LibrdataError)  # LibrdataError is not a PyreadrError
 Reader = Literal['pyreadr', 'rscript', 'pandas']
-ColumnType = Literal['categorical', 'continuous']  # what a registry row may declare
+ColumnType = Literal['categorical', 'ordered', 'continuous']  # what a registry row may declare
 
 # Reads one data/ file the way utils::data() does and saves each object in it as its own .rds
 # Uses serialization v2 because librdata rejects v3
@@ -91,6 +91,7 @@ class Loader:
     def __init__(self, cache: Path, fetch: Callable[[str], bytes | None] | None = None):
         self.cache = Path(cache)
         self.fetch = fetch or self._getBytes
+        self._frames: dict[Source, dict[str, tuple[DataObject, pd.DataFrame | None]]] = {}
 
     def objects(self, source: Source) -> list[DataObject]:
         pairs = self._read(source).values()
@@ -100,16 +101,17 @@ class Loader:
         self, source: Source, name: str, types: Mapping[str, ColumnType] | None = None
     ) -> pd.DataFrame:
         """The object as one typed table: `types` declares what a file format without column
-        types (delimited text, Excel) cannot carry; a categorical gets sorted levels."""
+        types (delimited text, Excel) cannot carry, and `ordered` what pyreadr drops from an R
+        factor; a plain column declared categorical or ordered gets sorted levels."""
         obj, df = self._read(source)[name]
         if df is None:
             raise ValueError(f'{source.name} {source.pin} {obj.file}: {name!r} is no DataFrame')
         declared = {}
         for column, kind in (types or {}).items():
-            if kind == 'categorical':
-                declared[column] = df[column].astype('category')
-            else:
+            if kind == 'continuous':
                 declared[column] = pd.to_numeric(df[column])
+            else:  # a categorical keeps its levels under a CategoricalDtype without categories
+                declared[column] = df[column].astype(pd.CategoricalDtype(ordered=kind == 'ordered'))
         return df.assign(**declared)
 
     def help(self, source: Source, name: str) -> str:
@@ -233,7 +235,13 @@ class Loader:
         return sorted(files)
 
     def _read(self, source: Source) -> dict[str, tuple[DataObject, pd.DataFrame | None]]:
-        """Every data object of the source by name, with its frame."""
+        """Every data object of the source by name, with its frame; parsed once per source,
+        since one survey merge asks for a table several times and pyreadr is slow on factors."""
+        if source not in self._frames:
+            self._frames[source] = self._parse(source)
+        return self._frames[source]
+
+    def _parse(self, source: Source) -> dict[str, tuple[DataObject, pd.DataFrame | None]]:
         tree = self._tree(source)
         objects = {}
         for file in self._files(source, tree):
