@@ -65,6 +65,7 @@ def refusal(merger: Merger, shard: Path) -> pd.DataFrame:
         ({'response': 'cases', 'response_type': 'binomial'}, 'trials', 'binomial names its trials'),
         ({'response_type': 'count'}, 'response_type', 'weight is not integer-valued'),
         ({'model_index': '4'}, 'model_index', 'at most 3 models per object'),
+        ({'covariates': 'breed;herd'}, 'grouping_factors', 'herd is also a covariate'),
     ],
 )
 def test_a_reading_the_table_contradicts_is_refused_with_the_row_named(

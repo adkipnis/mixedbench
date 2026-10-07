@@ -263,6 +263,7 @@ class Merger:
         loaded = self.loader.load(source, row['object'], types)
         df = withComposites(loaded, splitList(row['grouping_factors']))
         problems += self.groupingProblems(line, row, df)
+        problems += self.roleProblems(line, row)
         problems += self.responseProblems(line, row, df)
         return problems
 
@@ -295,6 +296,19 @@ class Merger:
                     self.problem(line, 'grouping_factors', f'{factor} has no level with two rows')
                 )
         return problems
+
+    def roleProblems(self, line: int, row: pd.Series) -> list[dict]:
+        """A column is a grouping factor or a covariate, never both (SASmixed Cultivation's
+        `(1|Cult)` next to `Inoc * Cult` reads as the whole-plot term `Block:Cult`); a part of a
+        composite factor may be a covariate."""
+        covariates = set(splitList(row['covariates']))
+        for term in splitList(row['interactions']):
+            covariates |= set(term.split(':'))
+        return [
+            self.problem(line, 'grouping_factors', f'{factor} is also a covariate')
+            for factor in splitList(row['grouping_factors'])
+            if factor in covariates
+        ]
 
     def responseProblems(self, line: int, row: pd.Series, df: pd.DataFrame) -> list[dict]:
         """The response column shows what its declared type says."""
