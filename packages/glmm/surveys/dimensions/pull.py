@@ -86,15 +86,17 @@ class Puller:
         self.loader = loader or Loader(self.root / 'cache')
         self.frame = readFrame(self.root)
         self.tiers = tiers
-        self.labels = [label for label, tier in self.frame.tiers.items() if tier in tiers]
+        # frame order: tier, then the order of `sources.yaml`
+        self.order = sorted(
+            self.frame.tiers, key=lambda label: TIERS.index(self.frame.tiers[label])
+        )
+        self.labels = [label for label in self.order if self.frame.tiers[label] in tiers]
         self.rows: list[dict] = []
 
     def enumerate(self) -> None:
-        """One row per data object of every source of the pulled tiers, in frame order (tier,
-        then the order of `sources.yaml`), screened, the cap drawn per source among the passing
-        objects."""
-        labels = sorted(self.labels, key=lambda label: TIERS.index(self.frame.tiers[label]))
-        for label in labels:
+        """One row per data object of every source of the pulled tiers, in frame order,
+        screened, the cap drawn per source among the passing objects."""
+        for label in self.labels:
             objects = sorted(self.loader.objects(self.frame.sources[label]), key=lambda o: o.name)
             rows = [self._row(label, obj) for obj in objects]
             passing = [row['object'] for row in rows if row['screen'] == 'pass']
@@ -123,9 +125,7 @@ class Puller:
         """`candidates.csv` whole, and the screened-out objects as an exclusion shard; the rows
         of tiers not pulled are kept from the existing file, everything in frame order."""
         rows = self._kept() + self.rows
-        rows.sort(
-            key=lambda row: (TIERS.index(row['tier']), list(self.frame.tiers).index(row['source']))
-        )
+        rows.sort(key=lambda row: self.order.index(row['source']))
         self._write(self.root / 'candidates.csv', CANDIDATE_COLUMNS, rows)
         excluded = [self._exclusion(row) for row in rows if row['screen'] != 'pass']
         (self.root / 'shards').mkdir(exist_ok=True)
