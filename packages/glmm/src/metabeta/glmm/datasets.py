@@ -62,13 +62,19 @@ BASE_R = """
 tree <- commandArgs(trailingOnly = TRUE)[1]
 dir.create(file.path(tree, 'data'), recursive = TRUE, showWarnings = FALSE)
 dir.create(file.path(tree, 'man'), showWarnings = FALSE)
-items <- data(package = 'datasets')$results[, 'Item']
-for (name in sub(' .*', '', items))
-    saveRDS(get(name, envir = as.environment('package:datasets')),
-            file.path(tree, 'data', paste0(name, '.rds')), version = 2)
+items <- sort(sub(' .*', '', data(package = 'datasets')$results[, 'Item']), method = 'radix')
+# CO2 and co2 would be one file on a case-insensitive file system: the later name in C order
+# gets a tilde, which the loader strips again
+files <- ifelse(duplicated(tolower(items)), paste0(items, '~'), items)
+for (i in seq_along(items))
+    saveRDS(get(items[i], envir = as.environment('package:datasets')),
+            file.path(tree, 'data', paste0(files[i], '.rds')), version = 2)
 pages <- tools::Rd_db('datasets')
-for (page in names(pages))
-    writeLines(paste(as.character(pages[[page]]), collapse = ''), file.path(tree, 'man', page))
+stems <- tools::file_path_sans_ext(names(pages))
+pageFiles <- ifelse(duplicated(tolower(stems)), paste0(stems, '~'), stems)
+for (i in seq_along(pages))
+    writeLines(paste(as.character(pages[[i]]), collapse = ''),
+               file.path(tree, 'man', paste0(pageFiles[i], '.Rd')))
 """
 
 
@@ -292,10 +298,14 @@ class Loader:
 
     def _readDumped(self, rds: Path) -> Frames:
         """An .rds R saved; what librdata still rejects is no table (boot's cd4.nested, a list)."""
+        name = rds.stem.removesuffix('~')  # BASE_R marks base R's co2 beside CO2 with a tilde
         try:
-            return self._readR(rds)
+            frames = self._readR(rds)
         except R_ERRORS:
-            return {rds.stem: None}
+            return {name: None}
+        if not frames:  # a list object (base R's Harman23.cor) holds no table
+            return frames
+        return {name: frames[rds.stem]}
 
     @staticmethod
     def _rscript(script: str, *args: str) -> None:

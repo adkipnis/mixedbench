@@ -233,6 +233,19 @@ def test_base_r_objects_report_the_rscript_route_and_have_help_pages(tmp_path):
     assert 'Anderson' in page
 
 
+@needsRscript
+def test_base_r_names_differing_in_case_only_both_survive_the_dump(tmp_path):
+    """Base R holds CO2 (a grouped table) and co2 (a time series); on a case-insensitive file
+    system one `<name>.rds` would overwrite the other, as happened in the #23 pull."""
+    base = Source(kind='cran', name='datasets', pin='base')
+    loader = Loader(tmp_path, fetch=serveNothing)
+    objects = objectsByName(loader, base)
+    assert (objects['CO2'].n_rows, objects['CO2'].n_cols) == (84, 5)
+    assert (objects['co2'].n_rows, objects['co2'].n_cols) == (468, 1)  # the Mauna Loa series
+    assert 'Potvin' in loader.help(base, 'CO2')
+    assert 'Mauna Loa' in loader.help(base, 'co2')
+
+
 # ----------------------------------------------------------------------------------------------
 # url and git sources (#16)
 # ----------------------------------------------------------------------------------------------
