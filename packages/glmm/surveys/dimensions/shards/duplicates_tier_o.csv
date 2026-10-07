@@ -1,0 +1,3 @@
+"source_a","object_a","source_b","object_b","verdict","notes"
+"pmlb_boxing2","analcatdata_boxing2.tsv.gz","openml_444","dataset_444.pq","same","PMLB codes Judge, Official and the winner as integers, OpenML carries the labels (G._Hamada, Yes, de_la_Hoya); 132 rounds x judges, same order"
+"openml_4531","dataset_4531.pq","uci_189","data.csv","same","the Parkinsons telemonitoring table of Tsanas et al.; OpenML renames the punctuation of the column names (subject., Jitter..., Shimmer.dB.) and UCI keeps subject#, Jitter(%), Shimmer(dB); 5875 rows, 22 columns, same values"
