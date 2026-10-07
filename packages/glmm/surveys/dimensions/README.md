@@ -12,7 +12,7 @@ nothing is imported across surveys. Results: [`SUMMARY.md`](SUMMARY.md), regener
 |---|---|---|
 | `sources.yaml` | hand (#19) and discovery (#21) | the frame: tiers of pinned sources, cap, seed, dropped candidates, see below |
 | `candidates.csv` | `pull.py` | every enumerated data object with its counts, see below |
-| `help/`, `cache/` | `pull.py`, loader | untracked: one help page per kept object for the agents; downloads and extracted trees |
+| `help/`, `cache/` | `pull.py`, loader | untracked: one help page per kept object for the agents, the table's dtypes and first rows appended; downloads and extracted trees |
 | `shards/<table>_<label>.csv` | agents; `pull.py` writes `excluded_prescreen.csv` | one shard per reading run; `table` ∈ `registry`, `excluded`, `duplicates`, `dropped` |
 | `registry.csv` | `merge.py` | one row per dataset and documented model, at most three per object |
 | `excluded.csv` | `merge.py` | every screened-out object with a categorical reason |
@@ -106,16 +106,16 @@ Key `source`, `object`, `model_index`. Agent columns, in order:
 | `response` | column name of the response |
 | `response_type` | `continuous` / `binary` / `count` / `binomial` / `ordinal` / `categorical`; what the response column holds, not the family fitted to it |
 | `trials` | column name of the trials for a `binomial` response, blank otherwise |
-| `grouping_factors` | `;`-list of column names whose levels index random effects, as documented |
+| `grouping_factors` | `;`-list of the columns whose levels index random effects, as documented; a random term on the combination of two columns (lme4's `(1\|Block:Variety)`, the whole plots of a split-plot) is `Block:Variety`, which the merge builds from its parts |
 | `covariates` | `;`-list of the documented model's covariate columns (main effects) |
 | `interactions` | `;`-list of `a:b` terms, every part a column name |
 | `ignore` | `;`-list of columns no model should use: row ids, weights, alternate responses |
 | `types` | `;`-list of `column=categorical`, `column=ordered` or `column=continuous` declarations for formats without column types (delimited text, Excel), and `ordered` for an R ordered factor, which `pyreadr` reads as unordered; blank otherwise |
-| `formula` | the documented model verbatim (lme4 syntax where the source gives one) |
+| `formula` | the documented model verbatim (lme4 syntax where the source gives one); a nonlinear mixed model in words, naming the model and its covariates, the row kept for its grouping |
 | `published_model` | `yes` when a published model specification exists (posteriordb, Stan example, textbook); else `no` |
 | `domain` | `ecology_biology` / `psychology_neuroscience` / `biomedicine` / `social_humanities` / `agriculture` / `education` / `economics` / `industry` / `other`; reporting only |
 | `confidence` | `high` / `medium` / `low` |
-| `notes` | free text: the documentation read, cases the prompt does not settle (`RULE GAP:`) |
+| `notes` | free text: the documentation read, cases the prompt does not settle (`RULE GAP:`); `NONLINEAR:` opens the note of a nonlinear mixed model |
 
 Script columns the merge fills: `tier` (from `sources.yaml`), `sources` (`source:object` of
 every confirmed duplicate folded into the row, the row's own first), `reader` (the loader's
@@ -126,7 +126,7 @@ route: `pyreadr`, `rscript` or `pandas`).
 Key `source`, `object`. Agent columns `source`, `object`, `reason`, `detail`; the merge adds
 `tier`. `reason` ∈ `no grouping structure` / `time series without replication` /
 `fewer than two groups` / `response missing or undocumented` / `derived or duplicated table` /
-`unreadable format` / `licence forbids redistribution` / `too large`. An object is in the
+`simulated data` / `unreadable format` / `licence forbids redistribution` / `too large`. An object is in the
 registry or in the exclusions, never both: the shard that would put it in the second file is
 refused. To re-file a misjudged object, drop it first (below).
 
@@ -159,7 +159,8 @@ repeated on each of its factors: `n_factors`, `relation` (`single` / `nested` / 
 `mixed`; a pair is nested when every level of one factor lies in one level of the other, the
 row is nested or crossed when every pair is, mixed otherwise), `d_doc` and `d_all` (continuous
 and binary columns count 1, a categorical K − 1, an interaction the product; `d_doc` over the
-documented model, `d_all` over every column of `columns.csv`).
+documented model, `d_all` over every column of `columns.csv` plus the documented interactions,
+so never below `d_doc`).
 
 ## `columns.csv`
 
@@ -188,8 +189,8 @@ read from `../practice/quantiles.yaml` at merge time.
 
 Header equal to the agent columns; required fields; allowed values; `model_index` an integer
 from 1 to 3; a dropped object is in `registry.csv` or `excluded.csv`; the source is in `sources.yaml` and the object in the source; every named column
-exists in the loaded table; each grouping factor has at least two levels and a level with two
-or more rows; the response shows its declared type (`continuous` numeric, `binary` two
+exists in the loaded table (every part of an `a:b` term); each grouping factor, a composite
+built from its parts, has at least two levels and a level with two or more rows; the response shows its declared type (`continuous` numeric, `binary` two
 distinct values, `count` and `binomial` non-negative integers, `ordinal` at most 10 distinct
 values, `categorical` not a float column); a `binomial` row names integer `trials` the
 response never exceeds; the object is not in the rival file. A failing shard is refused with
