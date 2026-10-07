@@ -1,3 +1,3 @@
 "source","object","reason","detail"
-"mlmRev","s3bbx","response missing or undocumented","covariates only; the simulated responses are in the separate matrix s3bby"
-"mlmRev","s3bby","no grouping structure","matrix of 100 simulated 0/1 response columns with no id or grouping column; grouping lives in s3bbx"
+"mlmRev","s3bbx","simulated data","covariates only; the simulated responses are in the separate matrix s3bby"
+"mlmRev","s3bby","simulated data","matrix of 100 simulated 0/1 response columns with no id or grouping column; grouping lives in s3bbx"
