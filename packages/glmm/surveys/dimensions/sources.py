@@ -30,6 +30,7 @@ def readFrame(root: Path) -> Frame:
                 pin=str(entry['pin']),
                 checksum=entry.get('checksum'),
                 path=entry.get('path'),
+                file=entry.get('file'),
             )
             caps[label] = entry.get('cap', file.get('cap'))
     return Frame(tiers, sources, caps, file['seed'])
