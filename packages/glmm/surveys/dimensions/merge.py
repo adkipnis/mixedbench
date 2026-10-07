@@ -19,6 +19,7 @@ from pathlib import Path
 
 import pandas as pd
 import yaml
+from measure import COLUMN_COLUMNS, DIMENSION_COLUMNS, Measurer, parseTypes, splitList
 from metabeta.glmm.datasets import DataObject, Loader, Source
 from schema import (
     ALLOWED,
@@ -33,6 +34,7 @@ from schema import (
     TYPES_COLUMN,
     Table,
 )
+from summarise import Summariser
 
 # =====================================================================================
 # globals
@@ -120,7 +122,7 @@ def readSources(root: Path) -> tuple[dict[str, str], dict[str, Source]]:
 
 
 # =====================================================================================
-# pipeline: shard -> validate -> upsert -> reconcile duplicates
+# pipeline: shard -> validate -> upsert -> reconcile duplicates -> measure -> summarise
 # =====================================================================================
 class Merger:
     def __init__(self, root: Path, loader: Loader | None = None) -> None:
@@ -257,7 +259,7 @@ class Merger:
         if row['object'] not in self.objects(row['source']):
             return [self.problem(line, 'object', f'not an object of {row["source"]}')]
         source = self.sources[row['source']]
-        types = self.parseTypes(row[TYPES_COLUMN])
+        types = parseTypes(row[TYPES_COLUMN])
         problems = []
         for kind in types.values():
             if kind not in COLUMN_TYPES:
@@ -277,8 +279,8 @@ class Merger:
         """Every column a row names, with the shard column it was named in."""
         named = [('response', row['response']), ('trials', row['trials'])]
         for col in COLUMN_LIST_COLUMNS:
-            named += [(col, name) for name in self.splitList(row[col])]
-        for interaction in self.splitList(row[INTERACTION_COLUMN]):
+            named += [(col, name) for name in splitList(row[col])]
+        for interaction in splitList(row[INTERACTION_COLUMN]):
             named += [(INTERACTION_COLUMN, name) for name in interaction.split(':')]
         named += [(TYPES_COLUMN, name) for name in types]
         return [
@@ -290,7 +292,7 @@ class Merger:
     def groupingProblems(self, line: int, row: pd.Series, df: pd.DataFrame) -> list[dict]:
         """A grouping factor has at least two levels and a level with two or more rows."""
         problems = []
-        for factor in self.splitList(row['grouping_factors']):
+        for factor in splitList(row['grouping_factors']):
             sizes = df[factor].value_counts()
             if len(sizes) < 2:
                 problems.append(self.problem(line, 'grouping_factors', f'{factor} has one level'))
@@ -330,16 +332,6 @@ class Merger:
         if 'sources' in self.table.scriptColumns:
             self.shard['sources'] = self.shard['source'] + ':' + self.shard['object']
 
-    @staticmethod
-    def splitList(text: str) -> list[str]:
-        return [t.strip() for t in text.split(';') if t.strip()]
-
-    @staticmethod
-    def parseTypes(text: str) -> dict[str, str]:
-        """`col=categorical;col2=continuous` -> {col: kind}."""
-        pairs = [entry.partition('=') for entry in Merger.splitList(text)]
-        return {col.strip(): kind.strip() for col, _, kind in pairs}
-
     # ---------------------------------------------------------------------------------
     # append
     # ---------------------------------------------------------------------------------
@@ -356,6 +348,7 @@ class Merger:
         self.flagged = 0
         if self.table.name in RECONCILED:
             self.reconcile()
+        self.measure()
 
     def supersede(self) -> None:
         """The shard's objects leave the files this merge wins over."""
@@ -428,6 +421,23 @@ class Merger:
     def signature(self, key: Key) -> tuple[int, tuple[int, ...]]:
         df = self.loader.load(self.sources[key[0]], key[1])
         return (len(df), tuple(sorted(df.nunique())))
+
+    # ---------------------------------------------------------------------------------
+    # measure: registry rows -> dimensions.csv, columns.csv
+    # ---------------------------------------------------------------------------------
+    def measure(self) -> None:
+        """Every merge measures the whole registry from the loaded tables; nothing is typed."""
+        registry = self.canonical(TABLES['registry'])
+        dimensions, columns = [], []
+        for _, row in registry.iterrows():
+            types = parseTypes(row['types'])
+            df = self.loader.load(self.sources[row['source']], row['object'], types)
+            measurer = Measurer(df, row.to_dict())
+            dimensions += measurer.dimensions()
+            columns += measurer.columns()
+        writeCsv(pd.DataFrame(dimensions, columns=DIMENSION_COLUMNS), self.root / 'dimensions.csv')  # fmt: skip
+        writeCsv(pd.DataFrame(columns, columns=COLUMN_COLUMNS), self.root / 'columns.csv')
+        Summariser(self.root, registry, self.canonical(TABLES['excluded'])).flush()
 
     def flush(self) -> None:
         new = len(self.shard) - self.replaced
