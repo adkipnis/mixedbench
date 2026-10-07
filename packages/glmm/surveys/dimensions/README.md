@@ -10,9 +10,9 @@ nothing is imported across surveys. Results: [`SUMMARY.md`](SUMMARY.md), regener
 
 | file | written by | content |
 |---|---|---|
-| `sources.yaml` | discovery and hand (#19, #21) | the frame: tiers of pinned sources, see below |
-| `candidates.csv` | pull script (#19) | every enumerated data object with its counts |
-| `help/`, `cache/` | pull script, loader | untracked: documentation per object for the agents; downloads and extracted trees |
+| `sources.yaml` | hand (#19) and discovery (#21) | the frame: tiers of pinned sources, cap, seed, dropped candidates, see below |
+| `candidates.csv` | `pull.py` | every enumerated data object with its counts, see below |
+| `help/`, `cache/` | `pull.py`, loader | untracked: one help page per kept object for the agents; downloads and extracted trees |
 | `shards/<table>_<label>.csv` | agents | one shard per reading run; `table` ∈ `registry`, `excluded`, `duplicates`, `dropped` |
 | `registry.csv` | `merge.py` | one row per dataset and documented model, at most three per object |
 | `excluded.csv` | `merge.py` | every screened-out object with a categorical reason |
@@ -22,13 +22,14 @@ nothing is imported across surveys. Results: [`SUMMARY.md`](SUMMARY.md), regener
 | `columns.csv` | `merge.py` via `measure.py` | one row per registry row and covariate column, see below |
 | `quantiles.yaml`, `SUMMARY.md` | `merge.py` via `summarise.py` | every axis pooled, per tier and without agridat; the summary from `SUMMARY.template.md`, which holds no digit |
 | `prompts/read.md` | | what a reading agent gets and writes |
-| `schema.py` | | file contract and allowed values |
+| `schema.py`, `sources.py` | | file contract and allowed values; the frame read from `sources.yaml` |
 | `measure.py`, `summarise.py` | | what the merge measures from a loaded table, and how it reports it |
 | `tests/` | | pytest, run by hand, not in CI: `uv run pytest packages/glmm/surveys/dimensions` |
 
 Agents read documentation and write shards; `merge.py` is the only writer of the canonical CSVs.
 
 ```
+uv run python packages/glmm/surveys/dimensions/pull.py
 uv run python packages/glmm/surveys/dimensions/merge.py packages/glmm/surveys/dimensions/shards/<shard>.csv [--root DIR]
 ```
 
@@ -40,19 +41,45 @@ repositories). Under each tier, one entry per source keyed by its **label**, the
 shard row names:
 
 ```yaml
+cap: 40
+seed: 0
 tiers:
   R:
-    lme4: {kind: cran, pin: 1.1-37}
-  D:
-    smith_2019_dryad: {kind: url, name: https://datadryad.org/.../data.zip, pin: <sha256>}
+    lme4: {kind: cran, pin: 2.0-6}
+    agridat: {kind: cran, pin: '1.26', cap: 40}
   E:
     stan_examples: {kind: git, name: https://github.com/stan-dev/example-models, pin: a1b2c3d, path: ARM}
+  D:
+    smith_2019_dryad: {kind: url, name: https://datadryad.org/.../data.zip, pin: <sha256>}
+dropped:
+  - {tier: E, name: some-collection, reason: registration wall}
 ```
 
 `kind` ∈ `cran` / `git` / `url` as the loader's `Source`; `name` defaults to the label (a CRAN
-package name); `pin` is the CRAN version, git revision or the file's sha256; `checksum`
-(optional) pins a CRAN or git archive; `path` (optional) narrows a git or url tree. Caps,
-seeds and dropped candidates are added by #19 and #21.
+package name); `pin` is the CRAN version, git revision or the file's sha256 (base R's
+`datasets` is pinned to the R version that dumps it); `checksum` (optional) pins a CRAN or
+git archive; `path` (optional) narrows a git or url tree. `cap` is the most objects read from
+one source, so that no single collection (agridat, about 400 tables) dominates: a source with
+more objects keeps a draw of `cap` of them made with `random.Random(seed)`, `seed` top-level, over its sorted
+object names, the top-level `cap` applying unless the entry sets its own. `dropped` lists every
+candidate source the discovery step (#21) considered and left out, with the reason.
+
+Tier R (#19) is a census of two package groups at the CRAN versions of 2026-10-07. Mixed-model
+packages: lme4, nlme, mlmRev, MEMSS, glmmTMB, brms, GLMMadaptive, nlmeU, SASmixed, HLMdiag,
+ordinal, geepack, agridat. General data packages with grouped tables: MASS, carData, lattice,
+HSAUR3, faraway, boot, gamlss.data, medicaldata, languageR, and base R's `datasets`.
+GLMMadaptive ships no data objects and so has no row in `candidates.csv`.
+
+## `candidates.csv`
+
+Key `source`, `object`; written whole by `pull.py` on every run, in frame order. Per
+enumerated data object: `tier`, `source`, `pin`, `object`, `file` (the data file inside the
+source tree), `n_rows`, `n_cols` (blank where the loader cannot make a DataFrame of the
+object, a table of more than two dimensions), the column counts by dtype `n_numeric`,
+`n_categorical`, `n_string`, `n_other` (bool, datetime), `reader` (the loader's route,
+`pyreadr` / `rscript` / `pandas`) and `capped`: `yes` for the objects a source's cap left
+out, which stay listed as the screening denominator but get no help page and are not read.
+The help page of every other object is at `help/<source>/<object>.txt`.
 
 ## `registry.csv`
 

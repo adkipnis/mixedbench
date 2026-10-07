@@ -70,6 +70,13 @@ DROPPED = Table(
 )
 
 TABLES = {t.name: t for t in (REGISTRY, EXCLUDED, DUPLICATES, DROPPED)}
+
+# One row per data object the pull script enumerates in a kept source; `capped` is `yes` for
+# the objects a source's cap left out, which stay listed as the screening denominator.
+CANDIDATE_COLUMNS = (
+    'tier', 'source', 'pin', 'object', 'file', 'n_rows', 'n_cols',
+    'n_numeric', 'n_categorical', 'n_string', 'n_other', 'reader', 'capped',
+)  # fmt: skip
 MAX_MODELS_PER_OBJECT = 3
 
 # =====================================================================================
