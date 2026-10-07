@@ -1,0 +1,4 @@
+"source_a","object_a","source_b","object_b","verdict","notes"
+"lme4","Pastes","mixedmodels_jl","pastes.arrow","same","MixedModels.jl drops lme4's derived sample column (batch:cask); 60 rows, same strength, batch and cask"
+"lme4","grouseticks","mixedmodels_jl","grouseticks.arrow","same","MixedModels.jl drops lme4's derived cHEIGHT (centred height) and lower-cases the names; 403 rows"
+"mlmRev","Contraception","mixedmodels_jl","contra.arrow","same","MixedModels.jl drops the woman id and renames district to dist; 1934 rows, same use, livch, age and urban"
