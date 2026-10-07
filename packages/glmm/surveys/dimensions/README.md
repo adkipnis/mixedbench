@@ -10,7 +10,8 @@ nothing is imported across surveys. Results: [`SUMMARY.md`](SUMMARY.md), regener
 
 | file | written by | content |
 |---|---|---|
-| `sources.yaml` | hand (#19) and discovery (#21) | the frame: tiers of pinned sources, cap, seed, dropped candidates, see below |
+| `sources.yaml` | hand (#19) and discovery (#21) | the frame: tiers of pinned sources, cap, seed, dropped candidates, the Tier O keyword net, see below |
+| `deposits.csv` | `deposits.py` | Tier D: the 60 seeded, stratified draws of the practice survey's deposit-naming papers, see below |
 | `candidates.csv` | `pull.py` | every enumerated data object with its counts, see below |
 | `help/`, `cache/` | `pull.py`, loader | untracked: one help page per kept object for the agents, the table's dtypes and first rows appended; downloads and extracted trees |
 | `shards/<table>_<label>.csv` | agents; `pull.py` writes `excluded_prescreen.csv` | one shard per reading run; `table` ∈ `registry`, `excluded`, `duplicates`, `dropped` |
@@ -21,7 +22,7 @@ nothing is imported across surveys. Results: [`SUMMARY.md`](SUMMARY.md), regener
 | `dimensions.csv` | `merge.py` via `measure.py` | one row per registry row and grouping factor, see below |
 | `columns.csv` | `merge.py` via `measure.py` | one row per registry row and covariate column, see below |
 | `quantiles.yaml`, `SUMMARY.md` | `merge.py` via `summarise.py` | every axis pooled, per tier and without agridat; the summary from `SUMMARY.template.md`, which holds no digit |
-| `prompts/read.md` | | what a reading agent gets and writes |
+| `prompts/discover.md`, `prompts/read.md` | | what the discovery agent and a reading agent get and write |
 | `schema.py`, `sources.py` | | file contract and allowed values; the frame read from `sources.yaml` |
 | `measure.py`, `summarise.py` | | what the merge measures from a loaded table, and how it reports it |
 | `tests/` | | pytest, run by hand, not in CI: `uv run pytest packages/glmm/surveys/dimensions` |
@@ -29,6 +30,7 @@ nothing is imported across surveys. Results: [`SUMMARY.md`](SUMMARY.md), regener
 Agents read documentation and write shards; `merge.py` is the only writer of the canonical CSVs.
 
 ```
+uv run python packages/glmm/surveys/dimensions/deposits.py
 uv run python packages/glmm/surveys/dimensions/pull.py
 uv run python packages/glmm/surveys/dimensions/merge.py packages/glmm/surveys/dimensions/shards/<shard>.csv [--root DIR]
 ```
@@ -48,6 +50,7 @@ tiers:
     agridat: {kind: cran, pin: '1.26', cap: 50}
   E:
     stan_examples: {kind: git, name: https://github.com/stan-dev/example-models, pin: a1b2c3d, path: ARM}
+    pingouin: {kind: git, name: https://github.com/raphaelvallat/pingouin, pin: b1c2d3e, path: src/pingouin/datasets, licence: GPL-3.0}
   D:
     smith_2019_dryad: {kind: url, name: https://datadryad.org/.../data.zip, pin: <sha256>}
 dropped:
@@ -63,14 +66,82 @@ source with more objects passing the pre-screen (below) keeps a draw of `cap` of
 `random.Random(seed)`, `seed` top-level, over their sorted names. Only agridat (about 390 field
 trials, else 38% of the pool) is capped; ten Tier R packages hold more than 40 objects, so a cap
 for all would have discarded grouped tables of faraway and MASS at random (decided 2026-10-07).
+`licence` (optional) is the collection's licence as its LICENSE file, readme or DESCRIPTION
+states it, or `not stated` once the collection was read and carries none; an absent key means
+nobody has looked yet. The survey redistributes no data, so the field records terms of use to
+respect and sources to cite, not permission to publish. #21 filled it where GitHub detects a
+LICENSE file and for the CRAN package of Tier T; #24 and #25 fill the rest from the fetched
+tree (Tier R from DESCRIPTION), #26 the Tier D entries from the repository APIs (Dryad is CC0
+throughout), #24 the Tier O hits from OpenML's and UCI's licence fields.
 `dropped` lists every candidate source the discovery step (#21) considered and left out, with
-the reason.
+the reason. `nets` is the Tier O keyword net (#24): the repositories, the column-name keywords
+a table must document as its clustering column, and the cap over the three repositories
+together; it is a record of a search, not a source, so `readFrame` leaves it alone and #24
+adds the resolved hits as `url` entries under `O`.
 
 Tier R (#19) is a census of two package groups at the CRAN versions of 2026-10-07. Mixed-model
 packages: lme4, nlme, mlmRev, MEMSS, glmmTMB, brms, GLMMadaptive, nlmeU, SASmixed, HLMdiag,
 ordinal, geepack, agridat. General data packages with grouped tables: MASS, carData, lattice,
 HSAUR3, faraway, boot, gamlss.data, medicaldata, languageR, and base R's `datasets`.
 GLMMadaptive ships no data objects and so has no row in `candidates.csv`.
+
+Tiers E and T (#21) come from the discovery step: one Opus agent with web search ran
+`prompts/discover.md` over the spec's fixed list and about twenty further queries; every
+collection it considered is a kept entry or a `dropped` row. Kept URLs were fetched once more
+with the loader's user agent and pinned by script (sha256 of the file, HEAD revision of the
+repository on 2026-10-07). Tier E: posteriordb, the Stan example models as two entries (`ARM`
+and `bugs_examples`; no BDA folder exists), pingouin, the PyMC examples' data, bambi's thirteen
+figshare files (bambi downloads them at load time; its own registry holds the checksums, which
+the download confirmed), and the forty datasets of Stata's [ME] manual, which the agent added.
+Tier T: Hox (git), Snijders & Bosker, Goldstein's third edition and its partnership data, nine
+teaching datasets of the Bristol Centre for Multilevel Modelling, Rabe-Hesketh & Skrondal,
+Singer & Willett (UCLA mirror), and three Zuur et al. books (the agent had missed Zuur; found
+by hand on highstat.com). Gelman's and West's author sites answer 403 to the loader as well as
+to the agent, so ARM data come through `stan_arm` and `ros`, West, Welch & Galecki through
+their CRAN package `WWGbook`.
+
+A second pass by hand on 2026-10-07 asked which collections a reviewer would miss and added
+seven (every URL fetched and pinned the same way). Tier E: the 25 further datasets of Stata's
+[XT] panel-data manual, and MixedModels.jl's dataset artifact (one tar.gz of 17 Arrow files on
+OSF; the agent had dropped it as an lme4 mirror, but kb07, mrk17_exp1, ml1m, oxide and d3 are
+its own). Tier T: McElreath's *Statistical Rethinking* (`rethinking` is GitHub-only, so not
+Tier R; 49 semicolon-separated csv), Fitzmaurice, Laird & Ware's *Applied Longitudinal
+Analysis* (one `.dta` per dataset, 36 of them, the description beside each as `<name>.txt`),
+Gelman, Hill & Vehtari's *Regression and Other Stories* (`ROS-Examples`, 106 data files under
+`<example>/data`, a 225 MB repository that overlaps `stan_arm`), `WWGbook`, and the seven
+APTS course files of Diggle (three longitudinal). Recorded as dropped in that pass: statsmodels
+(only two panel tables), Hedeker & Gibbons (host down), Verbeke & Molenberghs (Springer extras
+not locatable), Littell et al. (`SASmixed`, Tier R), Kruschke (scripts). For the pulls of #24
+and #25 the loader still lacks readers for SPSS `.sav` (Hox; the spec says ask before adding
+`pyreadstat`), old Excel `.xls` (Goldstein, Zuur), fixed-width `.dat` with an `.asc` layout
+(Bristol CMM), Stan data json (a dict of arrays, not a table), R dumps outside a CRAN `data/`
+folder (Stan examples), gzipped TSV (PMLB), semicolon-separated csv (`rethinking`) and Arrow
+inside a tar.gz whose URL carries no suffix (`mixedmodels_jl`, `pyarrow` is a dependency to
+ask about); each is that ticket's decision, read or `unreadable format`.
+
+Tier O (#21) starts with v0.5's four PMLB tables (`analcatdata` apnea 1 and 2 by subject,
+boxing 1 and 2 by judge; Simonoff, *Analyzing Categorical Data*, 2003), pinned at PMLB's commit of
+2026-10-07. PMLB keeps its data in Git LFS: the raw URL at a commit returns an LFS pointer,
+the `media.githubusercontent.com` URL the file, whose sha256 is the LFS object id. The files are
+gzipped TSV, which the loader's readers do not open yet, and PMLB's `metadata.yaml` for them is
+empty; both are #24's to settle before the Tier O pull. Tier D entries are added by #26 from
+`deposits.csv`, labelled `<paper_id>_<repository>`.
+
+## `deposits.csv`
+
+Key `paper_id`; written whole by `deposits.py`. The Tier D frame is every paper of the practice
+survey's `papers.csv` whose text (`../practice/texts/<paper_id>.txt`) names a Dryad, OSF, Zenodo
+or figshare deposit by DOI or URL, found by one regex and normalised to one identifier per
+deposit (the OSF five-character id, `zenodo.org/records/<n>`, DOIs in lower case). The match is
+mechanical and therefore also catches preregistrations and deposits a paper merely cites; #26
+excludes those with their reason and never replaces them, as the spec says, and that loss is
+a Tier D finding. Per stratum, 15 papers are drawn with `random.Random(seed).sample` over the
+sorted ids (seed 0), so rerunning the script reproduces the file byte for byte. One row per
+drawn paper: `stratum`, `repository` and `url` as `;`-lists over the paper's distinct deposits
+in text order, `context` (the text window around each match, joined with ` || `, so #26 sees
+which link is the data), `seed`, `n_frame` (deposit-naming papers of the stratum). Equal
+cells rather than proportional ones, because the tier exists to compare deposited data with
+package data and every stratum should stay readable (decided 2026-10-07).
 
 ## `candidates.csv`
 
