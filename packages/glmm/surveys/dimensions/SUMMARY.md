@@ -193,7 +193,7 @@ binary count one, a categorical its levels less one, an interaction the product.
 |---|---|---|---|---|---|---|---|---|---|
 | pooled | 364 | 0 | 0 | 0 | 5 | 20 | 35 | 14966 | – |
 | tier R | 252 | 0 | 0 | 1 | 5 | 20 | 35 | 14966 |  |
-| tier E | 99 | 0 | 0 | 0 | 5 | 16 | 22 | 555 |  |
+| tier E | 99 | 0 | 0 | 0 | 4 | 16 | 21 | 555 |  |
 | tier O | 13 | 2 | 2 | 2 | 19 | 59 | 2445 | 2445 |  |
 | without agridat | 336 | 0 | 0 | 1 | 5 | 20 | 35 | 14966 |  |
 

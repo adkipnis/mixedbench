@@ -335,7 +335,9 @@ Rules settled from the agents' `RULE GAP` notes:
   the replicate is no blocking factor (mead.germination) the object is excluded.
 - GEE fits (geepack) are filed as the lme4 equivalent with a random intercept on the cluster,
   `notes` saying the source fits GEE. A censored survival response (brms kidney) stays as
-  `continuous` with the censoring indicator in `ignore`.
+  `continuous`; the event indicator belongs to the response in `formula` (`Surv(time, cens)`)
+  and goes in `ignore`, since the schema has no indicator slot and the indicator is no design
+  column (confirmed for all survival rows in #24).
 - Help pages calling their data "constructed" or "probably constructed" (SASmixed Animal, BIB,
   IncBlk) stay in the registry: the page itself only guesses, and only data the source states
   to be simulated are excluded (decided 2026-10-07). Aggregate responses on a real grouping
@@ -599,10 +601,12 @@ Changed, mostly by reading the Stata manual entries more closely than the agents
   subject random effect sits on clearance alone; covariates reduced, formula rewritten.
 - pisa2000: the school mean `mn_isei` belongs to the model; it is an `egen` column not in
   the table, so it is in the formula only.
-- catheter and time_to_attrition: the failure indicator (`infect`, `left`) is part of the
-  survival response and is no longer ignored; time_to_attrition's covariates are sentiment
-  and level, gender stratifies the baseline hazard, intention is not in the model. This
-  departs from the #22 kidney convention (indicator in `ignore`) for these two rows.
+- catheter and time_to_attrition: the failure indicator (`infect`, `left`) is written into
+  the survival response of the formula; time_to_attrition's covariates are sentiment and
+  level, gender stratifies the baseline hazard, intention is not in the model. The indicator
+  stays in `ignore` under the #22 kidney convention, which Alex confirmed for all eight
+  survival rows after a first version of these two rows had dropped it (and, by mistake,
+  catheter's `stset` variables).
 - pig and radon_mn: Stata's `|| id: week` and the Stan code fit independent intercept and
   slope deviations, written `(1 + week || id)` and `(1 + floor_measure || county_idx)`;
   employee likewise `(1 | team) + (0 + lmx | team)` (the blind reading's row, re-filed).
@@ -616,9 +620,13 @@ Changed, mostly by reading the Stata manual entries more closely than the agents
 - long_heating_data and pancreatitis: excluded as `no grouping structure` (the blind
   reading): a fixed softmax choice model on a single choice occasion, and country-specific
   random walks over age.
-- srrs2.dat: Alex picked the blind reading's `county`, reasoning that the Ch.12 analysis
-  subsets to Minnesota; the object is the unsliced national file, where county names repeat
-  across states, so the row keeps `state:county` pending his confirmation.
+- srrs2.dat: Alex first picked the blind reading's `county`, since the Ch.12 analysis
+  subsets to Minnesota; the object is the unsliced national file (12777 rows, 469 state:county
+  pairs, 59 county names in more than one state), so `county` alone would merge namesake
+  counties across states. He confirmed `state:county` at medium: the registry classifies the
+  unsliced object, and `(1 | state:county)` is a state-disambiguated county grouping, not a
+  state-level effect. The Minnesota model itself is in the registry as radon.data.json,
+  radon_mn and the PyMC radon.csv.
 
 Of the 20 drawn rows, 11 stood and 9 changed; of the six adjudications the registry won
-two, the blind reading four (one pending).
+three, the blind reading three.
