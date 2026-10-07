@@ -8,7 +8,9 @@ archive (`deposit.zip`, `example-c0ffee1.tar.gz`, built by `make_fixtures.py`).
 from __future__ import annotations
 
 import hashlib
+import io
 import shutil
+import tarfile
 from pathlib import Path
 
 import pytest
@@ -55,11 +57,45 @@ def test_objects_enumerates_the_tarball(tmp_path):
     """The census denominator: every data object listed with its counts."""
     loader = Loader(tmp_path, fetch=serveCurrent)
     objects = objectsByName(loader, FIXTURE)
-    assert set(objects) == {'pets', 'scores', 'trials'}
+    assert set(objects) == {'pets', 'scores', 'trials', 'visits', 'wide'}
     pets, scores, trials = objects['pets'], objects['scores'], objects['trials']
     assert (pets.file, pets.n_rows, pets.n_cols) == ('data/pets.rda', 6, 3)
     assert (scores.file, scores.n_rows, scores.n_cols) == ('data/scores.rds', 4, 2)
     assert (trials.file, trials.n_rows, trials.n_cols) == ('data/trials.csv', 5, 2)
+
+
+@needsRscript
+def test_an_r_file_librdata_rejects_is_re_saved_by_r(tmp_path):
+    """geepack's muscatine is a plain data frame librdata calls an unrecognized object; the
+    Rscript dump turns it into a version-2 .rds pyreadr reads (spec #14, user story 15)."""
+    loader = Loader(tmp_path, fetch=serveCurrent)
+    visits = objectsByName(loader, FIXTURE)['visits']
+    assert (visits.reader, visits.n_rows, visits.n_cols) == ('rscript', 3, 2)
+    assert list(loader.load(FIXTURE, 'visits')['clinic'].cat.categories) == ['north', 'south']
+
+
+@needsRscript
+def test_an_object_pyreadr_cannot_frame_is_listed_without_counts(tmp_path):
+    """gamlss.data's aep holds a matrix column; the object stays in the census with None
+    counts rather than failing the whole source."""
+    loader = Loader(tmp_path, fetch=serveCurrent)
+    wide = objectsByName(loader, FIXTURE)['wide']
+    assert (wide.reader, wide.n_rows, wide.n_cols) == ('pyreadr', None, None)
+
+
+def test_a_package_without_a_data_folder_has_no_objects(tmp_path):
+    """GLMMadaptive ships no data; the census lists nothing for it instead of failing."""
+    buffer = io.BytesIO()
+    with tarfile.open(fileobj=buffer, mode='w:gz') as tar:
+        info = tarfile.TarInfo('nodata/DESCRIPTION')
+        info.size = len(b'Package: nodata\n')
+        tar.addfile(info, io.BytesIO(b'Package: nodata\n'))
+
+    def serveNodata(url: str) -> bytes | None:
+        return buffer.getvalue()
+
+    loader = Loader(tmp_path, fetch=serveNodata)
+    assert loader.objects(Source(kind='cran', name='nodata', pin='0.1')) == []
 
 
 @needsRscript
@@ -108,7 +144,7 @@ def test_archive_url_is_tried_after_a_miss(tmp_path):
 
     loader = Loader(tmp_path, fetch=serveArchive)
     objects = objectsByName(loader, FIXTURE)
-    assert set(objects) == {'pets', 'scores', 'trials'}
+    assert set(objects) == {'pets', 'scores', 'trials', 'visits', 'wide'}
     assert asked == [CURRENT, ARCHIVE]
     offline = Loader(tmp_path / 'empty', fetch=serveNothing)
     with pytest.raises(FileNotFoundError, match='fixture 1.0'):
@@ -122,7 +158,7 @@ def test_checksum_mismatch_is_refused(tmp_path):
     good = Source(kind='cran', name='fixture', pin='1.0', checksum=sha)
     bad = Source(kind='cran', name='fixture', pin='1.0', checksum='0' * 64)
     loader = Loader(tmp_path, fetch=serveCurrent)
-    assert len(loader.objects(good)) == 3
+    assert len(loader.objects(good)) == 5
     with pytest.raises(ValueError, match='checksum'):
         loader.objects(bad)
 
@@ -162,6 +198,18 @@ def test_base_r_datasets_are_dumped_from_the_namespace(tmp_path):
     assert (iris.file, iris.n_rows, iris.n_cols) == ('data/iris.rds', 150, 5)
     species = loader.load(base, 'iris')['Species']
     assert list(species.cat.categories) == ['setosa', 'versicolor', 'virginica']
+
+
+@needsRscript
+def test_base_r_objects_report_the_rscript_route_and_have_help_pages(tmp_path):
+    """The survey records the route per object (#19); base R arrives only through R, and its
+    help pages come from R's own Rd database since there is no tarball with a man/ folder."""
+    base = Source(kind='cran', name='datasets', pin='base')
+    loader = Loader(tmp_path, fetch=serveNothing)
+    assert objectsByName(loader, base)['iris'].reader == 'rscript'
+    page = loader.help(base, 'iris')
+    assert '\\alias{iris}' in page
+    assert 'Anderson' in page
 
 
 # ----------------------------------------------------------------------------------------------
