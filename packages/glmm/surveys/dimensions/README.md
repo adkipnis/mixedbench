@@ -513,7 +513,9 @@ Stata's re-exports of lme4, nlme, MEMSS, mlmRev, brms and MASS tables) by one ag
 contra) escaped the signature and were folded by hand. After the fold, Tier E holds 99 rows
 over 97 datasets (Stata 41, ARM 20, posteriordb 11, pingouin 11, PyMC 10, MixedModels.jl 3,
 BUGS 2, bambi 1), 93 of them with a published model, 56 at `high`; 21 Tier R rows now list a
-Tier E member in `sources`.
+Tier E member in `sources`. After the decisions and the spot check below Tier E closes at
+99 rows over 96 datasets (d3 and jobhistory's second model in, long_heating_data and
+pancreatitis out), 94 with a published model, 57 at `high`; the registry at 364 rows.
 
 Tier O: `net.py` ran the keyword net on 2026-10-07 (mechanics in `sources.yaml` above the
 `nets` block): 5025 OpenML datasets at their lowest version, 689 UCI datasets, 451 PMLB
@@ -583,3 +585,40 @@ Decided by Alex on 2026-10-07 from the agents' `RULE GAP` notes:
 - A stochastic-frontier inefficiency term (xtfrontier1) is rendered as a random intercept.
 - Tier O rows carry `published_model` `no`: a documented target and cluster is not a
   published mixed model.
+
+Spot check: 20 Tier E and O rows drawn with seed 0, stratified by shard in proportion to the
+rows surviving the fold (Stata 7, pingouin and PyMC 4, ARM 4, Tier O 2, posteriordb 2,
+MixedModels.jl 1), read by Alex against the help pages and the sources' online documentation,
+together with the four grouping disagreements and two exclusions of the blind reading. Agreed
+as filed: tvsfpors, earthquake, productivity, Diabetes130US, boxing2, state-wide votes, kb07,
+and the registry's cronbach_alpha (Subj grouping, Items the fixed repeated dimension of alpha)
+and the IRT rows (items index their own parameter sets, so `ii` is a grouping factor).
+Changed, mostly by reading the Stata manual entries more closely than the agents had:
+
+- quinidine: the PK parameter regressions use glyco, creatinine and weight only, and the
+  subject random effect sits on clearance alone; covariates reduced, formula rewritten.
+- pisa2000: the school mean `mn_isei` belongs to the model; it is an `egen` column not in
+  the table, so it is in the formula only.
+- catheter and time_to_attrition: the failure indicator (`infect`, `left`) is part of the
+  survival response and is no longer ignored; time_to_attrition's covariates are sentiment
+  and level, gender stratifies the baseline hazard, intention is not in the model. This
+  departs from the #22 kidney convention (indicator in `ignore`) for these two rows.
+- pig and radon_mn: Stata's `|| id: week` and the Stan code fit independent intercept and
+  slope deviations, written `(1 + week || id)` and `(1 + floor_measure || county_idx)`;
+  employee likewise `(1 | team) + (0 + lmx | team)` (the blind reading's row, re-filed).
+- rm_anova2: the two-way repeated-measures ANOVA is written with its error strata,
+  `Error(Subject/(Time * Metric))`; `(1|Subject)` alone does not represent them.
+- sesame.data.json model 2: `yt_2 ~ z + pretest + (1 | siteset)`, the second margin of a
+  bivariate-normal multilevel model (pretest not in the Stan data dict, formula only).
+- sesame.dta: grouping `site:setting`, the Ch.23 model's siteset (the blind reading).
+- multilevel_ordered_categorical_17.6: a hierarchical ordered-categorical model with
+  player-specific cutpoints and scale, not a random intercept.
+- long_heating_data and pancreatitis: excluded as `no grouping structure` (the blind
+  reading): a fixed softmax choice model on a single choice occasion, and country-specific
+  random walks over age.
+- srrs2.dat: Alex picked the blind reading's `county`, reasoning that the Ch.12 analysis
+  subsets to Minnesota; the object is the unsliced national file, where county names repeat
+  across states, so the row keeps `state:county` pending his confirmation.
+
+Of the 20 drawn rows, 11 stood and 9 changed; of the six adjudications the registry won
+two, the blind reading four (one pending).

@@ -1,0 +1,3 @@
+"source","object","reason","detail"
+"pymc_examples","examples/data/long_heating_data.csv","no grouping structure","idcase is a single choice occasion; the notebook fits a fixed softmax categorical-choice model with no random effect (spot check, Alex 2026-10-07)"
+"pymc_examples","examples/data/pancreatitis.csv","no grouping structure","GHME_2013.py fits country-specific Gaussian random walks over age to the scaled value, no hierarchical term (spot check, Alex 2026-10-07)"
