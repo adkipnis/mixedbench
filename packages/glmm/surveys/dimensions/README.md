@@ -4,7 +4,7 @@ The lower edges, imbalance, factor-level distribution and covariate mix of real 
 and the pool the v1 real-data test sets draw from. Spec: issue #14; tickets #15–#27. The
 package's loader (`metabeta.glmm.datasets`, research extra) reads every source; the survey
 scripts here own the file contract. The practice survey (`../practice/`) is the model;
-nothing is imported across surveys. Results: `SUMMARY.md` (once #18 lands).
+nothing is imported across surveys. Results: [`SUMMARY.md`](SUMMARY.md), regenerated on every merge.
 
 ## Files
 
@@ -18,9 +18,12 @@ nothing is imported across surveys. Results: `SUMMARY.md` (once #18 lands).
 | `excluded.csv` | `merge.py` | every screened-out object with a categorical reason |
 | `duplicates.csv` | `merge.py` | candidate pairs the merge flagged and the verdicts agents returned |
 | `dropped.csv` | `merge.py` | objects taken out of the registry and the exclusions, awaiting a re-filing shard |
-| `dimensions.csv`, `columns.csv`, `quantiles.yaml`, `SUMMARY.md` | `merge.py` (#18) | measured on every merge, never typed |
+| `dimensions.csv` | `merge.py` via `measure.py` | one row per registry row and grouping factor, see below |
+| `columns.csv` | `merge.py` via `measure.py` | one row per registry row and covariate column, see below |
+| `quantiles.yaml`, `SUMMARY.md` | `merge.py` via `summarise.py` | every axis pooled, per tier and without agridat; the summary from `SUMMARY.template.md`, which holds no digit |
 | `prompts/read.md` | | what a reading agent gets and writes |
 | `schema.py` | | file contract and allowed values |
+| `measure.py`, `summarise.py` | | what the merge measures from a loaded table, and how it reports it |
 | `tests/` | | pytest, run by hand, not in CI: `uv run pytest packages/glmm/surveys/dimensions` |
 
 Agents read documentation and write shards; `merge.py` is the only writer of the canonical CSVs.
@@ -104,6 +107,43 @@ Key `source`, `object`. Agent columns `source`, `object`, `reason` (free text); 
 `excluded.csv`, so that a later registry or excluded shard can re-file them; that later merge
 removes them from `dropped.csv` again. A shard naming an object in neither file is refused.
 
+## `dimensions.csv`
+
+Key `source`, `object`, `model_index`, `factor`, with `tier`. Per grouping factor: `n_obs`,
+`n_groups`, group sizes `group_size_min`, `group_size_p10`, `group_size_p50`, `group_size_p90`,
+`group_size_max` (observed sizes: at or below the level under p50, at or above from p50 on),
+`singleton_share`, `cv` (population standard deviation over the mean) and `alpha`, the
+concentration of a symmetric Dirichlet fitted by moment matching to the group-size proportions
+(`Var(p) = (1 − 1/G) / (G (G α + 1))` solved for α; `inf` for a balanced allocation). Per row,
+repeated on each of its factors: `n_factors`, `relation` (`single` / `nested` / `crossed` /
+`mixed`; a pair is nested when every level of one factor lies in one level of the other, the
+row is nested or crossed when every pair is, mixed otherwise), `d_doc` and `d_all` (continuous
+and binary columns count 1, a categorical K − 1, an interaction the product; `d_doc` over the
+documented model, `d_all` over every column of `columns.csv`).
+
+## `columns.csv`
+
+Key `source`, `object`, `model_index`, `column`, with `tier`: every column of the table that is
+not the response, the trials, a grouping factor or ignored. `type` by one rule, in order:
+`ordered` for an ordered categorical; `binary` for exactly two distinct values; `categorical`
+with `K` levels for a column the file or `types` declares categorical, a string column, or an
+integer column with at most 10 distinct values not declared continuous; `continuous` otherwise.
+`level` is `group` when the column is constant within every group of some grouping factor
+(`constant_within` lists those factors), `within` otherwise; `missing_share`; `in_model` is
+`yes` for a covariate of the documented model.
+
+## `quantiles.yaml`
+
+Per axis `n`, `min`, `p5`, `p10`, `p50`, `p90`, `p95`, `max`, pooled, per tier present and
+without agridat. Per-factor axes count a dataset once per grouping factor, dataset axes
+(`n_obs`, `n_grouping_factors`, `d_doc`, `d_all`) once per registry row, `K` once per
+categorical covariate of a documented model. The covariate-type and level shares and the K
+distribution run over the documented models' covariates; `implied_columns` is the expected
+design-column count of a 9- and a 14-term model (the practice survey's p90 and p95 of terms)
+under that categorical share and mean K − 1. `SUMMARY.md` ends each axis table with the
+practice survey's p90, the maximum over the v1 families (the minimum for `group_size_min`)
+read from `../practice/quantiles.yaml` at merge time.
+
 ## What the merge checks
 
 Header equal to the agent columns; required fields; allowed values; `model_index` an integer
@@ -114,4 +154,5 @@ distinct values, `count` and `binomial` non-negative integers, `ordinal` at most
 values, `categorical` not a float column); a `binomial` row names integer `trials` the
 response never exceeds; the object is not in the rival file. A failing shard is refused with
 its offending rows (line, key, column, value, problem) printed and nothing written. Upsert on
-the key: merging a shard twice changes nothing, a corrected shard replaces its rows.
+the key: merging a shard twice changes nothing, a corrected shard replaces its rows. Every merge
+then measures the whole registry again.
