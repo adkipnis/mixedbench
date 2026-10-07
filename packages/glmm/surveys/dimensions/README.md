@@ -203,13 +203,14 @@ refused. To re-file a misjudged object, drop it first (below).
 
 ## `duplicates.csv`
 
-Key `source_a`, `object_a`, `source_b`, `object_b`, the pair written earliest tier first
-whichever way a shard wrote it. Columns `verdict` and `notes`. The merge writes a pair with
-`verdict` `flagged` when two registry objects have the same row count and the same sorted
-column cardinalities; an agent answers through a `duplicates_<label>.csv` shard with `same`
-or `different`. On every merge the confirmed `same` groups collapse into the row(s) of their
-earliest-tier object, whose `sources` lists every member; the other members' rows leave the
-registry, and re-merging their shard folds them again.
+Key `source_a`, `object_a`, `source_b`, `object_b`, the pair written in frame order (tier,
+then the source's place in `sources.yaml`) whichever way a shard wrote it. Columns `verdict`
+and `notes`. The merge writes a pair with `verdict` `flagged` when two registry objects have
+the same row count and the same sorted column cardinalities; an agent answers through a
+`duplicates_<label>.csv` shard with `same` or `different`. On every merge the confirmed `same`
+groups collapse into the row(s) of their first object in frame order (nlme before MEMSS and
+mlmRev, so a re-export folds into the nlme row), whose `sources` lists every member of the
+group; the other members' rows leave the registry, and re-merging their shard folds them again.
 
 ## `dropped.csv`
 
