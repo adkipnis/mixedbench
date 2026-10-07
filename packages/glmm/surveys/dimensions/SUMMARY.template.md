@@ -70,7 +70,8 @@ ${implied_columns}.
 
 ## Design columns
 
-The documented model (`d_doc`) and every covariate column of the table (`d_all`): continuous and
+The documented model (`d_doc`) and every covariate column of the table plus the documented
+interactions (`d_all`, never below `d_doc`): continuous and
 binary count one, a categorical its levels less one, an interaction the product.
 
 ${table_d_doc}
