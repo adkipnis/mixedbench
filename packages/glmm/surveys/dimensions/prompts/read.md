@@ -41,10 +41,13 @@ index random effects; the **response** is the column a documented model explains
    column the model uses. Rows without a measured response (dosing events) are no
    observations; the merge drops them before measuring.
 3. **Further documented models.** A second or third documented model is a further row with
-   `model_index` 2 or 3; never more than three, the documented model first.
-4. **Columns to ignore.** Row ids, weights, offsets, alternate responses and derived columns
-   in `ignore`, so that the full-table column count excludes them; an offset stays in the
-   formula as `offset(log(area))`.
+   `model_index` 2 or 3 only when its response or its grouping factors differ from the first;
+   a nested simplification of the fixed effects (Littell's fm1 to fm3 ladders) is the same
+   model. Never more than three, the documented model first.
+4. **Columns to ignore.** Row ids, weights, offsets, alternate responses, derived columns and
+   the plot coordinates of a field layout (`row`, `col`, latitude) in `ignore`, so that the
+   full-table column count excludes them; an offset stays in the formula as
+   `offset(log(area))`.
 5. **Types the file cannot carry.** For delimited text, Excel and JSON, declare in `types`
    which columns are `categorical`, `ordered` or `continuous` where the documentation says
    so. For R, Stata and SPSS files declare only `ordered` factors (the help page says
