@@ -360,3 +360,26 @@ respiratory. Changed:
 - muscatine: the page's `cage` and `cage2` are an age polynomial; the registry names the
   column `age` once, so `d_doc` counts the linear term only. Polynomial and other derived
   terms on a column are not representable in the registry.
+
+The spot check found no substantive change in its eight `high` rows and six in its twelve
+`medium` and `low` rows, mostly a missed design level (chamber, whole plot, interaction random
+term) or a coordinate taken for a group, so the 38 `medium` and `low` rows of the census were
+read a second time, blind, by two Opus agents into a scratch directory and compared by script
+on response, grouping factors, covariates and interactions (`compare.py` in the session's
+scratchpad, not kept). Seven of the rows had seen the verdicts above through this section and
+do not count; of the 31 blind rows 21 agree. Six disagreements were covariate choices settled
+by rule without reading: a nonlinear model's input is a covariate (CO2, Orange), a
+pre-treatment baseline is a covariate rather than an alternate response (ahd, dietox), an
+interaction the cited book fits is carried (prt), otherwise the simpler reading stands
+(nass.sorghum). Four were grouping choices adjudicated by Alex on 2026-10-07:
+
+- buntaran.wheat: the three zones fixed, genotype random beside location, replicate and
+  incomplete block; `(1|loc:gen)` noted as the more faithful MET term.
+- jansen.strawberry: ordinal `category` weighted by `count` over the plot `block:male:female`,
+  with `male*female` fixed; not a count response. The measurer counts contingency cells.
+- kirk.potato: genotype only; the page says the replicates are not blocks.
+- senshu.rice: locations nested in countries, the page's own quadratic term dropped because
+  the page calls it senseless.
+
+The lesson for #23 on: a second blind reading of the rendered rows costs one agent pass and
+hands Alex only the grouping disagreements, about one row in eight.
