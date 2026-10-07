@@ -199,3 +199,4 @@
 "agridat","R","holtsmark.timothy.uniformity","derived or duplicated table","Per its help page, the 2x2 aggregation of larsen.timothy.uniformity (the same Holtsmark and Larsen trial); also a uniformity trial (row, col, yield only, examples fit only desplot)."
 "agridat","R","jegorow.oats.uniformity","no grouping structure","Uniformity trial of oats: only row, col and yield; examples fit only desplot, no treatment or documented random factor."
 "agridat","R","khan.brassica.uniformity","no grouping structure","Uniformity trial of brassica in two fields (F1, F2): only field, row, col and yield; examples fit only desplot, no treatment or documented random factor."
+"agridat","R","besag.checks","no grouping structure","row and col are plot coordinates of a spatial layout, not grouping factors; the help page fits no model with a random term (spot check #22, re-filed from the registry)"
