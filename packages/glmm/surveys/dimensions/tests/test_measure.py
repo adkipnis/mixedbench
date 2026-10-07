@@ -48,6 +48,18 @@ def test_group_sizes_per_factor(herds, rows):
     assert herd['cv'] == pytest.approx(0.41650, abs=1e-4)
 
 
+def test_rows_without_a_measured_response_are_not_observations(herds, rows):
+    """A pharmacokinetic table carries dosing rows with no concentration (the pilot's Phenobarb:
+    744 rows, 155 measured); only rows with a response count, here 13 of 14 once the first
+    weight is missing, so north holds 4 and h1 2."""
+    unmeasured = herds.copy()
+    unmeasured.loc[0, 'weight'] = float('nan')
+    region, herd = Measurer(unmeasured, rows[0]).dimensions()
+    assert (region['n_obs'], herd['n_obs']) == (13, 13)
+    assert (region['group_size_min'], herd['group_size_min']) == (4, 1)
+    assert herd['group_size_p50'] == 2
+
+
 def test_alpha_by_moment_matching(herds, rows):
     """Region sizes 5, 5, 4 give α = 65 exactly ((1 − 1/G) / (G s²) = 196); herd sizes
     3, 2, 4, 1, 4 give 4.41. A balanced allocation has zero variance, so α is infinite."""

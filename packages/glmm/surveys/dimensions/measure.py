@@ -91,7 +91,8 @@ class Measurer:
     def __init__(self, df: pd.DataFrame, row: dict) -> None:
         self.row = row
         self.factors = splitList(row['grouping_factors'])
-        self.df = withComposites(df, self.factors)
+        measured = df[df[row['response']].notna()]  # a PK table's dosing rows carry no response
+        self.df = withComposites(measured, self.factors)
         self.identity = {k: row[k] for k in IDENTITY}
         self.declared = parseTypes(row['types'])
         self.covariates = splitList(row['covariates'])
