@@ -5,11 +5,12 @@ Every repository is enumerated through its public API and every table's column n
 matched against the keywords: a column name tokenised on case and punctuation is the keyword
 alone, or the keyword with an id-like token (`SubjectID`, `patient_nbr`, `subject#`); a name
 that merely contains one (`family_history`, `time_in_hospital`) is no hit. OpenML's synthetic
-derivatives (`BNG(...)`, seeded resamples) are left out before the draw. Every API answer is cached under the untracked `cache/net/`,
-so rerunning fetches nothing. The hits over the three repositories together are capped with a
-seeded draw. The script writes `net_hits.csv` (every hit, kept or not, with its description) and
-prints the `sources.yaml` entries of the kept hits, pinned by the sha256 of the download, which
-are pasted under tier `O` by hand. Run from the repo root:
+derivatives (`BNG(...)`, seeded resamples) are left out before the draw. Every API answer is
+cached under the untracked `cache/net/`, so rerunning fetches nothing. The hits over the three
+repositories together are capped with a seeded draw. The script writes `net_hits.csv` (every
+hit, kept or not, with its description) and prints the `sources.yaml` entries of the kept hits,
+pinned by the sha256 of the download, which are pasted under tier `O` by hand. Run from the
+repo root:
 
     uv run python packages/glmm/surveys/dimensions/net.py
 """
@@ -95,9 +96,7 @@ class Net:
             ]
         )
         for dataset in datasets:
-            qualities = {q['name']: float(q['value']) for q in dataset.get('quality', [])}
-            n_rows = qualities['NumberOfInstances']
-            n_cols = qualities['NumberOfFeatures']
+            n_rows, n_cols = self._size(dataset)
             did = dataset['did']
             features = self._json(f'{OPENML}/data/features/{did}', f'openml/features_{did}')
             if features is None:  # the server failed on this dataset
@@ -121,7 +120,7 @@ class Net:
                 'n_cols': int(n_cols),
                 'matched': ';'.join(matched),
                 'licence': description.get('licence', ''),
-                'url': description['parquet_url'],  # every dataset has one; the csv endpoint 404s on newer ones
+                'url': description['parquet_url'],  # the csv endpoint 404s on newer datasets
                 'page': f'https://www.openml.org/d/{did}',
                 'kept': '',
                 'description': description.get('description', ''),
@@ -239,10 +238,14 @@ class Net:
         return name.startswith('BNG(') or bool(re.search(r'_seed_\d+_nrows_', name))
 
     @staticmethod
-    def _inBounds(dataset: dict) -> bool:
+    def _size(dataset: dict) -> tuple[float | None, float | None]:
+        """Rows and columns from the listing's qualities; None where OpenML has not computed them."""
         qualities = {q['name']: float(q['value']) for q in dataset.get('quality', [])}
-        n_rows = qualities.get('NumberOfInstances')
-        n_cols = qualities.get('NumberOfFeatures')
+        return qualities.get('NumberOfInstances'), qualities.get('NumberOfFeatures')
+
+    @staticmethod
+    def _inBounds(dataset: dict) -> bool:
+        n_rows, n_cols = Net._size(dataset)
         if n_rows is None or n_cols is None:
             return False
         return MIN_ROWS <= n_rows <= MAX_ROWS and n_cols <= MAX_COLUMNS
@@ -314,7 +317,8 @@ class Net:
         if not Path(hit['url'].split('?')[0]).suffix:
             file = f', file: {hit["name"]}.csv'
         licence = json.dumps(hit['licence'])  # quoted: OpenML licences hold colons and commas
-        return f'    {label}: {{kind: url, name: {hit["url"]}, pin: {digest}{file}, licence: {licence}}}  # {hit["name"]}, {hit["matched"]}'
+        fields = f'kind: url, name: {hit["url"]}, pin: {digest}{file}, licence: {licence}'
+        return f'    {label}: {{{fields}}}  # {hit["name"]}, {hit["matched"]}'
 
 
 # =====================================================================================
