@@ -110,8 +110,8 @@ Key `source`, `object`, `model_index`. Agent columns, in order:
 | `covariates` | `;`-list of the documented model's covariate columns (main effects) |
 | `interactions` | `;`-list of `a:b` terms, every part a column name |
 | `ignore` | `;`-list of columns no model should use: row ids, weights, alternate responses |
-| `types` | `;`-list of `column=categorical`, `column=ordered` or `column=continuous` declarations for formats without column types (delimited text, Excel), and `ordered` for an R ordered factor, which `pyreadr` reads as unordered; blank otherwise |
-| `formula` | the documented model verbatim (lme4 syntax where the source gives one); a nonlinear mixed model in words, naming the model and its covariates, the row kept for its grouping |
+| `types` | `;`-list of `column=categorical`, `column=ordered` or `column=continuous` declarations for formats without column types (delimited text, Excel), and `ordered` for an R ordered factor, which `pyreadr` reads as unordered, covariates only (a grouping factor stored ordered by nlme's `groupedData` is a nominal id); blank otherwise |
+| `formula` | the documented model verbatim (lme4 syntax where the source gives one); a nonlinear mixed model in words, naming the model class and its inputs (`conc ~ one-compartment IV PK model with first-order elimination (dose, time); subject-specific clearance and volume`), the row kept for its grouping |
 | `published_model` | `yes` when a published model specification exists (posteriordb, Stan example, textbook); else `no` |
 | `domain` | `ecology_biology` / `psychology_neuroscience` / `biomedicine` / `social_humanities` / `agriculture` / `education` / `economics` / `industry` / `other`; reporting only |
 | `confidence` | `high` / `medium` / `low` |
@@ -149,8 +149,9 @@ removes them from `dropped.csv` again. A shard naming an object in neither file 
 
 ## `dimensions.csv`
 
-Key `source`, `object`, `model_index`, `factor`, with `tier`. Per grouping factor: `n_obs`,
-`n_groups`, group sizes `group_size_min`, `group_size_p10`, `group_size_p50`, `group_size_p90`,
+Key `source`, `object`, `model_index`, `factor`, with `tier`. Every measure runs over the rows
+with a measured response (a pharmacokinetic table's dosing rows are not observations). Per
+grouping factor: `n_obs`, `n_groups`, group sizes `group_size_min`, `group_size_p10`, `group_size_p50`, `group_size_p90`,
 `group_size_max` (observed sizes: at or below the level under p50, at or above from p50 on),
 `singleton_share`, `cv` (population standard deviation over the mean) and `alpha`, the
 concentration of a symmetric Dirichlet fitted by moment matching to the group-size proportions
@@ -197,3 +198,28 @@ response never exceeds; the object is not in the rival file. A failing shard is 
 its offending rows (line, key, column, value, problem) printed and nothing written. Upsert on
 the key: merging a shard twice changes nothing, a corrected shard replaces its rows. Every merge
 then measures the whole registry again.
+
+## Pilot (#20)
+
+lme4, nlme and mlmRev read end to end by four Sonnet 5.5 agents, 77 objects, five registry rows
+drawn with seed 0 (`registry.sample(5, random_state=0)`) and read by Alex against the help
+pages: nlme Meat, Orthodont, Phenobarb, Remifentanil and mlmRev star. Disagreements and the
+rules they produced:
+
+- `ordered` declared on grouping factors (Meat, Orthodont, and 19 further rows): nlme's
+  `groupedData` orders subjects by their mean, no order a model uses. Rule: `ordered` for
+  covariates only; the declarations were dropped from the shards.
+- Dosing rows without a concentration counted as observations (Phenobarb 744 rows, 155
+  measured; Remifentanil, Quinidine, star, Gcsemv, Glucose likewise). Rule: the measurer keeps
+  the rows with a measured response.
+- Nonlinear formulas too vague ("one-compartment first-order PK"). Rule: name the model class
+  and its inputs; the two rows were re-filed.
+- star: `tch` is a reconstructed teacher-class identifier, noted. The `ignore` list stays at
+  the derived and alternate columns (`read`, `yrs`, `birthy`); unused but usable columns such
+  as `hdeg` and `birthq` remain in `columns.csv`, which is what `d_all` measures.
+
+Agreed as filed: the three lme4-syntax formulas, the covariate lists, the ignored copies
+(`Apgar`, `ID`, `BSA`). Settled from the agents' `RULE GAP` notes in the same pass: composite
+grouping factors `a:b`, the `simulated data` exclusion, the `NONLINEAR:` tag, offsets and
+observation-level random effects in `ignore`, transformed responses by their raw column,
+models recalled from the cited book at `medium`, `d_all` counting the documented interactions.

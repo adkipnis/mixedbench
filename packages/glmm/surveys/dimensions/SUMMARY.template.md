@@ -15,6 +15,8 @@ factors; per tier ${tiers}. Excluded: ${n_excluded} objects (${excluded_reasons}
 
 ## Observations
 
+Rows with a measured response; a pharmacokinetic table's dosing rows are not observations.
+
 ${table_n_obs}
 
 ## Grouping factors
