@@ -155,8 +155,27 @@ def test_a_confirmed_duplicate_collapses_into_the_earliest_tier_row_listing_both
     assert [(r['source'], r['model_index'], r['tier']) for r in rows] == [('cattle', '1', 'R')]
     assert rows[0]['sources'] == 'cattle:cattle.csv;herds:herds.csv'
     mergeShard(merger, FIXTURES / 'registry_herds.csv')
-    assert [r['source'] for r in readRows(merger.root / 'registry.csv')] == ['cattle']
+    mergeShard(merger, FIXTURES / 'registry_cattle.csv')  # a merge with the folded row absent
+    rows = readRows(merger.root / 'registry.csv')
+    assert [r['source'] for r in rows] == ['cattle']
+    assert rows[0]['sources'] == 'cattle:cattle.csv;herds:herds.csv'
     assert len(readRows(merger.root / 'duplicates.csv')) == 1
+
+
+def test_within_a_tier_the_frame_order_of_sources_yaml_decides_which_duplicate_survives(tmp_path):
+    """nlme is listed before MEMSS and mlmRev, so a re-export folds into the nlme row; an
+    alphabetical tie-break would keep MEMSS and discard the spot-checked row."""
+    entries = {label: {'kind': 'cran', 'pin': '1.0'} for label in ['nlme', 'MEMSS', 'agridat']}
+    sources = {'seed': 0, 'tiers': {'R': entries, 'D': {'deposit': {'kind': 'cran', 'pin': '1.0'}}}}
+    (tmp_path / 'sources.yaml').write_text(yaml.safe_dump(sources, sort_keys=False))
+    merger = Merger(tmp_path)
+    keys = [('deposit', 'x'), ('agridat', 'x'), ('MEMSS', 'x'), ('nlme', 'x')]
+    assert sorted(keys, key=merger.rank) == [
+        ('nlme', 'x'),
+        ('MEMSS', 'x'),
+        ('agridat', 'x'),
+        ('deposit', 'x'),
+    ]
 
 
 def test_a_dropped_shard_moves_an_object_from_the_exclusions_to_the_registry(merger):
