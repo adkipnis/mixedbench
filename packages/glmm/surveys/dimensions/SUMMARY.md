@@ -107,15 +107,15 @@ coefficient of variation are readable companions.
 
 | covariate type | n | share |
 |---|---|---|
-| continuous | 123 | 41% |
-| categorical | 93 | 31% |
-| binary | 74 | 25% |
+| continuous | 127 | 42% |
+| categorical | 93 | 30% |
+| binary | 74 | 24% |
 | ordered | 12 | 4% |
 
 | level | n | share |
 |---|---|---|
-| within | 170 | 56% |
-| group | 132 | 44% |
+| within | 172 | 56% |
+| group | 134 | 44% |
 
 Levels of the categorical covariates:
 
@@ -137,16 +137,16 @@ Levels of the categorical covariates:
 | 8 | 2 | 2% |
 | 10 | 2 | 2% |
 | 56 | 1 | 1% |
-| 9 | 1 | 1% |
-| 15 | 1 | 1% |
 | 30 | 1 | 1% |
 | 16 | 1 | 1% |
 | 20 | 1 | 1% |
 | 49 | 1 | 1% |
+| 9 | 1 | 1% |
+| 15 | 1 | 1% |
 
 Implied design columns of a model under the observed categorical share
-(0.348) and mean columns per categorical (4.8):
-9 terms 20.89 columns, 14 terms 32.5 columns.
+(0.343) and mean columns per categorical (4.8):
+9 terms 20.74 columns, 14 terms 32.25 columns.
 
 ## Design columns
 
@@ -156,8 +156,8 @@ binary count one, a categorical its levels less one, an interaction the product.
 
 | d_doc | n | min | p5 | p10 | p50 | p90 | p95 | max | practice p90 |
 |---|---|---|---|---|---|---|---|---|---|
-| pooled | 149 | 0 | 0 | 0 | 3 | 15 | 27 | 55 | 11 |
-| tier R | 149 | 0 | 0 | 0 | 3 | 15 | 27 | 55 |  |
+| pooled | 149 | 0 | 0 | 0 | 4 | 15 | 27 | 55 | 11 |
+| tier R | 149 | 0 | 0 | 0 | 4 | 15 | 27 | 55 |  |
 | without agridat | 121 | 0 | 0 | 1 | 3 | 13 | 15 | 55 |  |
 
 | d_all | n | min | p5 | p10 | p50 | p90 | p95 | max | practice p90 |
