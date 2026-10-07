@@ -1,300 +1,300 @@
-n_rows: 76
-n_objects: 71
-n_factor_rows: 98
+n_rows: 75
+n_objects: 70
+n_factor_rows: 102
 axes:
   n_groups:
     pooled:
-      n: 98
+      n: 102
       min: 2
-      p5: 3
+      p5: 4
       p10: 5
       p50: 21
-      p90: 437
-      p95: 1721
+      p90: 316
+      p95: 1595
       max: 11598
     tiers:
       R:
-        n: 98
+        n: 102
         min: 2
-        p5: 3
+        p5: 4
         p10: 5
         p50: 21
-        p90: 437
-        p95: 1721
+        p90: 316
+        p95: 1595
         max: 11598
     without_agridat:
-      n: 98
+      n: 102
       min: 2
-      p5: 3
+      p5: 4
       p10: 5
       p50: 21
-      p90: 437
-      p95: 1721
+      p90: 316
+      p95: 1595
       max: 11598
   group_size_min:
     pooled:
-      n: 98
+      n: 102
       min: 1
       p5: 1
       p10: 1
       p50: 6
-      p90: 32
-      p95: 56
+      p90: 30
+      p95: 54
       max: 316
     tiers:
       R:
-        n: 98
+        n: 102
         min: 1
         p5: 1
         p10: 1
         p50: 6
-        p90: 32
-        p95: 56
+        p90: 30
+        p95: 54
         max: 316
     without_agridat:
-      n: 98
+      n: 102
       min: 1
       p5: 1
       p10: 1
       p50: 6
-      p90: 32
-      p95: 56
+      p90: 30
+      p95: 54
       max: 316
   group_size_p10:
     pooled:
-      n: 98
+      n: 102
       min: 1
       p5: 1
       p10: 2
       p50: 8
-      p90: 50
-      p95: 63
+      p90: 40
+      p95: 56
       max: 316
     tiers:
       R:
-        n: 98
+        n: 102
         min: 1
         p5: 1
         p10: 2
         p50: 8
-        p90: 50
-        p95: 63
+        p90: 40
+        p95: 56
         max: 316
     without_agridat:
-      n: 98
+      n: 102
       min: 1
       p5: 1
       p10: 2
       p50: 8
-      p90: 50
-      p95: 63
+      p90: 40
+      p95: 56
       max: 316
   group_size_p50:
     pooled:
-      n: 98
+      n: 102
       min: 1
       p5: 3
       p10: 3
-      p50: 12
+      p50: 11
       p90: 60
       p95: 160
       max: 351
     tiers:
       R:
-        n: 98
+        n: 102
         min: 1
         p5: 3
         p10: 3
-        p50: 12
+        p50: 11
         p90: 60
         p95: 160
         max: 351
     without_agridat:
-      n: 98
+      n: 102
       min: 1
       p5: 3
       p10: 3
-      p50: 12
+      p50: 11
       p90: 60
       p95: 160
       max: 351
   group_size_p90:
     pooled:
-      n: 98
+      n: 102
       min: 2
       p5: 3
       p10: 4
-      p50: 14
+      p50: 13
       p90: 90
-      p95: 316
+      p95: 257
       max: 510
     tiers:
       R:
-        n: 98
+        n: 102
         min: 2
         p5: 3
         p10: 4
-        p50: 14
+        p50: 13
         p90: 90
-        p95: 316
+        p95: 257
         max: 510
     without_agridat:
-      n: 98
+      n: 102
       min: 2
       p5: 3
       p10: 4
-      p50: 14
+      p50: 13
       p90: 90
-      p95: 316
+      p95: 257
       max: 510
   group_size_max:
     pooled:
-      n: 98
+      n: 102
       min: 2
       p5: 3
       p10: 4
-      p50: 18
-      p90: 198
-      p95: 387
+      p50: 13
+      p90: 188
+      p95: 351
       max: 969
     tiers:
       R:
-        n: 98
+        n: 102
         min: 2
         p5: 3
         p10: 4
-        p50: 18
-        p90: 198
-        p95: 387
+        p50: 13
+        p90: 188
+        p95: 351
         max: 969
     without_agridat:
-      n: 98
+      n: 102
       min: 2
       p5: 3
       p10: 4
-      p50: 18
-      p90: 198
-      p95: 387
+      p50: 13
+      p90: 188
+      p95: 351
       max: 969
   singleton_share:
     pooled:
-      n: 98
+      n: 102
       min: 0
       p5: 0
       p10: 0
       p50: 0
-      p90: 0.0672
-      p95: 0.1525
+      p90: 0.0667
+      p95: 0.1
       max: 0.6665
     tiers:
       R:
-        n: 98
+        n: 102
         min: 0
         p5: 0
         p10: 0
         p50: 0
-        p90: 0.0672
-        p95: 0.1525
+        p90: 0.0667
+        p95: 0.1
         max: 0.6665
     without_agridat:
-      n: 98
+      n: 102
       min: 0
       p5: 0
       p10: 0
       p50: 0
-      p90: 0.0672
-      p95: 0.1525
+      p90: 0.0667
+      p95: 0.1
       max: 0.6665
   cv:
     pooled:
-      n: 98
+      n: 102
       min: 0
       p5: 0
       p10: 0
-      p50: 0.1362
-      p90: 0.7204
+      p50: 0.0636
+      p90: 0.7106
       p95: 0.8761
       max: 1.2161
     tiers:
       R:
-        n: 98
+        n: 102
         min: 0
         p5: 0
         p10: 0
-        p50: 0.1362
-        p90: 0.7204
+        p50: 0.0636
+        p90: 0.7106
         p95: 0.8761
         max: 1.2161
     without_agridat:
-      n: 98
+      n: 102
       min: 0
       p5: 0
       p10: 0
-      p50: 0.1362
-      p90: 0.7204
+      p50: 0.0636
+      p90: 0.7106
       p95: 0.8761
       max: 1.2161
   alpha:
     pooled:
-      n: 98
+      n: 102
       min: 0.6747
       p5: 1.2852
-      p10: 1.9069
-      p50: 91.9082
+      p10: 1.9306
+      p50: 261.2424
       p90: .inf
       p95: .inf
       max: .inf
     tiers:
       R:
-        n: 98
+        n: 102
         min: 0.6747
         p5: 1.2852
-        p10: 1.9069
-        p50: 91.9082
+        p10: 1.9306
+        p50: 261.2424
         p90: .inf
         p95: .inf
         max: .inf
     without_agridat:
-      n: 98
+      n: 102
       min: 0.6747
       p5: 1.2852
-      p10: 1.9069
-      p50: 91.9082
+      p10: 1.9306
+      p50: 261.2424
       p90: .inf
       p95: .inf
       max: .inf
   n_obs:
     pooled:
-      n: 76
+      n: 75
       min: 18
       p5: 30
-      p10: 36
+      p10: 40
       p50: 237
       p90: 7185
       p95: 26796
       max: 73421
     tiers:
       R:
-        n: 76
+        n: 75
         min: 18
         p5: 30
-        p10: 36
+        p10: 40
         p50: 237
         p90: 7185
         p95: 26796
         max: 73421
     without_agridat:
-      n: 76
+      n: 75
       min: 18
       p5: 30
-      p10: 36
+      p10: 40
       p50: 237
       p90: 7185
       p95: 26796
       max: 73421
   n_grouping_factors:
     pooled:
-      n: 76
+      n: 75
       min: 1
       p5: 1
       p10: 1
@@ -304,7 +304,7 @@ axes:
       max: 3
     tiers:
       R:
-        n: 76
+        n: 75
         min: 1
         p5: 1
         p10: 1
@@ -313,7 +313,7 @@ axes:
         p95: 2
         max: 3
     without_agridat:
-      n: 76
+      n: 75
       min: 1
       p5: 1
       p10: 1
@@ -323,7 +323,7 @@ axes:
       max: 3
   d_doc:
     pooled:
-      n: 76
+      n: 75
       min: 0
       p5: 0
       p10: 1
@@ -333,7 +333,7 @@ axes:
       max: 55
     tiers:
       R:
-        n: 76
+        n: 75
         min: 0
         p5: 0
         p10: 1
@@ -342,7 +342,7 @@ axes:
         p95: 21
         max: 55
     without_agridat:
-      n: 76
+      n: 75
       min: 0
       p5: 0
       p10: 1
@@ -352,32 +352,32 @@ axes:
       max: 55
   d_all:
     pooled:
-      n: 76
+      n: 75
       min: 0
       p5: 0
       p10: 1
-      p50: 3
-      p90: 10
-      p95: 22
+      p50: 4
+      p90: 15
+      p95: 31
       max: 55
     tiers:
       R:
-        n: 76
+        n: 75
         min: 0
         p5: 0
         p10: 1
-        p50: 3
-        p90: 10
-        p95: 22
+        p50: 4
+        p90: 15
+        p95: 31
         max: 55
     without_agridat:
-      n: 76
+      n: 75
       min: 0
       p5: 0
       p10: 1
-      p50: 3
-      p90: 10
-      p95: 22
+      p50: 4
+      p90: 15
+      p95: 31
       max: 55
   K:
     pooled:
@@ -409,7 +409,7 @@ axes:
       p95: 7
       max: 56
 imbalance:
-  balanced_share: 0.469
+  balanced_share: 0.49
 shares:
   covariate_type:
     continuous: 0.436
@@ -417,24 +417,24 @@ shares:
     binary: 0.237
     ordered: 0.058
   level:
-    within: 0.641
-    group: 0.359
+    within: 0.603
+    group: 0.397
   relation:
-    single: 0.561
-    nested: 0.224
-    crossed: 0.184
-    mixed: 0.031
+    single: 0.49
+    nested: 0.275
+    crossed: 0.176
+    mixed: 0.059
   response_type:
-    continuous: 0.789
-    binary: 0.105
-    count: 0.066
-    binomial: 0.026
+    continuous: 0.787
+    binary: 0.107
+    count: 0.067
+    binomial: 0.027
     categorical: 0.013
   reader:
     pyreadr: 1.0
   published_model:
-    'yes': 0.908
-    'no': 0.092
+    'yes': 0.907
+    'no': 0.093
 k_distribution:
   3: 0.451
   4: 0.333
