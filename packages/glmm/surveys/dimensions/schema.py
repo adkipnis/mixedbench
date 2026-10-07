@@ -1,7 +1,8 @@
 """File contract of the GLMM dimension survey: columns, allowed values and row keys of
-`registry.csv`, `excluded.csv` and `duplicates.csv`, and the shape of `sources.yaml`. The merge
-script enforces it; agents write shards with exactly the agent columns. Documented for humans
-in README.md. The practice survey's schema is the model; nothing is imported across surveys.
+`registry.csv`, `excluded.csv`, `duplicates.csv` and `dropped.csv`, and the shape of
+`sources.yaml`. The merge script enforces it; agents write shards with exactly the agent
+columns. Documented for humans in README.md. The practice survey's schema is the model;
+nothing is imported across surveys.
 """
 
 from __future__ import annotations
@@ -60,7 +61,15 @@ DUPLICATES = Table(
     key=('source_a', 'object_a', 'source_b', 'object_b'),
 )
 
-TABLES = {t.name: t for t in (REGISTRY, EXCLUDED, DUPLICATES)}
+# A dropped object leaves registry.csv and excluded.csv, so that a later shard can re-file it.
+DROPPED = Table(
+    name='dropped',
+    agentColumns=('source', 'object', 'reason'),
+    scriptColumns={'tier': 'source'},
+    key=('source', 'object'),
+)
+
+TABLES = {t.name: t for t in (REGISTRY, EXCLUDED, DUPLICATES, DROPPED)}
 MAX_MODELS_PER_OBJECT = 3
 
 # =====================================================================================
@@ -89,6 +98,7 @@ ALLOWED: dict[str, dict[str, tuple[str, ...]]] = {
     },
     'excluded': {'reason': EXCLUSION_REASONS},
     'duplicates': {'verdict': ('same', 'different')},
+    'dropped': {},
 }
 
 # `;`-separated lists of column names of the loaded table
@@ -98,7 +108,6 @@ INTERACTION_COLUMN = 'interactions'
 # `col=categorical;col2=continuous`
 TYPES_COLUMN = 'types'
 
-INT_COLUMNS = {'registry': ('model_index',), 'excluded': (), 'duplicates': ()}
 REQUIRED = {
     'registry': (
         'source', 'object', 'model_index', 'response', 'response_type', 'grouping_factors',
@@ -106,6 +115,7 @@ REQUIRED = {
     ),
     'excluded': ('source', 'object', 'reason'),
     'duplicates': ('source_a', 'object_a', 'source_b', 'object_b', 'verdict'),
+    'dropped': ('source', 'object', 'reason'),
 }  # fmt: skip
 
 # What the loaded table must show for each declared response type. A binomial response also

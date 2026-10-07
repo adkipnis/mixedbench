@@ -14,16 +14,16 @@ from __future__ import annotations
 import argparse
 import csv
 import sys
+from itertools import combinations
 from pathlib import Path
 
 import pandas as pd
 import yaml
-from metabeta.glmm.datasets import Loader, Source
+from metabeta.glmm.datasets import DataObject, Loader, Source
 from schema import (
     ALLOWED,
     COLUMN_LIST_COLUMNS,
     COLUMN_TYPES,
-    INT_COLUMNS,
     INTERACTION_COLUMN,
     MAX_MODELS_PER_OBJECT,
     MAX_ORDINAL_LEVELS,
@@ -38,7 +38,50 @@ from schema import (
 # globals
 # =====================================================================================
 HERE = Path(__file__).parent
-RIVALS = {'registry': 'excluded', 'excluded': 'registry'}  # an object is in one, never both
+# An object is in the registry or in the exclusions, never both: the second shard is refused.
+RIVALS = {'registry': 'excluded', 'excluded': 'registry'}
+# A dropped object leaves both files; re-filing it leaves dropped.csv. The later merge wins.
+SUPERSEDES = {
+    'registry': ('dropped',),
+    'excluded': ('dropped',),
+    'dropped': ('registry', 'excluded'),
+    'duplicates': (),
+}
+RECONCILED = ('registry', 'duplicates', 'dropped')  # merges that can change the duplicate fold
+Key = tuple[str, str]  # (source label, object name)
+
+
+def isNumeric(values: pd.Series) -> bool:
+    return pd.api.types.is_numeric_dtype(values)
+
+
+def isCount(values: pd.Series) -> bool:
+    if not isNumeric(values):
+        return False
+    return bool(((values >= 0) & (values == values.round())).all())
+
+
+def isBinary(values: pd.Series) -> bool:
+    return values.nunique() == 2
+
+
+def isOrdinal(values: pd.Series) -> bool:
+    return values.nunique() <= MAX_ORDINAL_LEVELS
+
+
+def isCategorical(values: pd.Series) -> bool:
+    return not pd.api.types.is_float_dtype(values)
+
+
+# What the response column must show for its declared type, and the complaint if it does not.
+RESPONSE_CHECKS = {
+    'continuous': (isNumeric, 'is not numeric'),
+    'binary': (isBinary, 'does not have two distinct values'),
+    'count': (isCount, 'is not integer-valued'),
+    'binomial': (isCount, 'is not integer-valued'),
+    'ordinal': (isOrdinal, f'has more than {MAX_ORDINAL_LEVELS} levels'),
+    'categorical': (isCategorical, 'is not categorical'),
+}
 
 
 class ShardRefused(Exception):
@@ -59,65 +102,42 @@ def writeCsv(frame: pd.DataFrame, path: Path) -> None:
     frame.to_csv(path, index=False, quoting=csv.QUOTE_ALL)
 
 
-def readSources(root: Path) -> dict[str, tuple[str, Source]]:
-    """`sources.yaml`: tiers of labelled pinned sources -> label -> (tier, Source)."""
+def readSources(root: Path) -> tuple[dict[str, str], dict[str, Source]]:
+    """`sources.yaml`, tiers of labelled pinned sources -> label -> tier, label -> Source."""
     frame = yaml.safe_load((root / 'sources.yaml').read_text())
-    sources = {}
+    tiers, sources = {}, {}
     for tier, entries in frame['tiers'].items():
         for label, entry in (entries or {}).items():
-            source = Source(
+            tiers[label] = tier
+            sources[label] = Source(
                 kind=entry['kind'],
                 name=entry.get('name', label),
                 pin=str(entry['pin']),
                 checksum=entry.get('checksum'),
                 path=entry.get('path'),
             )
-            sources[label] = (tier, source)
-    return sources
-
-
-def splitList(text: str) -> list[str]:
-    return [t.strip() for t in text.split(';') if t.strip()]
-
-
-def parseTypes(text: str) -> dict[str, str]:
-    """`col=categorical;col2=continuous` -> {col: kind}."""
-    pairs = [entry.partition('=') for entry in splitList(text)]
-    return {col.strip(): kind.strip() for col, _, kind in pairs}
-
-
-def sameGroups(duplicates: pd.DataFrame) -> list[set[tuple[str, str]]]:
-    """Connected components of the `same` pairs (radon in three sources is one group)."""
-    groups: list[set[tuple[str, str]]] = []
-    same = duplicates[duplicates['verdict'] == 'same']
-    for _, row in same.iterrows():
-        pair = {(row['source_a'], row['object_a']), (row['source_b'], row['object_b'])}
-        touching = [g for g in groups if g & pair]
-        for g in touching:
-            groups.remove(g)
-            pair |= g
-        groups.append(pair)
-    return groups
-
-
-def isCount(values: pd.Series) -> bool:
-    if not pd.api.types.is_numeric_dtype(values):
-        return False
-    return bool(((values >= 0) & (values == values.round())).all())
+    return tiers, sources
 
 
 # =====================================================================================
-# pipeline: shard -> validate -> upsert -> canonical files
+# pipeline: shard -> validate -> upsert -> reconcile duplicates
 # =====================================================================================
 class Merger:
     def __init__(self, root: Path, loader: Loader | None = None) -> None:
         self.root = Path(root)
         self.loader = loader or Loader(self.root / 'cache')
-        self.sources = readSources(self.root)
+        self.tiers, self.sources = readSources(self.root)
 
     def canonical(self, table: Table) -> pd.DataFrame:
         path = self.root / f'{table.name}.csv'
         return readCsv(path) if path.exists() else pd.DataFrame(columns=table.columns)
+
+    def objects(self, label: str) -> dict[str, DataObject]:
+        return {o.name: o for o in self.loader.objects(self.sources[label])}
+
+    def rank(self, key: Key) -> tuple[int, str, str]:
+        """Frame order of an object: its tier, then source label and name."""
+        return (TIERS.index(self.tiers[key[0]]), *key)
 
     # ---------------------------------------------------------------------------------
     # load
@@ -143,11 +163,6 @@ class Merger:
         self.shard[['source_a', 'object_a']] = [a for a, _ in ordered]
         self.shard[['source_b', 'object_b']] = [b for _, b in ordered]
 
-    def rank(self, key: tuple[str, str]) -> tuple[int, str, str]:
-        """Frame order of an object: its tier, then source label and name."""
-        tier = self.sources[key[0]][0]
-        return (TIERS.index(tier), *key)
-
     # ---------------------------------------------------------------------------------
     # validate
     # ---------------------------------------------------------------------------------
@@ -158,6 +173,8 @@ class Merger:
             problems += self.validateAgainstTables()
         if self.table.name in RIVALS:
             problems += self.rivalProblems()
+        if self.table.name == 'dropped':
+            problems += self.unknownObjects()
         if problems:
             raise ShardRefused(pd.DataFrame(problems))
         self.fillScriptColumns()
@@ -179,34 +196,39 @@ class Merger:
         for col, allowed in ALLOWED[name].items():
             bad = ~self.shard[col].isin(allowed) & (self.shard[col] != '')
             problems += self.flag(bad, col, 'not allowed')
-        for col in INT_COLUMNS[name]:
-            problems += self.flag(~self.shard[col].str.fullmatch(r'\d+'), col, 'not an integer')
         if name == 'registry':
-            index = pd.to_numeric(self.shard['model_index'], errors='coerce')
-            outside = index.notna() & ~index.between(1, MAX_MODELS_PER_OBJECT)
-            problems += self.flag(outside, 'model_index', f'at most {MAX_MODELS_PER_OBJECT} models per object')  # fmt: skip
+            problems += self.modelIndexProblems()
         return problems
 
-    def flag(self, mask: pd.Series, column: str, problem: str) -> list[dict]:
-        key = self.shard[list(self.table.key)].agg(' '.join, axis=1)
-        return [
-            {
-                'line': i,
-                'key': key[i],
-                'column': column,
-                'value': self.shard.at[i, column],
-                'problem': problem,
-            }
-            for i in self.shard.index[mask]
-        ]
+    def modelIndexProblems(self) -> list[dict]:
+        index = self.shard['model_index']
+        problems = self.flag(~index.str.fullmatch(r'\d+'), 'model_index', 'not an integer')
+        number = pd.to_numeric(index, errors='coerce')
+        outside = number.notna() & ~number.between(1, MAX_MODELS_PER_OBJECT)
+        problems += self.flag(outside, 'model_index', f'at most {MAX_MODELS_PER_OBJECT} models per object')  # fmt: skip
+        return problems
 
     def rivalProblems(self) -> list[dict]:
-        """An object is in the registry or in the exclusions, never both."""
         rival = TABLES[RIVALS[self.table.name]]
-        rows = self.canonical(rival)
-        taken = set(zip(rows['source'], rows['object']))
-        keys = pd.Series(list(zip(self.shard['source'], self.shard['object'])), index=self.shard.index)  # fmt: skip
-        return self.flag(keys.isin(taken), 'object', f'also in {rival.name}.csv')
+        taken = self.objectsIn(rival)
+        return self.flag(self.shardObjects().isin(taken), 'object', f'also in {rival.name}.csv')
+
+    def unknownObjects(self) -> list[dict]:
+        """A dropped object must be somewhere to drop it from."""
+        known = self.objectsIn(TABLES['registry']) | self.objectsIn(TABLES['excluded'])
+        unknown = ~self.shardObjects().isin(known)
+        return self.flag(unknown, 'object', 'not in registry.csv or excluded.csv')
+
+    def objectsIn(self, table: Table) -> set[Key]:
+        rows = self.canonical(table)
+        return set(zip(rows['source'], rows['object']))
+
+    def shardObjects(self) -> pd.Series:
+        keys = list(zip(self.shard['source'], self.shard['object']))
+        return pd.Series(keys, index=self.shard.index)
+
+    def flag(self, mask: pd.Series, column: str, text: str) -> list[dict]:
+        return [self.problem(line, column, text) for line in self.shard.index[mask]]
 
     def problem(self, line: int, column: str, text: str) -> dict:
         key = ' '.join(self.shard.loc[line, list(self.table.key)])
@@ -232,18 +254,16 @@ class Merger:
     def validateRow(self, line: int, row: pd.Series) -> list[dict]:
         if row['source'] not in self.sources:
             return [self.problem(line, 'source', 'not in sources.yaml')]
-        source = self.sources[row['source']][1]
-        objects = {o.name for o in self.loader.objects(source)}
-        if row['object'] not in objects:
+        if row['object'] not in self.objects(row['source']):
             return [self.problem(line, 'object', f'not an object of {row["source"]}')]
-        types = parseTypes(row[TYPES_COLUMN])
-        problems = [
-            self.problem(line, TYPES_COLUMN, f'not a column type: {kind}')
-            for kind in types.values()
-            if kind not in COLUMN_TYPES
-        ]
-        df = self.loader.load(source, row['object'])
-        problems += self.missingColumns(line, row, set(df.columns), types)
+        source = self.sources[row['source']]
+        types = self.parseTypes(row[TYPES_COLUMN])
+        problems = []
+        for kind in types.values():
+            if kind not in COLUMN_TYPES:
+                problems.append(self.problem(line, TYPES_COLUMN, f'not a column type: {kind}'))
+        untyped = self.loader.load(source, row['object'])
+        problems += self.missingColumns(line, row, set(untyped.columns), types)
         if problems:
             return problems
         df = self.loader.load(source, row['object'], types)
@@ -252,13 +272,13 @@ class Merger:
         return problems
 
     def missingColumns(
-        self, line: int, row: pd.Series, columns: set[str], types: dict
+        self, line: int, row: pd.Series, columns: set[str], types: dict[str, str]
     ) -> list[dict]:
         """Every column a row names, with the shard column it was named in."""
         named = [('response', row['response']), ('trials', row['trials'])]
         for col in COLUMN_LIST_COLUMNS:
-            named += [(col, name) for name in splitList(row[col])]
-        for interaction in splitList(row[INTERACTION_COLUMN]):
+            named += [(col, name) for name in self.splitList(row[col])]
+        for interaction in self.splitList(row[INTERACTION_COLUMN]):
             named += [(INTERACTION_COLUMN, name) for name in interaction.split(':')]
         named += [(TYPES_COLUMN, name) for name in types]
         return [
@@ -270,7 +290,7 @@ class Merger:
     def groupingProblems(self, line: int, row: pd.Series, df: pd.DataFrame) -> list[dict]:
         """A grouping factor has at least two levels and a level with two or more rows."""
         problems = []
-        for factor in splitList(row['grouping_factors']):
+        for factor in self.splitList(row['grouping_factors']):
             sizes = df[factor].value_counts()
             if len(sizes) < 2:
                 problems.append(self.problem(line, 'grouping_factors', f'{factor} has one level'))
@@ -281,45 +301,44 @@ class Merger:
         return problems
 
     def responseProblems(self, line: int, row: pd.Series, df: pd.DataFrame) -> list[dict]:
-        """The response column shows what its declared type says; binomial also names trials."""
+        """The response column shows what its declared type says."""
         response, kind = row['response'], row['response_type']
-        values = df[response].dropna()
+        fits, complaint = RESPONSE_CHECKS[kind]
         problems = []
-        if kind == 'continuous' and not pd.api.types.is_numeric_dtype(values):
-            problems.append(self.problem(line, 'response_type', f'{response} is not numeric'))
-        if kind == 'binary' and values.nunique() != 2:
-            problems.append(
-                self.problem(line, 'response_type', f'{response} has {values.nunique()} distinct values, not two')
-            )  # fmt: skip
-        if kind in ('count', 'binomial') and not isCount(values):
-            problems.append(
-                self.problem(line, 'response_type', f'{response} is not integer-valued')
-            )
-        if kind == 'ordinal' and values.nunique() > MAX_ORDINAL_LEVELS:
-            problems.append(
-                self.problem(line, 'response_type', f'{response} has more than {MAX_ORDINAL_LEVELS} levels')
-            )  # fmt: skip
-        if kind == 'categorical' and pd.api.types.is_float_dtype(values):
-            problems.append(self.problem(line, 'response_type', f'{response} is not categorical'))
-        if kind == 'binomial' and row['trials'] == '':
-            problems.append(self.problem(line, 'trials', 'binomial names its trials'))
-        if kind == 'binomial' and row['trials'] != '' and not isCount(df[row['trials']].dropna()):
-            problems.append(self.problem(line, 'trials', f'{row["trials"]} is not integer-valued'))
-        if kind == 'binomial' and row['trials'] != '' and (df[response] > df[row['trials']]).any():
-            problems.append(self.problem(line, 'trials', f'{response} exceeds {row["trials"]}'))
+        if not fits(df[response].dropna()):
+            problems.append(self.problem(line, 'response_type', f'{response} {complaint}'))
+        if kind == 'binomial':
+            problems += self.trialsProblems(line, row, df)
         return problems
+
+    def trialsProblems(self, line: int, row: pd.Series, df: pd.DataFrame) -> list[dict]:
+        """A binomial response names integer trials it never exceeds."""
+        response, trials = row['response'], row['trials']
+        if trials == '':
+            return [self.problem(line, 'trials', 'binomial names its trials')]
+        if not isCount(df[trials].dropna()):
+            return [self.problem(line, 'trials', f'{trials} is not integer-valued')]
+        if (df[response] > df[trials]).any():
+            return [self.problem(line, 'trials', f'{response} exceeds {trials}')]
+        return []
 
     def fillScriptColumns(self) -> None:
         if 'tier' in self.table.scriptColumns:
-            self.shard['tier'] = self.shard['source'].map(lambda s: self.sources[s][0])
+            self.shard['tier'] = self.shard['source'].map(self.tiers)
         if 'reader' in self.table.scriptColumns:
-            self.shard['reader'] = [self.reader(s, o) for s, o in zip(self.shard['source'], self.shard['object'])]  # fmt: skip
+            self.shard['reader'] = [self.objects(s)[o].reader for s, o in self.shardObjects()]
         if 'sources' in self.table.scriptColumns:
             self.shard['sources'] = self.shard['source'] + ':' + self.shard['object']
 
-    def reader(self, source: str, obj: str) -> str:
-        objects = {o.name: o for o in self.loader.objects(self.sources[source][1])}
-        return objects[obj].reader
+    @staticmethod
+    def splitList(text: str) -> list[str]:
+        return [t.strip() for t in text.split(';') if t.strip()]
+
+    @staticmethod
+    def parseTypes(text: str) -> dict[str, str]:
+        """`col=categorical;col2=continuous` -> {col: kind}."""
+        pairs = [entry.partition('=') for entry in Merger.splitList(text)]
+        return {col.strip(): kind.strip() for col, _, kind in pairs}
 
     # ---------------------------------------------------------------------------------
     # append
@@ -333,16 +352,29 @@ class Merger:
         self.replaced = len(old) + len(new) - len(merged)
         self.merged = merged.reset_index(drop=True)
         writeCsv(self.merged, self.root / f'{self.table.name}.csv')
-        if self.table.name in ('registry', 'duplicates'):
+        self.supersede()
+        self.flagged = 0
+        if self.table.name in RECONCILED:
             self.reconcile()
 
+    def supersede(self) -> None:
+        """The shard's objects leave the files this merge wins over."""
+        objects = set(self.shardObjects()) if 'source' in self.shard else set()
+        for name in SUPERSEDES[self.table.name]:
+            path = self.root / f'{name}.csv'
+            if not path.exists():
+                continue
+            rows = readCsv(path)
+            keys = pd.Series(list(zip(rows['source'], rows['object'])), index=rows.index)
+            writeCsv(rows[~keys.isin(objects)], path)
+
     # ---------------------------------------------------------------------------------
-    # reconcile duplicates: fold confirmed pairs, flag new candidates
+    # reconcile duplicates: fold confirmed groups, flag new candidates
     # ---------------------------------------------------------------------------------
     def reconcile(self) -> None:
         registry = self.canonical(TABLES['registry'])
         duplicates = self.canonical(TABLES['duplicates'])
-        registry = self.fold(registry, sameGroups(duplicates))
+        registry = self.fold(registry, self.sameGroups(duplicates))
         flagged = self.flagCandidates(registry, duplicates)
         writeCsv(registry, self.root / 'registry.csv')
         if len(duplicates) + len(flagged) > 0:
@@ -350,14 +382,30 @@ class Merger:
             writeCsv(duplicates, self.root / 'duplicates.csv')
         self.flagged = len(flagged)
 
-    def fold(self, registry: pd.DataFrame, groups: list[set[tuple[str, str]]]) -> pd.DataFrame:
-        """Each confirmed group becomes the row(s) of its earliest-tier object, `sources`
-        listing every member; the other members' rows leave the registry."""
+    @staticmethod
+    def sameGroups(duplicates: pd.DataFrame) -> list[set[Key]]:
+        """Connected components of the `same` pairs (radon in three sources is one group)."""
+        groups: list[set[Key]] = []
+        same = duplicates[duplicates['verdict'] == 'same']
+        for _, row in same.iterrows():
+            pair = {(row['source_a'], row['object_a']), (row['source_b'], row['object_b'])}
+            touching = [g for g in groups if g & pair]
+            for g in touching:
+                groups.remove(g)
+                pair |= g
+            groups.append(pair)
+        return groups
+
+    def fold(self, registry: pd.DataFrame, groups: list[set[Key]]) -> pd.DataFrame:
+        """Each confirmed group becomes the row(s) of its earliest-tier member in the registry,
+        `sources` listing every member present; the other members' rows leave the registry."""
         keys = pd.Series(list(zip(registry['source'], registry['object'])), index=registry.index)
         sources = registry['source'] + ':' + registry['object']
         keep = pd.Series(True, index=registry.index)
         for group in groups:
-            members = sorted(group, key=self.rank)
+            members = sorted(group & set(keys), key=self.rank)
+            if not members:
+                continue
             keep &= ~keys.isin(members[1:])
             listed = ';'.join(f'{s}:{o}' for s, o in members)
             sources = sources.where(keys != members[0], listed)
@@ -368,35 +416,23 @@ class Merger:
         no verdict row covers yet, earliest tier first."""
         objects = sorted(set(zip(registry['source'], registry['object'])), key=self.rank)
         signatures = {key: self.signature(key) for key in objects}
-        decided = set()
-        for _, row in duplicates.iterrows():
-            a = (row['source_a'], row['object_a'])
-            b = (row['source_b'], row['object_b'])
-            decided.add(frozenset((a, b)))
+        first = zip(duplicates['source_a'], duplicates['object_a'])
+        second = zip(duplicates['source_b'], duplicates['object_b'])
+        decided = set(zip(first, second))  # pairs are stored earliest tier first too
         flagged = []
-        for i, a in enumerate(objects):
-            for b in objects[i + 1 :]:
-                if signatures[a] == signatures[b] and frozenset((a, b)) not in decided:
-                    flagged.append(
-                        {
-                            'source_a': a[0],
-                            'object_a': a[1],
-                            'source_b': b[0],
-                            'object_b': b[1],
-                            'verdict': 'flagged',
-                            'notes': '',
-                        }
-                    )
+        for a, b in combinations(objects, 2):
+            if signatures[a] == signatures[b] and (a, b) not in decided:
+                flagged.append({'source_a': a[0], 'object_a': a[1], 'source_b': b[0], 'object_b': b[1], 'verdict': 'flagged', 'notes': ''})  # fmt: skip
         return flagged
 
-    def signature(self, key: tuple[str, str]) -> tuple[int, tuple[int, ...]]:
-        df = self.loader.load(self.sources[key[0]][1], key[1])
+    def signature(self, key: Key) -> tuple[int, tuple[int, ...]]:
+        df = self.loader.load(self.sources[key[0]], key[1])
         return (len(df), tuple(sorted(df.nunique())))
 
     def flush(self) -> None:
         new = len(self.shard) - self.replaced
         print(f'{self.table.name}: {new} rows added, {self.replaced} replaced, {len(self.merged)} total')  # fmt: skip
-        if self.table.name in ('registry', 'duplicates') and self.flagged:
+        if self.flagged:
             print(f'duplicates: {self.flagged} candidate pairs flagged, confirm through a duplicates shard')  # fmt: skip
 
 
