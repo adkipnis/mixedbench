@@ -34,8 +34,11 @@ index random effects; the **response** is the column a documented model explains
    `Block:Variety`, which the merge builds from its parts. An observation-level random effect
    (`(1|obs)` on a row id) is no grouping factor: its column goes in `ignore`, the term stays
    in the formula. A nonlinear mixed model (a pharmacokinetic or growth curve fitted with
-   `nlme`) stays in the registry for its grouping: write the model in words with its
-   covariates in `formula`, open `notes` with `NONLINEAR:`, confidence at most `medium`.
+   `nlme`) stays in the registry for its grouping: `formula` names the model class and its
+   inputs in words (`conc ~ one-compartment IV PK model with first-order elimination (dose,
+   time); subject-specific clearance and volume`), `notes` open with `NONLINEAR:`, confidence
+   at most `medium`. Rows without a measured response (dosing events) are no observations;
+   the merge drops them before measuring.
 3. **Further documented models.** A second or third documented model is a further row with
    `model_index` 2 or 3; never more than three, the documented model first.
 4. **Columns to ignore.** Row ids, weights, offsets, alternate responses and derived columns
@@ -44,7 +47,9 @@ index random effects; the **response** is the column a documented model explains
 5. **Types the file cannot carry.** For delimited text, Excel and JSON, declare in `types`
    which columns are `categorical`, `ordered` or `continuous` where the documentation says
    so. For R, Stata and SPSS files declare only `ordered` factors (the help page says
-   "ordered factor"; the reader loses the ordering) and leave the rest blank.
+   "ordered factor"; the reader loses the ordering) and leave the rest blank. Declare
+   `ordered` for covariates only: a grouping factor stored as an ordered factor (nlme's
+   `groupedData` orders subjects by their mean) is a nominal id, declare nothing for it.
 6. **Published model.** `published_model` is `yes` when a published model specification
    exists for the dataset (posteriordb, Stan example models, a textbook's worked example), else
    `no`.
