@@ -108,37 +108,37 @@ coefficient of variation are readable companions.
 | covariate type | n | share |
 |---|---|---|
 | continuous | 68 | 44% |
-| categorical | 42 | 27% |
+| categorical | 41 | 26% |
 | binary | 37 | 24% |
 | ordered | 9 | 6% |
 
 | level | n | share |
 |---|---|---|
-| within | 91 | 58% |
+| within | 90 | 58% |
 | group | 65 | 42% |
 
 Levels of the categorical covariates:
 
 | K | n | min | p5 | p10 | p50 | p90 | p95 | max | practice p90 |
 |---|---|---|---|---|---|---|---|---|---|
-| pooled | 51 | 2 | 3 | 3 | 4 | 6 | 7 | 56 | – |
-| tier R | 51 | 2 | 3 | 3 | 4 | 6 | 7 | 56 |  |
-| without agridat | 51 | 2 | 3 | 3 | 4 | 6 | 7 | 56 |  |
+| pooled | 50 | 2 | 3 | 3 | 4 | 6 | 7 | 56 | – |
+| tier R | 50 | 2 | 3 | 3 | 4 | 6 | 7 | 56 |  |
+| without agridat | 50 | 2 | 3 | 3 | 4 | 6 | 7 | 56 |  |
 
 | K | n | share |
 |---|---|---|
-| 3 | 23 | 45% |
-| 4 | 17 | 33% |
+| 3 | 23 | 46% |
+| 4 | 16 | 32% |
 | 6 | 4 | 8% |
-| 5 | 2 | 4% |
 | 2 | 2 | 4% |
+| 5 | 2 | 4% |
 | 14 | 1 | 2% |
 | 7 | 1 | 2% |
 | 56 | 1 | 2% |
 
 Implied design columns of a model under the observed categorical share
-(0.327) and mean columns per categorical (3.941):
-9 terms 17.65 columns, 14 terms 27.46 columns.
+(0.323) and mean columns per categorical (3.96):
+9 terms 17.59 columns, 14 terms 27.37 columns.
 
 ## Design columns
 
