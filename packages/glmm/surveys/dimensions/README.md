@@ -13,6 +13,7 @@ nothing is imported across surveys. Results: [`SUMMARY.md`](SUMMARY.md), regener
 | `sources.yaml` | hand (#19) and discovery (#21) | the frame: tiers of pinned sources, cap, seed, dropped candidates, the Tier O keyword net, see below |
 | `deposits.csv` | `deposits.py` | Tier D: the 60 seeded, stratified draws of the practice survey's deposit-naming papers, see below |
 | `candidates.csv` | `pull.py` | every enumerated data object with its counts, see below |
+| `net_hits.csv` | `net.py` | Tier O: every table of OpenML, UCI and PMLB whose column names hold a `nets` keyword, kept or not, see below |
 | `v05_datasets.csv` | hand (#23) | the 36 R datasets of metabeta v0.5 by `source`, `object` and their v0.5 parquet name; the closing contract test (#27) asserts each is in the registry or the exclusions |
 | `help/`, `cache/` | `pull.py`, loader | untracked: one help page per kept object for the agents, the table's dtypes and first rows appended; downloads and extracted trees |
 | `shards/<table>_<label>.csv` | agents; `pull.py` writes `excluded_prescreen.csv` | one shard per reading run; `table` ∈ `registry`, `excluded`, `duplicates`, `dropped` |
@@ -26,15 +27,20 @@ nothing is imported across surveys. Results: [`SUMMARY.md`](SUMMARY.md), regener
 | `prompts/discover.md`, `prompts/read.md` | | what the discovery agent and a reading agent get and write |
 | `schema.py`, `sources.py` | | file contract and allowed values; the frame read from `sources.yaml` |
 | `measure.py`, `summarise.py` | | what the merge measures from a loaded table, and how it reports it |
+| `net.py` | | the Tier O keyword net over the three repositories' APIs |
 | `tests/` | | pytest, run by hand, not in CI: `uv run pytest packages/glmm/surveys/dimensions` |
 
 Agents read documentation and write shards; `merge.py` is the only writer of the canonical CSVs.
 
 ```
 uv run python packages/glmm/surveys/dimensions/deposits.py
-uv run python packages/glmm/surveys/dimensions/pull.py
+uv run python packages/glmm/surveys/dimensions/net.py
+uv run python packages/glmm/surveys/dimensions/pull.py [--tiers E O]
 uv run python packages/glmm/surveys/dimensions/merge.py packages/glmm/surveys/dimensions/shards/<shard>.csv [--root DIR]
 ```
+
+`pull.py --tiers` pulls only those tiers (a ticket's pull): the other tiers keep their rows in
+`candidates.csv` and the pre-screen shard, and their help pages.
 
 ## `sources.yaml`
 
@@ -61,7 +67,9 @@ dropped:
 `kind` ∈ `cran` / `git` / `url` as the loader's `Source`; `name` defaults to the label (a CRAN
 package name); `pin` is the CRAN version, git revision or the file's sha256 (base R's
 `datasets` is pinned to the R version that dumps it); `checksum` (optional) pins a CRAN or
-git archive; `path` (optional) narrows a git or url tree. `cap` (optional, per entry or top-level as a
+git archive; `path` (optional) narrows a git or url tree; `file` (optional) names the download
+of a url whose path has no suffix (figshare's `files/<id>`, OSF's `download?version=9`), so the
+loader knows the format (`sleepstudy.csv`, `datasets.tar.gz`). `cap` (optional, per entry or top-level as a
 default) is the most objects read from one source, so that no single collection dominates: a
 source with more objects passing the pre-screen (below) keeps a draw of `cap` of them made with
 `random.Random(seed)`, `seed` top-level, over their sorted names. Only agridat (about 390 field
@@ -468,3 +476,89 @@ object left the registry; of the 20 drawn rows two left it, both `medium` rows w
 one-way factor classifies rather than clusters. Tier R closes at 1191 enumerated objects,
 689 read, 252 registry rows over 238 datasets and 559 exclusions.
 
+
+## Tier E census and Tier O net (#24)
+
+Loader work came first, since the Tier E files were unreadable: a Stan data dict (posteriordb's
+`.json.zip`, the Stan examples' `.data.json`) is read as the table of its observation-length
+arrays, an N-row matrix as numbered columns (`X_1`), scalars, group-level arrays and arrays of
+three dimensions left out and named on the help page; `.init.json` files (initial values) are no
+data; `.gz` and `.zip` wrappers are opened; Arrow files read through `pyarrow`, added to the
+research extra for MixedModels.jl's own datasets (decided 2026-10-07, against the spec's "no
+pyarrow"); parquet (OpenML) likewise; a url whose path has no suffix carries `file` in the
+frame; delimited text aligned with runs of spaces (the ARM `.dat` files) falls back to
+whitespace separation, padded names and fields are stripped, `NA` is missing, a byte-order
+mark dropped, and a file no reading parses (the PyMC examples' ice-core csv) is no frame; a
+429 is waited out. Documentation for a non-CRAN object is a text file named after its stem in
+its folder or a sibling folder (posteriordb's `data/info`), else the README-like files (`.md`,
+`.rst`, a `codebook.txt`, a `README` in capitals) in its folder or above it within the pinned
+path; a Stata file renders its labels as a codebook; an object with no documentation gets an
+empty page and the agent brief names where the source documents it. `pull.py --tiers E O`
+pulled the two tiers without touching Tier R. The composite factor builder (`measure.py`)
+now leaves a row without one of the parts without a level (the national radon survey's rows
+without a county).
+
+Tier E: 543 objects enumerated over 84 sources, 69 screened out mechanically (posteriordb's
+one-array time series among them), 474 read by eight Opus agents (posteriordb; the ARM
+chapters in three shards; the BUGS volumes; pingouin with the PyMC examples; bambi with
+MixedModels.jl; Stata [ME]; Stata [XT]), 189 registry rows before the fold and 360 exclusions
+(312 `no grouping structure`: the classical-regression ARM chapters, the BUGS examples' wide
+tables and one-row-per-group designs, bambi's regression tables; 25 `simulated data`, Stata's
+manual demos among them). The ARM chapters repeat their data files (srrs2.dat in five
+chapters, a dozen radon variants per chapter), so the merge flagged 357 pairs: 340 are
+byte-identical tables and were answered `same` by script
+(`shards/duplicates_tier_e_identical.csv`), the other 17 (MixedModels.jl's, bambi's and
+Stata's re-exports of lme4, nlme, MEMSS, mlmRev, brms and MASS tables) by one agent, all
+`same`. After the fold, Tier E holds 102 rows over 100 datasets (Stata 41, ARM 20,
+posteriordb 11, pingouin 11, PyMC 10, MixedModels.jl 6, BUGS 2, bambi 1), 96 of them with a
+published model, 58 at `high`; 17 Tier R rows now list a Tier E member in `sources`.
+
+Tier O: `net.py` ran the keyword net on 2026-10-07 (mechanics in `sources.yaml` above the
+`nets` block): 5025 OpenML datasets at their lowest version, 689 UCI datasets, 451 PMLB
+datasets; 76 hits (65 OpenML, 6 UCI, 5 PMLB; a first run that counted a name merely
+containing a keyword had 231, `family_history` and `time_in_hospital` among them, and is the
+reason the match is now the whole name), 30 drawn with seed 0, all 34 Tier O objects pass the
+pre-screen. One agent read them: 16 registry rows over 14 datasets and 20 exclusions (8
+synthetic: OpenML's `hepar2` Bayesian-network samples and a zombie table; 11 `no grouping
+structure`: the matched column is an attribute (`family` in anneal, `SUBJECT` as a crop type,
+IPUMS `farm` and `school`) or an id with one row per unit; one OpenML parquet holds a single
+subject of a 21-subject study). The boxing and Parkinsons twins across repositories folded, so
+Tier O closes at 13 rows over 12 datasets, none with a published mixed model, 7 `medium` and 6
+`low`: v0.5's four tables, squash and white clover trials, PopularKids, Parkinsons
+telemonitoring, gait, and three clinical tables whose cluster (patient, hospital) the source's
+own analysis treats as independent (kept at `low`; rule question below). The yield is low as
+expected: of 76 keyword hits 12 datasets have a documented clustering unit, and none a
+published model.
+
+Blind second reading of the 51 `medium` and `low` Tier E rows by three Opus agents into a
+scratch directory, compared by script on response, grouping factors, covariates and
+interactions: 45 still in the registry after the fold, 28 agree on all four (two more differ
+only in the order of an interaction's parts). Settled by rule without reading: a reading
+from the source document beats a recalled one (quinidine, earthquake, nlswork5, psidextract:
+the Stata agents read the manual PDFs, the blind readers recalled them), the simpler reading
+stands where neither read the source (mrk17_exp1's factorial interactions, radon Ch.12 and
+Ch.21's county-level `u`), an interaction the source fits is carried (allvar's
+`visage:treatmnt`), the multivariate rule gives the first-listed response (rm_missing) and
+the reduced form (sesame.data.json). Re-filed: pymc_examples employee, where the blind reader
+found the notebook's hierarchical model (`empower ~ lmx + male + (1 + lmx | team)`) the first
+reader had missed (`shards/*_tier_e_refile.csv`). Four grouping disagreements and two
+exclusions the blind readers proposed went to Alex with the spot check (below).
+
+Rule-gap decisions of this ticket (from the agents' notes):
+
+- `published_model` is `yes` for a documentation example that states the model (PyMC and
+  bambi notebooks, the Stata manual entries, the MixedModels.jl docs), `no` for data used only
+  in tests (pingouin pairwise_tests) (decided 2026-10-07).
+- posteriordb ships ladders of posteriors on one dataset (radon: 12); the row renders the
+  posterior with the richest grouping (varying intercept and slope), its covariates as fitted.
+- IRT posteriors (hier_2pl, grsm, gpcm: a discrimination × ability product) are nonlinear
+  mixed models over the crossed person × item grouping under the NONLINEAR rule.
+- A hierarchical model with Gaussian-process terms beside its random intercepts
+  (state_wide_presidential_votes) stays, GP noted; pure GP, time-series, CAR and mixture
+  posteriors are `no grouping structure`.
+- A Stan data dict that splits observations into censored and uncensored arrays of different
+  lengths (BUGS kidney) is read as its modal-length half; excluded as a derived table.
+- ARM raw tables of an early chapter whose multilevel fit sits in a later chapter are filed with
+  that model at `medium` when the grouping column is in the table; the Ch.4–7 earnings tables
+  lack `eth` and `age` and are excluded.
+- ml1m's 1–5 ratings are `ordinal` by the #23 rule (set in the shard).
