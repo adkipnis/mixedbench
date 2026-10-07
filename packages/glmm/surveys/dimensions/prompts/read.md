@@ -18,8 +18,8 @@ index random effects; the **response** is the column a documented model explains
 1. **Grouped or not.** If the documentation names no grouping factor (no subject, plot, school,
    herd, site, judge or the like that observations repeat within), or the table is one time
    series without replication, or a grouping column has fewer than two groups, the object goes
-   to the excluded shard with its reason. Likewise a response that is missing or undocumented,
-   a table derived from another object of the same source (a summary, an aggregate, a subset),
+   to the excluded shard with its reason. Likewise a table derived from another object of the
+   same source (a summary, an aggregate, a subset),
    a table the documentation calls simulated (the survey measures real grouped data), a format
    the loader refuses, a licence that forbids redistribution, or a table too large to hold in
    memory.
@@ -43,12 +43,19 @@ index random effects; the **response** is the column a documented model explains
 3. **Further documented models.** A second or third documented model is a further row with
    `model_index` 2 or 3 only when its response or its grouping factors differ from the first;
    a nested simplification of the fixed effects (Littell's fm1 to fm3 ladders) is the same
-   model. Never more than three, the documented model first.
-4. **Columns to ignore.** Row ids, weights, offsets, alternate responses, derived columns and
+   model. Never more than three, the documented model first. A multivariate table (several
+   response variables over one grouping, a MANOVA example) is one row per response in the
+   order the page lists them, the responses beyond the third named in the first row's `notes`
+   and every response not filed in that row's `ignore`.
+4. **Undocumented response.** A grouped table whose page documents no response and no model
+   is filed with the response a reader of the page would model, the outcome the data were
+   collected to study, at `low`; `notes` open with `RESPONSE INFERRED:` and say why. Only a
+   table with no defensible response is excluded as `response missing or undocumented`.
+5. **Columns to ignore.** Row ids, weights, offsets, alternate responses, derived columns and
    the plot coordinates of a field layout (`row`, `col`, latitude) in `ignore`, so that the
    full-table column count excludes them; an offset stays in the formula as
    `offset(log(area))`.
-5. **Types the file cannot carry.** For delimited text, Excel and JSON, declare in `types`
+6. **Types the file cannot carry.** For delimited text, Excel and JSON, declare in `types`
    which columns are `categorical`, `ordered` or `continuous` where the documentation says
    so. For R, Stata and SPSS files declare only `ordered` factors (the help page says
    "ordered factor"; the reader loses the ordering) and `categorical` for a numeric column
@@ -56,10 +63,10 @@ index random effects; the **response** is the column a documented model explains
    blank. Declare
    `ordered` for covariates only: a grouping factor stored as an ordered factor (nlme's
    `groupedData` orders subjects by their mean) is a nominal id, declare nothing for it.
-6. **Published model.** `published_model` is `yes` when a published model specification
+7. **Published model.** `published_model` is `yes` when a published model specification
    exists for the dataset (posteriordb, Stan example models, a textbook's worked example), else
    `no`.
-7. **Domain, confidence, notes.** One domain tag for reporting; `high` confidence when the
+8. **Domain, confidence, notes.** One domain tag for reporting; `high` confidence when the
    documentation states the model, `medium` when it describes the design but not a model or
    when you recall the model from the book the page cites (name book and section in `notes`),
    `low` when you inferred the grouping factor from column names. Name what you read and any
