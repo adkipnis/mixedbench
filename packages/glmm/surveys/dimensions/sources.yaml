@@ -1,0 +1,36 @@
+# The frame of the dimension survey (spec #14): tiers of pinned sources the pull enumerates.
+# Schema in README.md. Tier R pinned at the CRAN versions of 2026-10-07 (#19); `datasets` is
+# base R, pinned to the R version whose namespace the loader dumps.
+seed: 0
+tiers:
+  R:
+    # mixed-model packages
+    lme4: {kind: cran, pin: 2.0-6}
+    nlme: {kind: cran, pin: 3.1-171}
+    mlmRev: {kind: cran, pin: 1.0-9}
+    MEMSS: {kind: cran, pin: 0.9-4}
+    glmmTMB: {kind: cran, pin: 1.1.15.2}
+    brms: {kind: cran, pin: 2.23.0}
+    GLMMadaptive: {kind: cran, pin: 0.9-7}
+    nlmeU: {kind: cran, pin: 0.71.7}
+    SASmixed: {kind: cran, pin: 1.0-5}
+    HLMdiag: {kind: cran, pin: 0.5.1}
+    ordinal: {kind: cran, pin: 2026.7-26}
+    geepack: {kind: cran, pin: 1.3.13}
+    agridat: {kind: cran, pin: '1.26', cap: 50}  # about 390 field trials, else half the pool
+    # general data packages with grouped tables
+    MASS: {kind: cran, pin: 7.3-66}
+    carData: {kind: cran, pin: 3.0-6}
+    lattice: {kind: cran, pin: 0.23-1}
+    HSAUR3: {kind: cran, pin: 1.0-16}
+    faraway: {kind: cran, pin: 1.0.9}
+    boot: {kind: cran, pin: 1.3-32}
+    gamlss.data: {kind: cran, pin: 6.0-7}
+    medicaldata: {kind: cran, pin: 0.2.0}
+    languageR: {kind: cran, pin: '1.6'}
+    datasets: {kind: cran, pin: 4.6.1}
+  E:
+  T:
+  D:
+  O:
+dropped: []
