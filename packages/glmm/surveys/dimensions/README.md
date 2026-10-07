@@ -564,3 +564,22 @@ Rule-gap decisions of this ticket (from the agents' notes):
   that model at `medium` when the grouping column is in the table; the Ch.4–7 earnings tables
   lack `eth` and `age` and are excluded.
 - ml1m's 1–5 ratings are `ordinal` by the #23 rule (set in the shard).
+
+Decided by Alex on 2026-10-07 from the agents' `RULE GAP` notes:
+
+- Data a manual calls "fictional", "fictitious" or "synthetic" are `simulated data` like data
+  it calls simulated (Stata's chicken, estatus, wagework, xtcoint).
+- MixedModels.jl's d3 stays: no source states its origin or a simulation (the repository,
+  docs and Bates's simulation package were searched), and the table reads as anonymised real
+  data (coded ids, a composite of two factors, a bounded integer response); filed at `low`
+  with the benchmark model, re-filed from the exclusions.
+- InstEval's 1–5 ratings are `ordinal` (the pilot row said `continuous`); re-filed.
+- A cluster that repeats within the table counts as a grouping factor even when the source's
+  own analysis treats the rows as independent (Tier O's patient and hospital clusters).
+- A documented variant with a different grouping is a further `model_index` row (jobhistory:
+  birthyear crossed with id); a variant whose extra level has one row per level (melanoma's
+  county, an observation-level term) or whose grouping column is also a covariate (pig's week)
+  is not, and the merge refuses it.
+- A stochastic-frontier inefficiency term (xtfrontier1) is rendered as a random intercept.
+- Tier O rows carry `published_model` `no`: a documented target and cluster is not a
+  published mixed model.
