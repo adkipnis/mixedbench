@@ -327,7 +327,7 @@ axes:
       min: 0
       p5: 0
       p10: 0
-      p50: 3
+      p50: 4
       p90: 15
       p95: 27
       max: 55
@@ -337,7 +337,7 @@ axes:
         min: 0
         p5: 0
         p10: 0
-        p50: 3
+        p50: 4
         p90: 15
         p95: 27
         max: 55
@@ -412,13 +412,13 @@ imbalance:
   balanced_share: 0.579
 shares:
   covariate_type:
-    continuous: 0.407
-    categorical: 0.308
-    binary: 0.245
-    ordered: 0.04
+    continuous: 0.415
+    categorical: 0.304
+    binary: 0.242
+    ordered: 0.039
   level:
-    within: 0.563
-    group: 0.437
+    within: 0.562
+    group: 0.438
   relation:
     single: 0.474
     nested: 0.282
@@ -448,14 +448,14 @@ k_distribution:
   8: 0.019
   10: 0.019
   56: 0.01
-  9: 0.01
-  15: 0.01
   30: 0.01
   16: 0.01
   20: 0.01
   49: 0.01
+  9: 0.01
+  15: 0.01
 implied_columns:
-  categorical_share: 0.348
+  categorical_share: 0.343
   mean_columns_per_categorical: 4.8
-  terms_9: 20.89
-  terms_14: 32.5
+  terms_9: 20.74
+  terms_14: 32.25
