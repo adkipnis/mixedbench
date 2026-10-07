@@ -49,7 +49,9 @@ a value outside them or a column name the table lacks.
 ## Output — shards only
 
 Write `shards/registry_<label>.csv` with exactly the agent columns of the registry and
-`shards/excluded_<label>.csv` with `source,object,reason,detail`. Every field double-quoted,
-internal `"` doubled, no line breaks inside a field. Never write `registry.csv`,
-`excluded.csv` or `duplicates.csv`; never type a measured number; run nothing. Return
+`shards/excluded_<label>.csv` with `source,object,reason,detail`. Only when asked to re-read an
+object already filed, write `shards/dropped_<label>.csv` with `source,object,reason` first.
+Every field double-quoted, internal `"` doubled, no line breaks inside a field. Never write
+`registry.csv`, `excluded.csv`, `duplicates.csv` or `dropped.csv`; never type a measured
+number; run nothing. Return
 `{shard, n_objects, n_rows, n_excluded, n_high}`.

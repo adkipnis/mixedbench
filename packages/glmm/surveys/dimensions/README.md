@@ -13,10 +13,11 @@ nothing is imported across surveys. Results: `SUMMARY.md` (once #18 lands).
 | `sources.yaml` | discovery and hand (#19, #21) | the frame: tiers of pinned sources, see below |
 | `candidates.csv` | pull script (#19) | every enumerated data object with its counts |
 | `help/`, `cache/` | pull script, loader | untracked: documentation per object for the agents; downloads and extracted trees |
-| `shards/<table>_<label>.csv` | agents | one shard per reading run; `table` ∈ `registry`, `excluded`, `duplicates` |
+| `shards/<table>_<label>.csv` | agents | one shard per reading run; `table` ∈ `registry`, `excluded`, `duplicates`, `dropped` |
 | `registry.csv` | `merge.py` | one row per dataset and documented model, at most three per object |
 | `excluded.csv` | `merge.py` | every screened-out object with a categorical reason |
 | `duplicates.csv` | `merge.py` | candidate pairs the merge flagged and the verdicts agents returned |
+| `dropped.csv` | `merge.py` | objects taken out of the registry and the exclusions, awaiting a re-filing shard |
 | `dimensions.csv`, `columns.csv`, `quantiles.yaml`, `SUMMARY.md` | `merge.py` (#18) | measured on every merge, never typed |
 | `prompts/read.md` | | what a reading agent gets and writes |
 | `schema.py` | | file contract and allowed values |
@@ -84,7 +85,7 @@ Key `source`, `object`. Agent columns `source`, `object`, `reason`, `detail`; th
 `fewer than two groups` / `response missing or undocumented` / `derived or duplicated table` /
 `unreadable format` / `licence forbids redistribution` / `too large`. An object is in the
 registry or in the exclusions, never both: the shard that would put it in the second file is
-refused.
+refused. To re-file a misjudged object, drop it first (below).
 
 ## `duplicates.csv`
 
@@ -96,10 +97,17 @@ or `different`. On every merge the confirmed `same` groups collapse into the row
 earliest-tier object, whose `sources` lists every member; the other members' rows leave the
 registry, and re-merging their shard folds them again.
 
+## `dropped.csv`
+
+Key `source`, `object`. Agent columns `source`, `object`, `reason` (free text); the merge adds
+`tier`. Merging a `dropped_<label>.csv` shard removes its objects from `registry.csv` and
+`excluded.csv`, so that a later registry or excluded shard can re-file them; that later merge
+removes them from `dropped.csv` again. A shard naming an object in neither file is refused.
+
 ## What the merge checks
 
 Header equal to the agent columns; required fields; allowed values; `model_index` an integer
-from 1 to 3; the source is in `sources.yaml` and the object in the source; every named column
+from 1 to 3; a dropped object is in `registry.csv` or `excluded.csv`; the source is in `sources.yaml` and the object in the source; every named column
 exists in the loaded table; each grouping factor has at least two levels and a level with two
 or more rows; the response shows its declared type (`continuous` numeric, `binary` two
 distinct values, `count` and `binomial` non-negative integers, `ordinal` at most 10 distinct
