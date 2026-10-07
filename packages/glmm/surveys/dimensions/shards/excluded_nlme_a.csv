@@ -1,0 +1,2 @@
+"source","object","reason","detail"
+"nlme","MathAchSchool","no grouping structure","one row per school (School is unique per row), school-level companion of MathAchieve; RULE GAP: could also count as a derived table of MathAchieve"
