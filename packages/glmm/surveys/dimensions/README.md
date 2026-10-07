@@ -295,3 +295,38 @@ Agreed as filed: the three lme4-syntax formulas, the covariate lists, the ignore
 grouping factors `a:b`, the `simulated data` exclusion, the `NONLINEAR:` tag, offsets and
 observation-level random effects in `ignore`, transformed responses by their raw column,
 models recalled from the cited book at `medium`, `d_all` counting the documented interactions.
+
+## Census (#22)
+
+The remaining mixed-model packages, read by six Opus agents: MEMSS in two shards, SASmixed
+with nlmeU and HLMdiag, glmmTMB with brms, ordinal and geepack, agridat's 50 capped objects in
+two shards; 144 objects, 79 registry rows over 74 objects before the fold, 31 exclusions
+(agridat's 24 uniformity trials and fixed-effects-only tables, the wide and subject-level
+twins of nlmeU, the wide geepack tables). GLMMadaptive ships no data. One agent read the 40
+flagged pairs: every MEMSS object is a re-export of its nlme namesake (eight relabel the factor
+levels), SASmixed Semi2 is nlme Oxide, so 39 rows folded into their nlme rows and MEMSS keeps
+CO2, Orange and Theoph, whose namesakes are base R's `datasets` (#23). The MEMSS readings,
+made without sight of the nlme shards, agree with the pilot on every response and on 35 of 38
+grouping-factor lists (Alfalfa's and Pixel's composite whole-plot term, Gun's `Physique`);
+the covariate lists differ mostly on whether a nonlinear model's time or dose axis counts.
+
+Rules settled from the agents' `RULE GAP` notes:
+
+- A column is a grouping factor or a covariate, never both; the merge refuses the row. SASmixed
+  Cultivation's `(1|Cult)` next to `Inoc * Cult` is Littell's split-plot, so the random term is
+  the whole-plot term `Block:Cult`.
+- A nonlinear model's inputs (time, dose, concentration) are covariates, as the pilot filed
+  them; a shard that leaves them out measures `d_doc` 0.
+- A numeric R column the documented model wraps in `factor()` is declared `nitro=categorical`
+  in `types`; the loader applies a declaration on any format (yates.oats).
+- A uniformity trial (yield on a grid, no treatment) is excluded as `no grouping structure`
+  unless its examples block fits a random term on a column of the table (piepho.barley kept).
+- A documented fixed-effects fit over a blocked design (`lm` with `rep`) is rendered as the
+  random-effects version at `low` with the fixed model named in `notes`; when the page says
+  the replicate is no blocking factor (mead.germination) the object is excluded.
+- GEE fits (geepack) are filed as the lme4 equivalent with a random intercept on the cluster,
+  `notes` saying the source fits GEE. A censored survival response (brms kidney) stays as
+  `continuous` with the censoring indicator in `ignore`.
+- Help pages calling their data "constructed" or "probably constructed" (SASmixed Animal, BIB,
+  IncBlk) stay in the registry: only "simulated" excludes. Aggregate responses on a real
+  grouping (nass.sorghum's state-year yields, lillemo.wheat's mean scores) stay at `low`.
