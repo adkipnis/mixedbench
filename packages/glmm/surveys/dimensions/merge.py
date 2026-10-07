@@ -18,9 +18,8 @@ from itertools import combinations
 from pathlib import Path
 
 import pandas as pd
-import yaml
 from measure import COLUMN_COLUMNS, DIMENSION_COLUMNS, Measurer, parseTypes, splitList
-from metabeta.glmm.datasets import DataObject, Loader, Source
+from metabeta.glmm.datasets import DataObject, Loader
 from schema import (
     ALLOWED,
     COLUMN_LIST_COLUMNS,
@@ -34,6 +33,7 @@ from schema import (
     TYPES_COLUMN,
     Table,
 )
+from sources import readFrame
 from summarise import Summariser
 
 # =====================================================================================
@@ -104,23 +104,6 @@ def writeCsv(frame: pd.DataFrame, path: Path) -> None:
     frame.to_csv(path, index=False, quoting=csv.QUOTE_ALL)
 
 
-def readSources(root: Path) -> tuple[dict[str, str], dict[str, Source]]:
-    """`sources.yaml`, tiers of labelled pinned sources -> label -> tier, label -> Source."""
-    frame = yaml.safe_load((root / 'sources.yaml').read_text())
-    tiers, sources = {}, {}
-    for tier, entries in frame['tiers'].items():
-        for label, entry in (entries or {}).items():
-            tiers[label] = tier
-            sources[label] = Source(
-                kind=entry['kind'],
-                name=entry.get('name', label),
-                pin=str(entry['pin']),
-                checksum=entry.get('checksum'),
-                path=entry.get('path'),
-            )
-    return tiers, sources
-
-
 # =====================================================================================
 # pipeline: shard -> validate -> upsert -> reconcile duplicates -> measure -> summarise
 # =====================================================================================
@@ -128,7 +111,8 @@ class Merger:
     def __init__(self, root: Path, loader: Loader | None = None) -> None:
         self.root = Path(root)
         self.loader = loader or Loader(self.root / 'cache')
-        self.tiers, self.sources = readSources(self.root)
+        frame = readFrame(self.root)
+        self.tiers, self.sources = frame.tiers, frame.sources
 
     def canonical(self, table: Table) -> pd.DataFrame:
         path = self.root / f'{table.name}.csv'
