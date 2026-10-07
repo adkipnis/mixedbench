@@ -29,6 +29,18 @@ def splitList(text: str) -> list[str]:
     return [t.strip() for t in text.split(';') if t.strip()]
 
 
+def withComposites(df: pd.DataFrame, factors: list[str]) -> pd.DataFrame:
+    """A grouping factor `a:b` names no column (lme4's `(1|a:b)`, the whole plots of a
+    split-plot): the combination of its parts is added under that name, one level per pair of
+    levels present. Built here once, so the merge's checks and the measures see a plain column."""
+    composites = {}
+    for factor in factors:
+        if ':' in factor:
+            parts = factor.split(':')
+            composites[factor] = df[parts].astype(str).agg(':'.join, axis=1)
+    return df.assign(**composites)
+
+
 def fitAlpha(sizes: pd.Series) -> float:
     """Concentration of a symmetric Dirichlet fitted by moment matching to the group-size
     proportions: Var(p) = (1 − 1/G) / (G (G α + 1)) solved for α; the variance is around the
@@ -77,9 +89,9 @@ def observed(values: pd.Series, q: float) -> int | float:
 # =====================================================================================
 class Measurer:
     def __init__(self, df: pd.DataFrame, row: dict) -> None:
-        self.df = df
         self.row = row
         self.factors = splitList(row['grouping_factors'])
+        self.df = withComposites(df, self.factors)
         self.identity = {k: row[k] for k in IDENTITY}
         self.declared = parseTypes(row['types'])
         self.covariates = splitList(row['covariates'])
@@ -160,13 +172,15 @@ class Measurer:
     # design columns
     # ---------------------------------------------------------------------------------
     def design(self) -> dict:
-        """d_doc expands the documented model, d_all every covariate column (envelope rule 4):
-        continuous and binary count 1, categorical K − 1, an interaction the product."""
+        """d_doc expands the documented model, d_all every covariate column plus the documented
+        interactions, so that d_all is never below d_doc (envelope rule 4): continuous and
+        binary count 1, categorical K − 1, an interaction the product."""
         width = {c['column']: self.width(c) for c in self.columns()}
         interactions = splitList(self.row['interactions'])
-        dDoc = sum(width[c] for c in self.covariates)
-        dDoc += sum(np.prod([width[c] for c in term.split(':')]) for term in interactions)
-        return {'d_doc': int(dDoc), 'd_all': int(sum(width.values()))}
+        dInteractions = sum(np.prod([width[c] for c in term.split(':')]) for term in interactions)
+        dDoc = sum(width[c] for c in self.covariates) + dInteractions
+        dAll = sum(width.values()) + dInteractions
+        return {'d_doc': int(dDoc), 'd_all': int(dAll)}
 
     @staticmethod
     def width(column: dict) -> int:
