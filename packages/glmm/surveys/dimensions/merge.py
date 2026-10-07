@@ -120,6 +120,7 @@ class Merger:
         self.loader = loader or Loader(self.root / 'cache')
         frame = readFrame(self.root)
         self.tiers, self.sources = frame.tiers, frame.sources
+        self.order = {label: i for i, label in enumerate(frame.tiers)}  # sources.yaml order
 
     def canonical(self, table: Table) -> pd.DataFrame:
         path = self.root / f'{table.name}.csv'
@@ -128,9 +129,9 @@ class Merger:
     def objects(self, label: str) -> dict[str, DataObject]:
         return {o.name: o for o in self.loader.objects(self.sources[label])}
 
-    def rank(self, key: Key) -> tuple[int, str, str]:
-        """Frame order of an object: its tier, then source label and name."""
-        return (TIERS.index(self.tiers[key[0]]), *key)
+    def rank(self, key: Key) -> tuple[int, int, str]:
+        """Frame order of an object: its tier, its source's place in `sources.yaml`, its name."""
+        return (TIERS.index(self.tiers[key[0]]), self.order[key[0]], key[1])
 
     # ---------------------------------------------------------------------------------
     # load
@@ -383,18 +384,20 @@ class Merger:
         return groups
 
     def fold(self, registry: pd.DataFrame, groups: list[set[Key]]) -> pd.DataFrame:
-        """Each confirmed group becomes the row(s) of its earliest-tier member in the registry,
-        `sources` listing every member present; the other members' rows leave the registry."""
+        """Each confirmed group becomes the row(s) of its earliest member in the registry,
+        `sources` listing every member of the group, present or already folded away; the
+        other present members' rows leave the registry."""
         keys = pd.Series(list(zip(registry['source'], registry['object'])), index=registry.index)
         sources = registry['source'] + ':' + registry['object']
         keep = pd.Series(True, index=registry.index)
         for group in groups:
-            members = sorted(group & set(keys), key=self.rank)
-            if not members:
+            members = sorted(group, key=self.rank)
+            present = [m for m in members if m in set(keys)]
+            if not present:
                 continue
-            keep &= ~keys.isin(members[1:])
+            keep &= ~keys.isin(present[1:])
             listed = ';'.join(f'{s}:{o}' for s, o in members)
-            sources = sources.where(keys != members[0], listed)
+            sources = sources.where(keys != present[0], listed)
         return registry.assign(sources=sources)[keep].reset_index(drop=True)
 
     def flagCandidates(self, registry: pd.DataFrame, duplicates: pd.DataFrame) -> list[dict]:
