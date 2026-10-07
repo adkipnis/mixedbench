@@ -418,3 +418,6 @@
 "stata_melanoma","melanoma.dta","mixedmodels_jl","mmec.arrow","same","nation, region, county, deaths, expected, uv=uvb identical across 354 rows."
 "pmlb_boxing2","analcatdata_boxing2.tsv.gz","openml_444","dataset_444.pq","same","PMLB codes Judge, Official and the winner as integers, OpenML carries the labels (G._Hamada, Yes, de_la_Hoya); 132 rounds x judges, same order"
 "openml_4531","dataset_4531.pq","uci_189","data.csv","same","the Parkinsons telemonitoring table of Tsanas et al.; OpenML renames the punctuation of the column names (subject., Jitter..., Shimmer.dB.) and UCI keeps subject#, Jitter(%), Shimmer(dB); 5875 rows, 22 columns, same values"
+"lme4","Pastes","mixedmodels_jl","pastes.arrow","same","MixedModels.jl drops lme4's derived sample column (batch:cask); 60 rows, same strength, batch and cask"
+"lme4","grouseticks","mixedmodels_jl","grouseticks.arrow","same","MixedModels.jl drops lme4's derived cHEIGHT (centred height) and lower-cases the names; 403 rows"
+"mlmRev","Contraception","mixedmodels_jl","contra.arrow","same","MixedModels.jl drops the woman id and renames district to dist; 1934 rows, same use, livch, age and urban"

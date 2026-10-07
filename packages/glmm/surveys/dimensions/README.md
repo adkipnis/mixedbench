@@ -509,9 +509,11 @@ chapters, a dozen radon variants per chapter), so the merge flagged 357 pairs: 3
 byte-identical tables and were answered `same` by script
 (`shards/duplicates_tier_e_identical.csv`), the other 17 (MixedModels.jl's, bambi's and
 Stata's re-exports of lme4, nlme, MEMSS, mlmRev, brms and MASS tables) by one agent, all
-`same`. After the fold, Tier E holds 102 rows over 100 datasets (Stata 41, ARM 20,
-posteriordb 11, pingouin 11, PyMC 10, MixedModels.jl 6, BUGS 2, bambi 1), 96 of them with a
-published model, 58 at `high`; 17 Tier R rows now list a Tier E member in `sources`.
+`same`; three MixedModels.jl mirrors that drop a derived column (pastes, grouseticks,
+contra) escaped the signature and were folded by hand. After the fold, Tier E holds 99 rows
+over 97 datasets (Stata 41, ARM 20, posteriordb 11, pingouin 11, PyMC 10, MixedModels.jl 3,
+BUGS 2, bambi 1), 93 of them with a published model, 56 at `high`; 21 Tier R rows now list a
+Tier E member in `sources`.
 
 Tier O: `net.py` ran the keyword net on 2026-10-07 (mechanics in `sources.yaml` above the
 `nets` block): 5025 OpenML datasets at their lowest version, 689 UCI datasets, 451 PMLB
