@@ -85,6 +85,21 @@ def test_relation_between_grouping_factors_is_computed_from_the_data(
     assert {d['n_factors'] for d in dimensions} == {len(dimensions)}
 
 
+def test_a_composite_grouping_factor_is_built_from_its_parts(herds, rows):
+    """`region:breed` names no column: the measurer combines the two, a group per pair of
+    levels present. Twelve pairs, north:angus and south:jersey hold two rows, the ten others
+    one; the composite lies in region, so the relation is nested. breed and herd, no longer
+    a factor, are covariate columns; the composite does not appear in columns.csv."""
+    row = rows[0] | {'grouping_factors': 'region;region:breed'}
+    measurer = Measurer(herds, row)
+    region, pairs = measurer.dimensions()
+    assert pairs['factor'] == 'region:breed'
+    assert (pairs['n_groups'], pairs['group_size_min'], pairs['group_size_max']) == (12, 1, 2)
+    assert pairs['singleton_share'] == pytest.approx(10 / 12, abs=1e-4)
+    assert (region['relation'], pairs['relation']) == ('nested', 'nested')
+    assert [c['column'] for c in measurer.columns()] == ['herd', 'breed', 'feed', 'parity', 'sick']  # fmt: skip
+
+
 def test_column_types_and_levels_by_the_one_rule(herds, rows):
     """Model 1 leaves breed, feed, parity and sick as covariate columns (response, factors
     and the ignore list are out). breed and feed are declared categoricals; parity is an
@@ -119,11 +134,13 @@ def test_ordered_declared_continuous_and_missing_values(herds, rows):
 
 def test_design_columns_of_the_documented_model_and_of_the_whole_table(herds, rows):
     """Model 1: breed (4 levels) and feed (3) give d_doc = 3 + 2 = 5; parity (4) and sick (binary)
-    bring d_all to 9; an interaction breed:feed adds 3 × 2. Model 2 names only breed, and the
-    region column, no longer a factor, counts 2 in its d_all."""
+    bring d_all to 9; an interaction breed:feed adds 3 × 2 to both, so d_all is never below
+    d_doc. Model 2 names only breed, and the region column, no longer a factor, counts 2 in
+    its d_all."""
     dimensions = Measurer(herds, rows[0]).dimensions()
     assert {(d['d_doc'], d['d_all']) for d in dimensions} == {(5, 9)}
     interacting = rows[0] | {'interactions': 'breed:feed'}
-    assert Measurer(herds, interacting).dimensions()[0]['d_doc'] == 11
+    interacted = Measurer(herds, interacting).dimensions()[0]
+    assert (interacted['d_doc'], interacted['d_all']) == (11, 15)
     assert Measurer(herds, rows[1]).dimensions()[0]['d_doc'] == 3
     assert Measurer(herds, rows[1]).dimensions()[0]['d_all'] == 12
