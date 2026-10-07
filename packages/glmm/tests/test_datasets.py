@@ -132,6 +132,7 @@ def test_an_integer_column_with_na_loads_as_float_not_object(tmp_path):
     assert pd.api.types.is_string_dtype(scores['note'])
 
 
+@needsRscript
 def test_a_declared_ordered_column_keeps_its_levels_and_becomes_ordered(tmp_path):
     """pyreadr cannot tell an ordered factor from a plain one, so the registry declares it:
     an R factor keeps its level order, a plain column gets sorted levels."""
