@@ -18,17 +18,24 @@ from itertools import combinations
 from pathlib import Path
 
 import pandas as pd
-from measure import COLUMN_COLUMNS, DIMENSION_COLUMNS, Measurer, parseTypes, splitList
+from measure import (
+    COLUMN_COLUMNS,
+    DIMENSION_COLUMNS,
+    Measurer,
+    parseTypes,
+    splitList,
+    withComposites,
+)
 from metabeta.glmm.datasets import DataObject, Loader
 from schema import (
     ALLOWED,
     COLUMN_LIST_COLUMNS,
     COLUMN_TYPES,
-    INTERACTION_COLUMN,
     MAX_MODELS_PER_OBJECT,
     MAX_ORDINAL_LEVELS,
     REQUIRED,
     TABLES,
+    TERM_COLUMNS,
     TIERS,
     TYPES_COLUMN,
     Table,
@@ -252,7 +259,8 @@ class Merger:
         problems += self.missingColumns(line, row, set(untyped.columns), types)
         if problems:
             return problems
-        df = self.loader.load(source, row['object'], types)
+        loaded = self.loader.load(source, row['object'], types)
+        df = withComposites(loaded, splitList(row['grouping_factors']))
         problems += self.groupingProblems(line, row, df)
         problems += self.responseProblems(line, row, df)
         return problems
@@ -264,8 +272,9 @@ class Merger:
         named = [('response', row['response']), ('trials', row['trials'])]
         for col in COLUMN_LIST_COLUMNS:
             named += [(col, name) for name in splitList(row[col])]
-        for interaction in splitList(row[INTERACTION_COLUMN]):
-            named += [(INTERACTION_COLUMN, name) for name in interaction.split(':')]
+        for col in TERM_COLUMNS:
+            for term in splitList(row[col]):
+                named += [(col, name) for name in term.split(':')]
         named += [(TYPES_COLUMN, name) for name in types]
         return [
             self.problem(line, col, f'no such column: {name}')

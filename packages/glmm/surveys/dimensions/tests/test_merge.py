@@ -60,6 +60,7 @@ def refusal(merger: Merger, shard: Path) -> pd.DataFrame:
     [
         ({'domain': 'farming'}, 'domain', 'not allowed'),
         ({'covariates': 'breed;fed'}, 'covariates', 'no such column: fed'),
+        ({'grouping_factors': 'region:bred'}, 'grouping_factors', 'no such column: bred'),
         ({'types': 'breed=factor'}, 'types', 'not a column type: factor'),
         ({'response': 'cases', 'response_type': 'binomial'}, 'trials', 'binomial names its trials'),
         ({'response_type': 'count'}, 'response_type', 'weight is not integer-valued'),
@@ -175,6 +176,19 @@ def test_a_dropped_shard_moves_an_object_from_the_exclusions_to_the_registry(mer
     stray = {'source': 'herds', 'object': 'herds.csv', 'reason': 'never filed'}
     problems = refusal(merger, writeShard(merger.root / 'shards' / 'dropped_stray.csv', [stray]))
     assert list(problems['problem']) == ['not in registry.csv or excluded.csv']
+
+
+def test_a_composite_grouping_factor_merges_and_gets_its_own_dimension_row(merger):
+    """`region:breed` is no column of the table; the merge checks its parts, builds the
+    combination and measures it like any factor (the pilot's split-plot whole plots, #20)."""
+    rows = readRows(FIXTURES / 'registry_herds.csv')
+    rows[0]['grouping_factors'] = 'region;region:breed'
+    mergeShard(merger, writeShard(merger.root / 'shards' / 'registry_pairs.csv', rows[:1]))
+    dimensions = readRows(merger.root / 'dimensions.csv')
+    assert [(r['factor'], r['n_groups'], r['relation']) for r in dimensions] == [
+        ('region', '3', 'nested'),
+        ('region:breed', '12', 'nested'),
+    ]
 
 
 def test_every_merge_measures_the_registry_into_dimensions_and_columns(merger):
