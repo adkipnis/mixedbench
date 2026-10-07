@@ -186,7 +186,7 @@ Key `source`, `object`, `model_index`. Agent columns, in order:
 | `published_model` | `yes` when a published model specification exists (posteriordb, Stan example, textbook); else `no` |
 | `domain` | `ecology_biology` / `psychology_neuroscience` / `biomedicine` / `social_humanities` / `agriculture` / `education` / `economics` / `industry` / `other`; reporting only |
 | `confidence` | `high` / `medium` / `low` |
-| `notes` | free text: the documentation read, cases the prompt does not settle (`RULE GAP:`); `NONLINEAR:` opens the note of a nonlinear mixed model |
+| `notes` | free text: the documentation read, cases the prompt does not settle (`RULE GAP:`); `NONLINEAR:` opens the note of a nonlinear mixed model, `RESPONSE INFERRED:` the note of a row whose page documents no response |
 
 Script columns the merge fills: `tier` (from `sources.yaml`), `sources` (`source:object` of
 every confirmed duplicate folded into the row, the row's own first), `reader` (the loader's
