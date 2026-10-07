@@ -15,11 +15,13 @@ factors; per tier R 75. Excluded: 169 objects (no grouping structure 156, unread
 
 ## Observations
 
+Rows with a measured response; a pharmacokinetic table's dosing rows are not observations.
+
 | n_obs | n | min | p5 | p10 | p50 | p90 | p95 | max | practice p90 |
 |---|---|---|---|---|---|---|---|---|---|
-| pooled | 75 | 18 | 30 | 40 | 237 | 7185 | 26796 | 73421 | 23025 |
-| tier R | 75 | 18 | 30 | 40 | 237 | 7185 | 26796 | 73421 |  |
-| without agridat | 75 | 18 | 30 | 40 | 237 | 7185 | 26796 | 73421 |  |
+| pooled | 75 | 18 | 30 | 40 | 234 | 7185 | 24613 | 73421 | 23025 |
+| tier R | 75 | 18 | 30 | 40 | 234 | 7185 | 24613 | 73421 |  |
+| without agridat | 75 | 18 | 30 | 40 | 234 | 7185 | 24613 | 73421 |  |
 
 ## Grouping factors
 
@@ -40,9 +42,9 @@ factors; per tier R 75. Excluded: 169 objects (no grouping structure 156, unread
 
 | n_groups | n | min | p5 | p10 | p50 | p90 | p95 | max | practice p90 |
 |---|---|---|---|---|---|---|---|---|---|
-| pooled | 102 | 2 | 4 | 5 | 21 | 316 | 1595 | 11598 | 414 |
-| tier R | 102 | 2 | 4 | 5 | 21 | 316 | 1595 | 11598 |  |
-| without agridat | 102 | 2 | 4 | 5 | 21 | 316 | 1595 | 11598 |  |
+| pooled | 102 | 2 | 4 | 5 | 21 | 316 | 1595 | 10767 | 414 |
+| tier R | 102 | 2 | 4 | 5 | 21 | 316 | 1595 | 10767 |  |
+| without agridat | 102 | 2 | 4 | 5 | 21 | 316 | 1595 | 10767 |  |
 
 ## Group size
 
@@ -60,15 +62,15 @@ factors; per tier R 75. Excluded: 169 objects (no grouping structure 156, unread
 
 | group_size_p50 | n | min | p5 | p10 | p50 | p90 | p95 | max | practice p90 |
 |---|---|---|---|---|---|---|---|---|---|
-| pooled | 102 | 1 | 3 | 3 | 11 | 60 | 160 | 351 | – |
-| tier R | 102 | 1 | 3 | 3 | 11 | 60 | 160 | 351 |  |
-| without agridat | 102 | 1 | 3 | 3 | 11 | 60 | 160 | 351 |  |
+| pooled | 102 | 1 | 3 | 3 | 10 | 60 | 160 | 351 | – |
+| tier R | 102 | 1 | 3 | 3 | 10 | 60 | 160 | 351 |  |
+| without agridat | 102 | 1 | 3 | 3 | 10 | 60 | 160 | 351 |  |
 
 | group_size_p90 | n | min | p5 | p10 | p50 | p90 | p95 | max | practice p90 |
 |---|---|---|---|---|---|---|---|---|---|
-| pooled | 102 | 2 | 3 | 4 | 13 | 90 | 257 | 510 | – |
-| tier R | 102 | 2 | 3 | 4 | 13 | 90 | 257 | 510 |  |
-| without agridat | 102 | 2 | 3 | 4 | 13 | 90 | 257 | 510 |  |
+| pooled | 102 | 2 | 3 | 4 | 12 | 90 | 257 | 510 | – |
+| tier R | 102 | 2 | 3 | 4 | 12 | 90 | 257 | 510 |  |
+| without agridat | 102 | 2 | 3 | 4 | 12 | 90 | 257 | 510 |  |
 
 | group_size_max | n | min | p5 | p10 | p50 | p90 | p95 | max | practice p90 |
 |---|---|---|---|---|---|---|---|---|---|
@@ -80,7 +82,7 @@ factors; per tier R 75. Excluded: 169 objects (no grouping structure 156, unread
 
 The concentration of a symmetric Dirichlet fitted by moment matching to the group-size
 proportions, the statistic the simulator draws; a balanced allocation has infinite
-concentration (share of grouping factors: 0.49). Singleton share and the
+concentration (share of grouping factors: 0.48). Singleton share and the
 coefficient of variation are readable companions.
 
 | alpha | n | min | p5 | p10 | p50 | p90 | p95 | max | practice p90 |
@@ -91,9 +93,9 @@ coefficient of variation are readable companions.
 
 | singleton_share | n | min | p5 | p10 | p50 | p90 | p95 | max | practice p90 |
 |---|---|---|---|---|---|---|---|---|---|
-| pooled | 102 | 0 | 0 | 0 | 0 | 0.0667 | 0.1 | 0.6665 | – |
-| tier R | 102 | 0 | 0 | 0 | 0 | 0.0667 | 0.1 | 0.6665 |  |
-| without agridat | 102 | 0 | 0 | 0 | 0 | 0.0667 | 0.1 | 0.6665 |  |
+| pooled | 102 | 0 | 0 | 0 | 0 | 0.0672 | 0.1525 | 0.6665 | – |
+| tier R | 102 | 0 | 0 | 0 | 0 | 0.0672 | 0.1525 | 0.6665 |  |
+| without agridat | 102 | 0 | 0 | 0 | 0 | 0.0672 | 0.1525 | 0.6665 |  |
 
 | cv | n | min | p5 | p10 | p50 | p90 | p95 | max | practice p90 |
 |---|---|---|---|---|---|---|---|---|---|
@@ -112,8 +114,8 @@ coefficient of variation are readable companions.
 
 | level | n | share |
 |---|---|---|
-| within | 94 | 60% |
-| group | 62 | 40% |
+| within | 91 | 58% |
+| group | 65 | 42% |
 
 Levels of the categorical covariates:
 
@@ -128,8 +130,8 @@ Levels of the categorical covariates:
 | 3 | 23 | 45% |
 | 4 | 17 | 33% |
 | 6 | 4 | 8% |
-| 2 | 2 | 4% |
 | 5 | 2 | 4% |
+| 2 | 2 | 4% |
 | 14 | 1 | 2% |
 | 7 | 1 | 2% |
 | 56 | 1 | 2% |
