@@ -88,6 +88,17 @@ def test_every_object_gets_a_candidates_row_and_a_help_page(root):
     ]
 
 
+def test_a_help_page_ends_with_the_dtypes_and_first_rows_of_its_table(root):
+    """The read prompt promises agents the first rows next to the documentation, and agents
+    run nothing: the pull appends them to the help page."""
+    pull(root, Server())
+    page = (root / 'help' / 'fixture' / 'pets.txt').read_text()
+    head = page[page.index('# first rows') :]
+    assert '# first rows (of 6)' in head
+    assert 'category' in head
+    assert head.count('\n') >= 2 + 2 + 6  # banner, dtype lines, header and rows
+
+
 def test_a_source_over_its_cap_keeps_a_seeded_draw_and_lists_the_rest_as_capped(tmp_path):
     """Two of the four passing objects are read; the other two stay enumerated with `capped`
     set and get no help page, the screened-out one is not capped but not read either; the
