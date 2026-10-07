@@ -10,8 +10,8 @@ maximum over the v1 families' values in [`../practice/quantiles.yaml`](../practi
 (the minimum for the smallest group size), read at merge time; `–` where the practice survey
 has no such axis. These are evidence for `docs/design/envelope.md`, not the envelope itself.
 
-**Corpus.** 149 registry rows over 143 datasets and 210 grouping
-factors; per tier R 149. Excluded: 201 objects (no grouping structure 182, unreadable format 9, derived or duplicated table 7, simulated data 3).
+**Corpus.** 240 registry rows over 234 datasets and 324 grouping
+factors; per tier R 240. Excluded: 563 objects (no grouping structure 498, derived or duplicated table 21, time series without replication 14, simulated data 11, response missing or undocumented 10, unreadable format 9).
 
 ## Observations
 
@@ -19,133 +19,134 @@ Rows with a measured response; a pharmacokinetic table's dosing rows are not obs
 
 | n_obs | n | min | p5 | p10 | p50 | p90 | p95 | max | practice p90 |
 |---|---|---|---|---|---|---|---|---|---|
-| pooled | 149 | 12 | 30 | 36 | 196 | 3435 | 7185 | 73421 | 23025 |
-| tier R | 149 | 12 | 30 | 36 | 196 | 3435 | 7185 | 73421 |  |
-| without agridat | 121 | 18 | 30 | 36 | 234 | 4059 | 7230 | 73421 |  |
+| pooled | 240 | 12 | 20 | 30 | 220 | 3078 | 6402 | 73421 | 23025 |
+| tier R | 240 | 12 | 20 | 30 | 220 | 3078 | 6402 | 73421 |  |
+| without agridat | 212 | 12 | 20 | 30 | 235 | 3236 | 7185 | 73421 |  |
 
 ## Grouping factors
 
 | n_grouping_factors | n | min | p5 | p10 | p50 | p90 | p95 | max | practice p90 |
 |---|---|---|---|---|---|---|---|---|---|
-| pooled | 149 | 1 | 1 | 1 | 1 | 2 | 3 | 4 | 3 |
-| tier R | 149 | 1 | 1 | 1 | 1 | 2 | 3 | 4 |  |
-| without agridat | 121 | 1 | 1 | 1 | 1 | 2 | 2 | 3 |  |
+| pooled | 240 | 1 | 1 | 1 | 1 | 2 | 3 | 4 | 3 |
+| tier R | 240 | 1 | 1 | 1 | 1 | 2 | 3 | 4 |  |
+| without agridat | 212 | 1 | 1 | 1 | 1 | 2 | 2 | 3 |  |
 
 | relation | n | share |
 |---|---|---|
-| single | 98 | 47% |
-| nested | 57 | 27% |
-| crossed | 38 | 18% |
-| mixed | 17 | 8% |
+| single | 170 | 52% |
+| nested | 67 | 21% |
+| crossed | 64 | 20% |
+| mixed | 23 | 7% |
 
 ## Groups per factor
 
 | n_groups | n | min | p5 | p10 | p50 | p90 | p95 | max | practice p90 |
 |---|---|---|---|---|---|---|---|---|---|
-| pooled | 210 | 2 | 3 | 4 | 19 | 251 | 888 | 10767 | 414 |
-| tier R | 210 | 2 | 3 | 4 | 19 | 251 | 888 | 10767 |  |
-| without agridat | 157 | 2 | 4 | 5 | 21 | 312 | 1558 | 10767 |  |
+| pooled | 324 | 2 | 4 | 4 | 20 | 190 | 336 | 10767 | 414 |
+| tier R | 324 | 2 | 4 | 4 | 20 | 190 | 336 | 10767 |  |
+| without agridat | 271 | 2 | 4 | 4 | 21 | 197 | 539 | 10767 |  |
 
 ## Group size
 
 | group_size_min | n | min | p5 | p10 | p50 | p90 | p95 | max | practice p90 |
 |---|---|---|---|---|---|---|---|---|---|
-| pooled | 210 | 1 | 1 | 1 | 6 | 29 | 53 | 539 | 1 |
-| tier R | 210 | 1 | 1 | 1 | 6 | 29 | 53 | 539 |  |
-| without agridat | 157 | 1 | 1 | 1 | 6 | 28 | 54 | 539 |  |
+| pooled | 324 | 1 | 1 | 1 | 6 | 35 | 64 | 567 | 1 |
+| tier R | 324 | 1 | 1 | 1 | 6 | 35 | 64 | 567 |  |
+| without agridat | 271 | 1 | 1 | 1 | 5 | 32 | 79 | 567 |  |
 
 | group_size_p10 | n | min | p5 | p10 | p50 | p90 | p95 | max | practice p90 |
 |---|---|---|---|---|---|---|---|---|---|
-| pooled | 210 | 1 | 1 | 2 | 8 | 36 | 56 | 539 | – |
-| tier R | 210 | 1 | 1 | 2 | 8 | 36 | 56 | 539 |  |
-| without agridat | 157 | 1 | 1 | 2 | 7 | 36 | 56 | 539 |  |
+| pooled | 324 | 1 | 1 | 2 | 7 | 38 | 72 | 583 | – |
+| tier R | 324 | 1 | 1 | 2 | 7 | 38 | 72 | 583 |  |
+| without agridat | 271 | 1 | 1 | 2 | 6 | 38 | 81 | 583 |  |
 
 | group_size_p50 | n | min | p5 | p10 | p50 | p90 | p95 | max | practice p90 |
 |---|---|---|---|---|---|---|---|---|---|
-| pooled | 210 | 1 | 2 | 3 | 8 | 49 | 65 | 539 | – |
-| tier R | 210 | 1 | 2 | 3 | 8 | 49 | 65 | 539 |  |
-| without agridat | 157 | 1 | 2 | 3 | 8 | 50 | 160 | 539 |  |
+| pooled | 324 | 1 | 2 | 3 | 8 | 50 | 105 | 600 | – |
+| tier R | 324 | 1 | 2 | 3 | 8 | 50 | 105 | 600 |  |
+| without agridat | 271 | 1 | 2 | 3 | 8 | 51 | 152 | 600 |  |
 
 | group_size_p90 | n | min | p5 | p10 | p50 | p90 | p95 | max | practice p90 |
 |---|---|---|---|---|---|---|---|---|---|
-| pooled | 210 | 1 | 3 | 3 | 9 | 59 | 137 | 539 | – |
-| tier R | 210 | 1 | 3 | 3 | 9 | 59 | 137 | 539 |  |
-| without agridat | 157 | 2 | 3 | 4 | 9 | 61 | 257 | 539 |  |
+| pooled | 324 | 1 | 2 | 3 | 9 | 61 | 154 | 600 | – |
+| tier R | 324 | 1 | 2 | 3 | 9 | 61 | 154 | 600 |  |
+| without agridat | 271 | 2 | 2 | 3 | 9 | 63 | 217 | 600 |  |
 
 | group_size_max | n | min | p5 | p10 | p50 | p90 | p95 | max | practice p90 |
 |---|---|---|---|---|---|---|---|---|---|
-| pooled | 210 | 2 | 3 | 4 | 10 | 92 | 198 | 969 | 300 |
-| tier R | 210 | 2 | 3 | 4 | 10 | 92 | 198 | 969 |  |
-| without agridat | 157 | 2 | 3 | 4 | 10 | 118 | 351 | 969 |  |
+| pooled | 324 | 2 | 3 | 3 | 10 | 92 | 206 | 1666 | 300 |
+| tier R | 324 | 2 | 3 | 3 | 10 | 92 | 206 | 1666 |  |
+| without agridat | 271 | 2 | 3 | 3 | 10 | 118 | 290 | 1666 |  |
 
 ## Imbalance
 
 The concentration of a symmetric Dirichlet fitted by moment matching to the group-size
 proportions, the statistic the simulator draws; a balanced allocation has infinite
-concentration (share of grouping factors: 0.576). Singleton share and the
+concentration (share of grouping factors: 0.586). Singleton share and the
 coefficient of variation are readable companions.
 
 | alpha | n | min | p5 | p10 | p50 | p90 | p95 | max | practice p90 |
 |---|---|---|---|---|---|---|---|---|---|
-| pooled | 210 | 0.0251 | 1.5472 | 2.7846 | inf | inf | inf | inf | – |
-| tier R | 210 | 0.0251 | 1.5472 | 2.7846 | inf | inf | inf | inf |  |
-| without agridat | 157 | 0.3236 | 1.5472 | 2.6431 | inf | inf | inf | inf |  |
+| pooled | 324 | 0.0251 | 1.5472 | 3.2 | inf | inf | inf | inf | – |
+| tier R | 324 | 0.0251 | 1.5472 | 3.2 | inf | inf | inf | inf |  |
+| without agridat | 271 | 0.0363 | 1.5472 | 2.8425 | inf | inf | inf | inf |  |
 
 | singleton_share | n | min | p5 | p10 | p50 | p90 | p95 | max | practice p90 |
 |---|---|---|---|---|---|---|---|---|---|
-| pooled | 210 | 0 | 0 | 0 | 0 | 0.0667 | 0.1525 | 0.9964 | – |
-| tier R | 210 | 0 | 0 | 0 | 0 | 0.0667 | 0.1525 | 0.9964 |  |
-| without agridat | 157 | 0 | 0 | 0 | 0 | 0.0667 | 0.1525 | 0.6665 |  |
+| pooled | 324 | 0 | 0 | 0 | 0 | 0.0428 | 0.1525 | 0.9964 | – |
+| tier R | 324 | 0 | 0 | 0 | 0 | 0.0428 | 0.1525 | 0.9964 |  |
+| without agridat | 271 | 0 | 0 | 0 | 0 | 0.0428 | 0.1369 | 0.6665 |  |
 
 | cv | n | min | p5 | p10 | p50 | p90 | p95 | max | practice p90 |
 |---|---|---|---|---|---|---|---|---|---|
-| pooled | 210 | 0 | 0 | 0 | 0 | 0.5729 | 0.7935 | 5.899 | – |
-| tier R | 210 | 0 | 0 | 0 | 0 | 0.5729 | 0.7935 | 5.899 |  |
-| without agridat | 157 | 0 | 0 | 0 | 0 | 0.615 | 0.7935 | 1.7167 |  |
+| pooled | 324 | 0 | 0 | 0 | 0 | 0.5559 | 0.7869 | 5.899 | – |
+| tier R | 324 | 0 | 0 | 0 | 0 | 0.5559 | 0.7869 | 5.899 |  |
+| without agridat | 271 | 0 | 0 | 0 | 0 | 0.5586 | 0.7869 | 4.4575 |  |
 
 ## Covariates of the documented models
 
 | covariate type | n | share |
 |---|---|---|
-| continuous | 127 | 42% |
-| categorical | 93 | 30% |
-| binary | 74 | 24% |
-| ordered | 12 | 4% |
+| continuous | 218 | 41% |
+| binary | 160 | 30% |
+| categorical | 144 | 27% |
+| ordered | 14 | 3% |
 
 | level | n | share |
 |---|---|---|
-| within | 171 | 56% |
-| group | 135 | 44% |
+| within | 319 | 60% |
+| group | 217 | 40% |
 
 Levels of the categorical covariates:
 
 | K | n | min | p5 | p10 | p50 | p90 | p95 | max | practice p90 |
 |---|---|---|---|---|---|---|---|---|---|
-| pooled | 105 | 2 | 3 | 3 | 4 | 8 | 14 | 56 | – |
-| tier R | 105 | 2 | 3 | 3 | 4 | 8 | 14 | 56 |  |
-| without agridat | 77 | 2 | 3 | 3 | 4 | 7 | 10 | 56 |  |
+| pooled | 158 | 2 | 3 | 3 | 4 | 9 | 14 | 56 | – |
+| tier R | 158 | 2 | 3 | 3 | 4 | 9 | 14 | 56 |  |
+| without agridat | 130 | 2 | 3 | 3 | 4 | 9 | 10 | 56 |  |
 
 | K | n | share |
 |---|---|---|
-| 3 | 43 | 41% |
-| 4 | 33 | 31% |
-| 5 | 6 | 6% |
-| 6 | 5 | 5% |
-| 7 | 4 | 4% |
-| 14 | 2 | 2% |
-| 2 | 2 | 2% |
-| 10 | 2 | 2% |
-| 8 | 2 | 2% |
+| 3 | 60 | 38% |
+| 4 | 44 | 28% |
+| 5 | 15 | 9% |
+| 6 | 9 | 6% |
+| 10 | 6 | 4% |
+| 7 | 5 | 3% |
+| 8 | 5 | 3% |
+| 9 | 4 | 3% |
+| 14 | 2 | 1% |
+| 2 | 2 | 1% |
 | 56 | 1 | 1% |
-| 9 | 1 | 1% |
 | 15 | 1 | 1% |
 | 16 | 1 | 1% |
 | 20 | 1 | 1% |
 | 49 | 1 | 1% |
+| 17 | 1 | 1% |
 
 Implied design columns of a model under the observed categorical share
-(0.343) and mean columns per categorical (4.543):
-9 terms 19.94 columns, 14 terms 31.02 columns.
+(0.295) and mean columns per categorical (4.449):
+9 terms 18.15 columns, 14 terms 28.24 columns.
 
 ## Design columns
 
@@ -155,33 +156,33 @@ binary count one, a categorical its levels less one, an interaction the product.
 
 | d_doc | n | min | p5 | p10 | p50 | p90 | p95 | max | practice p90 |
 |---|---|---|---|---|---|---|---|---|---|
-| pooled | 149 | 0 | 0 | 0 | 4 | 15 | 23 | 55 | 11 |
-| tier R | 149 | 0 | 0 | 0 | 4 | 15 | 23 | 55 |  |
-| without agridat | 121 | 0 | 0 | 1 | 3 | 13 | 15 | 55 |  |
+| pooled | 240 | 0 | 0 | 0 | 4 | 14 | 19 | 55 | 11 |
+| tier R | 240 | 0 | 0 | 0 | 4 | 14 | 19 | 55 |  |
+| without agridat | 212 | 0 | 0 | 1 | 4 | 13 | 15 | 55 |  |
 
 | d_all | n | min | p5 | p10 | p50 | p90 | p95 | max | practice p90 |
 |---|---|---|---|---|---|---|---|---|---|
-| pooled | 149 | 0 | 0 | 1 | 5 | 20 | 31 | 60 | – |
-| tier R | 149 | 0 | 0 | 1 | 5 | 20 | 31 | 60 |  |
-| without agridat | 121 | 0 | 1 | 1 | 5 | 17 | 27 | 55 |  |
+| pooled | 240 | 0 | 0 | 1 | 5 | 21 | 38 | 14966 | – |
+| tier R | 240 | 0 | 0 | 1 | 5 | 21 | 38 | 14966 |  |
+| without agridat | 212 | 0 | 0 | 1 | 4 | 19 | 35 | 14966 |  |
 
 ## Response, reader and published model
 
 | response type | n | share |
 |---|---|---|
-| continuous | 117 | 79% |
-| count | 11 | 7% |
-| binary | 11 | 7% |
-| ordinal | 6 | 4% |
-| binomial | 3 | 2% |
-| categorical | 1 | 1% |
+| continuous | 182 | 76% |
+| binary | 23 | 10% |
+| count | 19 | 8% |
+| ordinal | 8 | 3% |
+| binomial | 7 | 3% |
+| categorical | 1 | 0% |
 
 | reader | n | share |
 |---|---|---|
-| pyreadr | 120 | 81% |
-| rscript | 29 | 19% |
+| pyreadr | 204 | 85% |
+| rscript | 36 | 15% |
 
 | published | n | share |
 |---|---|---|
-| yes | 136 | 91% |
-| no | 13 | 9% |
+| yes | 198 | 82% |
+| no | 42 | 18% |
