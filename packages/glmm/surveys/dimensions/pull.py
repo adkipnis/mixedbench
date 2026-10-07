@@ -6,7 +6,8 @@ data frame, three rows, two columns, one column whose values could index groups)
 are written as the shard `shards/excluded_prescreen.csv` for the merge. A source with more
 passing objects than its cap keeps a seeded draw of them. Objects screened out or left out by
 the cap stay listed, so that the screening denominator is known. The help page of every object
-to read lands in the untracked `help/<source>/<object>.txt` for the reading agents. Rerunning
+to read lands in the untracked `help/<source>/<object>.txt` for the reading agents, with the
+table's dtypes and first rows appended. Rerunning
 downloads nothing and rewrites the same files. Run from the repo root:
 
     uv run python packages/glmm/surveys/dimensions/pull.py
@@ -28,6 +29,7 @@ from sources import readFrame
 HERE = Path(__file__).parent
 MIN_ROWS = 3  # two groups, one of them with two observations
 MIN_COLS = 2  # a response and a grouping factor
+HEAD_ROWS = 8  # appended to each help page with the dtypes
 
 
 def countDtypes(df: pd.DataFrame) -> dict[str, int]:
@@ -107,7 +109,9 @@ class Puller:
             source = self.frame.sources[row['source']]
             file = self.root / 'help' / row['source'] / f'{row["object"]}.txt'
             file.parent.mkdir(parents=True, exist_ok=True)
-            file.write_text(self.loader.help(source, row['object']))
+            page = self.loader.help(source, row['object'])
+            df = self.loader.load(source, row['object'])
+            file.write_text(f'{page}\n\n{self._firstRows(df)}\n')
 
     def flush(self) -> None:
         """`candidates.csv` whole, and the screened-out objects as an exclusion shard."""
@@ -140,6 +144,14 @@ class Puller:
             'reader': obj.reader,
             'screen': screen(df),
         }
+
+    @staticmethod
+    def _firstRows(df: pd.DataFrame) -> str:
+        """What the read prompt promises next to the documentation: the dtypes and the first
+        rows, so that an agent sees the columns as loaded and runs nothing."""
+        dtypes = '\n'.join(f'{column}: {dtype}' for column, dtype in df.dtypes.items())
+        head = df.head(HEAD_ROWS).to_string(index=False)
+        return f'# first rows (of {len(df)})\n{dtypes}\n\n{head}'
 
     def _draw(self, names: list[str], cap: int | None) -> set[str]:
         """The names to read: all of them without a cap or under it, else a seeded sample."""
