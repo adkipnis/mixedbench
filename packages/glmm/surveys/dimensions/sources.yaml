@@ -30,7 +30,199 @@ tiers:
     languageR: {kind: cran, pin: '1.6'}
     datasets: {kind: cran, pin: 4.6.1}
   E:
+    # Python and Stan ecosystem examples, git revisions of 2026-10-07 (HEAD of the default
+    # branch); the discovery step (#21) added Stata's [ME] manual data as a further ecosystem
+    posteriordb: {kind: git, name: https://github.com/stan-dev/posteriordb, pin: 91027f9cdd13b7e76283fec3f2898f59d4b83ec4, path: posterior_database/data, licence: BSD-3-Clause}  # Stan data json and json.zip
+    stan_arm: {kind: git, name: https://github.com/stan-dev/example-models, pin: e5b7d9e2e9ecc375805c7e49e4a4d4c1882b5e3b, path: ARM}  # Gelman & Hill chapters, R dumps and json
+    stan_bugs: {kind: git, name: https://github.com/stan-dev/example-models, pin: e5b7d9e2e9ecc375805c7e49e4a4d4c1882b5e3b, path: bugs_examples}  # BUGS volumes 1 to 3, no BDA folder exists
+    pingouin: {kind: git, name: https://github.com/raphaelvallat/pingouin, pin: bb1cb22a3137f5864341c7a06cd030c072a170d4, path: src/pingouin/datasets, licence: GPL-3.0}  # csv with a datasets.csv index
+    pymc_examples: {kind: git, name: https://github.com/pymc-devs/pymc-examples, pin: 17c8f90dc90691b41587dfdf477698d74cf5c18c, path: examples/data, licence: MIT}  # documented in the notebooks
+    # bambi fetches its example data from figshare at load time; the URLs and checksums are those
+    # of bambi/data/datasets.py at b2a0e776 (2026-10-07), verified by download
+    bambi_my_data: {kind: url, name: https://ndownloader.figshare.com/files/28850355, pin: 1bfcdd10d0848c1811e33e467c92734fb488406ef3f9b9aae16a57b258a30fac}
+    bambi_adults: {kind: url, name: https://ndownloader.figshare.com/files/28870743, pin: 27a5270ba720125dfb24a7708cbee0218b2ead36248ae244813655d03320e43e}
+    bambi_anes: {kind: url, name: https://ndownloader.figshare.com/files/28870740, pin: 3106beb6ded5a592ea0405d23b868bd8e74c259d7a7f5242c907555692905772}
+    bambi_escs: {kind: url, name: https://ndownloader.figshare.com/files/28870722, pin: 0195545797a4258de138a205a013a84022bbe23e7ff47782b179055c706300b6}
+    bambi_carclaims: {kind: url, name: https://ndownloader.figshare.com/files/28870713, pin: 74924bf5f0a6e5aa5453d87845cea05e6b41bb2052cf6f096d7f102235ae5cdf}
+    bambi_batting: {kind: url, name: https://ndownloader.figshare.com/files/29749140, pin: bbbc9459632c738a07bbe0877970a7bbd1f4c2448193979337fe5bc3a4ab0228}
+    bambi_cherry_blossoms: {kind: url, name: https://ndownloader.figshare.com/files/31072807, pin: b859dd4f64c231c76ecb80b78f26da71e2f92698c50e0ceb93be0399dee24f51}
+    bambi_sleepstudy: {kind: url, name: https://ndownloader.figshare.com/files/31181002, pin: 0a002bec8be2fa9d40dbbf3d5038e614d113a4fd5bf8813f6f4271c3d6294675}
+    bambi_periwinkles: {kind: url, name: https://ndownloader.figshare.com/files/34446077, pin: 50da9791b7a66fbcc9ea4dd828dc7a3a66d5e067faf10f3bfd143af6c590923a}
+    bambi_admissions: {kind: url, name: https://ndownloader.figshare.com/files/34757857, pin: 41e2312ca09d50e99c2db67fbabc78d215df6ce71eefe880df5e9310a9fa8397}
+    bambi_bikes: {kind: url, name: https://ndownloader.figshare.com/files/38737026, pin: 3e1844b6da435f910b10899e18188568f7d789c715a286c9c6c2ca23833ee7ac}
+    bambi_mtcars: {kind: url, name: https://ndownloader.figshare.com/files/40208785, pin: c802190c43e02246da9c6c9c3f13a58f076cc6b77922f4d9766a3c6bdb1b52bd}
+    bambi_kidney: {kind: url, name: https://ndownloader.figshare.com/files/41645361, pin: 46e49372b4e8c3044dca0ffbb4eb2244f56d7398746802e351baac6c12625564}
+    # Stata [ME] Multilevel Mixed-Effects reference manual, release 18, one .dta per example
+    stata_admissions: {kind: url, name: https://www.stata-press.com/data/r18/admissions.dta, pin: 41fc592d31080ea244ef339b4c105a16d9f6e21fe94bfe372fae63830a799e4a}
+    stata_angina: {kind: url, name: https://www.stata-press.com/data/r18/angina.dta, pin: 59f46a60a1955ae22b39a66d213f5c028160f5b1558a234164ae5a2ab878668d}
+    stata_bangladesh: {kind: url, name: https://www.stata-press.com/data/r18/bangladesh.dta, pin: 2a88fd83c4e25474ed71e45e0a5946a4561151f6c8b0f28db360e4fc987dead2}
+    stata_catheter: {kind: url, name: https://www.stata-press.com/data/r18/catheter.dta, pin: 6dcc8acbf80c77d3435db92a1565367fa2b66dbba0a70547bba6e938b2da8a6c}
+    stata_childweight: {kind: url, name: https://www.stata-press.com/data/r18/childweight.dta, pin: 51d33a419a99246a83601a90810f5699ffd55b0de2cdac8b7d1a3ecc4bad5c1d}
+    stata_clippings: {kind: url, name: https://www.stata-press.com/data/r18/clippings.dta, pin: c02acede8789c9d658093e00a9bfc8d73ccccf804c5d30e085d6acf139b85bae}
+    stata_dialyzer: {kind: url, name: https://www.stata-press.com/data/r18/dialyzer.dta, pin: 32263a5a9122cf363a87cf12c57f1cde79ba3e6dfd50382b8e59faede0a8b4fb}
+    stata_diuretics: {kind: url, name: https://www.stata-press.com/data/r18/diuretics.dta, pin: 7e12c39f93854f957f6e39e26a0ff854254f77fc736777fe8f6666cb8de117b6}
+    stata_drvisits: {kind: url, name: https://www.stata-press.com/data/r18/drvisits.dta, pin: de1726b39a7401d5e7ceb81ac2a551e2744117c41a40762e625ef43552762a31}
+    stata_earthquake: {kind: url, name: https://www.stata-press.com/data/r18/earthquake.dta, pin: 3d391558a46363d28436cffdcbdae052752e21ae9159245378979a3b6faf27cc}
+    stata_epilepsy: {kind: url, name: https://www.stata-press.com/data/r18/epilepsy.dta, pin: 1f3108847cc03376b2df2fc1219eb058aed29425bcdb96e00d3e20838bb25e46}
+    stata_exercise: {kind: url, name: https://www.stata-press.com/data/r18/exercise.dta, pin: fce2c14895d9c4dae8b7f420cf4850a6ef06a7fb52c33f3af07009ed5b43b184}
+    stata_fifeschool: {kind: url, name: https://www.stata-press.com/data/r18/fifeschool.dta, pin: 25b5579ca820f1704019b487c042de3c80342f773eabefd3b7747ada04c66c9b}
+    stata_glucose: {kind: url, name: https://www.stata-press.com/data/r18/glucose.dta, pin: af75f135699acea78abebe7b6332e30b2bcd8a78936ad9006e84b57b1453c0df}
+    stata_jobhistory: {kind: url, name: https://www.stata-press.com/data/r18/jobhistory.dta, pin: 74483edce45598d9f4af99eaf90aea5118618e83b21034630e39846cecb68958}
+    stata_mastitis: {kind: url, name: https://www.stata-press.com/data/r18/mastitis.dta, pin: cf0d6b983e673e49d94cb85221cd6abd8f2a9f9e7b5ad73f5bc067b86b9dc172}
+    stata_melanoma: {kind: url, name: https://www.stata-press.com/data/r18/melanoma.dta, pin: 8e996671105c5147a13861fa4830b87bcb4dbed3b15322bfbabd56e90d10a8db}
+    stata_nlswork: {kind: url, name: https://www.stata-press.com/data/r18/nlswork.dta, pin: fa0c8a88dcc3283688b3cbb1197752bf3dc280087b89da36c755bcf98690b98b}
+    stata_nlswork3: {kind: url, name: https://www.stata-press.com/data/r18/nlswork3.dta, pin: e85b59f86eee466a101a717c674c96177747fe2b9ea57ed308506fd709bb1dac}
+    stata_orange: {kind: url, name: https://www.stata-press.com/data/r18/orange.dta, pin: 25f45e54bcdacef5199c0aafad9c7924ebd7af01e9571a5e450e9348adf2c4ec}
+    stata_ovary: {kind: url, name: https://www.stata-press.com/data/r18/ovary.dta, pin: 1288866a68c85ddb78d88872dd133ce25c744a85cede6de0e4e9a4b6bdb26e39}
+    stata_pefrate: {kind: url, name: https://www.stata-press.com/data/r18/pefrate.dta, pin: 426a381995f6430513c90eabafa8374cfe177448b0cc4e3370f49b618ffd1845}
+    stata_phenobarb: {kind: url, name: https://www.stata-press.com/data/r18/phenobarb.dta, pin: a2287168039ecb77579c5efaeca342e25828e8f1b1e1900a72a6ff4931a452d8}
+    stata_pig: {kind: url, name: https://www.stata-press.com/data/r18/pig.dta, pin: 386428521504899cb97dd920c5ccfc57a12d134425c3cd39bb9bd3c00b720161}
+    stata_pisa2000: {kind: url, name: https://www.stata-press.com/data/r18/pisa2000.dta, pin: 51f2d4d36d2f208facb42a3751b39563dc5cff933ad4051ece55e3e481dc1247}
+    stata_productivity: {kind: url, name: https://www.stata-press.com/data/r18/productivity.dta, pin: 0f48fb2597fa0ca0be0f4341b5b8c11fe2242589ddb4f0c773afa0292ed472f5}
+    stata_quinidine: {kind: url, name: https://www.stata-press.com/data/r18/quinidine.dta, pin: fbb25cd5a64d64aa1413f1268abc48ab7a352884b1ead5c8c53bb25ed1656c81}
+    stata_salamander: {kind: url, name: https://www.stata-press.com/data/r18/salamander.dta, pin: 6f0236549b3dbb6fef0a0cf3e62697d9cc5999e74018703602ae4200fe8aec06}
+    stata_soybean: {kind: url, name: https://www.stata-press.com/data/r18/soybean.dta, pin: 44d83d71959e14864ed4c15e82a4e0ac98981a08e010b6338ed1f54c2c5bd021}
+    stata_t43: {kind: url, name: https://www.stata-press.com/data/r18/t43.dta, pin: 62cd7d04644879759572364f80712f2ab151c2c9728efb94573e74d069fcec3e}
+    stata_theoph: {kind: url, name: https://www.stata-press.com/data/r18/theoph.dta, pin: c84a71678905106f0c8a9f4adb3bc3743e48795d4d9f4538dc9d0b72ad4dd8a4}
+    stata_toenail: {kind: url, name: https://www.stata-press.com/data/r18/toenail.dta, pin: f3a09261c35be443db45cdc56a939109e2ac2f63edab19097ac4b8afd74efe93}
+    stata_towerlondon: {kind: url, name: https://www.stata-press.com/data/r18/towerlondon.dta, pin: 7abcd9fb2d42b111fe3c73fdbed0e6372cbfc8bc31de4c03a5384c6d0a685345}
+    stata_tvsfpors: {kind: url, name: https://www.stata-press.com/data/r18/tvsfpors.dta, pin: 0742bdac316a50c5dad3f723e67ed88ce60a97f4637dda152d6fd498ec18c262}
+    stata_unicorn: {kind: url, name: https://www.stata-press.com/data/r18/unicorn.dta, pin: 08bc590894ea9091b1275f659541e7a02c5fa37c0459a9b256caddb9085cdb7b}
+    stata_union: {kind: url, name: https://www.stata-press.com/data/r18/union.dta, pin: 1706b833316bc4123c343ef1dc27fcb3ba80e9ac51095f43174dd4d88709b552}
+    stata_veneer: {kind: url, name: https://www.stata-press.com/data/r18/veneer.dta, pin: e63c3882edfdc52a199ba1d242ec2043b5c02738563cb8853fbc2dee82dad3bf}
+    stata_vptscores: {kind: url, name: https://www.stata-press.com/data/r18/vptscores.dta, pin: dcbdcd0d4134cfa3baa38b732d7ad397bec409a1f459a3a0413f155b0ed4769a}
+    stata_wafer: {kind: url, name: https://www.stata-press.com/data/r18/wafer.dta, pin: ea2dd473e7c5c276a3781ca2f951c801b3522fae38d23da22f02b2b98d92cd5a}
+    stata_weibre: {kind: url, name: https://www.stata-press.com/data/r18/weibre.dta, pin: 140317f1ffa15311eb1777384a58f9c3d29a726df2f9fd47d0117d866e3fcf77}
+    # Stata [XT] Longitudinal-Data/Panel-Data reference manual, release 18, added by hand on
+    # 2026-10-07; nlswork, nlswork3, union, tvsfpors and catheter are [ME] entries above
+    stata_quad1: {kind: url, name: https://www.stata-press.com/data/r18/quad1.dta, pin: 2d5187dc370d4472a304771e565452c7b32ae9fb283ffaa05999caa9b1965fb7}
+    stata_quad2: {kind: url, name: https://www.stata-press.com/data/r18/quad2.dta, pin: c466703c7353b9d07ff30c339b792b00e2c34aeb5c843cf592344bdffbf2f63e}
+    stata_clogitid: {kind: url, name: https://www.stata-press.com/data/r18/clogitid.dta, pin: 71dd7f87c2bcdf312bb77a349024279430ab4c108d504581b813c32a75c54bd4}
+    stata_abdata: {kind: url, name: https://www.stata-press.com/data/r18/abdata.dta, pin: 9c8e04dac33d01a36ce14a7071637ef88b0d900880a798993a2464f48b96fe53}
+    stata_xtcoint: {kind: url, name: https://www.stata-press.com/data/r18/xtcoint.dta, pin: a35fb4abc7c38b6599e282a44bdfaa45cffb7e48bf5bac8076f650de3ac6433d}
+    stata_xtdatasmpl: {kind: url, name: https://www.stata-press.com/data/r18/xtdatasmpl.dta, pin: b5e6a63851ac2a5c0b90a58aa1e8729fe3226746fe76ef93068643f5180a6017}
+    stata_xtdesxmpl: {kind: url, name: https://www.stata-press.com/data/r18/xtdesxmpl.dta, pin: 774d244e84e4f9fe7c7c04738d820d3654ca0dfb92ad10f9f20a5386d68269fe}
+    stata_xtfrontier1: {kind: url, name: https://www.stata-press.com/data/r18/xtfrontier1.dta, pin: c13e3a9f999d690f4636292809cd86102a39e032b804d35e1987927ffea29d88}
+    stata_nlswork2: {kind: url, name: https://www.stata-press.com/data/r18/nlswork2.dta, pin: d7a6e910f74964d1d7de050ca0d0d2c821a099c45ea185510cfa472f083bb047}
+    stata_airacc: {kind: url, name: https://www.stata-press.com/data/r18/airacc.dta, pin: b64272028553443f2a1dcc5b60c2ad2ee76547f0ce67c91bff1d615cd0408c03}
+    stata_airacc2: {kind: url, name: https://www.stata-press.com/data/r18/airacc2.dta, pin: 16b5d8bf8b63a3b04970642c69ced01aa66078cff391cf59a80511ed4d02ead1}
+    stata_invest2: {kind: url, name: https://www.stata-press.com/data/r18/invest2.dta, pin: fc3c2e45b3ba90e4f4dbf9d1e68f738a7729480ede82297266b68afd988738eb}
+    stata_wagework: {kind: url, name: https://www.stata-press.com/data/r18/wagework.dta, pin: e1078f3cdf85ae343e6edf0628ecf863bdbb909797dccf84b88e1b766a3dfae7}
+    stata_psidextract: {kind: url, name: https://www.stata-press.com/data/r18/psidextract.dta, pin: 62f62c273631bde09edff50e7af5dedf5fcd9f0cb9f1b34cc371f13924e7928f}
+    stata_xthtaylor1: {kind: url, name: https://www.stata-press.com/data/r18/xthtaylor1.dta, pin: f1121a19fd7f6376502d33c5d617b98ce99f2a7c22a6b1bf805a0afdc8b9cb11}
+    stata_xthtaylor2: {kind: url, name: https://www.stata-press.com/data/r18/xthtaylor2.dta, pin: a5b1ccb5fc1497a01a7e8cb2d05dba90506753e3bf0e1eebda68ba4a8f285a92}
+    stata_nlswork5: {kind: url, name: https://www.stata-press.com/data/r18/nlswork5.dta, pin: 3026017d403720b715403787d7365db12aa7293b956e02f9512f730b577ed73a}
+    stata_xtline1: {kind: url, name: https://www.stata-press.com/data/r18/xtline1.dta, pin: cda4ce415b6fcd464703b0e02d5d6670f4ab6dfe940f14ce06050f578d80b0ab}
+    stata_estatus: {kind: url, name: https://www.stata-press.com/data/r18/estatus.dta, pin: 12345823265b93112561d4716825616371b978804b811c98af10d4d7aa56a4a2}
+    stata_grunfeld: {kind: url, name: https://www.stata-press.com/data/r18/grunfeld.dta, pin: be844fe819788af680c8c7bb44f0a86f6726fb440081bd2de4a102679ebbc939}
+    stata_ships: {kind: url, name: https://www.stata-press.com/data/r18/ships.dta, pin: d015e0b262ebff647b5a2eb2c64260c5fd84ef7e05049595f888a7967612ba6b}
+    stata_chicken: {kind: url, name: https://www.stata-press.com/data/r18/chicken.dta, pin: 7438adeccc674e707970b5ac175a7abcc5552a5bfcc15afdde8e56483c3c0e72}
+    stata_gymdata: {kind: url, name: https://www.stata-press.com/data/r18/gymdata.dta, pin: 58167a7ffc6a6099ccf258a263af04e7d1970f71cb3d71ba230898ffd805911f}
+    stata_pennxrate: {kind: url, name: https://www.stata-press.com/data/r18/pennxrate.dta, pin: f2ef3cf9098d335e66068ae0a1ff27e7874713480060ddb468f317bbe244d9fb}
+    stata_swedishgov: {kind: url, name: https://www.stata-press.com/data/r18/swedishgov.dta, pin: 0e2f6e5f776b2b70be2e0fdd4780388ee5d61769012b323fae2d27c69df85f14}
+    # MixedModels.jl fetches its datasets as one OSF artifact (Artifacts.toml, version 9): a tar.gz
+    # of 17 Arrow files, among them kb07, mrk17_exp1, ml1m, oxide and d3, which lme4 lacks
+    mixedmodels_jl: {kind: url, name: "https://osf.io/djaqb/download?version=9", pin: 86de0984a920604d27bf5d9c1031bb65b9cb960c2450c064b7fcd29a052bbd34}
   T:
-  D:
+    # textbook companions and teaching sites, pinned 2026-10-07 by URL and sha256 (git revision for Hox)
+    hox: {kind: git, name: https://github.com/MirjamMoerbeek/Data_Sets_ML_book, pin: 55e410ee2c9d1613ca8ae74359b7d5cf5e3c8f82, path: .}  # Hox, Moerbeek & van de Schoot, 23 SPSS .sav
+    snijders_bosker: {kind: url, name: https://www.stats.ox.ac.uk/~snijders/Multilevel_Analysis_2nd_Ed_data.zip, pin: c802fa500556b3c4fdb8ae9f3b0dd241e171ce4a30d72050ee6df76a6334750c}  # Snijders & Bosker 2nd ed., one Excel workbook of every chapter's data
+    goldstein_msm: {kind: url, name: https://www.bristol.ac.uk/cmm/media/migrated/datasets-3rd-edition.zip, pin: ddc942a57c726cfa43f029e6f6ac2547438411f6bbd575759df86e136079caba}  # Goldstein, Multilevel Statistical Models 3rd ed., 12 .xls
+    goldstein_partnership: {kind: url, name: https://www.bristol.ac.uk/cmm/media/migrated/partnershipdata.zip, pin: 3a838831bc6cc2a6d44d51e348b562d8ddabf6aa6d1a7ec34b5e71c40fba63a7}  # Goldstein, partnership data (txt)
+    # Bristol Centre for Multilevel Modelling teaching library: fixed-width .dat with an .asc layout
+    cmm_asian: {kind: url, name: https://www.bristol.ac.uk/cmm/media/migrated/asian.zip, pin: 2270ccafd84e84bee014e9e91deecb7b9f6c3622a5d9f1730c8077ca020fdd07}
+    cmm_employ: {kind: url, name: https://www.bristol.ac.uk/cmm/media/migrated/employ.zip, pin: 2ba77d436104044a2e53d8660a7bd567cec84f5e48298fad758502868515223a}
+    cmm_ilea567: {kind: url, name: https://www.bristol.ac.uk/cmm/media/migrated/ilea567.zip, pin: e35674734d753de0113da9b69dbab6f62fe13548efd4d3bd67b74bd14af6013a}
+    cmm_jsp: {kind: url, name: https://www.bristol.ac.uk/cmm/media/migrated/jsp.zip, pin: 1f1fb579b6612a9a491f5517ed6c35a99d6f17a915f46343858ce1c9ec3da086}
+    cmm_oxboys: {kind: url, name: https://www.bristol.ac.uk/cmm/media/migrated/oxboys.zip, pin: abb9176ff4ca936aff73b77dc73cd2b0fb76503d582eed89cc4f07d0d7094965}
+    cmm_rao: {kind: url, name: https://www.bristol.ac.uk/cmm/media/migrated/rao.zip, pin: 7122dfaa42e16de801ad38c65fc9c30d373cb4d755e816c77b257f1e309e407e}
+    cmm_sci: {kind: url, name: https://www.bristol.ac.uk/cmm/media/migrated/sci.zip, pin: a19156a94fa6ab1c3e5a93a87a8a47459053a00fb3124a171bd2e1c8221448eb}
+    cmm_socatt: {kind: url, name: https://www.bristol.ac.uk/cmm/media/migrated/socatt.zip, pin: 2423324418e226dfcf5b07d6c6f689893b2a01e273b6adfa34879f3ab7662bb3}
+    cmm_starter: {kind: url, name: https://www.bristol.ac.uk/cmm/media/migrated/starter.zip, pin: 1c38355bf02a54b51769f26aaa9ad62d2d1cd22e4675428798219144153de0d5}
+    rabe_hesketh: {kind: url, name: https://www.stata-press.com/data/mlmus4/mlmus4.zip, pin: 5a544212728045d858e5a0df797e805a3865e29fddb09e5fa6c9aa4707a11529}  # Rabe-Hesketh & Skrondal 4th ed., 117 .dta
+    alda: {kind: url, name: https://stats.idre.ucla.edu/wp-content/uploads/2016/02/aldaascii.zip, pin: 14e62971f2cc5e37e3936fa775d59c1ceb045e5fbbc09239f750605d81156aaf}  # Singer & Willett, UCLA mirror, 48 csv-like .txt
+    zuur_mixed: {kind: url, name: https://www.highstat.com/Books/Book2/ZuurDataMixedModelling.zip, pin: 2210a4a3b0d78e94d66026dad7ea7ffac5afa75e4dfe013648c5da94b37582f2}  # Zuur et al. 2009, Mixed Effects Models and Extensions in Ecology with R, 34 .txt
+    zuur_glmglmm: {kind: url, name: https://www.highstat.com/Books/BGS/GLMGLMM/GLMGLMM_AllData_V2.zip, pin: 0ead3500ceecb93963ecaf8d9637958a1377bd448b1ae346652456bf9bc8da91}  # Zuur et al. 2013, Beginner's Guide to GLM and GLMM with R
+    zuur_zim: {kind: url, name: https://www.highstat.com/Books/BGS/ZIM/Data/Zuuretal_2016_ZIM_AllData.zip, pin: 5950df39b5509279f638b011fc5b01ae4f03357f971fd6f9d8d59b8596d2c801}  # Zuur et al. 2016, Beginner's Guide to Zero-Inflated Models with R
+    # added by hand on 2026-10-07 after a check for collections a reviewer would miss
+    rethinking: {kind: git, name: https://github.com/rmcelreath/rethinking, pin: ac1b3b2cda83f3e14096e2d997a6e30ad109eeee, path: data}  # McElreath, Statistical Rethinking; GitHub-only package, 49 semicolon-separated csv
+    ros: {kind: git, name: https://github.com/avehtari/ROS-Examples, pin: d35682d03d508e19ab60131e5c123643aac32bc9}  # Gelman, Hill & Vehtari, Regression and Other Stories; data under <example>/data, 106 files, 225 MB repository, overlaps stan_arm
+    west_welch_galecki: {kind: cran, name: WWGbook, pin: 1.0.2, licence: GPL (>= 2)}  # West, Welch & Galecki, Linear Mixed Models; every dataset of the book, the author site answers 403
+    # Fitzmaurice, Laird & Ware, Applied Longitudinal Analysis 2nd ed.: one .dta per dataset (obesity
+    # exists as txt only); the description of each is <name>.txt beside it on the same site
+    fitzmaurice_lead: {kind: url, name: https://content.sph.harvard.edu/fitzmaur/ala2e/lead.dta, pin: 91eaab7b452a597b919fe7df728f0e12ec099d829826a881f6bf57eb25eeac83}
+    fitzmaurice_tlc: {kind: url, name: https://content.sph.harvard.edu/fitzmaur/ala2e/tlc.dta, pin: 75de1ca3414da3ffdfc6126207f2e97dccccf5150f6b9e8fed53921fdff10628}
+    fitzmaurice_tlcmiss: {kind: url, name: https://content.sph.harvard.edu/fitzmaur/ala2e/tlcmiss.dta, pin: 90ae0a07155c012f2ce51b114a23d12df0783f79e395364214fa3c015d6ea709}
+    fitzmaurice_smoking: {kind: url, name: https://content.sph.harvard.edu/fitzmaur/ala2e/smoking.dta, pin: 91fbd32c49e04619bcf963aca6202d05299978a7c4ee6cc7dba0ee69bf934328}
+    fitzmaurice_fev1: {kind: url, name: https://content.sph.harvard.edu/fitzmaur/ala2e/fev1.dta, pin: d9c2763e0079b3f94a9ab1681052f461b79b300dc5edf8a64383b0707a90699e}
+    fitzmaurice_headache: {kind: url, name: https://content.sph.harvard.edu/fitzmaur/ala2e/headache.dta, pin: 6acfa370be70edee5e7a0b161c5500998af0a4b0c2a0818de58c639d42ca14cd}
+    fitzmaurice_bpd: {kind: url, name: https://content.sph.harvard.edu/fitzmaur/ala2e/bpd.dta, pin: 9c1a4a4640d1c250ae86b3f1f45a07b556532da95cffc03b458dfbdfa54597c9}
+    fitzmaurice_impairment: {kind: url, name: https://content.sph.harvard.edu/fitzmaur/ala2e/impairment.dta, pin: fb270bb7c628da44171a0adbfcdd877c22b81b5a9c13dc66571411563e5d566c}
+    fitzmaurice_insomnia: {kind: url, name: https://content.sph.harvard.edu/fitzmaur/ala2e/insomnia.dta, pin: 673feaef1d14e99bf02227f842e06562e9ab136af5ce297158188549eb860351}
+    fitzmaurice_tvsfp: {kind: url, name: https://content.sph.harvard.edu/fitzmaur/ala2e/tvsfp.dta, pin: acc03cb20a26a00f0914c5f83994ff53bfeb5f6f6280aa9ba6e9bd378c957f87}
+    fitzmaurice_ntp: {kind: url, name: https://content.sph.harvard.edu/fitzmaur/ala2e/ntp.dta, pin: a60022df640e2f428e341d09274aacb516e46146cdcfc9d104bc3bde04949819}
+    fitzmaurice_melanoma: {kind: url, name: https://content.sph.harvard.edu/fitzmaur/ala2e/melanoma.dta, pin: 7fcdd0ac52af650cc6791879f35d006a1cd9bfe354af19d1cc7aeed0cf294ed3}
+    fitzmaurice_muscatine: {kind: url, name: https://content.sph.harvard.edu/fitzmaur/ala2e/muscatine.dta, pin: a3c785975c72b81fc7315a3897d4dd8f798b52ef7ecf9336a0a84032eb7fd8ae}
+    fitzmaurice_epilepsy: {kind: url, name: https://content.sph.harvard.edu/fitzmaur/ala2e/epilepsy.dta, pin: 60392e5c4404fd2ab47a9c7b79a2e6c43f9177681afa9041ebf3833025eba676}
+    fitzmaurice_seizure: {kind: url, name: https://content.sph.harvard.edu/fitzmaur/ala2e/seizure.dta, pin: 78248fefae6063d46aac9c20bb00ffc5a5aa55541da4564d92b1247cb00d8e23}
+    fitzmaurice_ecg: {kind: url, name: https://content.sph.harvard.edu/fitzmaur/ala2e/ecg.dta, pin: 879157e98c18e51f3fae7f1cf4c2737cc394704aa180bd49725302ede4cabd50}
+    fitzmaurice_amenorrhea: {kind: url, name: https://content.sph.harvard.edu/fitzmaur/ala2e/amenorrhea.dta, pin: ba8c0280006e3e0bd9f3e6a27f3261dd3207fab959cee0abcd24e41a30c62668}
+    fitzmaurice_contracep: {kind: url, name: https://content.sph.harvard.edu/fitzmaur/ala2e/contracep.dta, pin: ed151697a68b10d275639a0499d97d47969268359c4182211084f6dc2e90c30b}
+    fitzmaurice_exercise: {kind: url, name: https://content.sph.harvard.edu/fitzmaur/ala2e/exercise.dta, pin: 07a8db0380d44dcfe0bed94819808e2bd61482e82e9402b391d2db72a02efb9c}
+    fitzmaurice_diabetes: {kind: url, name: https://content.sph.harvard.edu/fitzmaur/ala2e/diabetes.dta, pin: 1659f4d30b9a78d1000be0e3ec0f8f2393f6f0d2d487507823603148bb544561}
+    fitzmaurice_dental: {kind: url, name: https://content.sph.harvard.edu/fitzmaur/ala2e/dental.dta, pin: d71e655ef7734b6a736bceb02822adf6e2065d5737ff25ed3667e5ababa54f57}
+    fitzmaurice_birthwt: {kind: url, name: https://content.sph.harvard.edu/fitzmaur/ala2e/birthwt.dta, pin: 6b7f159d74edc8eab722034939321b19a90f49693a83ac9ce9356d403748f26e}
+    fitzmaurice_chd: {kind: url, name: https://content.sph.harvard.edu/fitzmaur/ala2e/chd.dta, pin: 835bcf8f714a3576378f170549daedc1510246fc79534d678e165fed5d3eb24a}
+    fitzmaurice_leprosy: {kind: url, name: https://content.sph.harvard.edu/fitzmaur/ala2e/leprosy.dta, pin: c97489a598f62e4162cc4aa1844a3acb0ae05b845e9d2b8ec0f4af606b5fc7b0}
+    fitzmaurice_cholesterol: {kind: url, name: https://content.sph.harvard.edu/fitzmaur/ala2e/cholesterol.dta, pin: ac46774eb28ce6f02282fd2c00cadb2b27d84734b301f066aa2d5b29178b3094}
+    fitzmaurice_rat: {kind: url, name: https://content.sph.harvard.edu/fitzmaur/ala2e/rat.dta, pin: da2c54f4ad7179b8368b8f101a45799de8342bda947ff9231faf6f4882bc75fa}
+    fitzmaurice_respir: {kind: url, name: https://content.sph.harvard.edu/fitzmaur/ala2e/respir.dta, pin: 7f36723a009859dd5477bb3e33cbfff30f5fd6521bc622698159d42de8d9e7fb}
+    fitzmaurice_tumor: {kind: url, name: https://content.sph.harvard.edu/fitzmaur/ala2e/tumor.dta, pin: 60ddc3d1f888a0989990b5bdf2fb73f91159325d697497d32155ffd33de73c21}
+    fitzmaurice_cd4: {kind: url, name: https://content.sph.harvard.edu/fitzmaur/ala2e/cd4.dta, pin: e9fda9377f2879594b3f73dbbb631e84482fc1df953b22f914ebd09dfff99399}
+    fitzmaurice_toenail: {kind: url, name: https://content.sph.harvard.edu/fitzmaur/ala2e/toenail.dta, pin: b049c0d0452552a35e580b8c9501a8ccb5ebe81d33a6bfd0b8ce96350fd2e94b}
+    fitzmaurice_progesterone: {kind: url, name: https://content.sph.harvard.edu/fitzmaur/ala2e/progesterone.dta, pin: cc1f229b57f8970ed4c12fc676d266c7dad5b2e3ed0f0c889d84d49507eb7fb6}
+    fitzmaurice_arthritis: {kind: url, name: https://content.sph.harvard.edu/fitzmaur/ala2e/arthritis.dta, pin: 250c58a530de23a95494fe4be14704905a934b4e3a52d0f88d10a5719d70898f}
+    fitzmaurice_schizophrenia: {kind: url, name: https://content.sph.harvard.edu/fitzmaur/ala2e/schizophrenia.dta, pin: 5ba896a9fff1393bb9ce9414f2178f52c450d741e478d99c4616f971a5d165a8}
+    fitzmaurice_skin: {kind: url, name: https://content.sph.harvard.edu/fitzmaur/ala2e/skin.dta, pin: 9b4d1b3666557ca3a45ca6f1d74d3a10f377f7cf111bbaa7ef2b8cabd74c494e}
+    fitzmaurice_fat: {kind: url, name: https://content.sph.harvard.edu/fitzmaur/ala2e/fat.dta, pin: a310cc6d1722fa4a243540f14e9074954634ef70c15935e1555925dfa7bd894d}
+    fitzmaurice_ccs: {kind: url, name: https://content.sph.harvard.edu/fitzmaur/ala2e/ccs.dta, pin: 5411530fdf5d096f9af0de0159150db88f1e7c89b3be4ef1991c05cd01f118fa}
+    fitzmaurice_obesity: {kind: url, name: https://content.sph.harvard.edu/fitzmaur/ala2e/obesity-data.txt, pin: 1d04686ffd42c342267b2f4d346c17153b682736e4f9237f0f89381309bbc6d2}
+    # Diggle, Heagerty, Liang & Zeger: the APTS course page of Diggle; CD4, lead and PANSS are
+    # longitudinal, the rest spatial and left to the pre-screen
+    diggle_cd4: {kind: url, name: https://www.lancaster.ac.uk/staff/diggle/APTS-data-sets/CD4_data.txt, pin: 2c071453c84ee5cb0f5837e5da1a453271c03b14665e001b1b1312a053bfc290}
+    diggle_lead2000: {kind: url, name: https://www.lancaster.ac.uk/staff/diggle/APTS-data-sets/lead2000_data.txt, pin: 29eb396fd42edddf9d0ff672116d68a34159fad77bfac725f9d7fd510dad3a48}
+    diggle_galicia_coastline: {kind: url, name: https://www.lancaster.ac.uk/staff/diggle/APTS-data-sets/galicia_coastline.txt, pin: a92f6e322d9991dd6f331305f08c9b079223f173d37ce83d05c944df565f7826}
+    diggle_maxtemp: {kind: url, name: https://www.lancaster.ac.uk/staff/diggle/APTS-data-sets/maxtemp_data.txt, pin: b6c6101ee92c2fbec5023d5521bdd5f634dcfad40f3765e295bfaf51f2af3a43}
+    diggle_panss_short: {kind: url, name: https://www.lancaster.ac.uk/staff/diggle/APTS-data-sets/PANSS_short_data.txt, pin: 874512292dbf8c0af69adb8790eaba118f523eb03ae9673453fb4ef5950bc47b}
+    diggle_wassle: {kind: url, name: https://www.lancaster.ac.uk/staff/diggle/APTS-data-sets/wassle_data.txt, pin: f4d5617753564c29c8de4912b2d7716ec6aeb0659b600af01218ba860c3b99a1}
+    diggle_amacrines: {kind: url, name: https://www.lancaster.ac.uk/staff/diggle/APTS-data-sets/amacrines_data.txt, pin: 26daaf7a241949b860024a6a211373f709b36d04045ddd5e55a520e7f2990060}
+  D:  # the deposits of `deposits.csv`, pinned by #26 as `<paper_id>_<repository>`
   O:
-dropped: []
+    # v0.5's four PMLB tables (Simonoff, Analyzing Categorical Data, 2003). PMLB keeps its data
+    # in Git LFS: the media URL at the commit of 2026-10-07 serves the file, the LFS object id is
+    # its sha256. The keyword net itself is `nets` below; #24 adds its hits here.
+    pmlb_apnea2: {kind: url, name: https://media.githubusercontent.com/media/EpistasisLab/pmlb/7c1f4bdc00136dc2e55c87fa6b8ba6e8af6d1a68/datasets/556_analcatdata_apnea2/556_analcatdata_apnea2.tsv.gz, pin: 95cee5abe3479338a52c419567b944199c6c6cef629d1111de7b1d2afe0b2b08}
+    pmlb_apnea1: {kind: url, name: https://media.githubusercontent.com/media/EpistasisLab/pmlb/7c1f4bdc00136dc2e55c87fa6b8ba6e8af6d1a68/datasets/557_analcatdata_apnea1/557_analcatdata_apnea1.tsv.gz, pin: 39628a3401b9ebfe2b4da629e0182736917694bf6f793dd4be821343459fca1e}
+    pmlb_boxing1: {kind: url, name: https://media.githubusercontent.com/media/EpistasisLab/pmlb/7c1f4bdc00136dc2e55c87fa6b8ba6e8af6d1a68/datasets/analcatdata_boxing1/analcatdata_boxing1.tsv.gz, pin: e720b93de914eddb9227dff10d63dad0b189a9f7127c16e84d78f9aaf68a4a59}
+    pmlb_boxing2: {kind: url, name: https://media.githubusercontent.com/media/EpistasisLab/pmlb/7c1f4bdc00136dc2e55c87fa6b8ba6e8af6d1a68/datasets/analcatdata_boxing2/analcatdata_boxing2.tsv.gz, pin: 45b06a3b07f45e5aa49f13f030860b245507ba94185219571ceb314fbdd87c2f}
+dropped:
+  # discovery step (#21), one fetch each with the loader's user agent on 2026-10-07
+  - {tier: T, name: Gelman & Hill ARM data at stat.columbia.edu/~gelman/arm/examples, reason: unreachable, detail: HTTP 403 on one try; the same data are in stan_arm}
+  - {tier: T, name: Raudenbush & Bryk HLM example data, reason: not public hosting, detail: ships inside the HLM software from SSI; High School & Beyond is in mlmRev}
+  - {tier: T, name: Faraway, Extending the Linear Model with R, reason: mirror of Tier R, detail: the faraway package}
+  - {tier: T, name: Finch, Bolin & Kelley, Multilevel Modeling Using R (mlminr.com), reason: not public hosting, detail: ten files as personal Google Drive share links}
+  - {tier: T, name: Zuur et al. 2007, Analysing Ecological Data, reason: not grouped, detail: general ecological statistics; its mixed-model data reappear in zuur_mixed}
+  - {tier: T, name: Bristol CMM momeg.zip, reason: no tabular data, detail: MLwiN worksheets and Word documents only}
+  - {tier: E, name: avehtari/BDA_R_demos, reason: no tabular data, detail: demo scripts; the BDA examples' data are in posteriordb and stan_bugs}
+  # second pass by hand (2026-10-07), collections a reviewer would miss
+  - {tier: E, name: statsmodels bundled datasets, reason: not grouped, detail: only grunfeld and randhie are panel data; its mixed-model examples use geepack data}
+  - {tier: T, name: Hedeker & Gibbons, Longitudinal Data Analysis (hedeker.people.uic.edu), reason: unreachable, detail: the host refuses connections; no Wiley companion page located}
+  - {tier: T, name: Verbeke & Molenberghs, Linear Mixed Models for Longitudinal Data, reason: unreachable, detail: Springer extras only, no download URL located on one try}
+  - {tier: T, name: Littell et al., SAS for Mixed Models, reason: mirror of Tier R, detail: the SASmixed package}
+  - {tier: T, name: Kruschke, Doing Bayesian Data Analysis (DBDA2Eprograms.zip on Google Sites), reason: not grouped, detail: scripts with a few csv; one hierarchical example (batting averages)}
+# Tier O keyword net (#24): OpenML, UCI and PMLB searched for tables with a documented clustering
+# column; the cap applies over the three repositories together, drawn with `seed` where exceeded.
+nets:
+  repositories: [openml, uci, pmlb]
+  keywords: [subject, participant, patient, site, hospital, school, classroom, plot, block, herd, farm, judge, rater, family, household, litter]
+  cap: 30
