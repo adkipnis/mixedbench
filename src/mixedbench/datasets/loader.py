@@ -165,7 +165,7 @@ class Loader:
     def _getBytes(url: str) -> bytes | None:
         """Default fetch; None on a 404 so the caller can try the next location; a 429 (OSF
         after a burst of downloads) waits the `Retry-After` seconds and tries again."""
-        req = urllib.request.Request(url, headers={'User-Agent': 'metabeta-survey'})
+        req = urllib.request.Request(url, headers={'User-Agent': 'mixedbench'})
         for attempt in range(3):
             try:
                 with urllib.request.urlopen(req, timeout=120) as r:
