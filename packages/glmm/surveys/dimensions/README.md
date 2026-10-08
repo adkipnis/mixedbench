@@ -689,7 +689,7 @@ padded column name). The merge flagged 26 pairs: 6 identical tables answered `sa
 (`shards/duplicates_tier_t_identical.csv`), 20 by one agent, all `same` (Rabe-Hesketh's
 re-exports of lme4, mlmRev, nlmeU, WWGbook and the Stata manuals; Fitzmaurice's toenail,
 birthwt and fat; ALDA's alcohol table in three sources; the CMM and Goldstein twins of faraway
-and mlmRev; ROS's `.rda` renderings of its csv files). After the fold Tier T holds 248 rows
+and mlmRev; ROS's `.rda` renderings of its csv files). After the fold Tier T held 248 rows
 over 236 datasets (Rabe-Hesketh 80, rethinking 23, Zuur 37 over three books, Hox 20, ALDA
 18, ROS 16, Goldstein 15, Snijders & Bosker 13, CMM 7, WWGbook 3, Fitzmaurice 15, Diggle 1),
 133 with a published model, 45 at `high`; 12 rows of Tiers R and E now list a Tier T member
@@ -719,3 +719,46 @@ applied (star_mm, a multiple-membership reshape of star1 that the registry canno
 ROS earnings, one row per respondent with a four-level demographic as its only candidate
 cluster). Covariate-only differences stay as filed: both readers recalled the same books.
 Eight disagreements went to Alex with the spot check (below).
+
+Rules decided by Alex on 2026-10-08 from the agents' `RULE GAP` notes: a discrete-time
+hazard model on a person-period table has the event indicator as its response, the period
+among its covariates, and `(1 | id)` with the book's fixed-effects fit noted; the period
+dummies are one categorical `PERIOD` covariate (as the #22 Bangladesh rule); a subset with
+its own worked model (wages_small_pp) is a derived table; a seasonal month or an observer is
+a grouping factor when it has enough levels and observations per level (Squid's 12 months,
+Clams' 6, Sparrows' 10 observers kept); an exploratory-only chapter counts as the published
+worked example (tolerance_pp); an ordinal response recoded off the table (schiz) is filed as
+its raw column; Gcsemv's `-1` missing sentinel stays undeclared; reedfrogs (one row per
+tank), UCBadmit's long form (derived) and the ROS age-period-cohort aggregates stay excluded.
+
+Spot check: 20 Tier T rows drawn with seed 0, stratified by shard in proportion to the rows
+surviving the fold (Rabe-Hesketh 8, the books 4, Zuur 3, rethinking with WWGbook 2, ALDA,
+ROS and Fitzmaurice 1), read by Alex against the books' chapter models, together with the
+eight disagreements of the blind reading. Agreed as filed: neighborhood, videos, thailand,
+height-nonlin, Snijders & Bosker's SOEP sheet, Spiders, BadgersFarmSurveys, RIKZDATAEnv,
+rat.brain. Changed, mostly the formula to the chapter's actual fit:
+
+- electricity: a mixed discrete-choice model with respondent-specific random coefficients
+  on the six attributes; yogurt: brand-specific random intercepts by household (ch 12);
+  ezunem: `log(uclms)` with year effects; infections: the fixed part completed (the survival
+  response keeps the #22 kidney convention, the schema having no survival type).
+- travel2: excluded; the chapter's conditional logit is single-level and `traveler` the
+  choice set, a departure from the #23 rendering of conditional-logistic designs with a
+  random intercept on the set, decided for this row.
+- jsp_728: Goldstein's normalised score is the documented response, the transform-rule
+  reading reverted; OXBOYS: a fourth-degree polynomial in centred age with correlated
+  random intercept, age and age-squared effects, season as sinusoidal terms.
+- Trolley: main effects only; electric.csv: the book fits `post_test ~ treatment +
+  pre_test` separately by grade, the pair kept as grouping under the #24 rule only;
+  fev1: log height, log baseline height and a random slope in age; reading_pp: chapter 5,
+  formula as filed.
+- Of the eight adjudications: NES (both objects) and the three Storable tables excluded,
+  the wave and the participant being no random grouping in the documented fits; 17C
+  (`married`), Galo (`advice`) and cito (`cito`) take the blind reading's response;
+  Cetaceans keeps `Species;DolphinID` with `Sex * Stain * Location` fixed; AstLrd keeps the
+  study; CTT_V2 excluded.
+
+Of the 20 drawn rows, 9 stood and 11 changed, one of them leaving the registry; of the
+eight adjudications the registry won two, the blind reading four, and four objects left
+the registry. Tier T closes at 244 rows over 227 datasets, 136 with a published model, 44
+at `high`, and 285 exclusions; the registry at 608 rows.
