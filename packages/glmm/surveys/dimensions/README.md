@@ -896,3 +896,10 @@ exclusions with the pre-screen (572 derived or duplicated, 158 unreadable, 113 w
 grouping structure, 46 not the paper's data, 28 without a response); the registry at 712
 rows, no flagged pair open.
 
+Dryad spot check (five rows, seed 0, by Alex on 2026-10-08): shanahan's `T_Net` model
+stood; meyel's volume model takes the paper's shifted Gamma-log response and its three
+random factors as separate terms, its head-behaviour model the deposited script's single
+`(1 | PopulationID:FamilyID)`; barbosa's two reaction-norm rows note that the paper fits
+them per population subset (eight models), the whole table kept as the row's grouping, as
+walker's per-site feeding assays are. One stood, four changed, none left.
+
