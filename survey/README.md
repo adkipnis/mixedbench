@@ -24,7 +24,7 @@ grill, not here.
 
 | file | written by | content |
 |---|---|---|
-| `sources.yaml` | hand, discovery, `resolve.py` | the frame: tiers of pinned sources, cap, seed, dropped candidates, the Tier O keyword net |
+| `sources.yaml` | hand, discovery, `resolve.py`, `mirror.py` (`mirror:`) | the frame: tiers of pinned sources, cap, seed, dropped candidates, the Tier O keyword net |
 | `deposits.csv` | `deposits.py` | Tier D frame: 60 seeded, stratified draws of the practice survey's deposit-naming papers |
 | `deposit_files.csv` | `resolve.py` | Tier D: every link of `deposits.csv` resolved through its repository's API, one row per listed file with role, checksum, label and pin; one row for a deposit without files |
 | `candidates.csv` | `pull.py` | every enumerated data object with its counts and pre-screen verdict |
@@ -39,6 +39,7 @@ grill, not here.
 | `dimensions.csv`, `columns.csv` | `merge.py` via `measure.py` | one row per registry row and grouping factor; one per registry row and covariate column |
 | `manifest.csv` | `merge.py` | one row per registry object: the file it loads from inside its source, that file's sha256 and size (empty for base R's, which R dumps); a user's loader fetches that file alone |
 | `quantiles.yaml`, `SUMMARY.md` | `merge.py` via `summarise.py` | every axis pooled, per tier and without agridat; the summary from `SUMMARY.template.md`, which holds no digit |
+| `mirror.py` | | publishes the CC0 files of the registry's Dryad sources as release assets and writes their `mirror:` URLs into `sources.yaml` |
 | `practice_quantiles.yaml` | copied | snapshot of the practice survey's `quantiles.yaml` (metabeta-v3), the p90 column of `SUMMARY.md` |
 | `prompts/discover.md`, `prompts/read.md` | | what the discovery agent and a reading agent get and write |
 | `schema.py`, `sources.py`, `measure.py`, `summarise.py`, `net.py` | | file contract and allowed values; the frame; what the merge measures and how it reports it; the Tier O net |
@@ -119,6 +120,9 @@ dropped:
   `random.Random(seed)` over their sorted names. Only agridat (about 390 field trials, else
   38% of the pool) is capped, at 50; a cap for all would have discarded grouped tables of
   faraway and MASS at random (decided 2026-10-07).
+- `mirror` (url sources only) is the package's copy of a CC0 file whose host refuses a script
+  (Dryad's 401), asked after the host under the same pin; written by `mirror.py`, which
+  uploads the cached files as assets of a GitHub release (ADR 0003).
 - `layout` names the columns of a headerless text file: `name` for a whitespace-separated
   file (Goldstein's partnership data), `name:start-end` for a fixed-width file (the Bristol
   CMM `.DAT` files, positions from 1).
