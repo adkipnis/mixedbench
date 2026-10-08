@@ -142,17 +142,7 @@ class Loader:
             root = root.parent
         found = docs.sameStemDocs(tree, file) or docs.docsBeside(root, file)
         pages = [f'# {f.relative_to(tree)}\n{f.read_text(errors="replace")}' for f in found]
-        suffix = readers.bare(file).suffix
-        if suffix == '.json':
-            pages.append(docs.stanNote(file))
-        if suffix == '.dta':
-            pages.append(docs.stataLabels(file))
-        if suffix == '.sav':
-            pages.append(docs.spssLabels(file))
-        if suffix in ('.xlsx', '.xls'):
-            pages.append(docs.workbookNotes(file))
-        if suffix in ('.csv', '.tsv', '.tab', '.txt', '.dat'):
-            pages.append(docs.bannerNote(file))
+        pages.append(docs.selfNote(file))
         for man in sorted(tree.rglob('man')):  # a repository that is an R package (rethinking)
             pages.append(docs.rdPage(man, readers.bare(file).stem))
         return '\n'.join(page for page in pages if page)
@@ -202,15 +192,8 @@ class Loader:
         filename = source.file or Path(urlparse(urls[0]).path).name
         file = self._dir(source) / filename
         if not file.exists():
-            data = None
-            for url in urls:
-                data = self.fetch(url)
-                if data is not None:
-                    break
-            if data is None:
-                raise FileNotFoundError(f'{source.name} {source.pin}: not at {", ".join(urls)}')
             file.parent.mkdir(parents=True, exist_ok=True)
-            file.write_bytes(data)
+            file.write_bytes(self._fetchFirst(source, urls))
         checksum = source.checksum
         if source.kind == 'url':  # the file's sha256 is its pin
             checksum = source.pin
@@ -218,6 +201,13 @@ class Loader:
         if checksum is not None and digest != checksum:
             raise ValueError(f'{file} checksum {digest} differs from pinned {checksum}')
         return file
+
+    def _fetchFirst(self, source: Source, urls: list[str]) -> bytes:
+        for url in urls:
+            data = self.fetch(url)
+            if data is not None:
+                return data
+        raise FileNotFoundError(f'{source.name} {source.pin}: not at {", ".join(urls)}')
 
     def _tree(self, source: Source) -> Path:
         """The source's files, extracted once: a CRAN package, a repository at a revision, or

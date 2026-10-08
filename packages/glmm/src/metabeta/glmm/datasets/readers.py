@@ -83,13 +83,21 @@ def readTables(file: Path, label: str, layout: tuple[str, ...] | None) -> Frames
     object per sheet, `<label>!<sheet>`, its codebook sheets (`Contents`) left out."""
     suffix = bare(file).suffix
     if suffix in ('.xlsx', '.xls'):
-        sheets = dataSheets(file)
-        if len(sheets) == 1:
-            return {label: next(iter(sheets.values()))}
-        return {f'{label}!{sheet}': df for sheet, df in sheets.items()}
+        return workbookObjects(file, label)
     if layout is not None:
         return {label: readLayout(file, layout)}
     return {label: readTable(file)}
+
+
+def workbookObjects(file: Path, label: str) -> Frames:
+    sheets = dataSheets(file)
+    objects = {}
+    for sheet, df in sheets.items():
+        name = label  # a workbook of one data sheet is the file
+        if len(sheets) > 1:
+            name = f'{label}!{sheet}'
+        objects[name] = df
+    return objects
 
 
 def readTable(file: Path) -> pd.DataFrame | None:
@@ -169,29 +177,30 @@ def readDelimited(file: Path) -> pd.DataFrame | None:
     with) is no table. Undecodable bytes (a latin-1 degree sign) are replaced, a byte-order
     mark dropped. pandas opens a `.gz` itself."""
     options = {'encoding': 'utf-8-sig', 'encoding_errors': 'replace', 'engine': 'python'}
-    skip, header = banner(file)
+    lines, header = banner(file)
     sep = None
     if not any(mark in header for mark in ',;\t|'):
         sep = r'\s+'
     try:
-        df = pd.read_csv(file, sep=sep, skiprows=skip, **options)
+        df = pd.read_csv(file, sep=sep, skiprows=len(lines), **options)
     except pd.errors.ParserError:
         return None
     return tidyText(df)
 
 
-def banner(file: Path) -> tuple[int, str]:
-    """How many lines starting with `#` open the file, and the header line after them."""
+def banner(file: Path) -> tuple[list[str], str]:
+    """The lines starting with `#` that open the file, and the header line after them."""
     opener = open
     if file.suffix.lower() == '.gz':
         opener = gzip.open
-    count = 0
+    lines = []
     with opener(file, 'rb') as f:
-        for line in f:
-            if not line.startswith(b'#'):
-                return count, line.decode('utf-8', errors='replace')
-            count += 1
-    return count, ''
+        for raw in f:
+            line = raw.decode('utf-8', errors='replace')
+            if not line.startswith('#'):
+                return lines, line
+            lines.append(line.rstrip())
+    return lines, ''
 
 
 def tidyText(df: pd.DataFrame) -> pd.DataFrame:
