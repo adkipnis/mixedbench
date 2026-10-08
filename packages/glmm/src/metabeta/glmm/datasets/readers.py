@@ -22,7 +22,9 @@ TABLE_FILES = {  # meant for pandas
     '.arrow', '.pq', '.parquet',
 }  # fmt: skip
 NOTE_SHEETS = ('contents', 'readme', 'codebook', 'notes', 'description')  # a workbook's codebook
-R_ERRORS = (PyreadrError, LibrdataError)  # LibrdataError is not a PyreadrError
+# LibrdataError is not a PyreadrError; the IndexError is pyreadr's value-label handler indexing
+# past the column names of a labelled data frame inside an .RData (a Tier D deposit, 2026-10-08)
+R_ERRORS = (PyreadrError, LibrdataError, IndexError)
 Frames = dict[str, pd.DataFrame | None]  # object name -> its table; None when it has no table
 
 
