@@ -29,7 +29,7 @@ grill, not here.
 | `deposit_files.csv` | `resolve.py` | Tier D: every link of `deposits.csv` resolved through its repository's API, one row per listed file with role, checksum, label and pin; one row for a deposit without files |
 | `candidates.csv` | `pull.py` | every enumerated data object with its counts and pre-screen verdict |
 | `net_hits.csv` | `net.py` | Tier O: every table of OpenML, UCI and PMLB whose column names hold a `nets` keyword, kept or not |
-| `v05_datasets.csv` | hand | the 36 R datasets of metabeta v0.5; the contract test asserts each is in the registry or the exclusions |
+| `v05_datasets.csv` | hand | the 36 R datasets of metabeta v0.5; each is in the registry or the exclusions (asserted at the closing, #27) |
 | `help/`, `cache/` | `pull.py`, loader, `resolve.py` | untracked: one help page per kept object (documentation, dtypes, first rows), one per Tier D deposit; downloads, extracted trees, cached API answers |
 | `shards/<table>_<label>.csv` | agents; `pull.py` writes `excluded_prescreen.csv` | one shard per reading run; `table` ∈ `registry`, `excluded`, `duplicates`, `dropped` |
 | `registry.csv` | `merge.py` | one row per dataset and documented model, at most three per object |
