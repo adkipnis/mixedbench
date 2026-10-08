@@ -10,22 +10,14 @@ from pathlib import Path
 
 import pandas as pd
 import pyreadstat
-from metabeta.glmm.datasets.readers import (
-    arrayDepth,
-    arrayShape,
-    banner,
-    bare,
-    isNoteSheet,
-    observationLength,
-    unwrap,
-)
+from metabeta.glmm.datasets import readers
 
 DOC_FILES = {'.md', '.txt', '.rst', ''}  # text beside a data file
 DOC_STEMS = ('readme', 'codebook', 'description', 'notes', 'metadata', 'variables', 'dictionary')
 
 
 def sameStemDocs(tree: Path, file: Path) -> list[Path]:
-    stem = bare(file).stem
+    stem = readers.bare(file).stem
     names = {f'{stem}{suffix}' for suffix in DOC_FILES} | {f'{stem}.info.json'}
     candidates = file.parent.parent.glob('*/*')  # the file's folder and its siblings
     if file.parent == tree:
@@ -61,7 +53,7 @@ def describesSibling(file: Path) -> bool:
     if file.suffix.lower() != '.txt':
         return False
     siblings = [f for f in file.parent.iterdir() if f.is_file() and f != file]
-    return any(bare(f).stem == file.stem.lower() for f in siblings)
+    return any(readers.bare(f).stem == file.stem.lower() for f in siblings)
 
 
 # ==============================================================================================
@@ -69,22 +61,39 @@ def describesSibling(file: Path) -> bool:
 # ==============================================================================================
 
 
+def selfNote(file: Path) -> str:
+    """The codebook a file carries itself, by format; empty where the format carries none."""
+    suffix = readers.bare(file).suffix
+    if suffix == '.json':
+        return stanNote(file)
+    if suffix == '.dta':
+        return stataLabels(file)
+    if suffix == '.sav':
+        return spssLabels(file)
+    if suffix in ('.xlsx', '.xls'):
+        return workbookNotes(file)
+    if suffix in ('.csv', '.tsv', '.tab', '.txt', '.dat'):
+        return bannerNote(file)
+    return ''
+
+
 def stanNote(file: Path) -> str:
     """The entries of a Stan data dict that are no column: scalars and group-level arrays;
     and the matrices the table holds as numbered columns."""
-    content = json.loads(unwrap(file))
+    content = json.loads(readers.unwrap(file))
     if not isinstance(content, dict):
         return ''
-    n = observationLength(content)
+    n = readers.observationLength(content)
     others, matrices = [], []
     for name, value in content.items():
         if not isinstance(value, list):
             others.append(f'{name} (scalar)')
         elif len(value) != n:
             others.append(f'{name} (length {len(value)})')
-        elif arrayDepth(value) > 2:
-            others.append(f'{name} ({" x ".join(map(str, arrayShape(value)))} array)')
-        elif arrayDepth(value) == 2:
+        elif readers.arrayDepth(value) > 2:
+            shape = ' x '.join(map(str, readers.arrayShape(value)))
+            others.append(f'{name} ({shape} array)')
+        elif readers.arrayDepth(value) == 2:
             matrices.append(f'{name} is a {n} x {len(value[0])} matrix')
     return '; '.join([f'# not in the table: {", ".join(others)}', *matrices])
 
@@ -116,11 +125,9 @@ def labels(title: str, meta: pyreadstat.metadata_container) -> str:
 def bannerNote(file: Path) -> str:
     """The `#` lines a text file opens with (Diggle's course files describe their columns
     there), which the reader skips."""
-    skip, _ = banner(file)
-    if skip == 0:
+    lines, _ = readers.banner(file)
+    if not lines:
         return ''
-    with file.open('rb') as f:
-        lines = [next(f).decode('utf-8', errors='replace').rstrip() for _ in range(skip)]
     return '# banner\n' + '\n'.join(lines)
 
 
@@ -129,7 +136,7 @@ def workbookNotes(file: Path) -> str:
     sheets = pd.read_excel(file, sheet_name=None, header=None)
     pages = []
     for name, df in sheets.items():
-        if not isNoteSheet(name):
+        if not readers.isNoteSheet(name):
             continue
         rows = df.fillna('').astype(str)
         lines = ['\t'.join(row).rstrip() for row in rows.itertuples(index=False)]
