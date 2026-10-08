@@ -6,6 +6,13 @@ package's loader (`metabeta.glmm.datasets`, research extra) reads every source; 
 scripts here own the file contract. The practice survey (`../practice/`) is the model;
 nothing is imported across surveys. Results: [`SUMMARY.md`](SUMMARY.md), regenerated on every merge.
 
+**Status: closed 2026-10-08** at 712 registry rows over 642 datasets (Tier R 252, T 244, D 104,
+E 99, O 13) and 2142 exclusions, above the closing minimums of #27 (at least 100 Tier R rows,
+at least 40 rows from the other tiers), no duplicate flag open. The contract test
+`tests/surveys/test_dimension_quantiles.py` holds the axes, tiers and blocks of
+`quantiles.yaml` and the 36 v0.5 datasets of `v05_datasets.csv`; the envelope edges are set
+in the outcome grill, not here.
+
 ## Files
 
 | file | written by | content |
@@ -933,3 +940,18 @@ Tier D row has been read by Alex: of 104 rows, 55 stood as the agents filed them
 changed in formula, type or structure, and 6 left the registry with the inferred-model
 rule. Tier D closes at 104 rows over 69 objects and 38 papers, the registry at 712.
 
+## Closing (#27)
+
+Closed on 2026-10-08 with every tier read and hand-checked as the sections above record: 712
+registry rows over 642 datasets and 940 grouping factors, Tier R 252, T 244, D 104, E 99, O 13;
+2142 exclusions; `duplicates.csv` holds no open flag. The minimums the ticket set (at least 100
+Tier R rows, at least 40 non-R rows) are met with 252 and 460. `SUMMARY.md` puts the pooled and
+per-tier quantiles of every axis beside the practice survey's p90; the edges themselves wait for
+the `/grill-me` outcome session. The CI test `tests/surveys/test_dimension_quantiles.py` loads
+`quantiles.yaml` as data and asserts its axes, quantile keys, tiers, the imbalance block, the K
+distribution, the shares summing to one and the tier minimums, and that every row of
+`v05_datasets.csv` is a registry key, a member of a registry row's `sources`, or an exclusion
+(four are folded: MEMSS MathAchieve into nlme's row, base R's Theoph, Orange and Indometh into
+MEMSS's). Known limit left as it is: three documented covariates measure as categorical with one
+level, constant over the measured rows (stata_quinidine's `dose` and `interval`, Zuur
+Seedling's `Year`), the `K` 1 cell of the K distribution.
