@@ -45,6 +45,7 @@ def sources(file: Path | None = None) -> dict[str, Source]:
                 path=entry.get('path'),
                 file=entry.get('file'),
                 layout=_layout(entry),
+                mirror=entry.get('mirror'),
             )
     return pinned
 
