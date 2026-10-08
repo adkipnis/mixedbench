@@ -1,14 +1,22 @@
 # Dimension survey — summary
 
-Public grouped datasets measured by script from [`registry.csv`](registry.csv); frame and
-method in [`README.md`](README.md). Every number below is filled by `merge.py` from
-`dimensions.csv` and `columns.csv` on each merge; edit `SUMMARY.template.md`, never this file.
-Quantiles are observed values, at or below the level in the lower half and at or above it in
-the upper half. Per-factor axes count a dataset once per grouping factor, dataset axes once per
-registry row. The last column of each axis table is the practice survey's upper quantile, the
-maximum over the v1 families' values in [`../practice/quantiles.yaml`](../practice/quantiles.yaml)
-(the minimum for the smallest group size), read at merge time; `–` where the practice survey
-has no such axis. These are evidence for `docs/design/envelope.md`, not the envelope itself.
+Public grouped datasets measured by script from [`registry.csv`](registry.csv); frame, method
+and reading rules in [`README.md`](README.md). Evidence for `docs/design/envelope.md`, not the
+envelope itself.
+
+How to read the tables:
+
+- Every number is filled by `merge.py` from `dimensions.csv` and `columns.csv` on each merge;
+  edit `SUMMARY.template.md`, never this file.
+- Quantiles are observed values: at or below the level in the lower half, at or above it in
+  the upper half.
+- Per-factor axes (groups, group sizes, imbalance) count a dataset once per grouping factor;
+  dataset axes (observations, grouping factors, design columns) once per registry row; `K`
+  once per categorical covariate of a documented model.
+- The last column of an axis table is the practice survey's upper quantile, the maximum over
+  the v1 families in [`../practice/quantiles.yaml`](../practice/quantiles.yaml) (the minimum
+  for the smallest group size), read at merge time; `–` where the practice survey has no such
+  axis.
 
 **Corpus.** 712 registry rows over 642 datasets and 940 grouping
 factors; per tier R 252, T 244, D 104, E 99, O 13. Excluded: 2142 objects (no grouping structure 1177, derived or duplicated table 622, unreadable format 187, not the paper's data 46, simulated data 43, response missing or undocumented 36, time series without replication 30, fewer than two groups 1).
@@ -180,28 +188,12 @@ Levels of the categorical covariates:
 | 5 | 44 | 10% |
 | 2 | 35 | 8% |
 | 6 | 27 | 6% |
+| 11+ | 27 | 6% |
 | 7 | 24 | 5% |
 | 10 | 16 | 3% |
 | 9 | 14 | 3% |
 | 8 | 10 | 2% |
-| 14 | 4 | 1% |
-| 11 | 4 | 1% |
 | 1 | 3 | 1% |
-| 12 | 3 | 1% |
-| 17 | 2 | 0% |
-| 76 | 2 | 0% |
-| 56 | 1 | 0% |
-| 15 | 1 | 0% |
-| 16 | 1 | 0% |
-| 20 | 1 | 0% |
-| 49 | 1 | 0% |
-| 13 | 1 | 0% |
-| 39 | 1 | 0% |
-| 55 | 1 | 0% |
-| 117 | 1 | 0% |
-| 69 | 1 | 0% |
-| 30 | 1 | 0% |
-| 47 | 1 | 0% |
 
 Implied design columns of a model under the observed categorical share
 (0.227) and mean columns per categorical (4.888):
@@ -210,8 +202,8 @@ Implied design columns of a model under the observed categorical share
 ## Design columns
 
 The documented model (`d_doc`) and every covariate column of the table plus the documented
-interactions (`d_all`, never below `d_doc`): continuous and
-binary count one, a categorical its levels less one, an interaction the product.
+interactions (`d_all`, never below `d_doc`): continuous and binary count one, a categorical
+its levels less one, an interaction the product.
 
 | d_doc | n | min | p5 | p10 | p50 | p90 | p95 | max | practice p90 |
 |---|---|---|---|---|---|---|---|---|---|
@@ -257,5 +249,10 @@ binary count one, a categorical its levels less one, an interaction the product.
 
 ## Tier D
 
-The practice survey's deposits, resolved and pulled by `resolve.py` (see the README); the loss
-by cause is a finding of the tier: 98 links of 60 papers; deposits by status: ok 89, no files 6, unresolved 1, restricted 1, not a deposit 1. Listed files by role: other 622, data 607, script 231, documentation 172; data files not pulled: too large 30, hidden path 9. Objects excluded: 917 (derived or duplicated table 572, unreadable format 158, no grouping structure 113, not the paper's data 46, response missing or undocumented 28); papers with a registry row: 38 over 104 rows.
+The practice survey's deposits, resolved and pulled by `resolve.py`; the loss by cause is the
+tier's finding.
+
+- Links: 98 of 60 papers; by status ok 89, no files 6, unresolved 1, restricted 1, not a deposit 1.
+- Listed files: 1632; by role other 622, data 607, script 231, documentation 172; data files not pulled: too large 30, hidden path 9.
+- Objects excluded: 917 (derived or duplicated table 572, unreadable format 158, no grouping structure 113, not the paper's data 46, response missing or undocumented 28).
+- Papers with a registry row: 38, over 104 rows.
