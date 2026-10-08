@@ -60,6 +60,7 @@ SUPERSEDES = {
 }
 RECONCILED = ('registry', 'duplicates', 'dropped')  # merges that can change the duplicate fold
 CENSUS = ('registry', 'excluded')  # shard tables in registry/; duplicates, dropped in survey/
+MANIFEST_COLUMNS = ['source', 'object', 'file', 'sha256', 'size']
 Key = tuple[str, str]  # (source label, object name)
 
 
@@ -454,7 +455,18 @@ class Merger:
             columns += measurer.columns()
         writeCsv(pd.DataFrame(dimensions, columns=DIMENSION_COLUMNS), self.registry / 'dimensions.csv')  # fmt: skip
         writeCsv(pd.DataFrame(columns, columns=COLUMN_COLUMNS), self.registry / 'columns.csv')
+        self.writeManifest(registry)
         Summariser(self.registry, self.survey, registry, self.canonical(TABLES['excluded'])).flush()
+
+    def writeManifest(self, registry: pd.DataFrame) -> None:
+        """The file each registry object loads from, with its digest and size (#4)."""
+        rows = []
+        for label, name in registry[['source', 'object']].drop_duplicates().itertuples(index=False):  # fmt: skip
+            row = self.loader.manifestRow(self.sources[label], name)
+            rows.append({'source': label, 'object': name, 'file': row.file, 'sha256': row.sha256, 'size': row.size})  # fmt: skip
+        manifest = pd.DataFrame(rows, columns=MANIFEST_COLUMNS)
+        manifest = manifest.astype({'size': 'Int64'})  # base R's None would make it float
+        writeCsv(manifest, self.registry / 'manifest.csv')
 
     def flush(self) -> None:
         new = len(self.shard) - self.replaced
