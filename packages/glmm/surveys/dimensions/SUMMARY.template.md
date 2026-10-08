@@ -1,14 +1,22 @@
 # Dimension survey — summary
 
-Public grouped datasets measured by script from [`registry.csv`](registry.csv); frame and
-method in [`README.md`](README.md). Every number below is filled by `merge.py` from
-`dimensions.csv` and `columns.csv` on each merge; edit `SUMMARY.template.md`, never this file.
-Quantiles are observed values, at or below the level in the lower half and at or above it in
-the upper half. Per-factor axes count a dataset once per grouping factor, dataset axes once per
-registry row. The last column of each axis table is the practice survey's upper quantile, the
-maximum over the v1 families' values in [`../practice/quantiles.yaml`](../practice/quantiles.yaml)
-(the minimum for the smallest group size), read at merge time; `–` where the practice survey
-has no such axis. These are evidence for `docs/design/envelope.md`, not the envelope itself.
+Public grouped datasets measured by script from [`registry.csv`](registry.csv); frame, method
+and reading rules in [`README.md`](README.md). Evidence for `docs/design/envelope.md`, not the
+envelope itself.
+
+How to read the tables:
+
+- Every number is filled by `merge.py` from `dimensions.csv` and `columns.csv` on each merge;
+  edit `SUMMARY.template.md`, never this file.
+- Quantiles are observed values: at or below the level in the lower half, at or above it in
+  the upper half.
+- Per-factor axes (groups, group sizes, imbalance) count a dataset once per grouping factor;
+  dataset axes (observations, grouping factors, design columns) once per registry row; `K`
+  once per categorical covariate of a documented model.
+- The last column of an axis table is the practice survey's upper quantile, the maximum over
+  the v1 families in [`../practice/quantiles.yaml`](../practice/quantiles.yaml) (the minimum
+  for the smallest group size), read at merge time; `–` where the practice survey has no such
+  axis.
 
 **Corpus.** ${n_rows} registry rows over ${n_objects} datasets and ${n_factor_rows} grouping
 factors; per tier ${tiers}. Excluded: ${n_excluded} objects (${excluded_reasons}).
@@ -73,8 +81,8 @@ ${implied_columns}.
 ## Design columns
 
 The documented model (`d_doc`) and every covariate column of the table plus the documented
-interactions (`d_all`, never below `d_doc`): continuous and
-binary count one, a categorical its levels less one, an interaction the product.
+interactions (`d_all`, never below `d_doc`): continuous and binary count one, a categorical
+its levels less one, an interaction the product.
 
 ${table_d_doc}
 
@@ -90,5 +98,7 @@ ${table_published_model}
 
 ## Tier D
 
-The practice survey's deposits, resolved and pulled by `resolve.py` (see the README); the loss
-by cause is a finding of the tier: ${tier_d}
+The practice survey's deposits, resolved and pulled by `resolve.py`; the loss by cause is the
+tier's finding.
+
+${tier_d}

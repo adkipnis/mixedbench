@@ -44,6 +44,7 @@ FACTOR_AXES = (
 ROW_AXES = {'n_obs': 'n_obs', 'n_grouping_factors': 'n_factors', 'd_doc': 'd_doc', 'd_all': 'd_all'}  # fmt: skip
 CATEGORICAL_TYPES = ('categorical', 'ordered')
 TERMS = (9, 14)  # the practice survey's p90 and p95 of fixed-effect terms (envelope rule 4)
+K_TAIL = 10  # the summary's K table pools the levels above this (the columns rule's integer cap)
 
 
 def readCsv(path: Path) -> pd.DataFrame:
@@ -188,7 +189,7 @@ class Summariser:
             'table_relation': shareTable(self.dimensions['relation'], 'relation'),
             'table_covariate_type': shareTable(self.modelled['type'], 'covariate type'),
             'table_level': shareTable(self.modelled['level'], 'level'),
-            'table_k_distribution': shareTable(self.categoricals['K'].astype(int), 'K'),
+            'table_k_distribution': shareTable(self.kBucketed(), 'K'),
             'table_response_type': shareTable(self.registry['response_type'], 'response type'),
             'table_reader': shareTable(self.registry['reader'], 'reader'),
             'table_published_model': shareTable(self.registry['published_model'], 'published'),
@@ -196,10 +197,16 @@ class Summariser:
         }
         return Template(TEMPLATE.read_text()).substitute(fields)
 
+    def kBucketed(self) -> pd.Series:
+        """K as the summary table shows it: every level count up to the columns rule's 10, the
+        long tail (declared factors of dozens of levels) as one `11+` row."""
+        k = self.categoricals['K'].astype(int)
+        return k.astype(str).where(k <= K_TAIL, f'{K_TAIL + 1}+')
+
     def tierD(self) -> str:
-        """The deposit-level loss of Tier D (#26): the links of `deposits.csv` by status, the
-        listed files by role, the data files not pulled by reason, the objects excluded by
-        reason, and the papers that reached the registry."""
+        """The deposit-level loss of Tier D (#26) as bullets: the links of `deposits.csv` by
+        status, the listed files by role, the data files not pulled by reason, the objects
+        excluded by reason, and the papers that reached the registry."""
         file = self.root / 'deposit_files.csv'
         if not file.exists():
             return 'Tier D not pulled.'
@@ -213,13 +220,12 @@ class Summariser:
         labels = registered['source'].str.replace(
             r'_(dryad|osf|zenodo|figshare)(_\d+)?$', '', regex=True
         )
-        return (
-            f'{len(links)} links of {links["paper_id"].nunique()} papers; deposits by status: '
-            f'{counted(links["status"])}. Listed files by role: {counted(listed["role"])}; data '
-            f'files not pulled: {counted(unpulled["reason"])}. Objects excluded: {len(excluded)} '
-            f'({counted(excluded["reason"])}); papers with a registry row: {labels.nunique()} '
-            f'over {len(registered)} rows.'
-        )
+        return '\n'.join([
+            f'- Links: {len(links)} of {links["paper_id"].nunique()} papers; by status {counted(links["status"])}.',
+            f'- Listed files: {len(listed)}; by role {counted(listed["role"])}; data files not pulled: {counted(unpulled["reason"])}.',
+            f'- Objects excluded: {len(excluded)} ({counted(excluded["reason"])}).',
+            f'- Papers with a registry row: {labels.nunique()}, over {len(registered)} rows.',
+        ])  # fmt: skip
 
     @staticmethod
     def axisTable(axis: str, block: dict, practice: dict) -> str:
