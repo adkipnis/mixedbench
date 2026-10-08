@@ -5,6 +5,7 @@ live here; the formats are `readers.py`, the help pages `docs.py`."""
 from __future__ import annotations
 
 import hashlib
+import ssl
 import subprocess
 import tarfile
 import time
@@ -23,6 +24,11 @@ from mixedbench.datasets.readers import DATA_FILES, R_ERRORS, R_FILES, TABLE_FIL
 
 CRAN = 'https://cloud.r-project.org/src/contrib'
 ARCHIVES = ('.zip', '.tar.gz', '.tgz', '.tar')
+# Intermediate certificates a source's server leaves out of its chain, which OpenSSL, unlike
+# macOS and Windows, does not fetch itself: Harvard's content.sph.harvard.edu (Fitzmaurice et
+# al.) sends InCommon's instead of Sectigo's OV R36, from its leaf's CA Issuers URL
+TLS = ssl.create_default_context()
+TLS.load_verify_locations(Path(__file__).parent / 'intermediates.pem')
 Reader = Literal['pyreadr', 'rscript', 'pandas']
 ColumnType = Literal['categorical', 'ordered', 'continuous']  # what a registry row may declare
 
@@ -79,6 +85,7 @@ class Source:
     path: str | None = None  # git, url: file or folder inside the tree; None -> all of it
     file: str | None = None  # url: the download's file name where the URL's path has none
     layout: tuple[str, ...] | None = None  # url: the columns of a headerless text file
+    mirror: str | None = None  # url: the package's copy where the host refuses (ADR 0003)
 
 
 @dataclass(frozen=True)
@@ -192,15 +199,15 @@ class Loader:
 
     @staticmethod
     def _getBytes(url: str) -> bytes | None:
-        """Default fetch; None on a 404 so the caller can try the next location; a 429 (OSF
-        after a burst of downloads) waits the `Retry-After` seconds and tries again."""
+        """Default fetch; None on a 404 or a refusal so the caller can try the next location;
+        a 429 (OSF after a burst of downloads) waits the `Retry-After` seconds and tries again."""
         req = urllib.request.Request(url, headers={'User-Agent': 'mixedbench'})
         for attempt in range(3):
             try:
-                with urllib.request.urlopen(req, timeout=120) as r:
+                with urllib.request.urlopen(req, timeout=120, context=TLS) as r:
                     return r.read()
             except urllib.error.HTTPError as e:
-                if e.code == 404:
+                if e.code in (401, 403, 404):  # Dryad refuses a script with 401
                     return None
                 if e.code != 429 or attempt == 2:
                     raise
@@ -223,6 +230,8 @@ class Loader:
             return [f'{CRAN}/{stem}.tar.gz', f'{CRAN}/Archive/{source.name}/{stem}.tar.gz']
         if source.kind == 'git':  # GitHub's archive of the tree at a revision
             return [f'{source.name}/archive/{source.pin}.tar.gz']
+        if source.mirror is not None:  # asked after the host, which stays the source
+            return [source.name, source.mirror]
         return [source.name]
 
     def _download(self, source: Source) -> Path:
