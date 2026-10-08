@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pandas as pd
 import pyreadstat
-from metabeta.glmm.datasets import readers
+from mixedbench.datasets import readers
 
 DOC_FILES = {'.md', '.txt', '.rst', ''}  # text beside a data file
 DOC_STEMS = ('readme', 'codebook', 'description', 'notes', 'metadata', 'variables', 'dictionary')

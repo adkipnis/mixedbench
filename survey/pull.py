@@ -23,7 +23,7 @@ import shutil
 from pathlib import Path
 
 import pandas as pd
-from metabeta.glmm.datasets import DataObject, Loader
+from mixedbench.datasets import DataObject, Loader
 from resolve import depositPages
 from schema import CANDIDATE_COLUMNS, EXCLUDED, SCREENS, TIERS
 from sources import readFrame

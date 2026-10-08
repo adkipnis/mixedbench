@@ -18,8 +18,8 @@ from typing import Literal
 from urllib.parse import urlparse
 
 import pandas as pd
-from metabeta.glmm.datasets import docs, readers
-from metabeta.glmm.datasets.readers import DATA_FILES, R_ERRORS, R_FILES, TABLE_FILES, Frames
+from mixedbench.datasets import docs, readers
+from mixedbench.datasets.readers import DATA_FILES, R_ERRORS, R_FILES, TABLE_FILES, Frames
 
 CRAN = 'https://cloud.r-project.org/src/contrib'
 ARCHIVES = ('.zip', '.tar.gz', '.tgz', '.tar')
