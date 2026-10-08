@@ -903,3 +903,22 @@ random factors as separate terms, its head-behaviour model the deposited script'
 them per population subset (eight models), the whole table kept as the row's grouping, as
 walker's per-site feeding assays are. One stood, four changed, none left.
 
+Since 13 of those 25 rows had changed, Alex read the remaining 89 rows in three hand draws
+(seed 0, every unchecked paper represented). Batches 1 and 2 (50 rows): 29 stood, 21
+changed, none left, the corrections in `shards/registry_tier_d_handdraw.csv`. What changed:
+the final model's term set rather than the candidate set (martinezzaragoza's two coping
+models, villemereuil's hatching model, verberk's Pcrit model), per-dimension or per-subset
+fits named in the formula (slepian), the factorial contrasts of a script rather than the
+collapsed factor (avetisyan Experiment 3), a zero-intercept parametrisation (zimin), the
+random structure as the paper describes it rather than as the deepest nesting term (meyel's
+three random factors, goodwin's stratum alone, weaving's `(1 | ID)` as fitted, kappers'
+final animal model with nest and birth year), a manipulation the model includes
+(voorspoels' sampling), and predictor names that are individual statuses although the
+columns say prevalence (arriero). Four verdicts were not applied as stated and are
+recorded instead: a response type follows what the column holds, not the family fitted
+(naranowicz's rating scales under a linear mixed model stay `ordinal`, staton's and liutu's
+non-integer abundance and stem columns stay `continuous`, the family named in the formula);
+a lay date stored as a date string cannot be a covariate (villemereuil), a cue level that
+is no column cannot be a grouping factor (lagisz), and a derived indicator of a
+four-valued notation column cannot be a binary response (jing), all kept in the formula.
+
