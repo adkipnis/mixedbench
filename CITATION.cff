@@ -1,0 +1,10 @@
+cff-version: 1.2.0
+message: If you use mixedbench, please cite it as below.
+title: 'mixedbench: a benchmark of posterior approximation and prediction on real grouped data for generalized linear mixed models'
+authors:
+  - family-names: Kipnis
+    given-names: Alex
+repository-code: https://github.com/adkipnis/mixedbench
+license: MIT
+version: 0.1.0
+# doi: 10.5281/zenodo.XXXXXXX  (the Zenodo DOI of the first suite release)
