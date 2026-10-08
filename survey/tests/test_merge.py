@@ -1,6 +1,7 @@
 """The merge script at its file seams: shard in, canonical CSVs and refusals out (#17)."""
 
 import csv
+import hashlib
 import re
 from pathlib import Path
 
@@ -209,7 +210,7 @@ def test_the_census_lands_in_the_registry_and_the_bookkeeping_in_the_survey(spli
     mergeShard(merger, FIXTURES / 'registry_cattle.csv')  # flags the pair with herds
     registryFiles = sorted(p.name for p in merger.registry.iterdir() if p.is_file())
     surveyFiles = sorted(p.name for p in merger.survey.iterdir() if p.is_file())
-    assert registryFiles == ['SUMMARY.md', 'columns.csv', 'dimensions.csv', 'excluded.csv', 'quantiles.yaml', 'registry.csv', 'sources.yaml']  # fmt: skip
+    assert registryFiles == ['SUMMARY.md', 'columns.csv', 'dimensions.csv', 'excluded.csv', 'manifest.csv', 'quantiles.yaml', 'registry.csv', 'sources.yaml']  # fmt: skip
     assert surveyFiles == ['dropped.csv', 'duplicates.csv']
 
 
@@ -251,6 +252,19 @@ def test_every_merge_measures_the_registry_into_dimensions_and_columns(merger):
     mergeShard(merger, FIXTURES / 'excluded_cattle.csv')
     after = {p.name: p.read_bytes() for p in merger.registry.glob('*.csv')}
     assert after == before | {'excluded.csv': after['excluded.csv']}
+
+
+def test_every_merge_names_each_registry_objects_file_in_the_manifest(merger):
+    """The lean fetch (#4) loads an object from the file the manifest names, checked against
+    its sha256: one row per registry object, however many models it has, taken from the
+    whole source in the survey's cache."""
+    mergeShard(merger, FIXTURES / 'registry_herds.csv')
+    herds = (FIXTURES / 'herds.csv').read_text().encode()  # as conftest zips it
+    sha256 = hashlib.sha256(herds).hexdigest()
+    rows = readRows(merger.registry / 'manifest.csv')
+    assert rows == [
+        {'source': 'herds', 'object': 'herds.csv', 'file': 'herds.csv', 'sha256': sha256, 'size': str(len(herds))}
+    ]  # fmt: skip
 
 
 QUANTILE_KEYS = ('n', 'min', 'p5', 'p10', 'p50', 'p90', 'p95', 'max')
