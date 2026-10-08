@@ -1,0 +1,4 @@
+"source","object","reason","detail"
+"sievers_2020_osf_211","individual_after.csv","no grouping structure","Wide post-conversation survey, one row per participant (Participant ID); the paper's behavioral distance model (1 | pair) runs on pairwise distances computed from these answers, which are not in this table, so no grouping column repeats."
+"sievers_2020_osf_257","supplementary_data_1_fmri_table.csv","derived or duplicated table","Supplementary table of significant fMRI clusters (peak and mean statistics, confidence limits per atlas region) summarising the whole-brain alignment analysis, not an analysis table of any mixed model."
+"sievers_2020_osf_258","subj_ids_groups.csv","response missing or undocumented","Lookup of subject id to conversation group (47 rows, two columns, one row per subject); no response and no model."

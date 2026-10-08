@@ -1,0 +1,7 @@
+"source_a","object_a","source_b","object_b","verdict","notes"
+"pymc_examples","examples/data/alcohol1_pp.csv","alda","aldatxt/alcohol1_pp.txt","same","identical tables (same values and column names, order free), answered by script"
+"nlme","Oxboys","rethinking","data/Oxboys.csv","same","identical tables (same values and column names, order free), answered by script"
+"ros","Childcare/data/cc2.csv","ros","cc2","same","identical tables (same values and column names, order free), answered by script"
+"ros","Helicopters/data/helicopters.txt","ros","helicopters","same","identical tables (same values and column names, order free), answered by script"
+"stata_productivity","productivity.dta","rabe_hesketh","productivity.dta","same","identical tables (same values and column names, order free), answered by script"
+"stata_salamander","salamander.dta","rabe_hesketh","salamander.dta","same","identical tables (same values and column names, order free), answered by script"

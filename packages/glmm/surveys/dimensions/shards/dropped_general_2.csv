@@ -1,0 +1,8 @@
+"source","object","reason"
+"HSAUR3","pottery","rule (a): multivariate table with a grouping factor (kiln) and documented oxide responses; moved from the exclusions into the registry"
+"HSAUR3","skulls","rule (a): multivariate table with a grouping factor (epoch) and documented measurement responses; moved from the exclusions into the registry"
+"carData","MplsStops","rule (b): grouped table (neighborhood) with no documented response, filed with an inferred response; moved from the exclusions into the registry"
+"medicaldata","covid_testing","rule (b): grouped table (clinic_name) with no documented response, filed with an inferred response; moved from the exclusions into the registry"
+"faraway","worldcup","rule (b): grouped table (Team) with no documented response, filed with an inferred response; moved from the exclusions into the registry"
+"MASS","painters","rule (b): grouped table (School) with no documented response, filed with an inferred response; moved from the exclusions into the registry"
+"faraway","neighbor","rule (b): grouped table (district) with no documented response, filed with an inferred response; moved from the exclusions into the registry"

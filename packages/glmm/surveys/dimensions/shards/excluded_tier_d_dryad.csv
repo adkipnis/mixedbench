@@ -1,0 +1,8 @@
+"source","object","reason","detail"
+"goodwin_2022_dryad","Amplification_primers.csv","no grouping structure","Four-row lookup table of PCR primer sequences, no response and no grouping column."
+"goodwin_2022_dryad_2","Sample_barcodes.csv","response missing or undocumented","Sequencing barcodes and well positions per sample PCR replicate; no measured response, the paper's models use Sample_metadata.csv and sequence counts."
+"goodwin_2022_dryad_4","Synthetic_sequences.csv","no grouping structure","Lookup table of spike-in sequences and well positions, no response and no grouping column."
+"villemereuil_2018_dryad_2","pedigree.csv","response missing or undocumented","Pedigree (id, dam, sire) input to the animal model on data.csv; no response column."
+"johansson_2020_dryad","Johansson_et_al..xlsx","unreadable format","The sheet's header sits on row 4 under a description banner, so the loader reads columns as Unnamed: 0 to 18 with banner and header rows as data and numeric columns as text; the paper's models (trait ~ latitude + sex + (1 | pop), pop = population) cannot be rendered on named columns."
+"meyel_2026_dryad","Data_MS_group_size_final.xlsx!READ ME","no grouping structure","Index sheet describing the other sheets, no observations."
+"shanahan_2019_dryad","DialReadings.csv","derived or duplicated table","Second-by-second dial readings from which TNetAndTSLR.csv and StandardDeviations.csv (the tables the paper's models use) are computed per the readme; no model is fitted to the raw readings. RULE GAP: here the raw table is excluded and its summaries filed."
