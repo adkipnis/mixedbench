@@ -1,0 +1,48 @@
+[project]
+name = "mixedbench"
+version = "0.1.0"
+description = "A benchmark of posterior approximation and prediction on real grouped data for GLMMs"
+readme = "README.md"
+license = "MIT"
+authors = [{ name = "Alex Kipnis", email = "adkipnis@users.noreply.github.com" }]
+requires-python = ">=3.14"
+dependencies = [
+    "pandas",
+    "pyyaml",
+    "pyreadr",
+    "openpyxl",
+    "xlrd",
+    "pyreadstat",
+    "pyarrow",
+]
+
+[project.optional-dependencies]
+# The reference sampler stack (brms and cmdstanr in an R subprocess), roadmap item 4.
+references = []
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "hypothesis",
+    "ruff",
+]
+
+[build-system]
+requires = ["uv_build>=0.12.2,<0.13.0"]
+build-backend = "uv_build"
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.format]
+quote-style = "single"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# survey tests run by hand (`uv run pytest survey/tests`); registry/cache holds fetched
+# repositories with tests of their own
+norecursedirs = ["survey", "registry"]
+addopts = "-m 'not network' --import-mode=importlib"
+markers = [
+    "network: fetches a source over the network; runs only in the CI fetch matrix",
+]
