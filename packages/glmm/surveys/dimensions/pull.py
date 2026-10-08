@@ -24,6 +24,7 @@ from pathlib import Path
 
 import pandas as pd
 from metabeta.glmm.datasets import DataObject, Loader
+from resolve import depositPages
 from schema import CANDIDATE_COLUMNS, EXCLUDED, SCREENS, TIERS
 from sources import readFrame
 
@@ -31,6 +32,7 @@ HERE = Path(__file__).parent
 MIN_ROWS = 3  # two groups, one of them with two observations
 MIN_COLS = 2  # a response and a grouping factor
 HEAD_ROWS = 8  # appended to each help page with the dtypes
+HEAD_COLUMNS = 60  # a genotype matrix's thousands of columns are not read column by column
 
 
 def countDtypes(df: pd.DataFrame) -> dict[str, int]:
@@ -92,6 +94,9 @@ class Puller:
         )
         self.labels = [label for label in self.order if self.frame.tiers[label] in tiers]
         self.rows: list[dict] = []
+        self.depositPages: dict[str, Path] = {}  # Tier D label -> the page of its deposit
+        if 'D' in tiers:
+            self.depositPages = depositPages(self.root)
 
     def enumerate(self) -> None:
         """One row per data object of every source of the pulled tiers, in frame order,
@@ -118,6 +123,9 @@ class Puller:
             file = self.root / 'help' / row['source'] / f'{row["object"]}.txt'
             file.parent.mkdir(parents=True, exist_ok=True)
             page = self.loader.help(source, row['object'])
+            if row['source'] in self.depositPages:  # one page per deposit, read once per deposit
+                deposit = self.depositPages[row['source']].relative_to(self.root)
+                page = f'# deposit page: {deposit}\n\n{page}'
             df = self.loader.load(source, row['object'])
             file.write_text(f'{page}\n\n{self._firstRows(df)}\n')
 
@@ -160,8 +168,11 @@ class Puller:
     def _firstRows(df: pd.DataFrame) -> str:
         """What the read prompt promises next to the documentation: the dtypes and the first
         rows, so that an agent sees the columns as loaded and runs nothing."""
-        dtypes = '\n'.join(f'{column}: {dtype}' for column, dtype in df.dtypes.items())
-        head = df.head(HEAD_ROWS).to_string(index=False)
+        shown = df.iloc[:, :HEAD_COLUMNS]
+        dtypes = '\n'.join(f'{column}: {dtype}' for column, dtype in shown.dtypes.items())
+        if shown.shape[1] < df.shape[1]:
+            dtypes += f'\n... and {df.shape[1] - shown.shape[1]} more columns'
+        head = shown.head(HEAD_ROWS).to_string(index=False)
         return f'# first rows (of {len(df)})\n{dtypes}\n\n{head}'
 
     def _draw(self, names: list[str], cap: int | None) -> set[str]:
