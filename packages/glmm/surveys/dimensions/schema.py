@@ -102,7 +102,7 @@ DOMAINS = (
 EXCLUSION_REASONS = (
     'no grouping structure', 'time series without replication', 'fewer than two groups',
     'response missing or undocumented', 'derived or duplicated table', 'simulated data',
-    'unreadable format', 'licence forbids redistribution', 'too large',
+    'unreadable format', 'licence forbids redistribution', 'too large', 'not the paper\'s data',
 )  # fmt: skip
 COLUMN_TYPES = ('categorical', 'ordered', 'continuous')  # what `types` may declare: `col=ordered`  # fmt: skip
 
