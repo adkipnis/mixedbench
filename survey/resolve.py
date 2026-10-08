@@ -33,8 +33,8 @@ import zipfile
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from metabeta.glmm.datasets import docs
-from metabeta.glmm.datasets.readers import R_FILES, TABLE_FILES
+from mixedbench.datasets import docs
+from mixedbench.datasets.readers import R_FILES, TABLE_FILES
 
 HERE = Path(__file__).parent
 DRYAD = 'https://datadryad.org/api/v2'

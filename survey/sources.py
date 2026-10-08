@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import yaml
-from metabeta.glmm.datasets import Source
+from mixedbench.datasets import Source
 
 
 @dataclass(frozen=True)

@@ -18,7 +18,7 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent))  # survey scripts are research code outside the package
 
 from merge import Merger
-from metabeta.glmm.datasets import Loader
+from mixedbench.datasets import Loader
 
 FIXTURES = HERE / 'fixtures'
 HERDS_URL = 'https://example.org/herds.zip'

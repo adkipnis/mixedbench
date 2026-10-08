@@ -26,7 +26,7 @@ from measure import (
     splitList,
     withComposites,
 )
-from metabeta.glmm.datasets import DataObject, Loader
+from mixedbench.datasets import DataObject, Loader
 from schema import (
     ALLOWED,
     COLUMN_LIST_COLUMNS,

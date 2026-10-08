@@ -18,7 +18,7 @@ from pathlib import Path
 
 import pandas as pd
 import pytest
-from metabeta.glmm.datasets import DataObject, Loader, Source, readers
+from mixedbench.datasets import DataObject, Loader, Source, readers
 
 FIXTURES = Path(__file__).parent / 'fixtures'
 TARBALL = (FIXTURES / 'fixture_1.0.tar.gz').read_bytes()

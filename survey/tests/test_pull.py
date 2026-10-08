@@ -10,7 +10,7 @@ import pandas as pd
 import pytest
 import yaml
 from merge import Merger
-from metabeta.glmm.datasets import Loader
+from mixedbench.datasets import Loader
 from pull import Puller, screen
 
 # the loader's own fixture: five documented data objects, one of them a data() text file
