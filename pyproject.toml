@@ -76,7 +76,7 @@ quote-style = "single"
 testpaths = ["tests"]
 # pytest's defaults kept; survey tests run by hand (`uv run pytest survey/tests`);
 # registry/cache holds fetched repositories with tests of their own
-norecursedirs = [".*", "build", "dist", "venv", "*.egg", "survey", "registry"]
+norecursedirs = [".*", "build", "dist", "venv", "*.egg", "survey", "cache"]
 addopts = "-m 'not network' --import-mode=importlib"
 markers = [
     "network: fetches a source over the network; runs only in the CI fetch matrix",
