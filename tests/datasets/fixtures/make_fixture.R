@@ -1,5 +1,5 @@
 # Builds the CRAN-shaped fixture tarball for test_datasets.py. Rerun from the repo root:
-#   Rscript packages/glmm/tests/fixtures/make_fixture.R <build dir> $PWD/packages/glmm/tests/fixtures/fixture_1.0.tar.gz
+#   Rscript tests/datasets/fixtures/make_fixture.R <build dir> $PWD/tests/datasets/fixtures/fixture_1.0.tar.gz
 args <- commandArgs(trailingOnly = TRUE)
 build <- args[1]; out <- args[2]
 pkg <- file.path(build, 'fixture')

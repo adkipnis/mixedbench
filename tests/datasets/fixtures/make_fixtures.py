@@ -1,5 +1,5 @@
 """Builds the url and git fixtures for test_datasets.py (#16). Rerun from the repo root:
-    uv run python packages/glmm/tests/fixtures/make_fixtures.py
+    uv run python tests/datasets/fixtures/make_fixtures.py
 
 `deposit.zip` is a data deposit: one `.csv` under `data/` and a codebook at the root.
 `example-c0ffee1.tar.gz` is a GitHub archive of repository `example` at revision `c0ffee1`:
