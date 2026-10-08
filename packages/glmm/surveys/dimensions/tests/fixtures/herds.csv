@@ -1,0 +1,15 @@
+id,region,herd,breed,feed,parity,weight,sick,cases,trials
+1,north,h1,angus,grass,1,512.3,0,2,10
+2,north,h1,hereford,grass,2,540.1,1,3,12
+3,north,h1,jersey,grass,3,498.7,0,1,8
+4,north,h2,angus,grain,1,530.0,0,4,10
+5,north,h2,holstein,grain,2,601.5,1,5,9
+6,south,h3,jersey,mixed,1,470.2,0,0,6
+7,south,h3,jersey,mixed,2,482.9,0,2,11
+8,south,h3,angus,mixed,4,525.4,1,6,12
+9,south,h3,hereford,mixed,3,551.0,0,3,10
+10,south,h4,holstein,grain,2,590.8,1,7,9
+11,east,h5,angus,grass,1,505.6,0,1,10
+12,east,h5,hereford,grass,1,538.2,0,2,10
+13,east,h5,holstein,grass,3,610.9,1,5,8
+14,east,h5,jersey,grass,2,477.5,0,0,7

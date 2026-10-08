@@ -1,0 +1,6 @@
+"source","object","reason"
+"SASmixed","AvgDailyGain","model 2 is a nested simplification of model 1; re-filed with one row (spot check #22)"
+"SASmixed","BIB","model 2 is a nested simplification of model 1; re-filed with one row (spot check #22)"
+"SASmixed","Cultivation","model 2 is a nested simplification of model 1; re-filed with one row (spot check #22)"
+"SASmixed","Mississippi","model 2 is a nested simplification of model 1; re-filed with one row (spot check #22)"
+"agridat","besag.checks","row and col are plot coordinates, no grouping factor; re-filed as excluded (spot check #22)"

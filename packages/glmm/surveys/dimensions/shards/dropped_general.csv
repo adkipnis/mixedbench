@@ -1,0 +1,2 @@
+"source","object","reason"
+"datasets","CO2","the #23 pull dumped the co2 time series over the CO2 table (case-insensitive file system); re-pulled after the loader fix"

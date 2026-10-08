@@ -1,0 +1,2 @@
+"source","object","reason","detail"
+"MEMSS","MathAchSchool","no grouping structure","School-level companion table to MathAchieve (per-school demographics incl. MEANSES, Size, Sector, HIMINTY); each School appears once per row, so no grouping factor carries repeated observations, and the help page documents no model. A between-school covariate table, not a grouped dataset."

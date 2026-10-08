@@ -1,0 +1,3 @@
+"source","object","reason","detail"
+"rabe_hesketh","star_mm.dta","derived or duplicated table","A multiple-membership reshape of the Project STAR data (star1.dta, in the registry): teacher membership is spread over some 80 wide weight columns, which the registry cannot represent; the first reader had filed a plain school intercept and flagged it, the blind reader excluded it (verdict 2026-10-08)."
+"ros","earnings","no grouping structure","One row per respondent of the ROS earnings example; ethnicity (four levels) is a demographic covariate, not a sampled cluster (the #23 area-factor rule), and the ARM varying-intercept model on it does not make it one; the first reader had flagged the row, the blind reader excluded it (verdict 2026-10-08)."
