@@ -862,6 +862,37 @@ by file against the md5 the Dryad API reported (a dataset zip is opened for its 
 the pins stay those of verified bytes. Done on 2026-10-08 through Claude in Chrome in Alex's
 session: the "Download full dataset" button of each landing page, one deposit at a time with
 seconds between; Dryad's BotStopper shows an automatic "Validating..." page before a file
-download, which passed by itself (no CAPTCHA was shown or solved). After the drop Tier D stands at 96 rows over 75
+download, which passed by itself (no CAPTCHA was shown or solved). After the drop Tier D stood at 96 rows over 75
 objects and 28 papers (50 `high`, 21 `medium`, 25 `low`), the Dryad deposits still to come.
+
+Spot check: 20 rows drawn with seed 0 after the drop, stratified by shard, each with the
+paper's DOI, the deposit page and the file URL, read by Alex against the paper's reported
+or deposited analysis. Agreed as filed: gumundsdottir's location-scale daily model,
+weaving's two punishment studies, sequestro's elevator model, berweger's surprise and
+exploration models, timmer's tone experiments, hubbard's diploma model, naranowicz's
+behavioural and film-valence models (the latter kept as a deposited-script model), and
+sievers' pairwise neural-influence model (ordered ego-alter pairs are distinct pairs).
+Changed: liutu's formula names its zero-inflation and dispersion submodels; walker's
+feeding assays take the paper's per-site `asin(sqrt(Consumption)) ~ Species + (1 |
+Replicate)`; grey's dynamic structural equation model is rendered in words as the
+nonlinear rows are. The rule set by the other six verdicts (walker's raw cage tables,
+kanber's trial-level Task 2, jing's bootstrap-analysed Experiment 1 tables, slepian's raw
+logs without the target column): in Tier D the recorded model is a reported or deposited
+analysis, so a raw table on which the paper fits nothing leaves the registry as `response
+missing or undocumented` rather than as a `RESPONSE INFERRED` row; applied to the whole
+class (`shards/dropped_tier_d_spotcheck.csv`): 16 inferred objects (jing's seven Experiment
+1, 4 and 5 tables, kanber's two tasks, laing's utterance table, walker's six raw cage
+tables) and slepian's five raw logs. Of the 20 rows, 11 stood, 3 changed their formula
+and 6 left the registry.
+
+The 11 Dryad deposits (26 files, all matched by the API's md5 or sha-256 digest) added 23
+objects, 22 passing the pre-screen, read by one Sonnet agent: 31 rows over 15 objects and
+7 exclusions (shanahan's second-by-second raw dial readings as derived, the paper modelling
+its two summary tables; johansson's workbook with its header on row 4 under a banner as
+unreadable; goodwin's primer and barcode lists); three count responses that are not
+integer-valued corrected to continuous. Tier D closes at 104 rows over 69 objects and 38
+papers, every row with a published model, 62 at `high`, 40 `medium`, 2 `low`, and 917
+exclusions with the pre-screen (572 derived or duplicated, 158 unreadable, 113 without
+grouping structure, 46 not the paper's data, 28 without a response); the registry at 712
+rows, no flagged pair open.
 

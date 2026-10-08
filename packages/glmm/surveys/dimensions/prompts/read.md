@@ -93,7 +93,10 @@ index random effects; the **response** is the column a documented model explains
    model's posterior draws, a simulation output) is excluded as `not the paper's data`; a
    summary table derived from the analysis table is `derived or duplicated table`; the
    analysis table without the grouping column (anonymised away) is `no grouping structure`
-   with that said in `detail`. Several files that are one dataset split by study or
+   with that said in `detail`; a raw table on which the paper fits nothing (its model runs
+   on an aggregate built from it, or needs columns it lacks) is `response missing or
+   undocumented`, never a `RESPONSE INFERRED` row: in this tier the recorded model is a
+   reported or deposited analysis, not a GLMM that could be fitted (decided 2026-10-08). Several files that are one dataset split by study or
    experiment are one row each; a dataset split into one file per coder, session or
    participant whose pooled table is in no file is excluded as `derived or duplicated
    table` (decided 2026-10-08).
