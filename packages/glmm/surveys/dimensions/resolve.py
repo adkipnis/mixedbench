@@ -184,13 +184,18 @@ class Resolver:
         self.ingested = {}
         for path in sorted(dir.rglob('*')):
             if path.is_file() and path.suffix.lower() != '.zip':
-                self.ingested[hashlib.md5(path.read_bytes()).hexdigest()] = path.read_bytes()
+                self._remember_ingested(path.read_bytes())
             elif path.is_file():
                 with zipfile.ZipFile(path) as z:
                     for member in z.namelist():
-                        data = z.read(member)
-                        self.ingested[hashlib.md5(data).hexdigest()] = data
+                        self._remember_ingested(z.read(member))
         print(f'{len(self.ingested)} files ingested from {dir}')
+
+    def _remember_ingested(self, data: bytes) -> None:
+        """Under both digests the repositories report (Dryad: md5 for older datasets, sha-256
+        for newer ones)."""
+        self.ingested[hashlib.md5(data).hexdigest()] = data
+        self.ingested[hashlib.sha256(data).hexdigest()] = data
 
     def fetch(self) -> None:
         """The labelled data files and the documentation into the cache, each once, checked
@@ -310,7 +315,7 @@ class Resolver:
                 download = entry['_links'].get('stash:download', {}).get('href', '')
                 deposit.files.append(File(
                     entry['path'], int(entry.get('size') or 0),
-                    f'{entry.get("digestType", "")}:{entry.get("digest", "")}'.strip(':'),
+                    f'{entry.get("digestType", "").replace("-", "")}:{entry.get("digest", "")}'.strip(':'),
                     f'https://datadryad.org{download}' if download else '', role(entry['path']),
                 ))  # fmt: skip
             url = listing['_links'].get('next', {}).get('href', '')
