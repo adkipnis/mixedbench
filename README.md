@@ -24,19 +24,21 @@ from pathlib import Path
 
 import pandas as pd
 from mixedbench import registry
-from mixedbench.datasets import Loader, Source
+from mixedbench.datasets import Loader
 
 rows = pd.read_csv(registry.path('registry.csv'))
 row = rows.set_index('object').loc['sleepstudy']  # its documented model: row['formula']
 
-loader = Loader(Path('cache'))  # downloads land here, checked against their pins
-sleepstudy = loader.load(Source(kind='cran', name='lme4', pin='2.0-6'), 'sleepstudy')
+# downloads land in cache/; only the object's file is fetched and checked against its sha256
+loader = Loader(Path('cache'), manifest=registry.manifest())
+sleepstudy = loader.load(registry.sources()[row['source']], 'sleepstudy')
 ```
 
 ## The registry files
 
-The package carries the seven registry files; `mixedbench.registry.path(name)` returns the
+The package carries the eight registry files; `mixedbench.registry.path(name)` returns the
 installed path of one (`sources.yaml`, `registry.csv`, `excluded.csv`, `dimensions.csv`,
-`columns.csv`, `quantiles.yaml`, `SUMMARY.md`) and `path()` their directory. In this repository
+`columns.csv`, `quantiles.yaml`, `SUMMARY.md`, `manifest.csv`) and `path()` their directory;
+`manifest.csv` names the file each object loads from, with its sha256 and size. In this repository
 they live in [`registry/`](registry/), written by `survey/merge.py` only; start with
 [`SUMMARY.md`](registry/SUMMARY.md).

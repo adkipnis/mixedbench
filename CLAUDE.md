@@ -23,7 +23,7 @@ src/mixedbench/
   references/           the brms/cmdstanr runner, ladder, bar and draw files (ADR 0004)
   metrics/, tracks/     posterior, predictive and oracle tracks, opponent lines (ADR 0005)
 registry/               sources.yaml, registry.csv, excluded.csv, dimensions.csv, columns.csv,
-                        quantiles.yaml, SUMMARY.md, help/ and cache/ untracked
+                        quantiles.yaml, SUMMARY.md, manifest.csv, help/ and cache/ untracked
 survey/                 the pipeline that builds the registry: pull, merge, measure, summarise,
                         shards/, prompts/; merge.py is the only writer of registry/
 suite/<version>/        problems.csv, contract hash, diagnostics per problem; draws on the

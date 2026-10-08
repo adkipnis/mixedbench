@@ -11,7 +11,7 @@ merge.
 
 The census files the package ships live in [`registry/`](../registry/) (`sources.yaml`,
 `registry.csv`, `excluded.csv`, `dimensions.csv`, `columns.csv`, `quantiles.yaml`,
-`SUMMARY.md`, and the untracked `cache/` and `help/`); everything else in the table below lives
+`SUMMARY.md`, `manifest.csv`, and the untracked `cache/` and `help/`); everything else in the table below lives
 here in `survey/`.
 
 **Status: closed 2026-10-08** at 712 registry rows over 642 datasets (Tier R 252, T 244,
@@ -37,6 +37,7 @@ grill, not here.
 | `duplicates.csv` | `merge.py` | candidate pairs the merge flagged and the verdicts returned |
 | `dropped.csv` | `merge.py` | objects taken out of the registry and the exclusions, awaiting a re-filing shard |
 | `dimensions.csv`, `columns.csv` | `merge.py` via `measure.py` | one row per registry row and grouping factor; one per registry row and covariate column |
+| `manifest.csv` | `merge.py` | one row per registry object: the file it loads from inside its source, that file's sha256 and size (empty for base R's, which R dumps); a user's loader fetches that file alone |
 | `quantiles.yaml`, `SUMMARY.md` | `merge.py` via `summarise.py` | every axis pooled, per tier and without agridat; the summary from `SUMMARY.template.md`, which holds no digit |
 | `practice_quantiles.yaml` | copied | snapshot of the practice survey's `quantiles.yaml` (metabeta-v3), the p90 column of `SUMMARY.md` |
 | `prompts/discover.md`, `prompts/read.md` | | what the discovery agent and a reading agent get and write |
@@ -74,8 +75,8 @@ One pass per tier, the same steps each time:
    file cannot carry. Opus for Tiers R, E, T and O; Sonnet at medium effort for Tier D
    (cost), the Opus tiers being the calibration.
 4. **Merge.** `merge.py` validates the shard against the loaded tables, upserts, flags
-   duplicate candidates, measures every registry row into `dimensions.csv` and `columns.csv`
-   and regenerates `quantiles.yaml` and `SUMMARY.md`.
+   duplicate candidates, measures every registry row into `dimensions.csv` and `columns.csv`,
+   names every registry object's file in `manifest.csv` and regenerates `quantiles.yaml` and `SUMMARY.md`.
 5. **Duplicates.** Flagged pairs are answered by script where the tables are identical, else
    by one agent; confirmed groups fold into the row of their first object in frame order.
 6. **Blind second reading.** The tier's `medium` and `low` rows are re-read by fresh agents
