@@ -1,7 +1,8 @@
 """Quantiles and summary of the dimension survey from the measured files (#18):
 `quantiles.yaml` from `dimensions.csv`, `columns.csv` and `registry.csv`, every axis pooled,
 per tier and with agridat removed; `SUMMARY.md` from the digit-free template, the practice
-survey's p90 read from its `quantiles.yaml` at merge time, never copied.
+survey's p90 read at merge time from `practice_quantiles.yaml`, a snapshot of the practice
+survey's `quantiles.yaml`, which stays in metabeta-v3.
 """
 
 from __future__ import annotations
@@ -19,7 +20,7 @@ from schema import TIERS
 # =====================================================================================
 HERE = Path(__file__).parent
 TEMPLATE = HERE / 'SUMMARY.template.md'
-PRACTICE = HERE.parent / 'practice' / 'quantiles.yaml'
+PRACTICE = HERE / 'practice_quantiles.yaml'
 # The v1 families of the stage table (docs/design/stages.md): the practice column takes the
 # maximum of their p90 (envelope rule 1), the minimum for the smallest group size.
 PRACTICE_FAMILIES = ('Normal', 'Bernoulli', 'Poisson', 'negative binomial', 'binomial', 'Gamma', 'log-normal')  # fmt: skip
@@ -95,8 +96,10 @@ def counted(values: pd.Series) -> str:
 # pipeline: measured files -> axes -> shares -> K -> implied columns -> summary
 # =====================================================================================
 class Summariser:
-    def __init__(self, root: Path, registry: pd.DataFrame, excluded: pd.DataFrame) -> None:
-        self.root = Path(root)
+    def __init__(
+        self, root: Path, survey: Path, registry: pd.DataFrame, excluded: pd.DataFrame
+    ) -> None:
+        self.root, self.survey = Path(root), Path(survey)  # the registry folder, the survey's
         self.registry = registry
         self.excluded = excluded
         measured = FACTOR_AXES + tuple(ROW_AXES.values())
@@ -207,7 +210,7 @@ class Summariser:
         """The deposit-level loss of Tier D (#26) as bullets: the links of `deposits.csv` by
         status, the listed files by role, the data files not pulled by reason, the objects
         excluded by reason, and the papers that reached the registry."""
-        file = self.root / 'deposit_files.csv'
+        file = self.survey / 'deposit_files.csv'
         if not file.exists():
             return 'Tier D not pulled.'
         files = readCsv(file)

@@ -1,14 +1,15 @@
 """Tier D of the frame: the practice survey's papers that name a Dryad, OSF, Zenodo or figshare
 deposit, and the seeded draw of them into `deposits.csv`.
 
-The match is mechanical, a regex over `../practice/texts/<paper_id>.txt`, so it also catches
+The match is mechanical, a regex over the practice survey's `texts/<paper_id>.txt` (in
+metabeta-v3), so it also catches
 preregistrations and deposits the paper merely cites; the window around each match travels
 along as `context`, and #26 excludes what is no data of the paper, never replacing it. One
 row per drawn paper, several deposits as `;`-lists, `n_frame` the deposit-naming papers of
 the stratum. The draw is `random.Random(seed).sample` over the sorted paper ids of each
 stratum, so rerunning reproduces the file byte for byte. Run from the repo root:
 
-    uv run python packages/glmm/surveys/dimensions/deposits.py
+    uv run python survey/deposits.py --practice <metabeta-v3>/packages/glmm/surveys/practice
 """
 
 from __future__ import annotations
@@ -141,7 +142,7 @@ class Drawer:
 if __name__ == '__main__':
     # fmt: off
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('--practice', type=Path, default=HERE.parent / 'practice', help='practice survey root')
+    parser.add_argument('--practice', type=Path, required=True, help="practice survey root (metabeta-v3's packages/glmm/surveys/practice)")
     parser.add_argument('--out', type=Path, default=HERE / 'deposits.csv')
     parser.add_argument('--per-stratum', type=int, default=PER_STRATUM)
     parser.add_argument('--seed', type=int, default=0)

@@ -1,11 +1,13 @@
 """Tier D of the frame: every deposit of `deposits.csv` resolved through its repository's API
 (Dryad, Zenodo, figshare, OSF), its files listed in `deposit_files.csv`, the data and
 documentation files fetched once into the cache and pinned, one deposit page per deposit under
-`help/deposits/` for the reading agents, and the Tier D block of `sources.yaml` rewritten.
+`registry/help/deposits/` for the reading agents, and the Tier D block of `sources.yaml`
+rewritten.
 
 The practice survey's rules apply: each location is tried once by script, the run stops at a
 bot wall, nobody solves a CAPTCHA. A `?view_only=` key the paper prints is part of the
-location and travels along. Every API answer is cached under the untracked `cache/deposits/`,
+location and travels along. Every API answer is cached under the untracked
+`registry/cache/deposits/`,
 so rerunning the listing fetches nothing. Without `--fetch` only the listing runs, so that the
 sizes and formats of a tier are known before a byte of data is pulled; with it the kept files
 land under `cache/url/<sha256>/<name>` where the loader looks for a `url` source, the
@@ -13,7 +15,7 @@ repository's own checksum is checked, and `sources.yaml` gets one entry per data
 labelled `<paper_id>_<repository>` and `_2`, `_3` for a paper's further files of that
 repository (decided 2026-10-08). Run from the repo root:
 
-    uv run python packages/glmm/surveys/dimensions/resolve.py [--fetch]
+    uv run python survey/resolve.py --practice <metabeta-v3>/packages/glmm/surveys/practice [--fetch]
 """
 
 from __future__ import annotations
@@ -123,9 +125,9 @@ def stripHtml(text: str) -> str:
 # resolver
 # =====================================================================================
 class Resolver:
-    def __init__(self, root: Path, practice: Path) -> None:
-        self.root, self.practice = root, practice
-        self.cache = root / 'cache' / 'deposits'
+    def __init__(self, registry: Path, survey: Path, practice: Path) -> None:
+        self.registry, self.survey, self.practice = registry, survey, practice
+        self.cache = registry / 'cache' / 'deposits'
         self.deposits: list[Deposit] = []
         self.seen: set[str] = (
             set()
@@ -135,7 +137,7 @@ class Resolver:
 
     def readDeposits(self) -> None:
         """One `Deposit` per link of `deposits.csv`, in file order."""
-        with (self.root / 'deposits.csv').open(newline='') as f:
+        with (self.survey / 'deposits.csv').open(newline='') as f:
             for row in csv.DictReader(f):
                 links = row['url'].split(';')
                 repositories = row['repository'].split(';')
@@ -209,7 +211,7 @@ class Resolver:
     def writePages(self) -> None:
         """`help/deposits/<paper_id>_<repository>_<id>.txt`: what the reading agent gets above
         each object of the deposit, the paper's filed models included."""
-        dir = self.root / 'help' / 'deposits'
+        dir = self.registry / 'help' / 'deposits'
         dir.mkdir(parents=True, exist_ok=True)
         for deposit in self.deposits:
             if deposit.status != 'ok':
@@ -224,11 +226,11 @@ class Resolver:
             for file in deposit.files:
                 if file.label and file.pin:
                     lines.append(self._entry(deposit, file))
-        text = (self.root / 'sources.yaml').read_text()
+        text = (self.registry / 'sources.yaml').read_text()
         pattern = re.compile(r'^  D:.*?(?=^  O:)', re.MULTILINE | re.DOTALL)
         assert pattern.search(text), 'sources.yaml has no `D:` block before `O:`'
         text = pattern.sub('\n'.join(lines) + '\n', text)
-        (self.root / 'sources.yaml').write_text(text)
+        (self.registry / 'sources.yaml').write_text(text)
 
     def flush(self) -> None:
         """`deposit_files.csv` whole: one row per file of every resolved deposit, one row for
@@ -249,7 +251,7 @@ class Resolver:
                     'url': file.url, 'role': file.role, 'label': file.label, 'pin': file.pin,
                     'reason': file.reason,
                 })  # fmt: skip
-        with (self.root / 'deposit_files.csv').open('w', newline='') as f:
+        with (self.survey / 'deposit_files.csv').open('w', newline='') as f:
             writer = csv.DictWriter(f, COLUMNS, quoting=csv.QUOTE_ALL, restval='')
             writer.writeheader()
             writer.writerows(rows)
@@ -556,7 +558,7 @@ class Resolver:
         digest = hashlib.sha256(data).hexdigest()
         if expected and hashlib.new(algorithm, data).hexdigest() != expected:
             raise ValueError(f"{deposit.id} {file.path}: {algorithm} differs from the repository's")
-        out = self.root / 'cache' / 'url' / digest / Path(file.path).name
+        out = self.registry / 'cache' / 'url' / digest / Path(file.path).name
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_bytes(data)
         file.pin = digest
@@ -614,7 +616,7 @@ class Resolver:
     def _text(self, file: File) -> str:
         """A documentation file as text: PDF through pdftotext, docx through its document
         XML, everything else as it is; a script cut to its first characters."""
-        path = self.root / 'cache' / 'url' / file.pin / Path(file.path).name
+        path = self.registry / 'cache' / 'url' / file.pin / Path(file.path).name
         suffix = path.suffix.lower()
         if suffix == '.pdf':
             text = subprocess.run(
@@ -655,13 +657,13 @@ def pageName(deposit: Deposit) -> str:
     return f'{deposit.paper_id}_{deposit.repository}_{deposit.id.split(".")[-1].replace("/", "_")}'
 
 
-def depositPages(root: Path) -> dict[str, Path]:
+def depositPages(registry: Path, survey: Path) -> dict[str, Path]:
     """Label -> deposit page, for the pull to prepend to every Tier D help page; none
     before the listing ran."""
     pages = {}
-    if not (root / 'deposit_files.csv').exists():
+    if not (survey / 'deposit_files.csv').exists():
         return pages
-    with (root / 'deposit_files.csv').open(newline='') as f:
+    with (survey / 'deposit_files.csv').open(newline='') as f:
         for row in csv.DictReader(f):
             if row['label']:
                 deposit = Deposit(
@@ -672,7 +674,7 @@ def depositPages(root: Path) -> dict[str, Path]:
                     '',
                     row['deposit'],
                 )
-                pages[row['label']] = root / 'help' / 'deposits' / f'{pageName(deposit)}.txt'
+                pages[row['label']] = registry / 'help' / 'deposits' / f'{pageName(deposit)}.txt'
     return pages
 
 
@@ -682,13 +684,14 @@ def depositPages(root: Path) -> dict[str, Path]:
 if __name__ == '__main__':
     # fmt: off
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('--root', type=Path, default=HERE, help='survey folder holding deposits.csv')
-    parser.add_argument('--practice', type=Path, default=HERE.parent / 'practice', help='practice survey root')
+    parser.add_argument('--practice', type=Path, required=True, help="practice survey root (metabeta-v3's packages/glmm/surveys/practice)")
+    parser.add_argument('--registry', type=Path, default=HERE.parent / 'registry', help='folder holding sources.yaml, cache/ and help/')
+    parser.add_argument('--survey', type=Path, default=HERE, help='folder holding deposits.csv and deposit_files.csv')
     parser.add_argument('--fetch', action='store_true', help='fetch the listed files, write the pages and the sources.yaml block')
     parser.add_argument('--ingest', type=Path, help='folder of files downloaded by hand, matched by md5 before any download')
     args = parser.parse_args()
     # fmt: on
-    resolver = Resolver(args.root, args.practice)
+    resolver = Resolver(args.registry, args.survey, args.practice)
     resolver.readDeposits()
     resolver.resolve()
     resolver.label()

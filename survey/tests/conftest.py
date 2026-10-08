@@ -37,9 +37,8 @@ def sha(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
-@pytest.fixture
-def merger(tmp_path: Path) -> Merger:
-    """A merger over a scratch root whose loader fetches the two zips from memory."""
+def scratchMerger(registry: Path, survey: Path) -> Merger:
+    """A merger over a scratch registry whose loader fetches the two zips from memory."""
     herdsText = (FIXTURES / 'herds.csv').read_text()
     cattleText = RENAMED + herdsText[herdsText.index('\n') :]
     archives = {
@@ -54,10 +53,23 @@ def merger(tmp_path: Path) -> Merger:
             'R': {'cattle': {'kind': 'url', 'name': CATTLE_URL, 'pin': sha(archives[CATTLE_URL])}},
         },
     }
-    (tmp_path / 'sources.yaml').write_text(yaml.safe_dump(sources, sort_keys=False))
-    (tmp_path / 'shards').mkdir()
+    registry.mkdir(exist_ok=True)
+    (registry / 'sources.yaml').write_text(yaml.safe_dump(sources, sort_keys=False))
+    (survey / 'shards').mkdir(parents=True)
 
     def serve(url: str) -> bytes | None:
         return archives.get(url)
 
-    return Merger(tmp_path, loader=Loader(tmp_path / 'cache', fetch=serve))
+    return Merger(registry, survey, loader=Loader(registry / 'cache', fetch=serve))
+
+
+@pytest.fixture
+def merger(tmp_path: Path) -> Merger:
+    """One scratch folder serving as both the registry and the survey."""
+    return scratchMerger(tmp_path, tmp_path)
+
+
+@pytest.fixture
+def split_merger(tmp_path: Path) -> Merger:
+    """The repository's layout: the registry and the survey in two folders."""
+    return scratchMerger(tmp_path / 'registry', tmp_path / 'survey')
