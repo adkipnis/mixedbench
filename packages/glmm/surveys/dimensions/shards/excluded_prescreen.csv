@@ -286,6 +286,7 @@
 "fitzmaurice_lead","lead.dta","no grouping structure","no repeated column"
 "fitzmaurice_diabetes","diabetes.dta","no grouping structure","no repeated column"
 "diggle_wassle","wassle_data.txt","unreadable format","no frame"
+"valdebenito_2020_dryad","Bacteria_in_plovers_R_code.txt","unreadable format","no frame"
 "willochallen_2026_zenodo","File_3_Drug_response_sDSS_164S_17Healthy.xlsx","no grouping structure","no repeated column"
 "willochallen_2026_zenodo","File_7_RNA_seq_CPM_163S_4Healthy.csv","no grouping structure","no repeated column"
 "kappers_2018_osf","READ_ME.txt","unreadable format","no frame"
