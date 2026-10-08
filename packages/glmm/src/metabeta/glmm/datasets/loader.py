@@ -1,11 +1,10 @@
-"""Dataset loader for the dimension survey: pinned source as input, typed DataFrame as output."""
+"""Dataset loader for the dimension survey: pinned source as input, typed DataFrame as output.
+The pipeline url -> archive -> tree -> files -> frames, the cache and the Rscript dump route
+live here; the formats are `readers.py`, the help pages `docs.py`."""
 
 from __future__ import annotations
 
 import hashlib
-import io
-import json
-import re
 import subprocess
 import tarfile
 import time
@@ -19,25 +18,12 @@ from typing import Literal
 from urllib.parse import urlparse
 
 import pandas as pd
-from pyreadr import LibrdataError, PyreadrError
-from pyreadr._pyreadr_parser import PyreadrParser
-
-# ==============================================================================================
-# globals
-# ==============================================================================================
+from metabeta.glmm.datasets import docs, readers
+from metabeta.glmm.datasets.readers import DATA_FILES, R_ERRORS, R_FILES, TABLE_FILES, Frames
 
 CRAN = 'https://cloud.r-project.org/src/contrib'
-R_FILES = {'.rda', '.rdata', '.rds'}  # meant for pyreadr
-DATA_FILES = {'.r', '.tab', '.txt', '.csv'}  # meant for utils::data()
-TABLE_FILES = {  # meant for pandas
-    '.csv', '.tsv', '.tab', '.dat', '.xlsx', '.json', '.dta', '.arrow', '.pq', '.parquet'
-}  # fmt: skip
-DOC_FILES = {'.md', '.txt', '.rst', ''}  # text beside a data file
-DOC_STEMS = ('readme', 'codebook', 'description', 'notes', 'metadata', 'variables', 'dictionary')
 ARCHIVES = ('.zip', '.tar.gz', '.tgz', '.tar')
-R_ERRORS = (PyreadrError, LibrdataError)  # LibrdataError is not a PyreadrError
 Reader = Literal['pyreadr', 'rscript', 'pandas']
-Frames = dict[str, pd.DataFrame | None]  # object name -> its table; None when it has no table
 ColumnType = Literal['categorical', 'ordered', 'continuous']  # what a registry row may declare
 
 # Reads one data/ file the way utils::data() does and saves each object in it as its own .rds,
@@ -92,6 +78,7 @@ class Source:
     checksum: str | None = None  # sha256 of a CRAN or git archive; None skips the check
     path: str | None = None  # git, url: file or folder inside the tree; None -> all of it
     file: str | None = None  # url: the download's file name where the URL's path has none
+    layout: tuple[str, ...] | None = None  # url: the columns of a headerless text file
 
 
 @dataclass(frozen=True)
@@ -140,22 +127,35 @@ class Loader:
         after the object's stem in its folder or a sibling folder (posteriordb's
         `data/info/radon.info.json` beside `data/data/`), else those in the file's folder or the
         nearest folder above it within the pinned path that has any; a Stan data dict adds which
-        entries are not in the table, a Stata file its labels."""
+        entries are not in the table, a Stata or SPSS file its labels, a workbook its contents
+        sheet, and a repository that is an R package (rethinking, ROS's `rpackage/`) the Rd
+        page named after the file's stem."""
         tree = self._tree(source)
         if source.kind == 'cran':
-            return self._rdPage(source, tree, name)
+            page = docs.rdPage(tree / 'man', name)
+            if page is None:
+                raise KeyError(f'{source.name} {source.pin} has no help page for {name!r}')
+            return page
         file = tree / self._read(source)[name][0].file
         root = tree / (source.path or '')  # documentation is sought within the pinned path
         if root.is_file():
             root = root.parent
-        docs = self._sameStemDocs(tree, file) or self._docsBeside(root, file)
-        pages = [f'# {f.relative_to(tree)}\n{f.read_text()}' for f in docs]
-        suffix = self._bare(file).suffix
+        found = docs.sameStemDocs(tree, file) or docs.docsBeside(root, file)
+        pages = [f'# {f.relative_to(tree)}\n{f.read_text(errors="replace")}' for f in found]
+        suffix = readers.bare(file).suffix
         if suffix == '.json':
-            pages.append(self._stanNote(file))
+            pages.append(docs.stanNote(file))
         if suffix == '.dta':
-            pages.append(self._stataLabels(file))
-        return '\n'.join(pages)
+            pages.append(docs.stataLabels(file))
+        if suffix == '.sav':
+            pages.append(docs.spssLabels(file))
+        if suffix in ('.xlsx', '.xls'):
+            pages.append(docs.workbookNotes(file))
+        if suffix in ('.csv', '.tsv', '.tab', '.txt', '.dat'):
+            pages.append(docs.bannerNote(file))
+        for man in sorted(tree.rglob('man')):  # a repository that is an R package (rethinking)
+            pages.append(docs.rdPage(man, readers.bare(file).stem))
+        return '\n'.join(page for page in pages if page)
 
     # ------------------------------------------------------------------------------------------
     # pipeline: url -> archive -> tree -> files -> frames
@@ -252,7 +252,8 @@ class Loader:
     @staticmethod
     def _files(source: Source, tree: Path) -> list[Path]:
         """The files holding data objects: a CRAN package's data/ folder as utils::data() sees
-        it; otherwise the pinned path (a file, or a folder walked) in what R or pandas read."""
+        it; otherwise the pinned path (a file, or a folder walked) in what R or pandas read,
+        less the text files that are documentation."""
         if source.kind == 'cran':  # data() ignores other files (`datalist`)
             candidates = []
             if (tree / 'data').exists():  # GLMMadaptive ships no data
@@ -264,15 +265,12 @@ class Loader:
             if root.is_dir():
                 candidates = root.rglob('*')
             readable = R_FILES | TABLE_FILES
-        files = [f for f in candidates if f.is_file() and Loader._bare(f).suffix in readable]
+        files = [f for f in candidates if f.is_file() and readers.bare(f).suffix in readable]
         files = [f for f in files if not f.name.endswith('.init.json')]  # Stan initial values
+        files = [f for f in files if '__MACOSX' not in f.parts]  # a zip's resource forks
+        if source.kind != 'cran':
+            files = [f for f in files if not docs.isDoc(f) and not docs.describesSibling(f)]
         return sorted(files)
-
-    @staticmethod
-    def _bare(file: Path) -> Path:
-        """The file's name without its `.zip` or `.gz` wrapper (posteriordb's `radon.json.zip`,
-        PMLB's `apnea.tsv.gz`): the suffix says how to read it, the stem what documents it."""
-        return Path(file.name.lower().removesuffix('.zip').removesuffix('.gz'))
 
     def _read(self, source: Source) -> dict[str, tuple[DataObject, pd.DataFrame | None]]:
         """Every data object of the source by name, with its frame; parsed once per source,
@@ -296,19 +294,19 @@ class Loader:
 
     def _readFile(self, file: Path, source: Source, label: str) -> tuple[Frames, Reader]:
         """An R file through pyreadr; a CRAN data/ text file follows utils::data() rules only R
-        knows, so R saves it as .rds first; pandas reads the rest, one object per file."""
+        knows, so R saves it as .rds first; pandas reads the rest."""
         if source.name == 'datasets':  # every file is an .rds R dumped
             return self._readDumped(file), 'rscript'
         if file.suffix.lower() in R_FILES:
             return self._readRFile(file, source)
         if source.kind == 'cran':
             return self._readViaR(file, source), 'rscript'
-        return {label: self._readTable(file)}, 'pandas'
+        return readers.readTables(file, label, source.layout), 'pandas'
 
     def _readRFile(self, file: Path, source: Source) -> tuple[Frames, Reader]:
         """An R file librdata rejects (geepack's muscatine, a plain data frame) is re-saved by R."""
         try:
-            return self._readR(file), 'pyreadr'
+            return readers.readR(file), 'pyreadr'
         except R_ERRORS:
             return self._readViaR(file, source), 'rscript'
 
@@ -325,7 +323,7 @@ class Loader:
         """An .rds R saved; what librdata still rejects is no table (boot's cd4.nested, a list)."""
         name = rds.stem.removesuffix('~')  # BASE_R marks base R's co2 beside CO2 with a tilde
         try:
-            frames = self._readR(rds)
+            frames = readers.readR(rds)
         except R_ERRORS:
             return {name: None}
         if not frames:  # a list object (base R's Harman23.cor) holds no table
@@ -335,215 +333,3 @@ class Loader:
     @staticmethod
     def _rscript(script: str, *args: str) -> None:
         subprocess.run(['Rscript', '-e', script, *args], check=True)
-
-    def _readR(self, path: Path) -> Frames:
-        """`pyreadr.read_r`, except that factor levels keep R's order and that an object pyreadr
-        cannot turn into a DataFrame is None; a file librdata rejects raises."""
-        parser = PyreadrParser()
-        parser.parse(bytes(path))
-        frames = {}
-        for table in parser.table_data:
-            name = table.name or path.stem  # an .rds carries no object name
-            if table.dim_num > 2:  # pyreadr hands these to xarray (base R's Titanic)
-                frames[name] = None
-                continue
-            try:
-                df = table.convert_to_dataframe()
-            except PyreadrError:  # a matrix column (gamlss.data's aep)
-                frames[name] = None
-                continue
-            for position, labels in table.value_labels.items():  # {column: {code: label}}
-                column = df.columns[position]
-                levels = [labels[code] for code in sorted(labels)]  # R orders levels by code
-                # pyreadr used astype('category'), which sorts levels and drops unused ones
-                df[column] = df[column].cat.set_categories(levels)
-            frames[name] = self._numbersAsFloat(df)
-        return frames
-
-    @staticmethod
-    def _numbersAsFloat(df: pd.DataFrame) -> pd.DataFrame:
-        """pyreadr renders an R integer vector with NA as an object column of ints and NaN
-        (mlmRev's `star`); such a column becomes float, a string column stays as it is."""
-        numbers = {}
-        for column in df.columns[df.dtypes == object]:
-            present = df[column].dropna()
-            if present.map(lambda v: isinstance(v, (int, float))).all():
-                numbers[column] = pd.to_numeric(df[column])
-        return df.assign(**numbers)
-
-    def _readTable(self, file: Path) -> pd.DataFrame | None:
-        """pandas by extension; None where the file holds no table."""
-        suffix = self._bare(file).suffix
-        if suffix == '.xlsx':
-            return pd.read_excel(file)
-        if suffix == '.json':
-            return self._readJson(self._unwrap(file))
-        if suffix == '.dta':
-            return pd.read_stata(file)
-        if suffix == '.arrow':
-            return pd.read_feather(file)
-        if suffix in ('.pq', '.parquet'):
-            return pd.read_parquet(file)
-        return self._readDelimited(file)
-
-    @staticmethod
-    def _readDelimited(file: Path) -> pd.DataFrame | None:
-        """The separator sniffed; columns aligned with runs of spaces (the ARM `.dat` files)
-        defeat the sniffer and are read whitespace-separated; what neither reading parses (a
-        banner above the table, the PyMC examples' ice-core csv) is no table. Undecodable
-        bytes (a latin-1 degree sign) are replaced, a byte-order mark dropped. pandas opens a
-        `.gz` itself."""
-        options = {'encoding': 'utf-8-sig', 'encoding_errors': 'replace'}
-        try:
-            df = pd.read_csv(file, sep=None, engine='python', **options)
-        except pd.errors.ParserError:
-            try:
-                df = pd.read_csv(file, sep=r'\s+', **options)
-            except pd.errors.ParserError:
-                return None
-        return Loader._tidyText(df)
-
-    @staticmethod
-    def _tidyText(df: pd.DataFrame) -> pd.DataFrame:
-        """Padded fields (the ARM files: `idnum, state, ...`, `NA       `) stripped, so that a
-        name is the name and a column of numbers with `NA` is numeric with missing values."""
-        df = df.rename(columns=lambda name: str(name).strip())
-        tidy = {}
-        for column in df.columns[df.dtypes.map(pd.api.types.is_string_dtype)]:
-            values = df[column].str.strip().replace({'': None, 'NA': None})
-            numbers = pd.to_numeric(values, errors='coerce')
-            if numbers.notna().sum() == values.notna().sum():  # every present value a number
-                values = numbers
-            tidy[column] = values
-        return df.assign(**tidy)
-
-    @staticmethod
-    def _unwrap(file: Path) -> bytes:
-        """The file's content, out of its `.zip` wrapper where it has one."""
-        if file.suffix.lower() != '.zip':
-            return file.read_bytes()
-        with zipfile.ZipFile(file) as z:
-            member = z.namelist()[0]
-            return z.read(member)
-
-    @staticmethod
-    def _readJson(data: bytes) -> pd.DataFrame | None:
-        """JSON records as pandas reads them; a Stan data dict (posteriordb, the Stan examples)
-        as the table of its arrays of the modal length, the observations: scalars, the arrays
-        of another length (group-level data) and arrays of three or more dimensions are no
-        columns, an N-row matrix is its numbered columns (`X_1`, `X_2`); a dict without arrays
-        (a descriptor) is no table."""
-        content = json.loads(data)
-        if not isinstance(content, dict):
-            return pd.read_json(io.BytesIO(data))
-        n = Loader._observationLength(content)
-        if n is None:
-            return None
-        columns = {}
-        for name, value in content.items():
-            if not isinstance(value, list) or len(value) != n:
-                continue
-            depth = Loader._depth(value)
-            if depth > 2:
-                continue
-            if depth == 2:  # a matrix, one row per observation
-                for k in range(len(value[0])):
-                    columns[f'{name}_{k + 1}'] = [row[k] for row in value]
-            else:
-                columns[name] = value
-        return pd.DataFrame(columns)
-
-    @staticmethod
-    def _shape(value: list) -> list[int]:
-        shape = []
-        while isinstance(value, list):
-            shape.append(len(value))
-            value = value[0] if value else None
-        return shape
-
-    @staticmethod
-    def _depth(value: list) -> int:
-        """Dimensions of a nested array: 1 for a vector, 2 for a matrix, and so on."""
-        return len(Loader._shape(value))
-
-    @staticmethod
-    def _observationLength(content: dict) -> int | None:
-        lengths = [len(value) for value in content.values() if isinstance(value, list)]
-        if not lengths:
-            return None
-        return max(set(lengths), key=lengths.count)
-
-    @staticmethod
-    def _sameStemDocs(tree: Path, file: Path) -> list[Path]:
-        stem = Loader._bare(file).stem
-        names = {f'{stem}{suffix}' for suffix in DOC_FILES} | {f'{stem}.info.json'}
-        candidates = file.parent.parent.glob('*/*')  # the file's folder and its siblings
-        if file.parent == tree:
-            candidates = tree.glob('*')
-        return sorted(f for f in candidates if f.is_file() and f.name.lower() in names)
-
-    @staticmethod
-    def _docsBeside(root: Path, file: Path) -> list[Path]:
-        folders = [file.parent, *file.parent.parents]
-        for folder in folders[: folders.index(root) + 1]:
-            files = sorted(f for f in folder.iterdir() if f.is_file())
-            docs = [f for f in files if Loader._isDoc(f)]
-            if docs:
-                return docs
-        return []
-
-    @staticmethod
-    def _isDoc(file: Path) -> bool:
-        """Markdown and reST; a `.txt` named like documentation (`codebook.txt`, not a data
-        file such as the PyMC examples' `Guber1999data.txt`); a suffix-less file in capitals
-        (`README`, `LICENSE`), not a dotfile or a suffix-less data file."""
-        suffix = file.suffix.lower()
-        if suffix in ('.md', '.rst'):
-            return True
-        if suffix == '.txt':
-            return any(stem in file.stem.lower() for stem in DOC_STEMS)
-        return suffix == '' and file.name.isupper()
-
-    @staticmethod
-    def _stanNote(file: Path) -> str:
-        """The entries of a Stan data dict that are no column: scalars and group-level arrays;
-        and the matrices the table holds as numbered columns."""
-        content = json.loads(Loader._unwrap(file))
-        if not isinstance(content, dict):
-            return ''
-        n = Loader._observationLength(content)
-        others, matrices = [], []
-        for name, value in content.items():
-            if not isinstance(value, list):
-                others.append(f'{name} (scalar)')
-            elif len(value) != n:
-                others.append(f'{name} (length {len(value)})')
-            elif Loader._depth(value) > 2:
-                others.append(f'{name} ({" x ".join(map(str, Loader._shape(value)))} array)')
-            elif Loader._depth(value) == 2:
-                matrices.append(f'{name} is a {n} x {len(value[0])} matrix')
-        return '; '.join([f'# not in the table: {", ".join(others)}', *matrices])
-
-    @staticmethod
-    def _stataLabels(file: Path) -> str:
-        """A `.dta`'s data label, one line per variable with its label, then each value-label
-        set with its labels in code order (a set is usually named after its variable)."""
-        with pd.read_stata(file, iterator=True) as reader:
-            lines = [reader.data_label]
-            for variable, label in reader.variable_labels().items():
-                lines.append(f'{variable}: {label}')
-            for labelset, labels in reader.value_labels().items():
-                ordered = ', '.join(labels[code] for code in sorted(labels))
-                lines.append(f'{labelset} values: {ordered}')
-        return '# Stata labels\n' + '\n'.join(lines)
-
-    @staticmethod
-    def _rdPage(source: Source, tree: Path, name: str) -> str:
-        """The raw Rd page whose alias is `name`."""
-        pages = sorted((tree / 'man').glob('*.Rd'))
-        alias = rf'\\alias\{{{re.escape(name)}\}}'
-        for page in pages:
-            text = page.read_text()
-            if re.search(alias, text):
-                return text
-        raise KeyError(f'{source.name} {source.pin} has no help page for {name!r}')

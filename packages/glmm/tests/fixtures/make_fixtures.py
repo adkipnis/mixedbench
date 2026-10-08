@@ -25,6 +25,7 @@ from pathlib import Path
 import pandas as pd
 import pyarrow as pa
 import pyarrow.feather
+import pyreadstat
 
 FIXTURES = Path(__file__).parent
 EPOCH = datetime(2026, 1, 1, tzinfo=UTC)
@@ -58,6 +59,12 @@ PADDED = (
     'NN        ,NA       ,Nagoya    \nPP        ,1        ,Tokyo     \n'
 )
 APNEA = 'Scorer\tSubject\ttarget\n1\t1\t3.0\n2\t1\t2.5\n1\t2\t4.0\n2\t2\t3.5\n'
+SCHOOLS_TXT = 'Estimates of a coaching effect in eight schools.\n'  # describes schools.dat
+# a banner of `#` lines above a whitespace-aligned table, as Diggle's course files
+CD4 = '#\n# CD4 counts by subject\n#\n   time   cd4  id\n -0.7   548  1\n  0.2   657  1\n -2.7   464  2\n'
+# the Bristol CMM layout: fixed-width columns, declared by the frame from the `.ASC` sheet
+PUPILS_DAT = ' 1101 7\n 1102 9\n 2201 8\n'  # school 2-3, class 4, pupil 5, score 6-7
+PARTNERS = '1 16 0\n1 17 1\n2 20 0\n'  # whitespace, no header; names declared by the frame
 
 
 def excel() -> bytes:
@@ -66,6 +73,10 @@ def excel() -> bytes:
     with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
         trials.to_excel(writer, index=False)
         writer.book.properties.created = EPOCH
+    return datedWorkbook(buffer)
+
+
+def datedWorkbook(buffer: io.BytesIO) -> bytes:
     # an .xlsx is a zip; openpyxl dates its members and the `modified` property at save time
     with zipfile.ZipFile(buffer) as workbook:
         members = {info.filename: workbook.read(info) for info in workbook.infolist()}
@@ -77,6 +88,41 @@ def excel() -> bytes:
     dated = io.BytesIO()
     writeZip(dated, members)
     return dated.getvalue()
+
+
+def workbook() -> bytes:
+    """One workbook of several data sheets with a `Contents` sheet describing them, as
+    Snijders & Bosker's companion."""
+    contents = pd.DataFrame({'sheet': ['03A', '03B'], 'data': ['schools', 'pupils']})
+    schools = pd.DataFrame({'school': [1, 2], ' size': [300, 450]})  # a padded name, as Goldstein's
+    pupils = pd.DataFrame({'school': [1, 1, 2], 'score': [10, 12, 8]})
+    buffer = io.BytesIO()
+    with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
+        contents.to_excel(writer, sheet_name='Contents', index=False, header=False)
+        schools.to_excel(writer, sheet_name='03A', index=False)
+        pupils.to_excel(writer, sheet_name='03B', index=False)
+        writer.book.properties.created = EPOCH
+    return datedWorkbook(buffer)
+
+
+def spss() -> bytes:
+    """An SPSS file with variable labels and value labels, as Hox's companion ships; one
+    column's labels name only its extremes."""
+    classes = pd.DataFrame(
+        {'class': [1, 1, 2], 'sex': [0, 1, 1], 'ses': [1, 3, 5], 'popular': [5.0, 6.5, 4.0]}
+    )
+    labels = {'class': 'Class id', 'sex': 'Pupil sex', 'ses': 'SES', 'popular': 'Popularity score'}
+    # `ses` labels only its extremes, as Hox's files do: it stays a number
+    values = {'sex': {0: 'boy', 1: 'girl'}, 'ses': {1: 'lowest', 5: 'highest'}}
+    file = FIXTURES / 'popular.sav'
+    pyreadstat.write_sav(
+        classes, file, file_label='Pupils', column_labels=labels, variable_value_labels=values
+    )
+    data = bytearray(file.read_bytes())
+    file.unlink()
+    # the header record's creation date (9 bytes) and time (8 bytes) at offset 92: fixed
+    data[92:109] = b'01 Jan 2600:00:00'
+    return bytes(data)
 
 
 def records() -> bytes:
@@ -156,6 +202,12 @@ if __name__ == '__main__':
         'example-c0ffee1/formats/visits.json': records(),
         'example-c0ffee1/formats/births.dta': stata(),
         'example-c0ffee1/formats/schools.dat': SCHOOLS_DAT.encode(),
+        'example-c0ffee1/formats/schools.txt': SCHOOLS_TXT.encode(),  # describes schools.dat
+        'example-c0ffee1/formats/cd4.txt': CD4.encode(),
+        'example-c0ffee1/formats/pupils.dat': PUPILS_DAT.encode(),
+        'example-c0ffee1/formats/partners.txt': PARTNERS.encode(),
+        'example-c0ffee1/formats/chapters.xlsx': workbook(),
+        'example-c0ffee1/formats/popular.sav': spss(),
         'example-c0ffee1/formats/degrees.csv': DEGREES,
         'example-c0ffee1/formats/notes.csv': NOTES,
         'example-c0ffee1/formats/padded.csv': PADDED.encode(),
