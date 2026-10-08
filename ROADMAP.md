@@ -5,7 +5,7 @@ dependencies. Spec and tickets follow as GitHub Issues on this repository.
 
 ## Suite 1.0
 
-- [ ] **1 Repository.** Move `packages/glmm/src/metabeta/glmm/datasets` and
+- [x] **1 Repository.** Move `packages/glmm/src/metabeta/glmm/datasets` and
   `packages/glmm/surveys/dimensions` from metabeta-v3 with history (`git subtree split`);
   `pyproject.toml` (MIT, `references` extra), CI matrix, the memory files copied; metabeta's
   research extra depends on `mixedbench` (uv path source while developing, PyPI pin at release)
