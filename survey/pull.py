@@ -1,17 +1,17 @@
 """Pull every kept source of `sources.yaml` and list its data objects in `candidates.csv`.
 
-Each source is fetched once into the untracked `cache/` through the package's dataset loader
+Each source is fetched once into the untracked `registry/cache/` through the package's dataset loader
 and enumerated. Every object is pre-screened mechanically for what a grouped table needs (a
 data frame, three rows, two columns, one column whose values could index groups); the discards
-are written as the shard `shards/excluded_prescreen.csv` for the merge. A source with more
+are written as the shard `survey/shards/excluded_prescreen.csv` for the merge. A source with more
 passing objects than its cap keeps a seeded draw of them. Objects screened out or left out by
 the cap stay listed, so that the screening denominator is known. The help page of every object
-to read lands in the untracked `help/<source>/<object>.txt` for the reading agents, with the
+to read lands in the untracked `registry/help/<source>/<object>.txt` for the reading agents, with the
 table's dtypes and first rows appended. Rerunning
 downloads nothing and rewrites the same files. `--tiers` pulls only those tiers (a ticket's
 pull; the others keep their rows, shard rows and help pages). Run from the repo root:
 
-    uv run python packages/glmm/surveys/dimensions/pull.py [--tiers E O]
+    uv run python survey/pull.py [--tiers E O]
 """
 
 from __future__ import annotations
@@ -82,11 +82,15 @@ def screen(df: pd.DataFrame | None) -> str:
 # =====================================================================================
 class Puller:
     def __init__(
-        self, root: Path, loader: Loader | None = None, tiers: tuple[str, ...] = TIERS
+        self,
+        registry: Path,
+        survey: Path,
+        loader: Loader | None = None,
+        tiers: tuple[str, ...] = TIERS,
     ) -> None:
-        self.root = Path(root)
-        self.loader = loader or Loader(self.root / 'cache')
-        self.frame = readFrame(self.root)
+        self.registry, self.survey = Path(registry), Path(survey)
+        self.loader = loader or Loader(self.registry / 'cache')
+        self.frame = readFrame(self.registry)
         self.tiers = tiers
         # frame order: tier, then the order of `sources.yaml`
         self.order = sorted(
@@ -96,7 +100,7 @@ class Puller:
         self.rows: list[dict] = []
         self.depositPages: dict[str, Path] = {}  # Tier D label -> the page of its deposit
         if 'D' in tiers:
-            self.depositPages = depositPages(self.root)
+            self.depositPages = depositPages(self.registry, self.survey)
 
     def enumerate(self) -> None:
         """One row per data object of every source of the pulled tiers, in frame order,
@@ -116,15 +120,15 @@ class Puller:
         """One page per object to read; a source's folder is rewritten, so a changed cap or
         frame leaves no stale page behind."""
         for label in self.labels:
-            shutil.rmtree(self.root / 'help' / label, ignore_errors=True)
+            shutil.rmtree(self.registry / 'help' / label, ignore_errors=True)
         to_read = [row for row in self.rows if row['screen'] == 'pass' and row['capped'] == 'no']
         for row in to_read:
             source = self.frame.sources[row['source']]
-            file = self.root / 'help' / row['source'] / f'{row["object"]}.txt'
+            file = self.registry / 'help' / row['source'] / f'{row["object"]}.txt'
             file.parent.mkdir(parents=True, exist_ok=True)
             page = self.loader.help(source, row['object'])
             if row['source'] in self.depositPages:  # one page per deposit, read once per deposit
-                deposit = self.depositPages[row['source']].relative_to(self.root)
+                deposit = self.depositPages[row['source']].relative_to(self.registry)
                 page = f'# deposit page: {deposit}\n\n{page}'
             df = self.loader.load(source, row['object'])
             file.write_text(f'{page}\n\n{self._firstRows(df)}\n')
@@ -134,10 +138,10 @@ class Puller:
         of tiers not pulled are kept from the existing file, everything in frame order."""
         rows = self._kept() + self.rows
         rows.sort(key=lambda row: self.order.index(row['source']))
-        self._write(self.root / 'candidates.csv', CANDIDATE_COLUMNS, rows)
+        self._write(self.survey / 'candidates.csv', CANDIDATE_COLUMNS, rows)
         excluded = [self._exclusion(row) for row in rows if row['screen'] != 'pass']
-        (self.root / 'shards').mkdir(exist_ok=True)
-        shard = self.root / 'shards' / 'excluded_prescreen.csv'
+        (self.survey / 'shards').mkdir(exist_ok=True)
+        shard = self.survey / 'shards' / 'excluded_prescreen.csv'
         self._write(shard, EXCLUDED.agentColumns, excluded)
 
     # ---------------------------------------------------------------------------------
@@ -183,7 +187,7 @@ class Puller:
 
     def _kept(self) -> list[dict]:
         """The rows of the tiers this run does not pull, as the last run wrote them."""
-        file = self.root / 'candidates.csv'
+        file = self.survey / 'candidates.csv'
         if not file.exists():
             return []
         with open(file, newline='') as f:
@@ -216,11 +220,12 @@ class Puller:
 if __name__ == '__main__':
     # fmt: off
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('--root', type=Path, default=HERE, help='survey folder holding sources.yaml')
+    parser.add_argument('--registry', type=Path, default=HERE.parent / 'registry', help='folder holding sources.yaml, cache/ and help/')
+    parser.add_argument('--survey', type=Path, default=HERE, help='folder of candidates.csv and shards/')
     parser.add_argument('--tiers', nargs='+', choices=TIERS, default=TIERS, help='tiers to pull; the others keep their rows')
     args = parser.parse_args()
     # fmt: on
-    puller = Puller(args.root, tiers=tuple(args.tiers))
+    puller = Puller(args.registry, args.survey, tiers=tuple(args.tiers))
     puller.enumerate()
     puller.copyHelp()
     puller.flush()

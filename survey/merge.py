@@ -4,9 +4,11 @@ A shard is `shards/<table>_<label>.csv` with exactly the agent columns of its ta
 (schema.py). The script loads every named object through the package's dataset loader,
 validates the shard against the table it returns, refuses a failing shard printing the
 offending rows, and otherwise upserts on the table's row key, so merging the same shard twice
-changes nothing and a corrected shard replaces its earlier rows. Run from the repo root:
+changes nothing and a corrected shard replaces its earlier rows. The census tables land in
+`registry/`, the survey's bookkeeping tables (duplicates, dropped) in `survey/`. Run from the
+repo root:
 
-    uv run python packages/glmm/surveys/dimensions/merge.py shards/registry_lme4.csv
+    uv run python survey/merge.py survey/shards/registry_lme4.csv
 """
 
 from __future__ import annotations
@@ -57,6 +59,7 @@ SUPERSEDES = {
     'duplicates': (),
 }
 RECONCILED = ('registry', 'duplicates', 'dropped')  # merges that can change the duplicate fold
+CENSUS = ('registry', 'excluded')  # the tables the package ships; the others stay in the survey
 Key = tuple[str, str]  # (source label, object name)
 
 
@@ -115,16 +118,20 @@ def writeCsv(frame: pd.DataFrame, path: Path) -> None:
 # pipeline: shard -> validate -> upsert -> reconcile duplicates -> measure -> summarise
 # =====================================================================================
 class Merger:
-    def __init__(self, root: Path, loader: Loader | None = None) -> None:
-        self.root = Path(root)
-        self.loader = loader or Loader(self.root / 'cache')
-        frame = readFrame(self.root)
+    def __init__(self, registry: Path, survey: Path, loader: Loader | None = None) -> None:
+        self.registry, self.survey = Path(registry), Path(survey)
+        self.loader = loader or Loader(self.registry / 'cache')
+        frame = readFrame(self.registry)
         self.tiers, self.sources = frame.tiers, frame.sources
         self.order = {label: i for i, label in enumerate(frame.tiers)}  # sources.yaml order
 
     def canonical(self, table: Table) -> pd.DataFrame:
-        path = self.root / f'{table.name}.csv'
+        path = self.file(table.name)
         return readCsv(path) if path.exists() else pd.DataFrame(columns=table.columns)
+
+    def file(self, name: str) -> Path:
+        dir = self.registry if name in CENSUS else self.survey
+        return dir / f'{name}.csv'
 
     def objects(self, label: str) -> dict[str, DataObject]:
         return {o.name: o for o in self.loader.objects(self.sources[label])}
@@ -351,7 +358,7 @@ class Merger:
         merged = pd.concat([old, new]).drop_duplicates(subset=key, keep='last')
         self.replaced = len(old) + len(new) - len(merged)
         self.merged = merged.reset_index(drop=True)
-        writeCsv(self.merged, self.root / f'{self.table.name}.csv')
+        writeCsv(self.merged, self.file(self.table.name))
         self.supersede()
         self.flagged = 0
         if self.table.name in RECONCILED:
@@ -362,7 +369,7 @@ class Merger:
         """The shard's objects leave the files this merge wins over."""
         objects = set(self.shardObjects()) if 'source' in self.shard else set()
         for name in SUPERSEDES[self.table.name]:
-            path = self.root / f'{name}.csv'
+            path = self.file(name)
             if not path.exists():
                 continue
             rows = readCsv(path)
@@ -377,10 +384,10 @@ class Merger:
         duplicates = self.canonical(TABLES['duplicates'])
         registry = self.fold(registry, self.sameGroups(duplicates))
         flagged = self.flagCandidates(registry, duplicates)
-        writeCsv(registry, self.root / 'registry.csv')
+        writeCsv(registry, self.file('registry'))
         if len(duplicates) + len(flagged) > 0:
             duplicates = pd.concat([duplicates, pd.DataFrame(flagged)]).reset_index(drop=True)
-            writeCsv(duplicates, self.root / 'duplicates.csv')
+            writeCsv(duplicates, self.file('duplicates'))
         self.flagged = len(flagged)
 
     @staticmethod
@@ -445,9 +452,9 @@ class Merger:
             measurer = Measurer(df, row.to_dict())
             dimensions += measurer.dimensions()
             columns += measurer.columns()
-        writeCsv(pd.DataFrame(dimensions, columns=DIMENSION_COLUMNS), self.root / 'dimensions.csv')  # fmt: skip
-        writeCsv(pd.DataFrame(columns, columns=COLUMN_COLUMNS), self.root / 'columns.csv')
-        Summariser(self.root, registry, self.canonical(TABLES['excluded'])).flush()
+        writeCsv(pd.DataFrame(dimensions, columns=DIMENSION_COLUMNS), self.registry / 'dimensions.csv')  # fmt: skip
+        writeCsv(pd.DataFrame(columns, columns=COLUMN_COLUMNS), self.registry / 'columns.csv')
+        Summariser(self.registry, self.survey, registry, self.canonical(TABLES['excluded'])).flush()
 
     def flush(self) -> None:
         new = len(self.shard) - self.replaced
@@ -462,11 +469,12 @@ class Merger:
 if __name__ == '__main__':
     # fmt: off
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('shard', type=Path, help='shards/<table>_<label>.csv')
-    parser.add_argument('--root', type=Path, default=HERE, help='survey folder holding sources.yaml and the canonical CSVs')
+    parser.add_argument('shard', type=Path, help='survey/shards/<table>_<label>.csv')
+    parser.add_argument('--registry', type=Path, default=HERE.parent / 'registry', help='folder holding sources.yaml and the census tables')
+    parser.add_argument('--survey', type=Path, default=HERE, help='folder holding the duplicates and dropped tables')
     args = parser.parse_args()
     # fmt: on
-    merger = Merger(args.root)
+    merger = Merger(args.registry, args.survey)
     merger.load(args.shard)
     try:
         merger.validate()

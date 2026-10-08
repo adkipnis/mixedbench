@@ -6,13 +6,13 @@ matched against the keywords: a column name tokenised on case and punctuation is
 alone, or the keyword with an id-like token (`SubjectID`, `patient_nbr`, `subject#`); a name
 that merely contains one (`family_history`, `time_in_hospital`) is no hit. OpenML's synthetic
 derivatives (`BNG(...)`, seeded resamples) are left out before the draw. Every API answer is
-cached under the untracked `cache/net/`, so rerunning fetches nothing. The hits over the three
-repositories together are capped with a seeded draw. The script writes `net_hits.csv` (every
+cached under the untracked `registry/cache/net/`, so rerunning fetches nothing. The hits over the three
+repositories together are capped with a seeded draw. The script writes `survey/net_hits.csv` (every
 hit, kept or not, with its description) and prints the `sources.yaml` entries of the kept hits,
 pinned by the sha256 of the download, which are pasted under tier `O` by hand. Run from the
 repo root:
 
-    uv run python packages/glmm/surveys/dimensions/net.py
+    uv run python survey/net.py
 """
 
 from __future__ import annotations
@@ -70,13 +70,13 @@ def matches(columns: list[str], keywords: list[str]) -> list[str]:
 # net
 # =====================================================================================
 class Net:
-    def __init__(self, root: Path) -> None:
-        self.root = Path(root)
-        frame = yaml.safe_load((self.root / 'sources.yaml').read_text())
+    def __init__(self, registry: Path, survey: Path) -> None:
+        self.registry, self.survey = Path(registry), Path(survey)
+        frame = yaml.safe_load((self.registry / 'sources.yaml').read_text())
         self.keywords: list[str] = frame['nets']['keywords']
         self.cap: int = frame['nets']['cap']
         self.seed: int = frame['seed']
-        self.cache = self.root / 'cache' / 'net'
+        self.cache = self.registry / 'cache' / 'net'
         self.hits: list[dict] = []
         self.unavailable: list[str] = []  # datasets whose API answer was a server error
 
@@ -213,7 +213,7 @@ class Net:
         its download (a hit whose download is gone is marked `unavailable`), then
         `net_hits.csv` whole."""
         entries = [self._entry(hit) for hit in self.hits if hit['kept'] == 'yes']
-        with open(self.root / 'net_hits.csv', 'w', newline='') as f:
+        with open(self.survey / 'net_hits.csv', 'w', newline='') as f:
             writer = csv.DictWriter(f, fieldnames=HIT_COLUMNS, quoting=csv.QUOTE_ALL)
             writer.writeheader()
             writer.writerows(self.hits)
@@ -327,10 +327,11 @@ class Net:
 if __name__ == '__main__':
     # fmt: off
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('--root', type=Path, default=HERE, help='survey folder holding sources.yaml')
+    parser.add_argument('--registry', type=Path, default=HERE.parent / 'registry', help='folder holding sources.yaml and cache/')
+    parser.add_argument('--survey', type=Path, default=HERE, help='folder of net_hits.csv')
     args = parser.parse_args()
     # fmt: on
-    net = Net(args.root)
+    net = Net(args.registry, args.survey)
     net.searchOpenml()
     net.searchUci()
     net.searchPmlb()

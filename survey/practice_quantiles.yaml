@@ -1,0 +1,290 @@
+# Snapshot of metabeta-v3 packages/glmm/surveys/practice/quantiles.yaml at 3eedd15 (last
+# changed in 8295be0, 2026-10-06): the practice survey stays there; summarise.py reads the
+# p90 column of SUMMARY.md from this copy.
+n_rows: 4325
+n_papers: 2244
+families:
+  Bernoulli:
+    n_rows: 1116
+    p90:
+      n_fixed_effects: 10
+      n_random_terms_total: 6
+      n_grouping_factors: 2
+      n_groups_per_factor: 302
+      group_size_min: 1
+      group_size_max: 300
+      n_obs: 23025
+  Gamma:
+    n_rows: 61
+    p90:
+      n_fixed_effects: 8
+      n_random_terms_total: 5
+      n_grouping_factors: 2
+      n_groups_per_factor: 110
+      group_size_min: 1
+      group_size_max: 54
+      n_obs: 5525
+  Normal:
+    n_rows: 2284
+    p90:
+      n_fixed_effects: 10
+      n_random_terms_total: 4
+      n_grouping_factors: 2
+      n_groups_per_factor: 397
+      group_size_min: 1
+      group_size_max: 83
+      n_obs: 15138
+  Poisson:
+    n_rows: 163
+    p90:
+      n_fixed_effects: 8
+      n_random_terms_total: 3
+      n_grouping_factors: 3
+      n_groups_per_factor: 414
+      group_size_min: 1
+      group_size_max: 127
+      n_obs: 6816
+  Student-t:
+    n_rows: 31
+    p90:
+      n_fixed_effects: 13
+      n_random_terms_total: 9
+      n_grouping_factors: 3
+      n_groups_per_factor: 98
+      group_size_min: 1
+      group_size_max: 61
+      n_obs: 6642
+  Tweedie:
+    n_rows: 8
+    p90:
+      n_fixed_effects: 8
+      n_random_terms_total: 3
+      n_grouping_factors: 3
+      n_groups_per_factor: 474
+      group_size_min: null
+      group_size_max: null
+      n_obs: 33243
+  beta:
+    n_rows: 64
+    p90:
+      n_fixed_effects: 8
+      n_random_terms_total: 5
+      n_grouping_factors: 3
+      n_groups_per_factor: 214
+      group_size_min: 1
+      group_size_max: 8
+      n_obs: 9924
+  beta-binomial:
+    n_rows: 15
+    p90:
+      n_fixed_effects: 4
+      n_random_terms_total: 3
+      n_grouping_factors: 3
+      n_groups_per_factor: 253
+      group_size_min: 4
+      group_size_max: 500
+      n_obs: 100412
+  binomial:
+    n_rows: 89
+    p90:
+      n_fixed_effects: 8
+      n_random_terms_total: 4
+      n_grouping_factors: 3
+      n_groups_per_factor: 181
+      group_size_min: 1
+      group_size_max: 40
+      n_obs: 9220
+  hurdle:
+    n_rows: 18
+    p90:
+      n_fixed_effects: 10
+      n_random_terms_total: 6
+      n_grouping_factors: 3
+      n_groups_per_factor: 1617
+      group_size_min: 3
+      group_size_max: 3
+      n_obs: 259700
+  log-normal:
+    n_rows: 29
+    p90:
+      n_fixed_effects: 8
+      n_random_terms_total: 6
+      n_grouping_factors: 2
+      n_groups_per_factor: 288
+      group_size_min: 1
+      group_size_max: 18
+      n_obs: 17396
+  multinomial:
+    n_rows: 38
+    p90:
+      n_fixed_effects: 12
+      n_random_terms_total: 3
+      n_grouping_factors: 2
+      n_groups_per_factor: 274
+      group_size_min: 2
+      group_size_max: 50
+      n_obs: 7958
+  negative binomial:
+    n_rows: 90
+    p90:
+      n_fixed_effects: 11
+      n_random_terms_total: 3
+      n_grouping_factors: 3
+      n_groups_per_factor: 354
+      group_size_min: 1
+      group_size_max: 29
+      n_obs: 2471
+  not stated:
+    n_rows: 40
+    p90:
+      n_fixed_effects: 7
+      n_random_terms_total: 4
+      n_grouping_factors: 2
+      n_groups_per_factor: 163
+      group_size_min: 1
+      group_size_max: 60
+      n_obs: 2280
+  ordinal:
+    n_rows: 123
+    p90:
+      n_fixed_effects: 12
+      n_random_terms_total: 8
+      n_grouping_factors: 2
+      n_groups_per_factor: 526
+      group_size_min: 1
+      group_size_max: 638
+      n_obs: 15600
+  other:
+    n_rows: 113
+    p90:
+      n_fixed_effects: 8
+      n_random_terms_total: 5
+      n_grouping_factors: 3
+      n_groups_per_factor: 204
+      group_size_min: 1
+      group_size_max: 96
+      n_obs: 10251
+  zero-inflated Poisson:
+    n_rows: 15
+    p90:
+      n_fixed_effects: 6
+      n_random_terms_total: 3
+      n_grouping_factors: 3
+      n_groups_per_factor: 125
+      group_size_min: 1
+      group_size_max: 125
+      n_obs: 2500
+  zero-inflated negative binomial:
+    n_rows: 28
+    p90:
+      n_fixed_effects: 11
+      n_random_terms_total: 3
+      n_grouping_factors: 3
+      n_groups_per_factor: 556
+      group_size_min: 2
+      group_size_max: 28
+      n_obs: 30074
+shares:
+  family:
+    Normal: 0.528
+    Bernoulli: 0.258
+    Poisson: 0.038
+    ordinal: 0.028
+    other: 0.026
+    negative binomial: 0.021
+    binomial: 0.021
+    beta: 0.015
+    Gamma: 0.014
+    not stated: 0.009
+    multinomial: 0.009
+    Student-t: 0.007
+    log-normal: 0.007
+    zero-inflated negative binomial: 0.006
+    hurdle: 0.004
+    beta-binomial: 0.003
+    zero-inflated Poisson: 0.003
+    Tweedie: 0.002
+  link:
+    identity: 0.542
+    logit: 0.325
+    log: 0.093
+    not stated: 0.027
+    probit: 0.01
+    cloglog: 0.001
+    other: 0.001
+    sqrt: 0.0
+  grouping_relation:
+    single: 0.548
+    crossed: 0.311
+    nested: 0.101
+    mixed: 0.041
+  slopes_correlated:
+    not applicable: 0.69
+    'yes': 0.172
+    not stated: 0.116
+    'no': 0.019
+    partial: 0.003
+  software_family:
+    lme4: 0.488
+    brms: 0.244
+    MCMCglmm: 0.069
+    not stated: 0.062
+    other: 0.053
+    glmmTMB: 0.051
+    nlme: 0.008
+    rstanarm: 0.006
+    Stan: 0.004
+    Stata: 0.004
+    SPSS: 0.003
+    JAGS/BUGS: 0.003
+    ASReml: 0.002
+    SAS: 0.001
+    PyMC: 0.0
+    INLA: 0.0
+  variance_component_prior_family:
+    not stated: 0.552
+    other: 0.128
+    half-Student-t: 0.064
+    half-Cauchy: 0.052
+    software default: 0.043
+    inverse-Wishart: 0.035
+    half-Normal: 0.034
+    parameter-expanded: 0.032
+    inverse-Gamma: 0.025
+    exponential: 0.021
+    uniform: 0.011
+    Gamma: 0.002
+prior_beta_sd:
+  n: 527
+  p10: 0.707107
+  p50: 2.5
+  p90: 100000
+coverage:
+  Prototype B:
+    families:
+    - Normal
+    - Bernoulli
+    - Poisson
+    family_share: 0.824
+    share:
+      all: 0.692
+      biomedicine: 0.689
+      ecology_biology: 0.724
+      psychology_neuroscience: 0.707
+      social_humanities: 0.62
+  v1:
+    families:
+    - Normal
+    - Bernoulli
+    - Poisson
+    - negative binomial
+    - binomial
+    - Gamma
+    - log-normal
+    family_share: 0.886
+    share:
+      all: 0.747
+      biomedicine: 0.756
+      ecology_biology: 0.833
+      psychology_neuroscience: 0.733
+      social_humanities: 0.654
