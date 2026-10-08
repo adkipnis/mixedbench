@@ -921,4 +921,15 @@ non-integer abundance and stem columns stay `continuous`, the family named in th
 a lay date stored as a date string cannot be a covariate (villemereuil), a cue level that
 is no column cannot be a grouping factor (lagisz), and a derived indicator of a
 four-valued notation column cannot be a binary response (jing), all kept in the formula.
+Batch 3 (the 39 remaining rows): 30 stood, 9 changed (avetisyan's Experiment 2 and
+voorspoels' two experiments take the script's factorial form, jing's notation preference
+its literal indicator response, kappers' second animal model loses sex, martinezzaragoza's
+support model its final terms, marton's two markers their square root, szollosi's
+Experiment 2 its incentive condition), and 5 carry a qualifier in the formula (kleisner's
+linguistic-similarity covariance on the population effects, meyel's cloglog, sievers'
+global dredge model, villemereuil's full optimum-test model), in
+`shards/registry_tier_d_handdraw_3.csv`. With the first draw and the Dryad check, every
+Tier D row has been read by Alex: of 104 rows, 55 stood as the agents filed them, 43
+changed in formula, type or structure, and 6 left the registry with the inferred-model
+rule. Tier D closes at 104 rows over 69 objects and 38 papers, the registry at 712.
 
