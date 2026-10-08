@@ -28,8 +28,43 @@ dev = [
 ]
 
 [build-system]
-requires = ["uv_build>=0.12.2,<0.13.0"]
-build-backend = "uv_build"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+# The repository keeps one copy of the registry files at registry/; the wheel carries them as
+# mixedbench/registry/files/. The editable install copies them into site-packages too, so the
+# cache keys make `uv run` reinstall after merge.py rewrites one.
+[tool.hatch.build.targets.wheel]
+packages = ["src/mixedbench"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"registry/sources.yaml" = "mixedbench/registry/files/sources.yaml"
+"registry/registry.csv" = "mixedbench/registry/files/registry.csv"
+"registry/excluded.csv" = "mixedbench/registry/files/excluded.csv"
+"registry/dimensions.csv" = "mixedbench/registry/files/dimensions.csv"
+"registry/columns.csv" = "mixedbench/registry/files/columns.csv"
+"registry/quantiles.yaml" = "mixedbench/registry/files/quantiles.yaml"
+"registry/SUMMARY.md" = "mixedbench/registry/files/SUMMARY.md"
+
+[tool.hatch.build.targets.sdist]
+only-include = [
+    "src/mixedbench",
+    "registry/sources.yaml",
+    "registry/registry.csv",
+    "registry/excluded.csv",
+    "registry/dimensions.csv",
+    "registry/columns.csv",
+    "registry/quantiles.yaml",
+    "registry/SUMMARY.md",
+]
+
+[tool.uv]
+cache-keys = [
+    { file = "pyproject.toml" },
+    { file = "registry/*.csv" },
+    { file = "registry/*.yaml" },
+    { file = "registry/SUMMARY.md" },
+]
 
 [tool.ruff]
 line-length = 100
