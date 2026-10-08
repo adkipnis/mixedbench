@@ -18,7 +18,7 @@ from pathlib import Path
 
 import pandas as pd
 import pytest
-from metabeta.glmm.datasets import DataObject, Loader, Source
+from metabeta.glmm.datasets import DataObject, Loader, Source, readers
 
 FIXTURES = Path(__file__).parent / 'fixtures'
 TARBALL = (FIXTURES / 'fixture_1.0.tar.gz').read_bytes()
@@ -144,8 +144,7 @@ def test_an_integer_column_with_na_loads_as_float_not_object(tmp_path):
         ' commandArgs(TRUE)[1], version = 2)',
         str(rds),
     )
-    loader = Loader(tmp_path, fetch=serveNothing)
-    frames = loader._readR(rds)
+    frames = readers.readR(rds)
     scores = frames['scores']
     assert scores['score'].dtype.kind == 'f'
     assert scores['score'].isna().sum() == 1
@@ -500,3 +499,85 @@ def test_a_parquet_file_loads(tmp_path):
     assert set(objectsByName(loader, pupils)) == {'dataset_42.pq'}
     df = loader.load(pupils, 'dataset_42.pq')
     assert list(df['school']) == ['GP', 'GP', 'MS']
+
+
+def test_a_data_txt_is_an_object_and_a_sibling_description_is_not(tmp_path):
+    """Textbook companions ship their tables as `.txt` (Zuur, Singer & Willett), so a `.txt`
+    is a data object unless it is named like documentation or after a data file of another
+    format beside it (Fitzmaurice's `lead.txt` beside `lead.dta`), which describes that file."""
+    formats = Source(kind='git', name=EXAMPLE_REPO, pin='c0ffee1', path='formats')
+    loader = Loader(tmp_path, fetch=serveExample)
+    objects = objectsByName(loader, formats)
+    assert 'formats/Guber1999data.txt' in objects
+    assert 'formats/schools.txt' not in objects
+    page = loader.help(formats, 'formats/schools.dat')
+    assert page.startswith('# formats/schools.txt\nEstimates of a coaching effect')
+
+
+def test_a_banner_of_hash_lines_above_the_table_is_skipped(tmp_path):
+    """Diggle's course files open with `#` comment lines above a whitespace-aligned table."""
+    formats = Source(kind='git', name=EXAMPLE_REPO, pin='c0ffee1', path='formats')
+    loader = Loader(tmp_path, fetch=serveExample)
+    cd4 = loader.load(formats, 'formats/cd4.txt')
+    assert list(cd4.columns) == ['time', 'cd4', 'id']
+    assert list(cd4['id']) == [1, 1, 2]
+    assert loader.help(formats, 'formats/cd4.txt') == '# banner\n#\n# CD4 counts by subject\n#'
+
+
+def test_a_declared_layout_reads_a_headerless_file(tmp_path):
+    """The Bristol CMM `.DAT` files are fixed-width with their columns in a prose `.ASC`, and
+    Goldstein's partnership file whitespace-separated with a codes list; the frame declares
+    the columns as `name:start-end` (positions from 1) or as bare names."""
+    pupils = Source(
+        kind='git', name=EXAMPLE_REPO, pin='c0ffee1', path='formats/pupils.dat',
+        layout=('school:2-3', 'class:4', 'pupil:5', 'score:6-7'),
+    )  # fmt: skip
+    loader = Loader(tmp_path, fetch=serveExample)
+    df = loader.load(pupils, 'formats/pupils.dat')
+    assert list(df.columns) == ['school', 'class', 'pupil', 'score']
+    assert list(df['school']) == [11, 11, 22]
+    assert list(df['score']) == [7, 9, 8]
+    partners = Source(
+        kind='git', name=EXAMPLE_REPO, pin='c0ffee1', path='formats/partners.txt',
+        layout=('id', 'age', 'status'),
+    )  # fmt: skip
+    df = loader.load(partners, 'formats/partners.txt')
+    assert list(df['id']) == [1, 1, 2]
+    assert list(df['status']) == [0, 1, 0]
+
+
+def test_a_workbook_of_several_sheets_is_one_object_per_data_sheet(tmp_path):
+    """Snijders & Bosker's companion is one workbook, a sheet per chapter dataset and a
+    `Contents` sheet describing them: each data sheet is an object `<file>!<sheet>`, the
+    contents sheet is their help page."""
+    formats = Source(kind='git', name=EXAMPLE_REPO, pin='c0ffee1', path='formats')
+    loader = Loader(tmp_path, fetch=serveExample)
+    objects = objectsByName(loader, formats)
+    assert 'formats/chapters.xlsx!03A' in objects
+    assert 'formats/chapters.xlsx!03B' in objects
+    assert 'formats/chapters.xlsx!Contents' not in objects
+    assert 'formats/chapters.xlsx' not in objects
+    assert 'formats/trials.xlsx' in objects  # a single-sheet workbook is the file
+    pupils = loader.load(formats, 'formats/chapters.xlsx!03B')
+    assert list(pupils['score']) == [10, 12, 8]
+    schools = loader.load(formats, 'formats/chapters.xlsx!03A')
+    assert list(schools.columns) == ['school', 'size']  # padded names stripped, as in text files
+    page = loader.help(formats, 'formats/chapters.xlsx!03B')
+    assert page == '# sheet Contents\n03A\tschools\n03B\tpupils'
+
+
+def test_an_spss_file_loads_with_its_value_labels_and_documents_itself(tmp_path):
+    """Hox's companion is 23 `.sav` files and nothing else: value labels that cover every
+    value arrive as a categorical, labels on a scale's extremes alone (`lowest`, `highest`)
+    leave the column numeric, and the file's labels are its codebook, rendered as the Stata
+    ones."""
+    formats = Source(kind='git', name=EXAMPLE_REPO, pin='c0ffee1', path='formats')
+    loader = Loader(tmp_path, fetch=serveExample)
+    popular = loader.load(formats, 'formats/popular.sav')
+    assert list(popular['sex'].cat.categories) == ['boy', 'girl']
+    assert list(popular['popular']) == [5.0, 6.5, 4.0]
+    assert list(popular['ses']) == [1, 3, 5]  # labels on the extremes only: no categorical
+    page = loader.help(formats, 'formats/popular.sav')
+    assert page.startswith('# SPSS labels\nPupils\n')
+    assert 'class: Class id\nsex: Pupil sex\nses: SES\npopular: Popularity score\n' in page
+    assert 'sex values: boy, girl' in page
