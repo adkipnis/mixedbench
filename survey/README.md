@@ -1,15 +1,23 @@
 # Dimension survey — public grouped datasets
 
 The lower edges, imbalance, factor-level distribution and covariate mix of real grouped data,
-and the pool the v1 real-data test sets draw from. Spec: issue #14; tickets #15–#27. The
-package's loader (`metabeta.glmm.datasets`, research extra) reads every source; the scripts
-here own the file contract. The practice survey (`../practice/`) is the model; nothing is
-imported across surveys. Results: [`SUMMARY.md`](SUMMARY.md), regenerated on every merge.
+and the pool the v1 real-data test sets draw from. Spec: issue #14; tickets #15–#27 (issue
+numbers in this file are metabeta-v3's: the survey moved here from its
+`packages/glmm/surveys/dimensions` with history on 2026-10-08). The package's loader
+(`mixedbench.datasets`) reads every source; the scripts here own the file contract. The
+practice survey (metabeta-v3's `packages/glmm/surveys/practice`) is the model; nothing is
+imported across surveys. Results: [`SUMMARY.md`](../registry/SUMMARY.md), regenerated on every
+merge.
+
+The census files the package ships live in [`registry/`](../registry/) (`sources.yaml`,
+`registry.csv`, `excluded.csv`, `dimensions.csv`, `columns.csv`, `quantiles.yaml`,
+`SUMMARY.md`, and the untracked `cache/` and `help/`); everything else in the table below lives
+here in `survey/`.
 
 **Status: closed 2026-10-08** at 712 registry rows over 642 datasets (Tier R 252, T 244,
 D 104, E 99, O 13) and 2142 exclusions, above the closing minimums of #27 (100 Tier R rows,
-40 rows from the other tiers), no duplicate flag open. `tests/surveys/test_dimension_quantiles.py`
-asserts the contract of `quantiles.yaml` in CI; the envelope edges are set in the outcome
+40 rows from the other tiers), no duplicate flag open. metabeta-v3's
+`tests/surveys/test_dimension_quantiles.py` asserts the contract of `quantiles.yaml` in CI; the envelope edges are set in the outcome
 grill, not here.
 
 ## Files
@@ -30,19 +38,23 @@ grill, not here.
 | `dropped.csv` | `merge.py` | objects taken out of the registry and the exclusions, awaiting a re-filing shard |
 | `dimensions.csv`, `columns.csv` | `merge.py` via `measure.py` | one row per registry row and grouping factor; one per registry row and covariate column |
 | `quantiles.yaml`, `SUMMARY.md` | `merge.py` via `summarise.py` | every axis pooled, per tier and without agridat; the summary from `SUMMARY.template.md`, which holds no digit |
+| `practice_quantiles.yaml` | copied | snapshot of the practice survey's `quantiles.yaml` (metabeta-v3), the p90 column of `SUMMARY.md` |
 | `prompts/discover.md`, `prompts/read.md` | | what the discovery agent and a reading agent get and write |
 | `schema.py`, `sources.py`, `measure.py`, `summarise.py`, `net.py` | | file contract and allowed values; the frame; what the merge measures and how it reports it; the Tier O net |
-| `tests/` | | pytest, run by hand, not in CI: `uv run pytest packages/glmm/surveys/dimensions/tests` (the folder itself would collect the cached repositories' tests) |
+| `tests/` | | pytest, run by hand, not in CI: `uv run pytest survey/tests` (the root run never recurses into `survey/` or `registry/`, whose cache holds repositories with tests of their own) |
 
 Agents read documentation and write shards; `merge.py` is the only writer of the canonical CSVs.
 
 ```
-uv run python packages/glmm/surveys/dimensions/deposits.py
-uv run python packages/glmm/surveys/dimensions/resolve.py [--fetch | --ingest]
-uv run python packages/glmm/surveys/dimensions/net.py
-uv run python packages/glmm/surveys/dimensions/pull.py [--tiers E O]
-uv run python packages/glmm/surveys/dimensions/merge.py packages/glmm/surveys/dimensions/shards/<shard>.csv [--root DIR]
+uv run python survey/deposits.py --practice <metabeta-v3>/packages/glmm/surveys/practice
+uv run python survey/resolve.py --practice <metabeta-v3>/packages/glmm/surveys/practice [--fetch | --ingest]
+uv run python survey/net.py
+uv run python survey/pull.py [--tiers E O]
+uv run python survey/merge.py survey/shards/<shard>.csv
 ```
+
+Every script takes `--registry DIR` and `--survey DIR`, defaulting to `registry/` and
+`survey/`.
 
 `pull.py --tiers` pulls only those tiers; the others keep their rows in `candidates.csv`, the
 pre-screen shard and their help pages.
@@ -269,7 +281,7 @@ covariate of a documented model. The covariate-type and level shares and the K d
 run over the documented models' covariates; `implied_columns` is the expected design-column
 count of a 9- and a 14-term model (the practice survey's p90 and p95 of terms) under that
 categorical share and mean K − 1. `SUMMARY.md` ends each axis table with the practice
-survey's p90 over the v1 families, read from `../practice/quantiles.yaml` at merge time.
+survey's p90 over the v1 families, read from `practice_quantiles.yaml` at merge time.
 
 ### What the merge checks
 
@@ -444,11 +456,11 @@ host sends an incomplete certificate chain Python refuses, so its 37 `.dta` and 
 descriptions were seeded into the cache by hand (sha256 checked by the loader as usual):
 
 ```
-grep -oE 'fitzmaurice_[a-z0-9]+: \{kind: url, name: ([^,]+), pin: ([0-9a-f]+)' packages/glmm/surveys/dimensions/sources.yaml \
+grep -oE 'fitzmaurice_[a-z0-9]+: \{kind: url, name: ([^,]+), pin: ([0-9a-f]+)' registry/sources.yaml \
   | sed -E 's/.*name: ([^,]+), pin: ([0-9a-f]+)/\1 \2/' | while read url pin; do
-  mkdir -p packages/glmm/surveys/dimensions/cache/url/$pin
-  curl -sS -o packages/glmm/surveys/dimensions/cache/url/$pin/$(basename $url) $url
-  curl -sS -o packages/glmm/surveys/dimensions/cache/url/$pin/$(basename $url .dta).txt ${url%.dta}.txt
+  mkdir -p registry/cache/url/$pin
+  curl -sS -o registry/cache/url/$pin/$(basename $url) $url
+  curl -sS -o registry/cache/url/$pin/$(basename $url .dta).txt ${url%.dta}.txt
 done
 ```
 

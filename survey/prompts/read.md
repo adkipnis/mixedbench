@@ -9,7 +9,7 @@ the merge script from the loaded table; you never type one.
 For each object of your shard: its `candidates.csv` row (`source`, `object`, `n_rows`,
 `n_cols`, per-dtype counts), its documentation under `help/<source>/<object>.txt` (R help
 page, README, codebook, or a paper's methods excerpt) and the first rows of the table.
-Vocabulary follows `packages/glmm/CONTEXT.md`: a **grouping factor** is a column whose levels
+Vocabulary follows `CONTEXT.md` at the repository root: a **grouping factor** is a column whose levels
 index random effects; the **response** is the column a documented model explains; the
 **family** is the likelihood that model names for it.
 

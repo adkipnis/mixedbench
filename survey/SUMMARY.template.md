@@ -14,7 +14,7 @@ How to read the tables:
   dataset axes (observations, grouping factors, design columns) once per registry row; `K`
   once per categorical covariate of a documented model.
 - The last column of an axis table is the practice survey's upper quantile, the maximum over
-  the v1 families in [`../practice/quantiles.yaml`](../practice/quantiles.yaml) (the minimum
+  the v1 families in [`practice_quantiles.yaml`](../survey/practice_quantiles.yaml) (the minimum
   for the smallest group size), read at merge time; `–` where the practice survey has no such
   axis.
 
