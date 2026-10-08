@@ -45,6 +45,7 @@ packages = ["src/mixedbench"]
 "registry/columns.csv" = "mixedbench/registry/files/columns.csv"
 "registry/quantiles.yaml" = "mixedbench/registry/files/quantiles.yaml"
 "registry/SUMMARY.md" = "mixedbench/registry/files/SUMMARY.md"
+"registry/manifest.csv" = "mixedbench/registry/files/manifest.csv"
 
 [tool.hatch.build.targets.sdist]
 only-include = [
@@ -56,6 +57,7 @@ only-include = [
     "registry/columns.csv",
     "registry/quantiles.yaml",
     "registry/SUMMARY.md",
+    "registry/manifest.csv",
 ]
 
 [tool.uv]

@@ -52,9 +52,9 @@ def test_both_packages_import_from_the_wheel(installed: tuple[Path, dict]) -> No
     assert Path(report['registry']).is_relative_to(target)
 
 
-def test_the_seven_files_resolve_inside_the_install(installed: tuple[Path, dict]) -> None:
+def test_the_registry_files_resolve_inside_the_install(installed: tuple[Path, dict]) -> None:
     target, report = installed
-    assert len(report['files']) == 7
+    assert len(report['files']) == 8
     assert all(Path(p).is_relative_to(target) for p in report['files'])
 
 
