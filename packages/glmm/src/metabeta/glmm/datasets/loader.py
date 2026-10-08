@@ -117,10 +117,20 @@ class Loader:
         declared = {}
         for column, kind in (types or {}).items():
             if kind == 'continuous':
-                declared[column] = pd.to_numeric(df[column])
+                declared[column] = pd.to_numeric(self._decimalPoint(df[column]))
             else:  # a categorical keeps its levels under a CategoricalDtype without categories
                 declared[column] = df[column].astype(pd.CategoricalDtype(ordered=kind == 'ordered'))
         return df.assign(**declared)
+
+    @staticmethod
+    def _decimalPoint(values: pd.Series) -> pd.Series:
+        """A string column with decimal commas and no points (a European csv, kleisner_2026's
+        BMI) read with points; anything else as it is, so a thousands separator fails loudly."""
+        if not pd.api.types.is_string_dtype(values):
+            return values
+        if values.str.contains('.', regex=False).any():
+            return values
+        return values.str.replace(',', '.', regex=False)
 
     def help(self, source: Source, name: str) -> str:
         """What documents `name`: the Rd page of a CRAN object; otherwise the text files named
