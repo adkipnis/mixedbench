@@ -198,10 +198,10 @@ def test_a_dropped_shard_moves_an_object_from_the_exclusions_to_the_registry(mer
     assert list(problems['problem']) == ['not in registry.csv or excluded.csv']
 
 
-def test_the_census_lands_in_the_registry_and_the_bookkeeping_in_the_survey(split_merger):
+def test_the_census_lands_in_the_registry_and_the_bookkeeping_in_the_survey(splitMerger):
     """registry/ is what the package ships, so a merge writes only the census there; the
     duplicate flags and the dropped list stay with the survey's working files."""
-    merger = split_merger
+    merger = splitMerger
     mergeShard(merger, FIXTURES / 'registry_herds.csv')
     mergeShard(merger, FIXTURES / 'excluded_cattle.csv')
     drop = {'source': 'cattle', 'object': 'cattle.csv', 'reason': 'farms are the grouping'}

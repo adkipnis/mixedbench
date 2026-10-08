@@ -70,6 +70,6 @@ def merger(tmp_path: Path) -> Merger:
 
 
 @pytest.fixture
-def split_merger(tmp_path: Path) -> Merger:
+def splitMerger(tmp_path: Path) -> Merger:
     """The repository's layout: the registry and the survey in two folders."""
     return scratchMerger(tmp_path / 'registry', tmp_path / 'survey')
