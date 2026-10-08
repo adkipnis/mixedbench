@@ -12,10 +12,11 @@ nothing is imported across surveys. Results: [`SUMMARY.md`](SUMMARY.md), regener
 |---|---|---|
 | `sources.yaml` | hand (#19) and discovery (#21) | the frame: tiers of pinned sources, cap, seed, dropped candidates, the Tier O keyword net, see below |
 | `deposits.csv` | `deposits.py` | Tier D: the 60 seeded, stratified draws of the practice survey's deposit-naming papers, see below |
+| `deposit_files.csv` | `resolve.py` | Tier D: every link of `deposits.csv` resolved through its repository's API, one row per listed file with its role, checksum, label and pin, one row for a deposit without files, see below |
 | `candidates.csv` | `pull.py` | every enumerated data object with its counts, see below |
 | `net_hits.csv` | `net.py` | Tier O: every table of OpenML, UCI and PMLB whose column names hold a `nets` keyword, kept or not, see below |
 | `v05_datasets.csv` | hand (#23) | the 36 R datasets of metabeta v0.5 by `source`, `object` and their v0.5 parquet name; the closing contract test (#27) asserts each is in the registry or the exclusions |
-| `help/`, `cache/` | `pull.py`, loader | untracked: one help page per kept object for the agents, the table's dtypes and first rows appended; downloads and extracted trees |
+| `help/`, `cache/` | `pull.py`, loader, `resolve.py` | untracked: one help page per kept object for the agents, the table's dtypes and first rows appended; `help/deposits/` one page per Tier D deposit; downloads, extracted trees and the cached repository API answers |
 | `shards/<table>_<label>.csv` | agents; `pull.py` writes `excluded_prescreen.csv` | one shard per reading run; `table` ∈ `registry`, `excluded`, `duplicates`, `dropped` |
 | `registry.csv` | `merge.py` | one row per dataset and documented model, at most three per object |
 | `excluded.csv` | `merge.py` | every screened-out object with a categorical reason |
@@ -34,6 +35,7 @@ Agents read documentation and write shards; `merge.py` is the only writer of the
 
 ```
 uv run python packages/glmm/surveys/dimensions/deposits.py
+uv run python packages/glmm/surveys/dimensions/resolve.py [--fetch]
 uv run python packages/glmm/surveys/dimensions/net.py
 uv run python packages/glmm/surveys/dimensions/pull.py [--tiers E O]
 uv run python packages/glmm/surveys/dimensions/merge.py packages/glmm/surveys/dimensions/shards/<shard>.csv [--root DIR]
@@ -209,7 +211,9 @@ route: `pyreadr`, `rscript` or `pandas`).
 Key `source`, `object`. Agent columns `source`, `object`, `reason`, `detail`; the merge adds
 `tier`. `reason` ∈ `no grouping structure` / `time series without replication` /
 `fewer than two groups` / `response missing or undocumented` / `derived or duplicated table` /
-`simulated data` / `unreadable format` / `licence forbids redistribution` / `too large`. An object is in the
+`simulated data` / `unreadable format` / `licence forbids redistribution` / `too large` /
+`not the paper's data` (Tier D only: a table of a deposit the paper merely cites, or of a
+preregistration, decided 2026-10-08). An object is in the
 registry or in the exclusions, never both: the shard that would put it in the second file is
 refused. To re-file a misjudged object, drop it first (below).
 
@@ -762,3 +766,89 @@ Of the 20 drawn rows, 9 stood and 11 changed, one of them leaving the registry; 
 eight adjudications the registry won two, the blind reading four, and four objects left
 the registry. Tier T closes at 244 rows over 227 datasets, 136 with a published model, 44
 at `high`, and 285 exclusions; the registry at 608 rows.
+
+## Tier D census (#26)
+
+Decided up front on 2026-10-08: one `url` entry per fetched data file rather than one
+whole-deposit zip per deposit (the repositories build their zips on the fly, so a pin on one
+would not survive a re-pull; Zenodo has none; the per-file route skips images, videos and
+genomics), labelled `<paper_id>_<repository>` and `_2`, `_3` for a paper's further files of
+that repository, pinned by the file's sha256 and checked on download against the checksum the
+repository's API reports (OSF sha256, Dryad, Zenodo and figshare md5); a script-written
+`deposit_files.csv` as the deposit-level record, since a private deposit, a preprint or a bot
+wall yields no object for `excluded.csv`; the exclusion reason `not the paper's data` for a
+table of a deposit the paper merely cites or a preregistration; the registry formula is the
+model the practice survey filed for the paper, `published_model` `yes` throughout; the
+reading agents on Sonnet at medium effort for this tier (cost), the earlier tiers' Opus
+readings being the calibration.
+
+`resolve.py` resolves each link through its repository's API (Dryad datasets and version
+files, Zenodo records, figshare articles, OSF guids: a project walked with its storage
+providers, folders, wiki and child components, a registration likewise, a file, a preprint's
+PDF; a `?view_only=` key printed in the paper travels along), caches every answer under
+`cache/deposits/`, and classifies each file by name: a table or archive the loader reads is
+`data`, a README, codebook, PDF, docx or knitted html `documentation`, an R, Python, Stata,
+SPSS, Julia or Stan file `script`, the rest `other`. The listing of 2026-10-08: 98 links over
+the 60 papers (one paper names up to twelve OSF components), 89 resolved, 6 without files
+(empty or registration-only OSF nodes), one restricted project, one figshare private link
+without its DOI, one OSF user profile cited as a deposit (ip_2020); 1632 files, 607 `data`,
+622 `other` (246 MATLAB `.mat`, 227 images), 231 scripts, 172 documentation files. Pull rules
+set from the listing: 50 MB per file, since every larger file was a fitted model, posterior
+draws or simulation output (30 files, 4.9 GB, the largest a 1.7 GB GitHub snapshot on
+Zenodo), and no file under a hidden folder (RStudio's `.Rproj.user` notebook chunks). The
+fetch wrote 550 entries under tier `D` of `sources.yaml` (the block is rewritten whole by the
+script) and one page per deposit under `help/deposits/`: title, licence, description, the
+paper's text around the link, the paper's models as the practice survey filed them, the file
+listing, then the README, codebook and scripts (knitted html stripped to text, each file cut
+at 40 000 characters, the page at 250 000). The Tier D help page of an object opens with a
+pointer to its deposit page rather than the page itself (the first pull had pasted it into
+each of a deposit's objects, 250 kB per object). Dryad refuses anonymous downloads on every
+route (its file API answers 401 "must have current bearer token", the dataset zip likewise,
+the web file stream 403 to the script), so its 11 deposits (25 files, under 60 MB) stayed
+unfetched under the no-bot-wall rule; decision pending (below). Two OSF files answered 403.
+
+Loader changes: pyreadr's `IndexError` on a labelled data frame inside an `.RData` (its
+value-label handler indexes past the column names) takes the Rscript route like its other
+errors; a `continuous` declaration on a string column with decimal commas and no points
+(kleisner_2026's BMI, a European csv) reads them as points. The pull renders at most 60
+columns of a table's dtypes and first rows (a genotype matrix of thousands of columns had
+made a 4 MB page). Known limits left as they are, filed as `unreadable format`: a workbook
+with a merged group header above the variable names (liu_2022), a text sentinel
+(`destroyed`) among counts and `.` as the missing marker (walker_2021b).
+
+`pull.py --tiers D` enumerated 970 objects over 489 sources (a zip is one source whose files
+are its objects: jing_2020's data zip alone 405), 226 screened out mechanically (153 without
+a frame: fitted brms and lme4 models saved as `.rds` and `.RData`, Stan json, bookdown
+indexes), 744 passing. Of those, 320 were filed by script before the reading
+(`shards/excluded_tier_d_series.csv`): jing_2020's one-raw-file-per-participant series
+(eight or more same-shaped siblings named `<stem>_<n>`, 48 per experiment), whose merged
+tables (`mydata_*` objects) are in the same zip, as `derived or duplicated table`. The
+remaining 424 objects were read by nine Sonnet agents (sievers_2020 in three shards,
+jing_2020 in two, the other 36 papers in four by stratum order, at most 60 objects each):
+185 registry rows over 164 objects and 28 papers, 799 exclusions with the pre-screen and
+the series (482 derived or duplicated, 156 unreadable, 110 without grouping structure, 46 not
+the paper's data, 5 without a response); 50 rows at `high`, 28 `medium`, 107 `low`. Eleven
+rows were refused by the merge and corrected (a key-pressed column and a `y`/`n`/`u` column
+filed as binary, two objects named with a suffix the loader strips, one with the file's own
+misspelling, a morph score filed as ordinal with more than ten levels, a stem density as
+count, and the three unreadable tables above). The merge flagged 11 pairs, all jing_2020's
+RData objects present in both of its zips or two experiments of one design, answered by
+script from table equality (`shards/duplicates_tier_d_identical.csv`, 7 `same`, 4
+`different`).
+
+The loss by cause is the tier's finding (`SUMMARY.md`, Tier D). Of the 60 papers, 22 reach
+no object at all: the 11 Dryad deposits, 8 papers whose OSF link is a preprint, one
+restricted project, one user page, one deposit too large; of the 38 with objects, 28 have a
+registry row. Within the deposits, the paper's analysis table is the exception: deposits
+hold raw per-participant logs beside merged tables, Qualtrics exports one row per
+participant with the trials as columns, aggregates the model runs on but which were built in
+a script from the deposited raw tables (kanber, laing, walker), fitted models and posterior
+draws, and stimulus lists. The agents' `RULE GAP` notes (115 rows) name four recurring
+cases: a model on an aggregate whose only deposited input is the raw trial table (filed at
+`low` with the trial-level response, `RESPONSE INFERRED`); a dataset split into one file per
+coder, group or session whose pooled table and response are not in any file (sievers_2020's
+82 speech-turn worksheets, filed at `low` with an inferred turn rating); the paper's model
+needing a column the table lacks (jing's dot count, slepian's target); and tables of the
+paper's own deposit that no model uses, filed as `not the paper's data` for want of a
+"not analysed" value.
+
