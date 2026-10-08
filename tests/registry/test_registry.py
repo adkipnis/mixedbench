@@ -54,3 +54,13 @@ def test_the_manifest_names_the_file_of_every_registry_object() -> None:
     manifest = registry.manifest()
     keys = {(sources[label], name) for label, name in zip(rows['source'], rows['object'])}
     assert keys <= set(manifest)
+
+
+def test_every_dryad_source_of_the_registry_has_a_mirror() -> None:
+    """Dryad refuses scripted downloads, so a registry object from Dryad loads only from the
+    package's mirror of its CC0 file (ADR 0003)."""
+    rows = pd.read_csv(registry.path('registry.csv'), dtype=str, keep_default_na=False)
+    sources = registry.sources()
+    dryad = {label for label in rows['source'] if 'datadryad.org' in sources[label].name}
+    unmirrored = {label for label in dryad if sources[label].mirror is None}
+    assert dryad and not unmirrored
