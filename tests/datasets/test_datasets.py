@@ -14,11 +14,12 @@ import shutil
 import tarfile
 import urllib.error
 import urllib.request
+import zipfile
 from pathlib import Path
 
 import pandas as pd
 import pytest
-from mixedbench.datasets import DataObject, Loader, Source, readers
+from mixedbench.datasets import DataObject, Loader, ManifestRow, Source, readers
 
 FIXTURES = Path(__file__).parent / 'fixtures'
 TARBALL = (FIXTURES / 'fixture_1.0.tar.gz').read_bytes()
@@ -67,6 +68,10 @@ def serveFiles(url: str) -> bytes | None:
 
 def sha(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
+
+
+def manifestRow(file: str, data: bytes) -> ManifestRow:
+    return ManifestRow(file, sha(data), len(data))
 
 
 def objectsByName(loader: Loader, source: Source) -> dict[str, DataObject]:
@@ -581,3 +586,121 @@ def test_an_spss_file_loads_with_its_value_labels_and_documents_itself(tmp_path)
     assert page.startswith('# SPSS labels\nPupils\n')
     assert 'class: Class id\nsex: Pupil sex\nses: SES\npopular: Popularity score\n' in page
     assert 'sex values: boy, girl' in page
+
+
+# ----------------------------------------------------------------------------------------------
+# lean fetch through the manifest (#4)
+# ----------------------------------------------------------------------------------------------
+
+
+def member(archive: bytes, name: str) -> bytes:
+    with tarfile.open(fileobj=io.BytesIO(archive)) as tar:
+        return tar.extractfile(name).read()
+
+
+RADON = member(EXAMPLE, 'example-c0ffee1/data/radon.csv')
+RADON_RAW = 'https://raw.githubusercontent.com/acme/example/c0ffee1/data/radon.csv'
+
+
+def serveRaw(url: str) -> bytes | None:
+    return RADON if url == RADON_RAW else None
+
+
+def test_a_git_object_is_fetched_alone_from_its_raw_url(tmp_path):
+    """With the manifest, a git object is one file at the pinned revision, never the
+    repository archive (pymc-examples is 1 GB for a few csv); the cache serves it after."""
+    asked = []
+
+    def counting(url: str) -> bytes | None:
+        asked.append(url)
+        return serveRaw(url) or serveExample(url)
+
+    example = Source(kind='git', name=EXAMPLE_REPO, pin='c0ffee1', path='data')
+    manifest = {(example, 'data/radon.csv'): manifestRow('data/radon.csv', RADON)}
+    loader = Loader(tmp_path, fetch=counting, manifest=manifest)
+    df = loader.load(example, 'data/radon.csv')
+    assert list(df['county']) == ['Anoka', 'Anoka', 'Clay', 'Clay', 'Clay']
+    Loader(tmp_path, fetch=counting, manifest=manifest).load(example, 'data/radon.csv')
+    assert asked == [RADON_RAW]
+
+
+def test_a_file_differing_from_its_manifest_checksum_is_refused(tmp_path):
+    """A per-file fetch keeps the fetch-only guarantee only if every file is checked against
+    the digest the package ships, on cache hits too, where a tampered file would sit."""
+    example = Source(kind='git', name=EXAMPLE_REPO, pin='c0ffee1', path='data')
+    good = {(example, 'data/radon.csv'): manifestRow('data/radon.csv', RADON)}
+    bad = {(example, 'data/radon.csv'): ManifestRow('data/radon.csv', '0' * 64, len(RADON))}
+    Loader(tmp_path, fetch=serveRaw, manifest=good).load(example, 'data/radon.csv')
+    with pytest.raises(ValueError, match='checksum'):
+        Loader(tmp_path, fetch=serveRaw, manifest=bad).load(example, 'data/radon.csv')
+
+
+def test_a_url_archive_object_extracts_only_its_file(tmp_path):
+    """A deposit zip is downloaded whole (its sha256 is the pin) but only the manifest's file
+    leaves it: the codebook and whatever else the deposit holds stay inside the archive. The
+    zip's single top-level folder is layout, as on the enumerate path."""
+    deposit = Source(kind='url', name=DEPOSIT_URL, pin=DEPOSIT_SHA)
+    schools = zipfile.ZipFile(io.BytesIO(DEPOSIT)).read('deposit/data/schools.csv')
+    manifest = {(deposit, 'data/schools.csv'): manifestRow('data/schools.csv', schools)}
+    loader = Loader(tmp_path, fetch=serveDeposit, manifest=manifest)
+    df = loader.load(deposit, 'data/schools.csv')
+    assert list(df['score']) == [10.5, 12.0, 9.5, 15.0, 11.0]
+    cached = {f.name for f in tmp_path.rglob('*') if f.is_file()}
+    assert cached == {'deposit.zip', 'schools.csv'}
+
+
+def test_a_cran_object_reads_only_its_file_without_rscript(tmp_path, monkeypatch):
+    """The tarball comes whole, but only the object's file is checked and read: loading `pets`
+    no longer dumps the fixture's `trials.csv` through R, so no Rscript is on the path."""
+    monkeypatch.setenv('PATH', '')
+    pets = member(TARBALL, 'fixture/data/pets.rda')
+    manifest = {(FIXTURE, 'pets'): manifestRow('data/pets.rda', pets)}
+    loader = Loader(tmp_path, fetch=serveCurrent, manifest=manifest)
+    assert list(loader.load(FIXTURE, 'pets')['species']) == [
+        'dog',
+        'cat',
+        'fish',
+        'dog',
+        'cat',
+        'dog',
+    ]
+
+
+@needsRscript
+def test_a_base_r_object_loads_through_the_manifest_from_rs_dump(tmp_path):
+    """Base R's `datasets` has no tarball to take a file from: R dumps the namespace as before,
+    and the manifest carries no checksum, since the dump is R's output, not a download."""
+    base = Source(kind='cran', name='datasets', pin='base')
+    manifest = {(base, 'iris'): ManifestRow('data/iris.rds', None, None)}
+    loader = Loader(tmp_path, fetch=serveNothing, manifest=manifest)
+    assert loader.load(base, 'iris').shape == (150, 5)
+
+
+@needsRscript
+def test_rs_re_save_of_a_url_file_is_no_object_of_its_own(tmp_path):
+    """A url that is no archive has its cache folder as its tree, where R's re-save of a file
+    librdata rejects lands too; a later enumeration must still name the download, which the
+    manifest records (an OSF `.rds` of johannes_2021b came out as the re-save, #4)."""
+    visits = member(TARBALL, 'fixture/data/visits.rda')
+    url = 'https://example.org/clinic.rda'  # sorts before `rds/`, as `processed_data.rds` did
+    source = Source(kind='url', name=url, pin=sha(visits))
+
+    def serveVisits(asked: str) -> bytes | None:
+        return visits if asked == url else None
+
+    Loader(tmp_path, fetch=serveVisits).objects(source)  # R re-saves the file into the cache
+    objects = Loader(tmp_path, fetch=serveVisits).objects(source)
+    assert [(o.name, o.file, o.reader) for o in objects] == [('visits', 'clinic.rda', 'rscript')]
+
+
+def test_a_git_file_name_with_spaces_is_quoted_in_its_raw_url(tmp_path):
+    """ROS keeps `HDI/data/state vote and income, 68-00.dta`; a URL cannot carry the spaces."""
+    quoted = 'https://raw.githubusercontent.com/acme/example/c0ffee1/data/radon%20by%20county.csv'
+
+    def serveQuoted(url: str) -> bytes | None:
+        return RADON if url == quoted else None
+
+    example = Source(kind='git', name=EXAMPLE_REPO, pin='c0ffee1', path='data')
+    manifest = {(example, 'data/radon by county.csv'): manifestRow('data/radon by county.csv', RADON)}  # fmt: skip
+    loader = Loader(tmp_path, fetch=serveQuoted, manifest=manifest)
+    assert len(loader.load(example, 'data/radon by county.csv')) == 5

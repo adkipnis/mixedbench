@@ -15,7 +15,7 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
-from urllib.parse import urlparse
+from urllib.parse import quote, urlparse
 
 import pandas as pd
 from mixedbench.datasets import docs, readers
@@ -90,15 +90,33 @@ class DataObject:
     reader: Reader  # pyreadr read the file, an .rds that Rscript dumped from it, or pandas did
 
 
+@dataclass(frozen=True)
+class ManifestRow:
+    file: str  # the object's file, relative to the source tree
+    sha256: str | None  # of that file; None where it is no download (base R's, dumped by R)
+    size: int | None  # in bytes, likewise
+
+
+Manifest = Mapping[tuple[Source, str], ManifestRow]  # (source, object name) -> its file
+
+
 # ==============================================================================================
 # loader
 # ==============================================================================================
 
 
 class Loader:
-    def __init__(self, cache: Path, fetch: Callable[[str], bytes | None] | None = None):
+    def __init__(
+        self,
+        cache: Path,
+        fetch: Callable[[str], bytes | None] | None = None,
+        manifest: Manifest | None = None,
+    ):
+        """With a manifest, `load` fetches and reads only the object's file (ADR 0003, #4);
+        without one, the whole source, as the survey needs for objects not yet merged."""
         self.cache = Path(cache)
         self.fetch = fetch or self._getBytes
+        self.manifest = manifest
         self._frames: dict[Source, dict[str, tuple[DataObject, pd.DataFrame | None]]] = {}
 
     def objects(self, source: Source) -> list[DataObject]:
@@ -111,9 +129,9 @@ class Loader:
         """The object as one typed table: `types` declares what a file format without column
         types (delimited text, Excel) cannot carry, and `ordered` what pyreadr drops from an R
         factor; a plain column declared categorical or ordered gets sorted levels."""
-        obj, df = self._read(source)[name]
+        file, df = self._object(source, name)
         if df is None:
-            raise ValueError(f'{source.name} {source.pin} {obj.file}: {name!r} is no DataFrame')
+            raise ValueError(f'{source.name} {source.pin} {file}: {name!r} is no DataFrame')
         declared = {}
         for column, kind in (types or {}).items():
             if kind == 'continuous':
@@ -131,6 +149,14 @@ class Loader:
         if values.str.contains('.', regex=False).any():
             return values
         return values.str.replace(',', '.', regex=False)
+
+    def manifestRow(self, source: Source, name: str) -> ManifestRow:
+        """What the manifest records of an object, read from the whole source."""
+        file = self._read(source)[name][0].file
+        if source.name == 'datasets':
+            return ManifestRow(file, None, None)
+        data = (self._tree(source) / file).read_bytes()
+        return ManifestRow(file, hashlib.sha256(data).hexdigest(), len(data))
 
     def help(self, source: Source, name: str) -> str:
         """What documents `name`: the Rd page of a CRAN object; otherwise the text files named
@@ -210,10 +236,15 @@ class Loader:
         checksum = source.checksum
         if source.kind == 'url':  # the file's sha256 is its pin
             checksum = source.pin
+        self._verify(file, checksum)
+        return file
+
+    @staticmethod
+    def _verify(file: Path, checksum: str | None) -> None:
+        """None skips the check: a CRAN tarball without a checksum, a file R writes."""
         digest = hashlib.sha256(file.read_bytes()).hexdigest()
         if checksum is not None and digest != checksum:
             raise ValueError(f'{file} checksum {digest} differs from pinned {checksum}')
-        return file
 
     def _fetchFirst(self, source: Source, urls: list[str]) -> bytes:
         for url in urls:
@@ -275,6 +306,69 @@ class Loader:
             files = [f for f in files if not docs.isDoc(f) and not docs.describesSibling(f)]
         return sorted(files)
 
+    def _object(self, source: Source, name: str) -> tuple[str, pd.DataFrame | None]:
+        """The object's file and frame: the manifest's file alone, else the parsed source."""
+        if self.manifest is None:
+            obj, df = self._read(source)[name]
+            return obj.file, df
+        row = self.manifest[source, name]
+        file = self._fetchFile(source, row)
+        self._verify(file, row.sha256)
+        frames, _ = self._readFile(file, source, row.file)
+        return row.file, frames[name]
+
+    def _fetchFile(self, source: Source, row: ManifestRow) -> Path:
+        """One file of the source, kept under `files/` so that a partial download never
+        passes for the extracted `tree/` the enumerate path reads; a url that is no archive
+        is that file, base R's `datasets` a dump R makes of the whole namespace."""
+        if source.name == 'datasets':
+            return self._tree(source) / row.file
+        if source.kind == 'url' and not self._isArchive(source):
+            return self._download(source)
+        file = self._dir(source) / 'files' / row.file
+        if not file.exists():
+            file.parent.mkdir(parents=True, exist_ok=True)
+            file.write_bytes(self._fileBytes(source, row.file))
+        return file
+
+    @staticmethod
+    def _isArchive(source: Source) -> bool:
+        filename = source.file or Path(urlparse(source.name).path).name
+        return filename.lower().endswith(ARCHIVES)
+
+    def _fileBytes(self, source: Source, file: str) -> bytes:
+        """git: GitHub's raw file at the pinned revision; url: the downloaded archive's member."""
+        if source.kind == 'git':
+            return self._fetchFirst(source, [self._rawUrl(source, file)])
+        return self._member(self._download(source), file)
+
+    @staticmethod
+    def _rawUrl(source: Source, file: str) -> str:
+        """Every git source is on GitHub."""
+        repo = source.name.removesuffix('.git').removeprefix('https://github.com/')
+        return f'https://raw.githubusercontent.com/{repo}/{source.pin}/{quote(file)}'
+
+    @staticmethod
+    def _member(archive: Path, file: str) -> bytes:
+        """The member at `file` in the tree; under the archive's single top-level folder if it
+        has one, which `_tree` drops as layout."""
+        if archive.suffix.lower() == '.zip':
+            with zipfile.ZipFile(archive) as z:
+                return z.read(Loader._memberName(z.namelist(), file))
+        with tarfile.open(archive) as t:
+            return t.extractfile(Loader._memberName(t.getnames(), file)).read()
+
+    @staticmethod
+    def _memberName(names: list[str], file: str) -> str:
+        tops = {name.split('/')[0] for name in names}
+        if len(tops) != 1:
+            return file
+        top = tops.pop()
+        is_folder = any(name.startswith(f'{top}/') for name in names)
+        if not is_folder:
+            return file
+        return f'{top}/{file}'
+
     def _read(self, source: Source) -> dict[str, tuple[DataObject, pd.DataFrame | None]]:
         """Every data object of the source by name, with its frame; parsed once per source,
         since one survey merge asks for a table several times and pyreadr is slow on factors."""
@@ -284,8 +378,10 @@ class Loader:
 
     def _parse(self, source: Source) -> dict[str, tuple[DataObject, pd.DataFrame | None]]:
         tree = self._tree(source)
+        dumps = self._dir(source) / 'rds'  # inside the tree of a url that is no archive
+        files = [f for f in self._files(source, tree) if not f.is_relative_to(dumps)]
         objects = {}
-        for file in self._files(source, tree):
+        for file in files:
             label = file.relative_to(tree).as_posix()
             frames, reader = self._readFile(file, source, label)
             for name, df in frames.items():
