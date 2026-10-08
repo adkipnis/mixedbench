@@ -148,7 +148,7 @@ def rdPage(man: Path, alias: str) -> str | None:
     """The raw Rd page under `man/` whose alias is `alias`, None where there is none."""
     pattern = rf'\\alias\{{{re.escape(alias)}\}}'
     for page in sorted(man.glob('*.Rd')):
-        text = page.read_text()
+        text = page.read_text(encoding='utf-8')
         if re.search(pattern, text):
             return text
     return None

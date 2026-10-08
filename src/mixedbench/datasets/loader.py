@@ -151,7 +151,10 @@ class Loader:
         if root.is_file():
             root = root.parent
         found = docs.sameStemDocs(tree, file) or docs.docsBeside(root, file)
-        pages = [f'# {f.relative_to(tree)}\n{f.read_text(errors="replace")}' for f in found]
+        pages = [
+            f'# {f.relative_to(tree).as_posix()}\n{f.read_text(encoding="utf-8", errors="replace")}'
+            for f in found
+        ]
         pages.append(docs.selfNote(file))
         for man in sorted(tree.rglob('man')):  # a repository that is an R package (rethinking)
             pages.append(docs.rdPage(man, readers.bare(file).stem))
