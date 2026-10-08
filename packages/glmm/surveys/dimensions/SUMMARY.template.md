@@ -87,3 +87,8 @@ ${table_response_type}
 ${table_reader}
 
 ${table_published_model}
+
+## Tier D
+
+The practice survey's deposits, resolved and pulled by `resolve.py` (see the README); the loss
+by cause is a finding of the tier: ${tier_d}

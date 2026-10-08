@@ -192,8 +192,34 @@ class Summariser:
             'table_response_type': shareTable(self.registry['response_type'], 'response type'),
             'table_reader': shareTable(self.registry['reader'], 'reader'),
             'table_published_model': shareTable(self.registry['published_model'], 'published'),
+            'tier_d': self.tierD(),
         }
         return Template(TEMPLATE.read_text()).substitute(fields)
+
+    def tierD(self) -> str:
+        """The deposit-level loss of Tier D (#26): the links of `deposits.csv` by status, the
+        listed files by role, the data files not pulled by reason, the objects excluded by
+        reason, and the papers that reached the registry."""
+        file = self.root / 'deposit_files.csv'
+        if not file.exists():
+            return 'Tier D not pulled.'
+        files = readCsv(file)
+        links = files.drop_duplicates(['paper_id', 'link'])
+        listed = files[files['file'] != '']
+        data = listed[listed['role'] == 'data']
+        unpulled = data[data['reason'] != '']
+        excluded = self.excluded[self.excluded['tier'] == 'D']
+        registered = self.registry[self.registry['tier'] == 'D']
+        labels = registered['source'].str.replace(
+            r'_(dryad|osf|zenodo|figshare)(_\d+)?$', '', regex=True
+        )
+        return (
+            f'{len(links)} links of {links["paper_id"].nunique()} papers; deposits by status: '
+            f'{counted(links["status"])}. Listed files by role: {counted(listed["role"])}; data '
+            f'files not pulled: {counted(unpulled["reason"])}. Objects excluded: {len(excluded)} '
+            f'({counted(excluded["reason"])}); papers with a registry row: {labels.nunique()} '
+            f'over {len(registered)} rows.'
+        )
 
     @staticmethod
     def axisTable(axis: str, block: dict, practice: dict) -> str:

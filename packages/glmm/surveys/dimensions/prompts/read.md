@@ -81,6 +81,21 @@ index random effects; the **response** is the column a documented model explains
    `low` when you inferred the grouping factor from column names. Name what you read and any
    case these rules do not settle in `notes`, starting `RULE GAP:`.
 
+10. **Tier D deposits.** A Tier D object is one file of a deposit (Dryad, OSF, Zenodo,
+   figshare) named by a paper of the practice survey; its page opens with the deposit's
+   page: title, licence, description, the paper's text around the link, the paper's models
+   as the practice survey filed them (`formula_verbatim`, `family`, `n_obs`,
+   `n_groups_per_factor`), the deposit's file listing, then its README, codebook and
+   analysis scripts. The documented model is the paper's model as filed, rendered on the
+   table's columns, at `high` when the columns match it and the scripts or codebook confirm
+   it; `published_model` is `yes` throughout the tier. A table that is not the paper's data
+   (a deposit the paper merely cites, a preregistration's pilot, a stimulus list, a fitted
+   model's posterior draws, a simulation output) is excluded as `not the paper's data`; a
+   summary table derived from the analysis table is `derived or duplicated table`; the
+   analysis table without the grouping column (anonymised away) is `no grouping structure`
+   with that said in `detail`. Where a paper's several files are one dataset split (one
+   file per study), each file is its own row.
+
 Allowed values and columns are in `README.md` and `schema.py`; the merge refuses a shard with
 a value outside them or a column name the table lacks.
 
