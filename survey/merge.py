@@ -59,7 +59,7 @@ SUPERSEDES = {
     'duplicates': (),
 }
 RECONCILED = ('registry', 'duplicates', 'dropped')  # merges that can change the duplicate fold
-CENSUS = ('registry', 'excluded')  # the tables the package ships; the others stay in the survey
+CENSUS = ('registry', 'excluded')  # shard tables in registry/; duplicates, dropped in survey/
 Key = tuple[str, str]  # (source label, object name)
 
 

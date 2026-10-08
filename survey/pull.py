@@ -128,7 +128,7 @@ class Puller:
             file.parent.mkdir(parents=True, exist_ok=True)
             page = self.loader.help(source, row['object'])
             if row['source'] in self.depositPages:  # one page per deposit, read once per deposit
-                deposit = self.depositPages[row['source']].relative_to(self.registry)
+                deposit = self.depositPages[row['source']].relative_to(self.registry.parent)
                 page = f'# deposit page: {deposit}\n\n{page}'
             df = self.loader.load(source, row['object'])
             file.write_text(f'{page}\n\n{self._firstRows(df)}\n')

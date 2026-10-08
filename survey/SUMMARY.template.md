@@ -1,7 +1,7 @@
 # Dimension survey — summary
 
 Public grouped datasets measured by script from [`registry.csv`](registry.csv); frame, method
-and reading rules in [`README.md`](README.md). Evidence for `docs/design/envelope.md`, not the
+and reading rules in [`README.md`](../survey/README.md). Evidence for `docs/design/envelope.md`, not the
 envelope itself.
 
 How to read the tables:
