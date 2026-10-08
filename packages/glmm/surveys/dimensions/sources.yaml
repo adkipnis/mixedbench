@@ -131,17 +131,18 @@ tiers:
     hox: {kind: git, name: https://github.com/MirjamMoerbeek/Data_Sets_ML_book, pin: 55e410ee2c9d1613ca8ae74359b7d5cf5e3c8f82, path: .}  # Hox, Moerbeek & van de Schoot, 23 SPSS .sav
     snijders_bosker: {kind: url, name: https://www.stats.ox.ac.uk/~snijders/Multilevel_Analysis_2nd_Ed_data.zip, pin: c802fa500556b3c4fdb8ae9f3b0dd241e171ce4a30d72050ee6df76a6334750c}  # Snijders & Bosker 2nd ed., one Excel workbook of every chapter's data
     goldstein_msm: {kind: url, name: https://www.bristol.ac.uk/cmm/media/migrated/datasets-3rd-edition.zip, pin: ddc942a57c726cfa43f029e6f6ac2547438411f6bbd575759df86e136079caba}  # Goldstein, Multilevel Statistical Models 3rd ed., 12 .xls
-    goldstein_partnership: {kind: url, name: https://www.bristol.ac.uk/cmm/media/migrated/partnershipdata.zip, pin: 3a838831bc6cc2a6d44d51e348b562d8ddabf6aa6d1a7ec34b5e71c40fba63a7}  # Goldstein, partnership data (txt)
-    # Bristol Centre for Multilevel Modelling teaching library: fixed-width .dat with an .asc layout
-    cmm_asian: {kind: url, name: https://www.bristol.ac.uk/cmm/media/migrated/asian.zip, pin: 2270ccafd84e84bee014e9e91deecb7b9f6c3622a5d9f1730c8077ca020fdd07}
-    cmm_employ: {kind: url, name: https://www.bristol.ac.uk/cmm/media/migrated/employ.zip, pin: 2ba77d436104044a2e53d8660a7bd567cec84f5e48298fad758502868515223a}
-    cmm_ilea567: {kind: url, name: https://www.bristol.ac.uk/cmm/media/migrated/ilea567.zip, pin: e35674734d753de0113da9b69dbab6f62fe13548efd4d3bd67b74bd14af6013a}
-    cmm_jsp: {kind: url, name: https://www.bristol.ac.uk/cmm/media/migrated/jsp.zip, pin: 1f1fb579b6612a9a491f5517ed6c35a99d6f17a915f46343858ce1c9ec3da086}
-    cmm_oxboys: {kind: url, name: https://www.bristol.ac.uk/cmm/media/migrated/oxboys.zip, pin: abb9176ff4ca936aff73b77dc73cd2b0fb76503d582eed89cc4f07d0d7094965}
-    cmm_rao: {kind: url, name: https://www.bristol.ac.uk/cmm/media/migrated/rao.zip, pin: 7122dfaa42e16de801ad38c65fc9c30d373cb4d755e816c77b257f1e309e407e}
-    cmm_sci: {kind: url, name: https://www.bristol.ac.uk/cmm/media/migrated/sci.zip, pin: a19156a94fa6ab1c3e5a93a87a8a47459053a00fb3124a171bd2e1c8221448eb}
-    cmm_socatt: {kind: url, name: https://www.bristol.ac.uk/cmm/media/migrated/socatt.zip, pin: 2423324418e226dfcf5b07d6c6f689893b2a01e273b6adfa34879f3ab7662bb3}
-    cmm_starter: {kind: url, name: https://www.bristol.ac.uk/cmm/media/migrated/starter.zip, pin: 1c38355bf02a54b51769f26aaa9ad62d2d1cd22e4675428798219144153de0d5}
+    goldstein_partnership: {kind: url, name: https://www.bristol.ac.uk/cmm/media/migrated/partnershipdata.zip, pin: 3a838831bc6cc2a6d44d51e348b562d8ddabf6aa6d1a7ec34b5e71c40fba63a7, layout: [id, start_age, change, episode, n_previous, social_class, partnership]}  # Goldstein, partnership data: a headerless txt, its columns in partnershipcodes.txt (also inside datasets-3rd-edition.zip)
+    # Bristol Centre for Multilevel Modelling teaching library: fixed-width .DAT files, their
+    # columns transcribed into `layout` from the prose `.ASC` sheets (#25)
+    cmm_asian: {kind: url, name: https://www.bristol.ac.uk/cmm/media/migrated/asian.zip, pin: 2270ccafd84e84bee014e9e91deecb7b9f6c3622a5d9f1730c8077ca020fdd07, layout: [child:1-4, age:5-7, weight:8-12, birthweight:13-16, gender:17]}
+    cmm_employ: {kind: url, name: https://www.bristol.ac.uk/cmm/media/migrated/employ.zip, pin: 2ba77d436104044a2e53d8660a7bd567cec84f5e48298fad758502868515223a, layout: [area:2-5, cell:7-9, gender:11, qualified:13, employed:15-16, total:18-19]}
+    cmm_ilea567: {kind: url, name: https://www.bristol.ac.uk/cmm/media/migrated/ilea567.zip, pin: e35674734d753de0113da9b69dbab6f62fe13548efd4d3bd67b74bd14af6013a, layout: [year:1, school:2-4, score:5-6, fsm:7-8, vr1:9-10, gender:11, vrband:12, ethnic:13-14, schgender:15, denomination:16]}
+    cmm_jsp: {kind: url, name: https://www.bristol.ac.uk/cmm/media/migrated/jsp.zip, pin: 1f1fb579b6612a9a491f5517ed6c35a99d6f17a915f46343858ce1c9ec3da086, layout: [school:1-2, class:3, gender:4, social:5, ravens:6-7, student:8-11, english:12-13, maths:14-15, year:16]}
+    cmm_oxboys: {kind: url, name: https://www.bristol.ac.uk/cmm/media/migrated/oxboys.zip, pin: abb9176ff4ca936aff73b77dc73cd2b0fb76503d582eed89cc4f07d0d7094965, layout: [student:1-2, age:3-9, height:10-15, occasion:16]}
+    cmm_rao: {kind: url, name: https://www.bristol.ac.uk/cmm/media/migrated/rao.zip, pin: 7122dfaa42e16de801ad38c65fc9c30d373cb4d755e816c77b257f1e309e407e, layout: [len8:1-4, len85:6-9, len9:11-14, len95:16-19]}
+    cmm_sci: {kind: url, name: https://www.bristol.ac.uk/cmm/media/migrated/sci.zip, pin: a19156a94fa6ab1c3e5a93a87a8a47459053a00fb3124a171bd2e1c8221448eb, layout: [centre:1-5, candidate:7-10, gender:12, written:14-16, coursework:18-20]}
+    cmm_socatt: {kind: url, name: https://www.bristol.ac.uk/cmm/media/migrated/socatt.zip, pin: 2423324418e226dfcf5b07d6c6f689893b2a01e273b6adfa34879f3ab7662bb3, layout: [district:1-2, respondent:4-7, year:9, score:11, party:13, class:15, gender:17, age:19-20, religion:22]}
+    cmm_starter: {kind: url, name: https://www.bristol.ac.uk/cmm/media/migrated/starter.zip, pin: 1c38355bf02a54b51769f26aaa9ad62d2d1cd22e4675428798219144153de0d5, layout: [response]}
     rabe_hesketh: {kind: url, name: https://www.stata-press.com/data/mlmus4/mlmus4.zip, pin: 5a544212728045d858e5a0df797e805a3865e29fddb09e5fa6c9aa4707a11529}  # Rabe-Hesketh & Skrondal 4th ed., 117 .dta
     alda: {kind: url, name: https://stats.idre.ucla.edu/wp-content/uploads/2016/02/aldaascii.zip, pin: 14e62971f2cc5e37e3936fa775d59c1ceb045e5fbbc09239f750605d81156aaf}  # Singer & Willett, UCLA mirror, 48 csv-like .txt
     zuur_mixed: {kind: url, name: https://www.highstat.com/Books/Book2/ZuurDataMixedModelling.zip, pin: 2210a4a3b0d78e94d66026dad7ea7ffac5afa75e4dfe013648c5da94b37582f2}  # Zuur et al. 2009, Mixed Effects Models and Extensions in Ecology with R, 34 .txt

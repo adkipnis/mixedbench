@@ -31,6 +31,14 @@ def readFrame(root: Path) -> Frame:
                 checksum=entry.get('checksum'),
                 path=entry.get('path'),
                 file=entry.get('file'),
+                layout=layout(entry),
             )
             caps[label] = entry.get('cap', file.get('cap'))
     return Frame(tiers, sources, caps, file['seed'])
+
+
+def layout(entry: dict) -> tuple[str, ...] | None:
+    """The columns of a headerless text file, as the frame lists them."""
+    if 'layout' not in entry:
+        return None
+    return tuple(entry['layout'])
