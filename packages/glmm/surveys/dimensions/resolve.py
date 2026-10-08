@@ -131,6 +131,7 @@ class Resolver:
             set()
         )  # canonical ids, so a paper's two links to one deposit list once
         self.viewOnly = ''  # the `?view_only=` key of the OSF deposit being resolved
+        self.ingested: dict[str, bytes] = {}  # md5 -> bytes of a file downloaded by hand
 
     def readDeposits(self) -> None:
         """One `Deposit` per link of `deposits.csv`, in file order."""
@@ -176,6 +177,20 @@ class Resolver:
                 file.label = f'{deposit.paper_id}_{deposit.repository}'
                 if counts[key] > 1:
                     file.label += f'_{counts[key]}'
+
+    def ingest(self, dir: Path) -> None:
+        """Files Alex downloaded through the browser (Dryad refuses the script), by the md5 the
+        repository reported: every file under `dir` and every member of a zip there."""
+        self.ingested = {}
+        for path in sorted(dir.rglob('*')):
+            if path.is_file() and path.suffix.lower() != '.zip':
+                self.ingested[hashlib.md5(path.read_bytes()).hexdigest()] = path.read_bytes()
+            elif path.is_file():
+                with zipfile.ZipFile(path) as z:
+                    for member in z.namelist():
+                        data = z.read(member)
+                        self.ingested[hashlib.md5(data).hexdigest()] = data
+        print(f'{len(self.ingested)} files ingested from {dir}')
 
     def fetch(self) -> None:
         """The labelled data files and the documentation into the cache, each once, checked
@@ -522,16 +537,18 @@ class Resolver:
         if done is not None:
             file.pin = done
             return
-        try:
-            data = self._get(file.url)
-        except urllib.error.HTTPError as e:
-            file.reason = f'http {e.code}'
-            return
-        except BotWall:
-            file.reason = 'bot wall'
-            return
-        digest = hashlib.sha256(data).hexdigest()
         algorithm, _, expected = file.checksum.partition(':')
+        data = self.ingested.get(expected)
+        if data is None:
+            try:
+                data = self._get(file.url)
+            except urllib.error.HTTPError as e:
+                file.reason = f'http {e.code}'
+                return
+            except BotWall:
+                file.reason = 'bot wall'
+                return
+        digest = hashlib.sha256(data).hexdigest()
         if expected and hashlib.new(algorithm, data).hexdigest() != expected:
             raise ValueError(f"{deposit.id} {file.path}: {algorithm} differs from the repository's")
         out = self.root / 'cache' / 'url' / digest / Path(file.path).name
@@ -663,12 +680,15 @@ if __name__ == '__main__':
     parser.add_argument('--root', type=Path, default=HERE, help='survey folder holding deposits.csv')
     parser.add_argument('--practice', type=Path, default=HERE.parent / 'practice', help='practice survey root')
     parser.add_argument('--fetch', action='store_true', help='fetch the listed files, write the pages and the sources.yaml block')
+    parser.add_argument('--ingest', type=Path, help='folder of files downloaded by hand, matched by md5 before any download')
     args = parser.parse_args()
     # fmt: on
     resolver = Resolver(args.root, args.practice)
     resolver.readDeposits()
     resolver.resolve()
     resolver.label()
+    if args.ingest:
+        resolver.ingest(args.ingest)
     if args.fetch:
         resolver.fetch()
     resolver.flush()
