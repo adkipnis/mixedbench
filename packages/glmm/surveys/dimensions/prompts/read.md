@@ -93,8 +93,10 @@ index random effects; the **response** is the column a documented model explains
    model's posterior draws, a simulation output) is excluded as `not the paper's data`; a
    summary table derived from the analysis table is `derived or duplicated table`; the
    analysis table without the grouping column (anonymised away) is `no grouping structure`
-   with that said in `detail`. Where a paper's several files are one dataset split (one
-   file per study), each file is its own row.
+   with that said in `detail`. Several files that are one dataset split by study or
+   experiment are one row each; a dataset split into one file per coder, session or
+   participant whose pooled table is in no file is excluded as `derived or duplicated
+   table` (decided 2026-10-08).
 
 Allowed values and columns are in `README.md` and `schema.py`; the merge refuses a shard with
 a value outside them or a column name the table lacks.

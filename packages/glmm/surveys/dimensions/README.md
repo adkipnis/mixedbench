@@ -852,3 +852,13 @@ needing a column the table lacks (jing's dot count, slepian's target); and table
 paper's own deposit that no model uses, filed as `not the paper's data` for want of a
 "not analysed" value.
 
+Decided by Alex on 2026-10-08: sievers_2020's 89 per-coder worksheets leave the registry
+(`shards/dropped_tier_d_sievers_worksheets.csv`, re-filed as `derived or duplicated table`)
+under the rule that a dataset split into one file per coder, session or participant whose
+pooled table is in no file is excluded, while a split by study or experiment stays one row
+per file (`prompts/read.md`, rule 10); the Dryad deposits come through Alex's logged-in
+browser at reading pace into the untracked `cache/dryad_raw/`, which `resolve.py --ingest`
+matches file by file against the md5 the Dryad API reported (a dataset zip is opened for its
+members), so the pins stay those of verified bytes. After the drop Tier D stands at 96 rows over 75
+objects and 28 papers (50 `high`, 21 `medium`, 25 `low`), the Dryad deposits still to come.
+
