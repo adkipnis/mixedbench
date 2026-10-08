@@ -1,0 +1,13 @@
+__pycache__/
+*.py[cod]
+.venv/
+dist/
+*.egg-info/
+.pytest_cache/
+.hypothesis/
+.ruff_cache/
+.ipynb_checkpoints/
+.DS_Store
+# rebuilt from pins (cache) and by survey/pull.py (help), never committed
+registry/cache/
+registry/help/
