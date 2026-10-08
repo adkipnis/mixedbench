@@ -75,6 +75,10 @@ source with more objects passing the pre-screen (below) keeps a draw of `cap` of
 `random.Random(seed)`, `seed` top-level, over their sorted names. Only agridat (about 390 field
 trials, else 38% of the pool) is capped; ten Tier R packages hold more than 40 objects, so a cap
 for all would have discarded grouped tables of faraway and MASS at random (decided 2026-10-07).
+`layout` (optional) names the columns of a headerless text file, `name` for a
+whitespace-separated file with a codes list (Goldstein's partnership data) or `name:start-end`
+for a fixed-width file (the Bristol CMM `.DAT` files, transcribed from their `.ASC` sheets;
+positions from 1), since nothing in such a file says what its columns are.
 `licence` (optional) is the collection's licence as its LICENSE file, readme or DESCRIPTION
 states it, or `not stated` once the collection was read and carries none; an absent key means
 nobody has looked yet. The survey redistributes no data, so the field records terms of use to
@@ -120,13 +124,12 @@ Gelman, Hill & Vehtari's *Regression and Other Stories* (`ROS-Examples`, 106 dat
 `<example>/data`, a 225 MB repository that overlaps `stan_arm`), `WWGbook`, and the seven
 APTS course files of Diggle (three longitudinal). Recorded as dropped in that pass: statsmodels
 (only two panel tables), Hedeker & Gibbons (host down), Verbeke & Molenberghs (Springer extras
-not locatable), Littell et al. (`SASmixed`, Tier R), Kruschke (scripts). For the pulls of #24
-and #25 the loader still lacks readers for SPSS `.sav` (Hox; the spec says ask before adding
-`pyreadstat`), old Excel `.xls` (Goldstein, Zuur), fixed-width `.dat` with an `.asc` layout
-(Bristol CMM), Stan data json (a dict of arrays, not a table), R dumps outside a CRAN `data/`
-folder (Stan examples), gzipped TSV (PMLB), semicolon-separated csv (`rethinking`) and Arrow
-inside a tar.gz whose URL carries no suffix (`mixedmodels_jl`, `pyarrow` is a dependency to
-ask about); each is that ticket's decision, read or `unreadable format`.
+not locatable), Littell et al. (`SASmixed`, Tier R), Kruschke (scripts). At the time of that pass
+the loader still lacked readers for SPSS `.sav` (Hox), old Excel `.xls` (Goldstein, Zuur),
+fixed-width `.dat` with an `.asc` layout (Bristol CMM), Stan data json, R dumps outside a CRAN
+`data/` folder, gzipped TSV, semicolon-separated csv and Arrow inside a suffix-less tar.gz;
+#24 settled the last five, #25 the first three (`pyreadstat`, `xlrd` and the `layout` key
+above, decided 2026-10-08).
 
 Tier O (#21) starts with v0.5's four PMLB tables (`analcatdata` apnea 1 and 2 by subject,
 boxing 1 and 2 by judge; Simonoff, *Analyzing Categorical Data*, 2003), pinned at PMLB's commit of
@@ -181,7 +184,7 @@ Key `source`, `object`, `model_index`. Agent columns, in order:
 | column | content |
 |---|---|
 | `source` | label in `sources.yaml` |
-| `object` | the data object as the loader enumerates it: an R object name, or a file path inside a git or url tree |
+| `object` | the data object as the loader enumerates it: an R object name, a file path inside a git or url tree, or `<path>!<sheet>` for a data sheet of a workbook with several |
 | `model_index` | 1 for the documented model, 2 and 3 for further documented models; never more |
 | `response` | column name of the response |
 | `response_type` | `continuous` / `binary` / `count` / `binomial` / `ordinal` / `categorical`; what the response column holds, not the family fitted to it |
@@ -630,3 +633,89 @@ Changed, mostly by reading the Stata manual entries more closely than the agents
 
 Of the 20 drawn rows, 11 stood and 9 changed; of the six adjudications the registry won
 three, the blind reading three.
+
+## Tier T census (#25)
+
+Loader work came first, since four collections were unreadable or silently absent: SPSS
+`.sav` (Hox) through `pyreadstat` and old Excel `.xls` (Goldstein, Zuur) through `xlrd`, both
+added to the research extra (decided 2026-10-08); a workbook with several data sheets
+(Snijders & Bosker's single companion file) is one object per sheet, `<file>!<sheet>`, its
+sheets named like documentation (`Contents`) left out and rendered on the help page, empty
+sheets (Excel's `Sheet2`) skipped; headerless files read as the frame's `layout` declares
+(the nine Bristol CMM fixed-width `.DAT` files, transcribed from their `.ASC` sheets, and
+Goldstein's whitespace-separated partnership file); a `.txt` is a data object unless named
+like documentation or after a data file of another format beside it (Fitzmaurice's `lead.txt`
+describes `lead.dta`), which no earlier tier had needed; a `#` banner above a table (Diggle's
+course files) is skipped and shown on the help page; column names of Excel sheets are
+stripped (Goldstein's ` gender,girl=1`); a `.dta` whose value-label section pandas misparses
+(mlmus4's scotmap) is read by `pyreadstat`, which also renders the Stata and SPSS codebooks;
+SPSS value labels that cover only a scale's extremes (Hox's `lowest`, `highest` on numeric
+scores) no longer turn the column categorical; a zip's `__MACOSX` resource forks are no
+files; the Rd pages of a repository that is an R package (rethinking, ROS's `rpackage/`)
+document the file named after their alias. With two readers landing, `datasets.py` became
+the package `datasets/` (`loader.py` pipeline and Rscript route, `readers.py` formats,
+`docs.py` help pages), same public names. Fitzmaurice's host sends an incomplete certificate
+chain that Python refuses and `curl` accepts, so its 37 `.dta` and the `.txt` descriptions
+beside them were seeded into the cache by hand (sha256 checked by the loader as usual):
+
+```
+grep -oE 'fitzmaurice_[a-z0-9]+: \{kind: url, name: ([^,]+), pin: ([0-9a-f]+)' packages/glmm/surveys/dimensions/sources.yaml \
+  | sed -E 's/.*name: ([^,]+), pin: ([0-9a-f]+)/\1 \2/' | while read url pin; do
+  mkdir -p packages/glmm/surveys/dimensions/cache/url/$pin
+  curl -sS -o packages/glmm/surveys/dimensions/cache/url/$pin/$(basename $url) $url
+  curl -sS -o packages/glmm/surveys/dimensions/cache/url/$pin/$(basename $url .dta).txt ${url%.dta}.txt
+done
+```
+
+Known limits left as they are: ROS's 49 Congress `.asc` election returns and a two-line
+banner without `#` (ROS `cows.dat`) are not read (the first are fixed-effects election
+tables, the second one row per cow); Goldstein's Gcsemv.xls codes missing marks as `-1`,
+which the registry cannot declare, so its measured rows include them (the dataset is also
+mlmRev's `Gcsemv`, with proper NAs, which the fold did not catch since the shapes differ);
+a `.txt` data file of Tier E (the PyMC examples) was not enumerated in #24 under the old rule
+and would be on a re-pull.
+
+`pull.py --tiers T` enumerated 534 objects over 65 sources, 54 screened out mechanically
+(the empty sheets, matrices and model objects of `rethinking`, one-column and wide tables),
+480 read by nine Opus agents (Hox, Snijders & Bosker, Goldstein and the CMM sets; Rabe-Hesketh
+in two shards, whose chapter do-files hold the book's models; Singer & Willett; the three Zuur
+books; McElreath with WWGbook and Diggle; Fitzmaurice; ROS in two shards): 271 registry rows
+before the fold and 222 exclusions, 276 with the pre-screen (230 `no grouping structure`, 50
+of them wide repeated-measures tables, which is how Fitzmaurice, Singer & Willett and Hox ship
+half their data; 24 derived or duplicated; 10 unreadable; 9 time series; 3 without a
+response). Eight shard rows were refused by the merge and corrected (a one-level factor, a
+phantom row-id name, four responses that were not binary or whose labels were partial, a
+padded column name). The merge flagged 26 pairs: 6 identical tables answered `same` by script
+(`shards/duplicates_tier_t_identical.csv`), 20 by one agent, all `same` (Rabe-Hesketh's
+re-exports of lme4, mlmRev, nlmeU, WWGbook and the Stata manuals; Fitzmaurice's toenail,
+birthwt and fat; ALDA's alcohol table in three sources; the CMM and Goldstein twins of faraway
+and mlmRev; ROS's `.rda` renderings of its csv files). After the fold Tier T holds 248 rows
+over 236 datasets (Rabe-Hesketh 80, rethinking 23, Zuur 37 over three books, Hox 20, ALDA
+18, ROS 16, Goldstein 15, Snijders & Bosker 13, CMM 7, WWGbook 3, Fitzmaurice 15, Diggle 1),
+133 with a published model, 45 at `high`; 12 rows of Tiers R and E now list a Tier T member
+in `sources`. ROS contributes no published mixed model: the book fits classical regressions
+throughout (every `.Rmd` grepped), so its 16 rows are clusters that repeat under the #24 rule.
+
+Blind second reading of the 196 `medium` and `low` Tier T rows outside the flagged pairs (187
+objects) by six Opus agents into a scratch directory, compared by script on response, grouping
+factors, covariates and interactions: 89 agree on all four, 3 exclusions proposed, 34 differ
+on the response or the grouping. Settled by the data: SocsLong's sender and receiver ids
+repeat across groups (the composite stands), skincancer's region codes do not (plain `region`
+stands), RiceFieldBirds' SITE has one level, infections' thirteen centres repeat (centre
+added, as for Fitzmaurice headache and skin). Settled by rule without reading: a transformed
+response names the raw column (Clams AFD, jsp_728 `math yr 3`); several responses over one
+grouping are several rows (the three Hong Kong spider taxa, coursework and star1's second
+exam, the second direction of the kl_dyads and Monks dyads, whose dyad has one row per pair
+and is no grouping factor); a discrete-time hazard model on a person-period table has the
+event indicator as its response, the period among its covariates (cigarette, as the ALDA
+rows; a continuous-time survival row keeps the time as response and `Surv(time, event)` in
+the formula); a block in a variety trial is the random term (wheat's plots, as leafblotch in
+#23); the dyad is a grouping factor where the book fits dyad effects and the pairs repeat
+(Crofoot); a reading from the source beats a recalled one (depression_pp's cubic age from
+the UCLA page); a cluster that repeats stays a grouping factor (headache, skin, aggression's
+items, PrussianHorses' years); the simpler or first reading stands where neither reader had
+a source (HDI, Pew, Frei et al., Hoogland). Two exclusions both readers supported were
+applied (star_mm, a multiple-membership reshape of star1 that the registry cannot represent;
+ROS earnings, one row per respondent with a four-level demographic as its only candidate
+cluster). Covariate-only differences stay as filed: both readers recalled the same books.
+Eight disagreements went to Alex with the spot check (below).
