@@ -33,3 +33,13 @@ first use fetches each source and verifies its digest. Nothing is mirrored.
   subset, weekly a full fetch with checksum verification, at release a full fetch on three
   operating systems. A problem materialises to one parquet file per problem for R and Julia
   users.
+
+## Amendment 2026-10-08: a mirror where a CC0 host refuses scripts (#4)
+
+Dryad answers a scripted download with 401, so the 15 registry objects of its 11 sources
+could not be fetched by a user's loader. Their data are CC0, which permits a copy: the
+package mirrors exactly those files as assets of the release `mirror-1` of this repository
+(`survey/mirror.py`), recorded as `mirror:` in their `sources.yaml` entries. The host stays
+the source and is asked first; the mirror is asked on a 404 or a refusal (401, 403), and its
+file must carry the same pinned sha256. Nothing under another licence is mirrored; a rotted
+non-CC0 source still retires its problems.
