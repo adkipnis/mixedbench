@@ -513,7 +513,7 @@ class Resolver:
     def _get(url: str) -> bytes:
         """One answer; a 429 waits `Retry-After` and tries again, a 5xx once; an HTML page
         where none was asked for is a bot wall."""
-        req = urllib.request.Request(url, headers={'User-Agent': 'metabeta-survey'})
+        req = urllib.request.Request(url, headers={'User-Agent': 'mixedbench'})
         for attempt in range(6):
             try:
                 with urllib.request.urlopen(req, timeout=300) as r:

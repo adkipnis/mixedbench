@@ -275,7 +275,7 @@ class Net:
     def _fetch(url: str) -> bytes:
         """One API answer; a 429 waits `Retry-After` (else 15 s) and tries again, a 5xx is
         retried once and then recorded as an empty answer."""
-        req = urllib.request.Request(url, headers={'User-Agent': 'metabeta-survey'})
+        req = urllib.request.Request(url, headers={'User-Agent': 'mixedbench'})
         for attempt in range(6):
             try:
                 with urllib.request.urlopen(req, timeout=120) as r:
