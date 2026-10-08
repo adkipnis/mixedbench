@@ -19,6 +19,7 @@ from pathlib import Path
 
 import pandas as pd
 import pytest
+from mixedbench import registry
 from mixedbench.datasets import DataObject, Loader, ManifestRow, Source, readers
 
 FIXTURES = Path(__file__).parent / 'fixtures'
@@ -473,7 +474,7 @@ def test_download_waits_and_retries_after_a_429(monkeypatch):
         io.BytesIO(b'content'),
     ]
 
-    def urlopen(req, timeout):
+    def urlopen(req, timeout, context):
         answer = answers.pop(0)
         if isinstance(answer, Exception):
             raise answer
@@ -704,3 +705,40 @@ def test_a_git_file_name_with_spaces_is_quoted_in_its_raw_url(tmp_path):
     manifest = {(example, 'data/radon by county.csv'): manifestRow('data/radon by county.csv', RADON)}  # fmt: skip
     loader = Loader(tmp_path, fetch=serveQuoted, manifest=manifest)
     assert len(loader.load(example, 'data/radon by county.csv')) == 5
+
+
+@pytest.mark.network
+def test_a_server_that_sends_the_wrong_intermediate_certificate_is_verified():
+    """Harvard's companion site for Fitzmaurice et al. sends InCommon's intermediate for a leaf
+    Sectigo's OV R36 signed; macOS and Windows fetch the right one, OpenSSL does not, so the
+    package ships it and the download is verified on every operating system."""
+    fev1 = registry.sources()['fitzmaurice_fev1']
+    data = Loader._getBytes(fev1.name)
+    assert sha(data) == fev1.pin
+
+
+def test_a_url_its_host_refuses_loads_from_its_mirror_under_the_same_pin(tmp_path):
+    """Dryad refuses scripted downloads of CC0 data, so the package mirrors them (ADR 0003): the
+    host is asked first, the mirror after, and the mirror's file must carry the pinned digest."""
+    asked = []
+    mirror = 'https://github.com/acme/mixedbench/releases/download/mirror-1/schools.csv'
+
+    def serveMirror(url: str) -> bytes | None:
+        asked.append(url)
+        return SCHOOLS if url == mirror else None
+
+    schools = Source(kind='url', name=SCHOOLS_URL, pin=sha(SCHOOLS), file='schools.csv', mirror=mirror)  # fmt: skip
+    df = Loader(tmp_path, fetch=serveMirror).load(schools, 'schools.csv')
+    assert list(df['school']) == ['A', 'B', 'A', 'C', 'B']
+    assert asked == [SCHOOLS_URL, mirror]
+
+
+@pytest.mark.parametrize('code', [401, 403])
+def test_download_takes_a_refusal_as_a_miss(monkeypatch, code):
+    """Dryad answers 401 to a script; like a 404 the next location (the mirror) is asked."""
+
+    def urlopen(req, timeout, context):
+        raise urllib.error.HTTPError('u', code, 'Unauthorized', {}, None)
+
+    monkeypatch.setattr(urllib.request, 'urlopen', urlopen)
+    assert Loader._getBytes('https://datadryad.org/api/v2/files/1/download') is None
