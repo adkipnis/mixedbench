@@ -5,7 +5,7 @@
 `example-c0ffee1.tar.gz` is a GitHub archive of repository `example` at revision `c0ffee1`:
 `data/` holds a `.csv` with its own README, `formats/` an Excel, JSON and Stata file and the
 awkward text files met in the pull (whitespace-aligned, latin-1, padded, a banner above the
-table, a data `.txt`), `stan/data/` a Stan data dict as `.json` and as `.json.zip` with its
+table, a data `.txt`, R's write.table output), `stan/data/` a Stan data dict as `.json` and as `.json.zip` with its
 `.info.json` in the sibling `stan/info/` (posteriordb's layout). `schools` is the csv served
 from a URL without a suffix (figshare), `apnea.tsv.gz` a gzipped TSV (PMLB), `datasets.tar.gz`
 a tarball of Arrow files (MixedModels.jl), `dataset_42.pq` OpenML's parquet rendering.
@@ -65,6 +65,9 @@ CD4 = '#\n# CD4 counts by subject\n#\n   time   cd4  id\n -0.7   548  1\n  0.2  
 # the Bristol CMM layout: fixed-width columns, declared by the frame from the `.ASC` sheet
 PUPILS_DAT = ' 1101 7\n 1102 9\n 2201 8\n'  # school 2-3, class 4, pupil 5, score 6-7
 PARTNERS = '1 16 0\n1 17 1\n2 20 0\n'  # whitespace, no header; names declared by the frame
+# R's write.table output, as ARM's ideo2.dat: every string quoted, a state name with a space,
+# and row names, so the header is one field short of the rows
+IDEOLOGY = '"state" "score"\n"1" "NEW HAM" 0.24\n"2" "NEW HAM" 0.34\n"3" "NEVADA" -0.25\n'
 
 
 def excel() -> bytes:
@@ -206,6 +209,7 @@ if __name__ == '__main__':
         'example-c0ffee1/formats/cd4.txt': CD4.encode(),
         'example-c0ffee1/formats/pupils.dat': PUPILS_DAT.encode(),
         'example-c0ffee1/formats/partners.txt': PARTNERS.encode(),
+        'example-c0ffee1/formats/ideology.dat': IDEOLOGY.encode(),
         'example-c0ffee1/formats/chapters.xlsx': workbook(),
         'example-c0ffee1/formats/popular.sav': spss(),
         'example-c0ffee1/formats/degrees.csv': DEGREES,

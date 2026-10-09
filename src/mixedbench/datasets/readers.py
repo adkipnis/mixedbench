@@ -245,13 +245,15 @@ def readDelimited(file: Path) -> pd.DataFrame | None:
     table is skipped; what does not parse (a banner the PyMC examples' ice-core csv opens
     with) is no table. Undecodable bytes (a latin-1 degree sign) are replaced, a byte-order
     mark dropped. pandas opens a `.gz` itself."""
-    options = {'encoding': 'utf-8-sig', 'encoding_errors': 'replace', 'engine': 'python'}
+    options = {'encoding': 'utf-8-sig', 'encoding_errors': 'replace'}
     lines, header = banner(file)
-    sep = None
+    # the sniffer needs the python engine, which ignores quotes under a regex separator; the C
+    # engine honours them, as read.table does (R's write.table output, ARM's ideo2.dat)
+    sep, engine = None, 'python'
     if not any(mark in header for mark in ',;\t|'):
-        sep = r'\s+'
+        sep, engine = r'\s+', 'c'
     try:
-        df = pd.read_csv(file, sep=sep, skiprows=len(lines), **options)
+        df = pd.read_csv(file, sep=sep, skiprows=len(lines), engine=engine, **options)
     except pd.errors.ParserError:
         return None
     return tidyText(df)
