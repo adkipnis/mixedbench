@@ -21,10 +21,11 @@ from urllib.parse import quote, urlparse
 
 import pandas as pd
 from mixedbench.datasets import docs, readers
-from mixedbench.datasets.deparse import Deparse
+from mixedbench.datasets.deparse import Deparse, DeparseError
 from mixedbench.datasets.readers import DATA_FILES, R_ERRORS, R_FILES, TABLE_FILES, Frames
 
 CRAN = 'https://cloud.r-project.org/src/contrib'
+R_SOURCES = 'https://cloud.r-project.org/src/base'
 ARCHIVES = ('.zip', '.tar.gz', '.tgz', '.tar')
 # Intermediate certificates a source's server leaves out of its chain, which OpenSSL, unlike
 # macOS and Windows, does not fetch itself: Harvard's content.sph.harvard.edu (Fitzmaurice et
@@ -81,8 +82,8 @@ for (i in seq_along(pages))
 @dataclass(frozen=True)
 class Source:
     kind: Literal['cran', 'git', 'url']
-    name: str  # CRAN package ('datasets' is base R), GitHub repository URL, or URL of a file
-    pin: str  # CRAN version, git revision, or the file's sha256
+    name: str  # CRAN package ('datasets' is base R's), GitHub repository URL, or URL of a file
+    pin: str  # CRAN or R version, git revision, or the file's sha256
     checksum: str | None = None  # sha256 of a CRAN or git archive; None skips the check
     path: str | None = None  # git, url: file or folder inside the tree; None -> all of it
     file: str | None = None  # url: the download's file name where the URL's path has none
@@ -162,8 +163,6 @@ class Loader:
     def manifestRow(self, source: Source, name: str) -> ManifestRow:
         """What the manifest records of an object, read from the whole source."""
         file = self._read(source)[name][0].file
-        if source.name == 'datasets':
-            return ManifestRow(file, None, None)
         data = (self._tree(source) / file).read_bytes()
         return ManifestRow(file, hashlib.sha256(data).hexdigest(), len(data))
 
@@ -232,6 +231,9 @@ class Loader:
     @staticmethod
     def _urls(source: Source) -> list[str]:
         """Where the source's archive is, in the order to try."""
+        if source.name == 'datasets':  # base R's package, inside R's source tarball
+            major = source.pin.split('.')[0]
+            return [f'{R_SOURCES}/R-{major}/R-{source.pin}.tar.gz']
         if source.kind == 'cran':  # CRAN moves superseded versions to Archive/
             stem = f'{source.name}_{source.pin}'
             return [f'{CRAN}/{stem}.tar.gz', f'{CRAN}/Archive/{source.name}/{stem}.tar.gz']
@@ -273,11 +275,6 @@ class Loader:
         """The source's files, extracted once: a CRAN package, a repository at a revision, or
         what a URL serves (an archive's content, else the file in a folder of its own)."""
         dir = self._dir(source)
-        if source.name == 'datasets':  # base R ships no tarball: R lays its namespace out as one
-            tree = dir / 'datasets'
-            if not tree.exists():
-                self._rscript(BASE_R, str(tree))
-            return tree
         file = self._download(source)
         is_archive = file.name.lower().endswith(ARCHIVES)
         if not is_archive:
@@ -287,7 +284,9 @@ class Loader:
             self._extract(file, tree)
         entries = list(tree.iterdir())
         if len(entries) == 1 and entries[0].is_dir():  # a single top-level folder is layout
-            return entries[0]
+            tree = entries[0]
+        if source.name == 'datasets':  # laid out in R's sources as a CRAN package is
+            return tree / 'src' / 'library' / 'datasets'
         return tree
 
     @staticmethod
@@ -336,7 +335,8 @@ class Loader:
     def _fetchFile(self, source: Source, row: ManifestRow) -> Path:
         """One file of the source, kept under `files/` so that a partial download never
         passes for the extracted `tree/` the enumerate path reads; a url that is no archive
-        is that file, base R's `datasets` a dump R makes of the whole namespace."""
+        is that file, base R's `datasets` a file of R's extracted source tarball, which keeps
+        the package below its top-level folder."""
         if source.name == 'datasets':
             return self._tree(source) / row.file
         if source.kind == 'url' and not self._isArchive(source):
@@ -410,15 +410,22 @@ class Loader:
     def _readFile(self, file: Path, source: Source, label: str) -> tuple[Frames, Reader]:
         """An R file through pyreadr; another file in a CRAN data/ folder by utils::data()'s
         rules, a `.R` file deparsed, a text file as read.table reads it; pandas reads the rest."""
-        if source.name == 'datasets':  # every file is an .rds R dumped
-            return self._readDumped(file), 'rscript'
         if file.suffix.lower() in R_FILES:
             return self._readRFile(file, source)
         if source.kind == 'cran' and file.suffix.lower() == '.r':
-            return Deparse(file).frames(), 'deparse'
+            return self._readDeparsed(file), 'deparse'
         if source.kind == 'cran':
             return readers.readData(file), 'pandas'
         return readers.readTables(file, label, source.layout), 'pandas'
+
+    @staticmethod
+    def _readDeparsed(file: Path) -> Frames:
+        """A file outside the deparse subset (most of base R's: time series, matrices) is no
+        table, so that enumerating the source does not fail on it."""
+        try:
+            return Deparse(file).frames()
+        except DeparseError:
+            return {file.stem: None}
 
     def _readRFile(self, file: Path, source: Source) -> tuple[Frames, Reader]:
         """An R file librdata rejects (geepack's muscatine, a plain data frame) is re-saved by R."""
