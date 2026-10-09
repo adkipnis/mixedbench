@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from mixedbench.registry.row import COLUMNS, FAMILIES, RESPONSE_TYPES
+from mixedbench.registry.row import COLUMNS, FAMILIES, RESPONSE_TYPES, VERIFIED
 
 
 # =====================================================================================
@@ -103,6 +103,7 @@ ALLOWED: dict[str, dict[str, tuple[str, ...]]] = {
         'published_model': YES_NO,
         'domain': DOMAINS,
         'confidence': ('high', 'medium', 'low'),
+        'verified': VERIFIED,
     },
     'excluded': {'reason': EXCLUSION_REASONS},
     'duplicates': {'verdict': ('same', 'different')},
@@ -112,7 +113,7 @@ ALLOWED: dict[str, dict[str, tuple[str, ...]]] = {
 REQUIRED = {
     'registry': (
         'source', 'object', 'model_index', 'response', 'response_type', 'grouping_factors',
-        'formula', 'published_model', 'domain', 'confidence',
+        'formula', 'published_model', 'domain', 'confidence', 'verified',
     ),
     'excluded': ('source', 'object', 'reason'),
     'duplicates': ('source_a', 'object_a', 'source_b', 'object_b', 'verdict'),

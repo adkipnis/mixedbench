@@ -67,6 +67,11 @@ def refusal(merger: Merger, shard: Path) -> pd.DataFrame:
         ({'model_index': '4'}, 'model_index', 'at most 3 models per object'),
         ({'covariates': 'breed;herd'}, 'grouping_factors', 'herd is also a covariate'),
         ({'family': 'poisson'}, 'family', 'not allowed'),  # a restatement of the family rule
+        ({'verified': 'yes'}, 'verified', 'not allowed'),
+        ({'verified': ''}, 'verified', 'required'),
+        ({'random_slopes': 'breed'}, 'random_slopes', 'not a slope term'),
+        ({'random_slopes': 'weight|herd'}, 'random_slopes', 'weight is not a covariate'),
+        ({'random_slopes': 'breed||farm'}, 'random_slopes', 'farm is not a grouping factor'),
         (
             {'documented_prior': 'sd ~ student_t(3, 0, 2.5)', 'published_model': 'no'},
             'documented_prior',
@@ -88,6 +93,16 @@ def test_a_reading_the_table_contradicts_is_refused_with_the_row_named(
     assert list(problems['column']) == [column]
     assert problems.iloc[0]['problem'] == problem
     assert readRows(merger.registry / 'registry.csv') == []
+
+
+def test_slope_terms_on_a_covariate_over_a_grouping_factor_merge(merger):
+    """The gate refuses only what ADR 0001 forbids: a correlated and an uncorrelated slope on
+    the row's own covariates and factors pass and land as written."""
+    rows = readRows(FIXTURES / 'registry_herds.csv')
+    rows[0] |= {'random_slopes': 'breed|herd;feed||region'}
+    mergeShard(merger, writeShard(merger.survey / 'shards' / 'registry_slopes.csv', rows))
+    merged = readRows(merger.registry / 'registry.csv')
+    assert [r['random_slopes'] for r in merged] == ['breed|herd;feed||region', '']
 
 
 def test_a_shard_with_another_header_is_refused_naming_each_column(merger):
@@ -203,6 +218,25 @@ def test_an_empty_shard_migrates_a_registry_of_the_old_shape(merger):
     assert readCsv(path).equals(current)
     mergeShard(merger, shard)
     assert path.read_bytes() == migrated
+
+
+def test_a_header_only_shard_adds_random_slopes_and_verified_empty_in_place(merger):
+    """The migration of #26: the two agent columns land empty after `interactions` and
+    `confidence`, every other cell byte-identical, so the registry's diff is the two columns."""
+    mergeShard(merger, FIXTURES / 'registry_herds.csv')
+    path = merger.registry / 'registry.csv'
+    old = readCsv(path).drop(columns=['random_slopes', 'verified'])
+    writeCsv(old, path)
+    header = ','.join(readRows(FIXTURES / 'registry_herds.csv')[0])
+    shard = merger.survey / 'shards' / 'registry_schema_2.csv'
+    shard.write_text(header + '\n')
+    mergeShard(merger, shard)
+    migrated = readCsv(path)
+    columns = list(migrated.columns)
+    assert columns[columns.index('interactions') + 1] == 'random_slopes'
+    assert columns[columns.index('confidence') + 1] == 'verified'
+    assert set(migrated['random_slopes']) == set(migrated['verified']) == {''}
+    assert migrated.drop(columns=['random_slopes', 'verified']).equals(old)
 
 
 def test_equal_row_count_and_column_cardinalities_flag_a_duplicate_candidate(merger):
