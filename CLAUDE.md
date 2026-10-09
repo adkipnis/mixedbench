@@ -182,6 +182,9 @@ Per roadmap item: `/grill-me` (decision only) or `/grill-with-docs` (decision th
 several sessions, then `/tdd` or `/implement` per ticket, then tick the `ROADMAP.md`. One
 funnel stage per session.
 
+A spec's ticket table gives per ticket the skill (`/tdd` or `/implement`), the model
+(Sonnet 5.5, Opus 5.5 or Fable 5.1) and the expected tokens.
+
 ### Issue tracker
 
 Specs and tickets are GitHub Issues on this repo, via `gh`, one area label per issue
