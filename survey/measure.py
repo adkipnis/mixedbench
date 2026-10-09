@@ -10,6 +10,7 @@ from itertools import combinations
 
 import numpy as np
 import pandas as pd
+from mixedbench.contract import columnType, withComposites
 from mixedbench.registry.row import parseTypes, parts, splitList
 
 # =====================================================================================
@@ -22,24 +23,6 @@ DIMENSION_COLUMNS = (
     'singleton_share', 'cv', 'alpha',
 )  # fmt: skip
 COLUMN_COLUMNS = (*IDENTITY, 'column', 'type', 'K', 'level', 'constant_within', 'missing_share', 'in_model')  # fmt: skip
-# A string or integer column with at most this many distinct values is a categorical (spec #14).
-MAX_INTEGER_LEVELS = 10
-
-
-def withComposites(df: pd.DataFrame, factors: tuple[str, ...]) -> pd.DataFrame:
-    """A grouping factor `a:b` names no column (lme4's `(1|a:b)`, the whole plots of a
-    split-plot): the combination of its parts is added under that name, one level per pair of
-    levels present; a row missing a part has no level (the ARM radon survey's rows without a
-    county). Built here once, so the merge's checks and the measures see a plain column."""
-    composites = {}
-    for factor in factors:
-        columns = parts(factor)
-        if len(columns) > 1:
-            composite = df[columns[0]].astype(str)
-            for part in columns[1:]:
-                composite = composite + ':' + df[part].astype(str)  # missing stays missing
-            composites[factor] = composite
-    return df.assign(**composites)
 
 
 def fitAlpha(sizes: pd.Series) -> float:
@@ -130,7 +113,7 @@ class Measurer:
     # ---------------------------------------------------------------------------------
     def describe(self, column: str) -> dict:
         values = self.df[column]
-        kind, levels = self.columnType(values, self.declared.get(column, ''))
+        kind, levels = columnType(values, self.declared.get(column, ''))
         constantWithin = [f for f in self.factors if self.constantWithin(column, f)]
         return {
             'type': kind,
@@ -140,25 +123,6 @@ class Measurer:
             'missing_share': round(float(values.isna().mean()), 4),
             'in_model': 'yes' if column in self.covariates else 'no',
         }
-
-    @staticmethod
-    def columnType(values: pd.Series, declared: str) -> tuple[str, int | str]:
-        """The one typing rule, in order: ordered categorical; exactly two distinct values is
-        binary; a declared or typed categorical, a string, or an integer with few distinct values
-        is categorical with K levels; otherwise continuous. K is blank for a continuous column."""
-        distinct = values.dropna().nunique()
-        dtype = values.dtype
-        if isinstance(dtype, pd.CategoricalDtype) and dtype.ordered:
-            return 'ordered', distinct
-        if distinct == 2:
-            return 'binary', 2
-        if declared == 'continuous':
-            return 'continuous', ''
-        if isinstance(dtype, pd.CategoricalDtype) or pd.api.types.is_string_dtype(dtype):
-            return 'categorical', distinct
-        if pd.api.types.is_integer_dtype(dtype) and distinct <= MAX_INTEGER_LEVELS:
-            return 'categorical', distinct
-        return 'continuous', ''
 
     def constantWithin(self, column: str, factor: str) -> bool:
         distinct = self.df.groupby(factor, observed=True)[column].nunique()
