@@ -1,5 +1,5 @@
 ---
-status: accepted
+status: accepted, amended 2026-10-09
 date: 2026-10-08
 ---
 
@@ -54,3 +54,16 @@ correction a benchmark change.
   themselves keep their sources' terms (ADR 0003).
 - Rejected: inheriting metabeta's CC-BY-NC-SA licence, since a benchmark under a
   non-commercial licence bars companies and most ML groups.
+
+## Amendment 2026-10-09: the grill of roadmap item 3
+
+- Decision: a `verified` registry column records why a row counts as verified: `hand` for
+  the hand sample's rows and every Tier D row, `high` for the remaining rows of high
+  confidence, `second-reading` for every other row, since the blind second reading was the
+  method for all medium and low rows. It is assigned once by script.
+- Why: the suite's `problems.csv` and the paper state per problem why it is in; prose
+  summarising it was rejected by the docs rule, and admitting `high` only would discard the
+  hand sample's finding that medium rows agree. A second hand sample during item 4 is open.
+- Decision: the share of rows dropped for missing values is recorded on the candidate list,
+  `suite/<version>/candidates.csv`, and not capped. A cap is a branch for a case not yet
+  observed; the admission script prints the top of the distribution.
