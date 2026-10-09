@@ -177,6 +177,18 @@ def test_merging_the_same_shard_twice_changes_nothing(merger):
     assert after == before
 
 
+def test_a_replaced_row_keeps_its_place(merger, tmp_path):
+    """A shard re-merging a row replaces it where it stands, so a correction shows in the
+    registry's diff as that row alone and the registry order a seeded draw reads holds."""
+    mergeShard(merger, FIXTURES / 'registry_herds.csv')
+    first = readRows(FIXTURES / 'registry_herds.csv')[0]
+    shard = writeShard(tmp_path / 'registry_herds_note.csv', [first | {'notes': 're-read'}])
+    mergeShard(merger, shard)
+    rows = readRows(merger.registry / 'registry.csv')
+    assert [(r['model_index'], r['notes']) for r in rows][0] == ('1', 're-read')
+    assert [r['model_index'] for r in rows] == ['1', '2']
+
+
 def test_an_empty_shard_migrates_a_registry_of_the_old_shape(merger):
     """The one-time migration of #7 is a merge of a shard with the new header and no rows: the
     old rows gain `family` and `documented_prior` empty and `licence` filled, in the new column
