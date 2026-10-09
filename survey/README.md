@@ -28,6 +28,7 @@ by script.
 | `prompts/read.md` | | the reading agent's brief |
 | `schema.py`, `sources.py`, `help.py`, `measure.py`, `summarise.py` | | file contract, frame, help pages, measures, summary |
 | `verify.py` | | the rule that filled `verified` once (#26) |
+| `slopes.py` | | the parser that filled `random_slopes` once, reporting the shapes Alex decided (#27) |
 | `archive/` | | finished scripts and their outputs, reproducible at tag `survey-archive` ([README](archive/README.md)) |
 | `tests/` | | `uv run pytest survey/tests`, by hand; the root run never recurses here |
 
@@ -152,8 +153,10 @@ first); `reader`; `licence`, the `licence:` key or a CRAN DESCRIPTION's `License
 `LICENCES` in `schema.py` and rewritten at every merge (ADR 0003).
 
 `random_slopes` and `verified` came in by the header-only `shards/registry_schema_2.csv`;
-`verify.py` filled `verified` once through `shards/registry_verified.csv`. A later row fills
-both in its own shard.
+`verify.py` filled `verified` once through `shards/registry_verified.csv`; `slopes.py` filled
+`random_slopes` through `shards/registry_slopes.csv`, Alex's decisions on the rows it reported
+through `shards/registry_slopes_decisions.csv` (`VERDICTS.md`). A later row fills both in its
+own shard.
 
 ### `excluded.csv`, `duplicates.csv`, `dropped.csv`
 
