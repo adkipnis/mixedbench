@@ -13,7 +13,7 @@ release that freezes it.
   dialect, row grammar, manifest), so `survey/` and the contract share one parser (#16,
   candidate 2). The `random_slopes` and `verified` columns, filled by script. `Problem`
   from a registry row (ADR 0001, amended 2026-10-09): rows, coding, per-regime
-  standardisation, family rule, prior, splits, oracle generator, id and hash; the
+  standardisation, family rule, prior, splits, id and hash; the
   materialised problem (parquet and JSON) as the interface; the admission script writes
   suite 1.1's candidate list (membership freezes with the references in 1.1, since admission
   needs a reference that passes the bar, ADR 0002); the weekly fetch CI as the link-rot
@@ -37,7 +37,11 @@ release that freezes it.
 
 - [ ] **8 Suite 1.2.** Oracle-track references; negative binomial and probit from the `family`
   column; retirements from the weekly fetch log; random-effect blocks as the source writes
-  them (#46, grilled when this item starts)
+  them (#46, grilled when this item starts). The oracle generator, moved here from item 3
+  (#31) and grilled when this item starts: metabeta's simulator draws the parameters and
+  the response under any prior it supports, mixedbench turns them into a replicate (new id,
+  splits and scales, the truth, the prior) and owns its format, so the simulation exists once
+  and the dependency stays one-way (metabeta-v3 ADR 0002)
 - [ ] **9 Extensions.** An R loader; an "as published" prior track from `documented_prior`; a
   permitted-mirror fallback for rotted sources (ADR 0003)
 
