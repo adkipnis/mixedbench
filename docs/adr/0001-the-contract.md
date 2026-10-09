@@ -111,6 +111,11 @@ any rule is a new suite version, never a recomputation.
   `grouping_factors` already writes `(1|a/b)` as `a;a:b`.
 - Why: 97 of 714 documented models carry a slope, and intercept-only would make 14% of the
   problems not their documented model.
+- Clarified 2026-10-09 (#27, after an outside review): `x||g` is independent of the intercept
+  and of every other slope of `g`. Both kinds of term act on the standardised column, so a
+  zero correlation or a slope without its intercept is set at the sample mean, not at the
+  source's zero. This is a benchmark assumption of suite 1.1. A slope that maps the source's structure into another basis is equivalent in structure, not
+  in prior. Keeping the source's own blocks is a contract extension (#46).
 
 **Family rule, two cases.**
 
