@@ -802,3 +802,10 @@ sampled row no longer in the registry. Verdicts per row:
 - `published_model` `no`: agridat nass.sorghum (the help fits Illinois corn); cmm_ilea567
   (the seven-predictor model is not in the source).
 - excluded: hox SocsLong.sav, `simulated data` per the author's data appendix (DataStories.pdf).
+
+Siblings of batch 3, aligned at Alex's request (`shards/registry_hand_sample_3_siblings.csv`):
+rabe_hesketh coursework #1 takes `written`, the bivariate model's first response
+(`published_model` `yes`, `high`); snijders_bosker sheet 16 #1 takes Table 16.2's predictors
+(ch16.r fits them for both responses); mlmRev Chem97 #1 `score` `ordinal`. Both coursework.dta
+responses code missing as -1 (202 and 180 rows), kept as values and noted; whether the
+contract recodes them is open.
