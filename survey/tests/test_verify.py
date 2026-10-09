@@ -6,7 +6,7 @@ from collections import Counter
 from pathlib import Path
 
 from schema import REGISTRY
-from verify import Verifier
+from verify import SAMPLE_COLUMNS, Verifier
 
 
 def writeRegistry(registry: Path, rows: list[dict]) -> None:
@@ -259,3 +259,111 @@ def test_handoff_names_page_and_download_urls_and_no_local_path(tmp_path):
     assert str(tmp_path) not in text
     assert 'registry/' not in text
     assert 'cache' not in text
+
+
+def reading(source: str, object: str, **fields: str) -> dict:
+    """A row key with a plain reading; `fields` overrides the ones a test edits."""
+    base = {'response': 'y', 'response_type': 'continuous', 'grouping_factors': 'g',
+            'covariates': 'x', 'formula': 'y ~ x + (1 | g)', 'published_model': 'yes'}  # fmt: skip
+    return {'source': source, 'object': object, 'model_index': '1'} | base | fields
+
+
+def writeSample(survey: Path, rows: list[dict]) -> None:
+    with open(survey / 'sample.csv', 'w', newline='') as f:
+        writer = csv.DictWriter(f, fieldnames=SAMPLE_COLUMNS, restval='', quoting=csv.QUOTE_ALL)
+        writer.writeheader()
+        writer.writerows(rows)
+
+
+def readTable(path: Path) -> dict[str, dict[str, float]]:
+    """The agreement table as stratum -> column -> number."""
+    return {row.pop('stratum'): {k: float(v) for k, v in row.items()} for row in readRows(path)}
+
+
+def test_agree_gives_the_share_of_rows_whose_reading_stood_per_stratum_tier_and_overall(tmp_path):
+    """The registry's reading quality is the share of sampled rows whose draw-time reading the
+    hand check left unchanged, per stratum and field, pooled per tier and overall. Worked by
+    hand: R/high's `b` changed its response, R/low's `c` its formula, T/medium's `e` its grouping
+    factors."""
+    registry = tmp_path / 'registry'
+    survey = tmp_path / 'survey'
+    survey.mkdir()
+    drawn = [
+        reading('r', 'a') | {'stratum': 'R/high'},
+        reading('r', 'b') | {'stratum': 'R/high'},
+        reading('r', 'c') | {'stratum': 'R/low'},
+        reading('t', 'd') | {'stratum': 'T/medium'},
+        reading('t', 'e') | {'stratum': 'T/medium'},
+    ]
+    writeSample(survey, drawn)
+    writeRegistry(registry, [
+        reading('r', 'a'),
+        reading('r', 'b', response='log_y'),
+        reading('r', 'c', formula='y ~ x + (1 + x | g)'),
+        reading('t', 'd'),
+        reading('t', 'e', grouping_factors='h'),
+    ])  # fmt: skip
+    verifier = Verifier(registry, survey)
+
+    verifier.agree()
+
+    table = readTable(survey / 'agreement.csv')
+    assert list(table) == ['R/high', 'R/low', 'T/medium', 'R', 'T', 'all']
+    assert [table[s]['rows'] for s in table] == [2, 1, 2, 3, 2, 5]
+    assert table['R/high']['response'] == 0.5
+    assert table['R/low']['formula'] == 0
+    assert table['T/medium']['grouping_factors'] == 0.5
+    assert table['R']['response'] == 0.667
+    assert table['R']['formula'] == 0.667
+    assert table['all']['response'] == 0.8
+    assert table['all']['grouping_factors'] == 0.8
+    assert table['all']['formula'] == 0.8
+    untouched = ('response_type', 'trials', 'covariates', 'interactions', 'published_model')
+    assert all(table[s][f] == 1 for s in table for f in untouched)
+
+
+def test_agree_reads_lists_as_sets_terms_as_unordered_and_formulas_without_whitespace(tmp_path):
+    """A reading the hand check rewrote in another order or spacing still stood: `;`-lists are
+    sets, `a:b` names the same term as `b:a`, and a formula's spaces carry no meaning. `b`'s
+    added covariate is a real change."""
+    registry = tmp_path / 'registry'
+    survey = tmp_path / 'survey'
+    survey.mkdir()
+    drawn = {'grouping_factors': 'site;plot:site', 'covariates': 'x;z', 'interactions': 'x:z',
+             'formula': 'y ~ x * z + (1 | site/plot)'}  # fmt: skip
+    stratum = {'stratum': 'R/high'}
+    writeSample(survey, [reading('r', 'a') | drawn | stratum, reading('r', 'b') | drawn | stratum])
+    rewritten = {'grouping_factors': 'site:plot;site', 'covariates': 'z;x', 'interactions': 'z:x',
+                 'formula': 'y~x*z+(1|site/plot)'}  # fmt: skip
+    writeRegistry(registry, [
+        reading('r', 'a') | drawn | rewritten,
+        reading('r', 'b') | drawn | rewritten | {'covariates': 'x;z;w'},
+    ])  # fmt: skip
+    verifier = Verifier(registry, survey)
+
+    verifier.agree()
+
+    shares = readTable(survey / 'agreement.csv')['R/high']
+    assert shares['grouping_factors'] == 1
+    assert shares['interactions'] == 1
+    assert shares['formula'] == 1
+    assert shares['covariates'] == 0.5
+
+
+def test_agree_counts_a_sampled_row_that_left_the_registry_as_disagreeing_everywhere(tmp_path):
+    """A row the hand check took out of the registry (hox SocsLong.sav, simulated data) was a
+    reading that should not exist, so it counts against every field rather than dropping out of
+    the rows compared."""
+    registry = tmp_path / 'registry'
+    survey = tmp_path / 'survey'
+    survey.mkdir()
+    stratum = {'stratum': 'T/medium'}
+    writeSample(survey, [reading('t', 'kept') | stratum, reading('t', 'gone') | stratum])
+    writeRegistry(registry, [reading('t', 'kept')])
+    verifier = Verifier(registry, survey)
+
+    verifier.agree()
+
+    shares = readTable(survey / 'agreement.csv')['T/medium']
+    assert shares['rows'] == 2
+    assert all(shares[f] == 0.5 for f in shares if f != 'rows')
