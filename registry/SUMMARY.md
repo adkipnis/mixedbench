@@ -250,8 +250,8 @@ its levels less one, an interaction the product.
 
 ## Tier D
 
-The practice survey's deposits, resolved and pulled by `resolve.py`; the loss by cause is the
-tier's finding.
+The practice survey's deposits, resolved and pulled by the archived `resolve.py` (tag
+`survey-archive`); the loss by cause is the tier's finding.
 
 - Links: 98 over 60 papers; by status ok 89, no files 6, unresolved 1, restricted 1, not a deposit 1.
 - Listed files: 1632; by role other 622, data 607, script 231, documentation 172; data files not pulled: too large 30, hidden path 9.
