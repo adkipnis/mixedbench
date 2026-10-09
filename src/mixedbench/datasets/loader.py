@@ -1,4 +1,4 @@
-"""Dataset loader for the dimension survey: pinned source as input, typed DataFrame as output.
+"""Dataset loader: pinned source as input, typed DataFrame as output.
 The pipeline url -> archive -> tree -> files -> frames and the cache live here, without R
 (ADR 0003); the formats are `readers.py`."""
 
@@ -19,11 +19,10 @@ from urllib.parse import quote, urlparse
 
 import pandas as pd
 from mixedbench.datasets import readers
-from mixedbench.datasets.readers import Reader
 
 CRAN = 'https://cloud.r-project.org/src/contrib'
 R_SOURCES = 'https://cloud.r-project.org/src/base'
-ARCHIVES = ('.zip', '.tar.gz', '.tgz', '.tar')
+ARCHIVES = ('.zip', '.tar.gz')
 # Intermediate certificates a source's server leaves out of its chain, which OpenSSL, unlike
 # macOS and Windows, does not fetch itself: Harvard's content.sph.harvard.edu (Fitzmaurice et
 # al.) sends InCommon's instead of Sectigo's OV R36, from its leaf's CA Issuers URL
@@ -47,10 +46,10 @@ class Source:
 @dataclass(frozen=True)
 class DataObject:
     name: str  # the R object, or the file's path inside the source
-    file: str  # relative to the source tree; a label for the survey table, never opened
+    file: str  # relative to the source tree
     n_rows: int | None  # None: the object is no table (a model fit, a list, a time series)
     n_cols: int | None
-    reader: Reader  # the file's route: pyreadr, rdata, pandas or the deparse reader
+    reader: readers.Reader  # the file's route: pyreadr, rdata, pandas or the deparse reader
 
 
 @dataclass(frozen=True)
@@ -97,6 +96,7 @@ class Loader:
         self.fetch = fetch
         self.manifest = manifest
         self._frames: dict[Source, dict[str, tuple[DataObject, pd.DataFrame | None]]] = {}
+        self._verified: set[tuple[Path, str]] = set()  # (file, checksum) pairs that matched
 
     def objects(self, source: Source) -> list[DataObject]:
         pairs = self._read(source).values()
@@ -133,18 +133,9 @@ class Loader:
         entries = list(tree.iterdir())
         if len(entries) == 1 and entries[0].is_dir():  # a single top-level folder is layout
             tree = entries[0]
-        _, package = self._location(source)
-        return tree / package
-
-    @staticmethod
-    def _decimalPoint(values: pd.Series) -> pd.Series:
-        """A string column with decimal commas and no points (a European csv, kleisner_2026's
-        BMI) read with points; anything else as it is, so a thousands separator fails loudly."""
-        if not pd.api.types.is_string_dtype(values):
-            return values
-        if values.str.contains('.', regex=False).any():
-            return values
-        return values.str.replace(',', '.', regex=False)
+        if source.name == 'datasets':  # base R's, laid out in R's sources as a CRAN package is
+            return tree / 'src/library/datasets'
+        return tree
 
     # ------------------------------------------------------------------------------------------
     # pipeline: url -> archive -> tree -> files -> frames
@@ -156,28 +147,28 @@ class Loader:
         if source.kind == 'cran':
             return self.cache / 'cran' / f'{source.name}_{source.pin}'
         if source.kind == 'git':
-            owner, repo = source.name.removesuffix('.git').rsplit('/', 2)[-2:]
+            owner, repo = self._repo(source).split('/')
             return self.cache / 'git' / f'{owner}_{repo}_{source.pin}'
         return self.cache / 'url' / source.pin
 
     @staticmethod
-    def _location(source: Source) -> tuple[list[str], str]:
-        """Where the source's download is, in the order to try, and the source's folder in it."""
-        if source.name == 'datasets':  # base R's, laid out in R's sources as a CRAN package is
+    def _urls(source: Source) -> list[str]:
+        """Where the source's download is, in the order to try."""
+        if source.name == 'datasets':  # base R's, in R's sources
             major = source.pin.split('.')[0]
-            return [f'{R_SOURCES}/R-{major}/R-{source.pin}.tar.gz'], 'src/library/datasets'
+            return [f'{R_SOURCES}/R-{major}/R-{source.pin}.tar.gz']
         if source.kind == 'cran':  # CRAN moves superseded versions to Archive/
             stem = f'{source.name}_{source.pin}'
-            return [f'{CRAN}/{stem}.tar.gz', f'{CRAN}/Archive/{source.name}/{stem}.tar.gz'], ''
+            return [f'{CRAN}/{stem}.tar.gz', f'{CRAN}/Archive/{source.name}/{stem}.tar.gz']
         if source.kind == 'git':  # GitHub's archive of the tree at a revision
-            return [f'{source.name}/archive/{source.pin}.tar.gz'], ''
+            return [f'{source.name}/archive/{source.pin}.tar.gz']
         if source.mirror is not None:  # asked after the host, which stays the source
-            return [source.name, source.mirror], ''
-        return [source.name], ''
+            return [source.name, source.mirror]
+        return [source.name]
 
     def _download(self, source: Source) -> Path:
         """Fetched once from the first URL that answers; the digest is checked on cache hits too."""
-        urls, _ = self._location(source)
+        urls = self._urls(source)
         filename = source.file or Path(urlparse(urls[0]).path).name
         file = self._dir(source) / filename
         if not file.exists():
@@ -186,12 +177,16 @@ class Loader:
         self._verify(file, source.checksum)
         return file
 
-    @staticmethod
-    def _verify(file: Path, checksum: str | None) -> None:
-        """None skips the check: a CRAN tarball without a checksum."""
-        digest = hashlib.sha256(file.read_bytes()).hexdigest()
-        if checksum is not None and digest != checksum:
+    def _verify(self, file: Path, checksum: str | None) -> None:
+        """Once per loader, in chunks, since every manifest load passes through the source's
+        archive; None skips the check: a CRAN tarball without a checksum."""
+        if checksum is None or (file, checksum) in self._verified:
+            return
+        with file.open('rb') as f:
+            digest = hashlib.file_digest(f, 'sha256').hexdigest()
+        if digest != checksum:
             raise ValueError(f'{file} checksum {digest} differs from pinned {checksum}')
+        self._verified.add((file, checksum))
 
     def _fetchFirst(self, source: Source, urls: list[str]) -> bytes:
         for url in urls:
@@ -246,14 +241,14 @@ class Loader:
         file = self._dir(source) / 'files' / row.file
         if not file.exists():
             file.parent.mkdir(parents=True, exist_ok=True)
-            file.write_bytes(self._fetchFirst(source, [self._rawUrl(source, row.file)]))
+            revision = f'https://raw.githubusercontent.com/{self._repo(source)}/{source.pin}'
+            file.write_bytes(self._fetchFirst(source, [f'{revision}/{quote(row.file)}']))
         return file
 
     @staticmethod
-    def _rawUrl(source: Source, file: str) -> str:
-        """Every git source is on GitHub."""
-        repo = source.name.removesuffix('.git').removeprefix('https://github.com/')
-        return f'https://raw.githubusercontent.com/{repo}/{source.pin}/{quote(file)}'
+    def _repo(source: Source) -> str:
+        """A git source's `owner/repo`; every git source is on GitHub."""
+        return source.name.removeprefix('https://github.com/')
 
     def _read(self, source: Source) -> dict[str, tuple[DataObject, pd.DataFrame | None]]:
         """Every data object of the source by name, with its frame; parsed once per source,
@@ -275,3 +270,13 @@ class Loader:
                     shape = df.shape
                 objects[name] = DataObject(name, label, *shape, reader), df
         return objects
+
+    @staticmethod
+    def _decimalPoint(values: pd.Series) -> pd.Series:
+        """A string column with decimal commas and no points (a European csv, kleisner_2026's
+        BMI) read with points; anything else as it is, so a thousands separator fails loudly."""
+        if not pd.api.types.is_string_dtype(values):
+            return values
+        if values.str.contains('.', regex=False).any():
+            return values
+        return values.str.replace(',', '.', regex=False)
