@@ -1,4 +1,5 @@
-# Builds the CRAN-shaped fixture tarball for test_datasets.py. Rerun from the repo root:
+# Builds the CRAN-shaped fixture tarball for test_loader.py, test_readers.py and
+# survey/tests/test_help.py. Rerun from the repo root:
 #   Rscript tests/datasets/fixtures/make_fixture.R <build dir> $PWD/tests/datasets/fixtures/fixture_1.0.tar.gz
 args <- commandArgs(trailingOnly = TRUE)
 build <- args[1]; out <- args[2]

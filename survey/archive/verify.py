@@ -25,9 +25,8 @@ from urllib.parse import quote
 
 import numpy as np
 import pandas as pd
-from schema import COLUMN_LIST_COLUMNS, REGISTRY, TERM_COLUMNS
+from schema import COLUMN_LIST_COLUMNS, REGISTRY, TERM_COLUMNS, readCsv
 from sources import readFrame
-from summarise import readCsv
 
 from mixedbench.datasets import Source
 

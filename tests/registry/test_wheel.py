@@ -9,9 +9,11 @@ import os
 import shutil
 import subprocess
 import sys
+import typing
 from pathlib import Path
 
 import pytest
+from mixedbench import registry
 
 ROOT = Path(__file__).parents[2]
 # imports both packages from the target, reports where they and the registry files resolve
@@ -54,7 +56,8 @@ def test_both_packages_import_from_the_wheel(installed: tuple[Path, dict]) -> No
 
 def test_the_registry_files_resolve_inside_the_install(installed: tuple[Path, dict]) -> None:
     target, report = installed
-    assert len(report['files']) == 8
+    files = typing.get_args(registry.RegistryFile)
+    assert len(report['files']) == len(files)
     assert all(Path(p).is_relative_to(target) for p in report['files'])
 
 

@@ -2,15 +2,12 @@
 Dirichlet α, the relation between factors, column types and levels, d_doc and d_all, every
 expected value computed by hand from `fixtures/herds.csv`."""
 
-import csv
-from pathlib import Path
-
 import numpy as np
 import pandas as pd
 import pytest
+from conftest import FIXTURES, readRows
 from measure import Measurer, fitAlpha
 
-FIXTURES = Path(__file__).parent / 'fixtures'
 CATEGORICAL = ('region', 'herd', 'breed', 'feed')
 
 
@@ -23,8 +20,7 @@ def herds() -> pd.DataFrame:
 
 @pytest.fixture
 def rows() -> list[dict]:
-    with open(FIXTURES / 'registry_herds.csv', newline='') as f:
-        rows = list(csv.DictReader(f))
+    rows = readRows(FIXTURES / 'registry_herds.csv')
     for row in rows:
         row['tier'] = 'D'
     return rows

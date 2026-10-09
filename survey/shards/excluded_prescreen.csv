@@ -106,7 +106,7 @@
 "datasets","BJsales","unreadable format","no frame"
 "datasets","BOD","unreadable format","no frame"
 "datasets","EuStockMarkets","unreadable format","no frame"
-"datasets","Formaldehyde","unreadable format","no frame"
+"datasets","Formaldehyde","no grouping structure","no repeated column"
 "datasets","HairEyeColor","unreadable format","no frame"
 "datasets","Harman23.cor","unreadable format","no frame"
 "datasets","Harman74.cor","unreadable format","no frame"

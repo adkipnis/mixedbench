@@ -1,4 +1,5 @@
-"""File to frames, by format: R files through pyreadr, or rdata where librdata rejects one;
+"""File to frames, by format, and which files of a tree hold data: R files through pyreadr,
+or rdata where librdata rejects one; a CRAN package's data/ folder as utils::data() reads it;
 delimited and fixed-width text, Excel workbooks, JSON records and Stan data dicts, SPSS, Stata
 and Arrow through pandas."""
 
@@ -11,10 +12,12 @@ import struct
 import warnings
 import zipfile
 from pathlib import Path
+from typing import Literal
 
 import pandas as pd
 import pyreadstat
 import rdata
+from mixedbench.datasets.deparse import Deparse, DeparseError
 from pyreadr import LibrdataError, PyreadrError
 from pyreadr._pyreadr_parser import PyreadrParser
 
@@ -22,8 +25,9 @@ R_FILES = {'.rda', '.rdata', '.rds'}  # meant for pyreadr, or rdata
 DATA_FILES = {'.r', '.tab', '.txt', '.csv'}  # meant for utils::data()
 TABLE_FILES = {  # meant for pandas
     '.csv', '.tsv', '.tab', '.txt', '.dat', '.xlsx', '.xls', '.json', '.dta', '.sav',
-    '.arrow', '.pq', '.parquet',
+    '.arrow', '.pq',
 }  # fmt: skip
+DOC_STEMS = ('readme', 'codebook', 'description', 'notes', 'metadata', 'variables', 'dictionary')
 NOTE_SHEETS = ('contents', 'readme', 'codebook', 'notes', 'description')  # a workbook's codebook
 # LibrdataError is not a PyreadrError; the IndexError is pyreadr's value-label handler indexing
 # past the column names of a labelled data frame inside an .RData (a Tier D deposit, 2026-10-08)
@@ -33,7 +37,72 @@ R_ERRORS = (PyreadrError, LibrdataError, IndexError)
 RDATA_ERRORS = (ValueError, AssertionError)
 # a class rdata has no constructor for, read as the data frame it extends
 FRAME_CLASSES = r'Missing constructor for R class "(data\.table|tbl_df|tbl)"'
+Reader = Literal['pyreadr', 'rdata', 'pandas', 'deparse']
 Frames = dict[str, pd.DataFrame | None]  # object name -> its table; None when it has no table
+
+
+def read(
+    file: Path, label: str, *, layout: tuple[str, ...] | None = None, cran: bool = False
+) -> tuple[Frames, Reader]:
+    """The file's objects and its route. An R file through pyreadr, or rdata where librdata
+    rejects it (geepack's muscatine, a plain data frame); a file in a CRAN package's data/
+    folder by utils::data()'s rules; any other file one object named by its `label`, or one per
+    sheet of a workbook, read by pandas as `layout` declares a headerless text file."""
+    suffix = file.suffix.lower()
+    if suffix in R_FILES:
+        try:
+            return readR(file), 'pyreadr'
+        except R_ERRORS:
+            return readRdata(file), 'rdata'
+    if cran and suffix == '.r':
+        try:
+            return Deparse(file).frames(), 'deparse'
+        except DeparseError:  # most of base R's data/*.R files: time series, matrices
+            return {file.stem: None}, 'deparse'
+    if cran:
+        return readData(file), 'pandas'
+    if bare(file).suffix in ('.xlsx', '.xls'):
+        return readWorkbook(file, label), 'pandas'
+    if layout is not None:
+        return {label: readLayout(file, layout)}, 'pandas'
+    return {label: readTable(file)}, 'pandas'
+
+
+def isData(file: Path, *, cran: bool = False) -> bool:
+    """In a CRAN package's data/ folder, what utils::data() reads; elsewhere what R or pandas
+    read, less the text files that are documentation. Never Stan initial values beside a data
+    dict, nor a zip's resource forks."""
+    readable = R_FILES | TABLE_FILES
+    if cran:
+        readable = R_FILES | DATA_FILES
+    if bare(file).suffix not in readable:
+        return False
+    if file.name.endswith('.init.json') or '__MACOSX' in file.parts:
+        return False
+    if cran:
+        return True
+    return not isDoc(file) and not describesSibling(file)
+
+
+def isDoc(file: Path) -> bool:
+    """Markdown and reST; a `.txt` named like documentation (`codebook.txt`, not a data
+    file such as the PyMC examples' `Guber1999data.txt`); a suffix-less file in capitals
+    (`README`, `LICENSE`), not a dotfile or a suffix-less data file."""
+    suffix = file.suffix.lower()
+    if suffix in ('.md', '.rst'):
+        return True
+    if suffix == '.txt':
+        return any(stem in file.stem.lower() for stem in DOC_STEMS)
+    return suffix == '' and file.name.isupper()
+
+
+def describesSibling(file: Path) -> bool:
+    """A `.txt` named after a data file of another format beside it (Fitzmaurice's `lead.txt`
+    beside `lead.dta`, ROS's `bypass.txt` beside `bypass.csv`) is its description, no data."""
+    if file.suffix.lower() != '.txt':
+        return False
+    siblings = [f for f in file.parent.iterdir() if f.is_file() and f != file]
+    return any(bare(f).stem == file.stem.lower() for f in siblings)
 
 
 def bare(file: Path) -> Path:
@@ -147,25 +216,18 @@ def readData(file: Path) -> Frames:
 # ==============================================================================================
 
 
-def readTables(file: Path, label: str, layout: tuple[str, ...] | None) -> Frames:
-    """One object per file, named by its label; a workbook of several data sheets is one
-    object per sheet, `<label>!<sheet>`, its codebook sheets (`Contents`) left out."""
-    suffix = bare(file).suffix
-    if suffix in ('.xlsx', '.xls'):
-        return workbookObjects(file, label)
-    if layout is not None:
-        return {label: readLayout(file, layout)}
-    return {label: readTable(file)}
-
-
-def workbookObjects(file: Path, label: str) -> Frames:
-    sheets = dataSheets(file)
+def readWorkbook(file: Path, label: str) -> Frames:
+    """One object per data sheet, `<label>!<sheet>`, names stripped as in text files; a
+    workbook of one data sheet is the file. The sheets named like documentation (`Contents`)
+    and the empty ones (Excel's default `Sheet2` and `Sheet3`) are none."""
+    sheets = pd.read_excel(file, sheet_name=None)
+    data = [name for name, df in sheets.items() if not isNoteSheet(name) and len(df)]
     objects = {}
-    for sheet, df in sheets.items():
-        name = label  # a workbook of one data sheet is the file
-        if len(sheets) > 1:
-            name = f'{label}!{sheet}'
-        objects[name] = df
+    for name in data:
+        key = f'{label}!{name}'
+        if len(data) == 1:
+            key = label
+        objects[key] = sheets[name].rename(columns=lambda c: str(c).strip())
     return objects
 
 
@@ -180,7 +242,7 @@ def readTable(file: Path) -> pd.DataFrame | None:
         return readSpss(file)
     if suffix == '.arrow':
         return pd.read_feather(file)
-    if suffix in ('.pq', '.parquet'):
+    if suffix == '.pq':
         return pd.read_parquet(file)
     return readDelimited(file)
 
@@ -207,14 +269,6 @@ def readSpss(file: Path) -> pd.DataFrame:
             levels = [labels[code] for code in sorted(labels)]
             labelled[column] = pd.Categorical(df[column].map(labels), categories=levels)
     return df.assign(**labelled)
-
-
-def dataSheets(file: Path) -> dict[str, pd.DataFrame]:
-    """A workbook's sheets, names stripped, without those named like documentation and the
-    empty ones (Excel's default `Sheet2` and `Sheet3`)."""
-    sheets = pd.read_excel(file, sheet_name=None)
-    sheets = {name: df.rename(columns=lambda c: str(c).strip()) for name, df in sheets.items()}
-    return {name: df for name, df in sheets.items() if not isNoteSheet(name) and len(df)}
 
 
 def isNoteSheet(name: str) -> bool:

@@ -7,16 +7,11 @@ release that freezes it.
 
 ## Release 1.0 — the dataset bundle; the repository goes public
 
-- [x] **1 Repository.** Move `packages/glmm/src/metabeta/glmm/datasets` and
-  `packages/glmm/surveys/dimensions` from metabeta-v3 with history (`git subtree split`);
-  `pyproject.toml` (MIT, `references` extra), CI matrix, the memory files copied; metabeta's
-  research extra depends on `mixedbench` (uv path source while developing, PyPI pin at release)
-  and its quantiles contract test reads the installed package's `quantiles.yaml`
-- [x] **2 Registry columns and verification.** `family`, `documented_prior` and `licence` by
-  script plus a hand look at the keyword hits; Python readers for CRAN's `data/*.txt` and the
-  base R objects (no R, ADR 0003); the seeded 100-row hand sample and its per-field agreement
-  table; corrections merged as shards
-- [ ] **3 Contract and candidate list.** `Problem` from a registry row (ADR 0001): rows, coding,
+- [x] **1 Repository.** Loader and survey moved from metabeta-v3 with history, package and CI
+- [x] **2 Registry columns and verification.** Family, prior, licence, readers without R, hand sample (#6)
+- [ ] **3 Contract and candidate list.** First, the registry module owns the registry row (CSV
+  dialect, row grammar, manifest), so `survey/` and the contract share one parser (#16,
+  candidate 2). `Problem` from a registry row (ADR 0001): rows, coding,
   standardisation, family rule, prior, splits, oracle generator, id and hash; `materialise` to
   parquet; the admission script writes suite 1.1's candidate list (membership freezes with the
   references in 1.1, since admission needs a reference that passes the bar, ADR 0002); the
@@ -43,5 +38,4 @@ release that freezes it.
 - [ ] **9 Extensions.** An R loader; an "as published" prior track from `documented_prior`; a
   permitted-mirror fallback for rotted sources (ADR 0003)
 
-No further releases are planned. INLA and MCMCglmm lines are dropped (ADR 0005 parked them;
-their priors cannot be made to match the contract's).
+No further releases are planned.

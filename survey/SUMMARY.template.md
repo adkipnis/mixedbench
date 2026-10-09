@@ -1,22 +1,22 @@
 # Dimension survey — summary
 
 Public grouped datasets measured by script from [`registry.csv`](registry.csv); frame, method
-and reading rules in [`README.md`](../survey/README.md). Evidence for `docs/design/envelope.md`, not the
-envelope itself.
+and reading rules in [`README.md`](../survey/README.md). Evidence for the envelope in metabeta's
+design docs, not the envelope itself.
 
 How to read the tables:
 
 - Every number is filled by `merge.py` from `dimensions.csv` and `columns.csv` on each merge;
   edit `SUMMARY.template.md`, never this file.
-- Quantiles are observed values: at or below the level in the lower half, at or above it in
-  the upper half.
+- Quantiles are observed values, never interpolated: below the median the nearest value at
+  or below the level, from the median on the nearest value at or above it.
 - Per-factor axes (groups, group sizes, imbalance) count a dataset once per grouping factor;
   dataset axes (observations, grouping factors, design columns) once per registry row; `K`
   once per categorical covariate of a documented model.
-- The last column of an axis table is the practice survey's upper quantile, the maximum over
-  the v1 families in [`practice_quantiles.yaml`](../survey/practice_quantiles.yaml) (the minimum
-  for the smallest group size), read at merge time; `–` where the practice survey has no such
-  axis.
+- The last column of an axis table, `practice`, is the practice survey's upper decile, the
+  maximum over the v1 families in [`practice_quantiles.yaml`](../survey/practice_quantiles.yaml)
+  (the minimum for the smallest group size), read at merge time; `–` where the practice survey
+  has no such axis.
 
 **Corpus.** ${n_rows} registry rows over ${n_objects} datasets and ${n_factor_rows} grouping
 factors; per tier ${tiers}. Excluded: ${n_excluded} objects (${excluded_reasons}).
@@ -98,7 +98,7 @@ ${table_published_model}
 
 ## Tier D
 
-The practice survey's deposits, resolved and pulled by `resolve.py`; the loss by cause is the
-tier's finding.
+The practice survey's deposits, resolved and pulled by the archived `resolve.py` (tag
+`survey-archive`); the loss by cause is the tier's finding.
 
 ${tier_d}
