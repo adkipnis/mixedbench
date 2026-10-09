@@ -1,5 +1,6 @@
-"""File to frames, by format: R files through pyreadr, delimited and fixed-width text, Excel
-workbooks, JSON records and Stan data dicts, SPSS, Stata and Arrow through pandas."""
+"""File to frames, by format: R files through pyreadr, or rdata where librdata rejects one;
+delimited and fixed-width text, Excel workbooks, JSON records and Stan data dicts, SPSS, Stata
+and Arrow through pandas."""
 
 from __future__ import annotations
 
@@ -7,15 +8,17 @@ import gzip
 import io
 import json
 import struct
+import warnings
 import zipfile
 from pathlib import Path
 
 import pandas as pd
 import pyreadstat
+import rdata
 from pyreadr import LibrdataError, PyreadrError
 from pyreadr._pyreadr_parser import PyreadrParser
 
-R_FILES = {'.rda', '.rdata', '.rds'}  # meant for pyreadr
+R_FILES = {'.rda', '.rdata', '.rds'}  # meant for pyreadr, or rdata
 DATA_FILES = {'.r', '.tab', '.txt', '.csv'}  # meant for utils::data()
 TABLE_FILES = {  # meant for pandas
     '.csv', '.tsv', '.tab', '.txt', '.dat', '.xlsx', '.xls', '.json', '.dta', '.sav',
@@ -25,6 +28,11 @@ NOTE_SHEETS = ('contents', 'readme', 'codebook', 'notes', 'description')  # a wo
 # LibrdataError is not a PyreadrError; the IndexError is pyreadr's value-label handler indexing
 # past the column names of a labelled data frame inside an .RData (a Tier D deposit, 2026-10-08)
 R_ERRORS = (PyreadrError, LibrdataError, IndexError)
+# rdata on what it cannot parse: bytecode and ALTREP in the Tier D deposits' model fits, an
+# object type it does not know (ValueError); an environment (boot's cd4.nested, AssertionError)
+RDATA_ERRORS = (ValueError, AssertionError)
+# a class rdata has no constructor for, read as the data frame it extends
+FRAME_CLASSES = r'Missing constructor for R class "(data\.table|tbl_df|tbl)"'
 Frames = dict[str, pd.DataFrame | None]  # object name -> its table; None when it has no table
 
 
@@ -62,6 +70,46 @@ def readR(path: Path) -> Frames:
             df[column] = df[column].cat.set_categories(levels)
         frames[name] = numbersAsFloat(df)
     return frames
+
+
+def readRdata(path: Path) -> Frames:
+    """An R file librdata rejects (geepack's muscatine, plonsky_2019_osf's .RData) through the
+    pure-Python rdata; a list or a model fit is no table."""
+    try:
+        objects = rdataObjects(path)
+    except RDATA_ERRORS:
+        return {path.stem: None}
+    frames = {}
+    for name, value in objects.items():
+        if name.startswith('.'):  # R's hidden objects (`.Random.seed`), left out as ls() does
+            continue
+        frames[name] = None
+        if isinstance(value, pd.DataFrame):
+            # R's integer row names, 1-based (or a subset's, jing_2020_osf): pyreadr's 0-based range
+            frames[name] = pyreadrTypes(value.reset_index(drop=True))
+    return frames
+
+
+def rdataObjects(path: Path) -> dict:
+    """An .rds holds one object, named by the file as `readR` names it."""
+    with warnings.catch_warnings():
+        warnings.filterwarnings('ignore', FRAME_CLASSES, UserWarning)
+        if path.suffix.lower() == '.rds':
+            return {path.stem: rdata.read_rds(path)}
+        return rdata.read_rda(path)
+
+
+def pyreadrTypes(df: pd.DataFrame) -> pd.DataFrame:
+    """rdata's nullable dtypes as pyreadr's: an R integer column int32, float where it holds
+    NA (`numbersAsFloat`), a string column pandas' default string."""
+    types = {}
+    for column in df.columns[df.dtypes == 'Int32']:
+        types[column] = 'int32'
+        if df[column].isna().any():
+            types[column] = 'float64'
+    for column in df.columns[df.dtypes == 'string']:
+        types[column] = 'str'
+    return df.astype(types)
 
 
 def numbersAsFloat(df: pd.DataFrame) -> pd.DataFrame:

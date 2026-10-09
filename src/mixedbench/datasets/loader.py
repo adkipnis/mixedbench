@@ -1,13 +1,12 @@
 """Dataset loader for the dimension survey: pinned source as input, typed DataFrame as output.
-The pipeline url -> archive -> tree -> files -> frames, the cache and the Rscript dump route
-live here; the formats are `readers.py`, the help pages `docs.py`."""
+The pipeline url -> archive -> tree -> files -> frames and the cache live here, without R
+(ADR 0003); the formats are `readers.py`, the help pages `docs.py`."""
 
 from __future__ import annotations
 
 import hashlib
 import re
 import ssl
-import subprocess
 import tarfile
 import time
 import urllib.error
@@ -32,51 +31,8 @@ ARCHIVES = ('.zip', '.tar.gz', '.tgz', '.tar')
 # al.) sends InCommon's instead of Sectigo's OV R36, from its leaf's CA Issuers URL
 TLS = ssl.create_default_context()
 TLS.load_verify_locations(Path(__file__).parent / 'intermediates.pem')
-Reader = Literal['pyreadr', 'rscript', 'pandas', 'deparse']
+Reader = Literal['pyreadr', 'rdata', 'pandas', 'deparse']
 ColumnType = Literal['categorical', 'ordered', 'continuous']  # what a registry row may declare
-
-# Reads one data/ file the way utils::data() does and saves each object in it as its own .rds,
-# in serialization v2, which librdata reads where it rejects some v3 files (geepack's muscatine)
-DUMP_R = """
-args <- commandArgs(trailingOnly = TRUE)
-file <- args[1]
-out <- args[2]
-env <- new.env()
-ext <- tolower(tools::file_ext(file))
-stem <- tools::file_path_sans_ext(basename(file))
-if (ext == 'r') sys.source(file, envir = env, chdir = TRUE) else
-if (ext %in% c('rda', 'rdata')) load(file, envir = env) else
-if (ext == 'rds') assign(stem, readRDS(file), envir = env) else
-if (ext %in% c('tab', 'txt'))
-    assign(stem, read.table(file, header = TRUE, as.is = FALSE), envir = env) else
-if (ext == 'csv')
-    assign(stem, read.table(file, header = TRUE, sep = ';', as.is = FALSE), envir = env) else
-    stop(paste('no data() rule for', file))
-dir.create(out, recursive = TRUE, showWarnings = FALSE)
-for (name in ls(env))
-    saveRDS(get(name, envir = env), file.path(out, paste0(name, '.rds')), version = 2)
-"""
-
-# Lays out base R's `datasets` (lazy data, no tarball) like a source tree: every object as its
-# own .rds under data/, every help page from R's Rd database under man/
-BASE_R = """
-tree <- commandArgs(trailingOnly = TRUE)[1]
-dir.create(file.path(tree, 'data'), recursive = TRUE, showWarnings = FALSE)
-dir.create(file.path(tree, 'man'), showWarnings = FALSE)
-items <- sort(sub(' .*', '', data(package = 'datasets')$results[, 'Item']), method = 'radix')
-# CO2 and co2 would be one file on a case-insensitive file system: the later name in C order
-# gets a tilde, which the loader strips again
-files <- ifelse(duplicated(tolower(items)), paste0(items, '~'), items)
-for (i in seq_along(items))
-    saveRDS(get(items[i], envir = as.environment('package:datasets')),
-            file.path(tree, 'data', paste0(files[i], '.rds')), version = 2)
-pages <- tools::Rd_db('datasets')
-stems <- tools::file_path_sans_ext(names(pages))
-pageFiles <- ifelse(duplicated(tolower(stems)), paste0(stems, '~'), stems)
-for (i in seq_along(pages))
-    writeLines(paste(as.character(pages[[i]]), collapse = ''),
-               file.path(tree, 'man', paste0(pageFiles[i], '.Rd')))
-"""
 
 
 @dataclass(frozen=True)
@@ -95,16 +51,16 @@ class Source:
 class DataObject:
     name: str  # the R object, or the file's path inside the source
     file: str  # relative to the source tree; a label for the survey table, never opened
-    n_rows: int | None  # None: pyreadr cannot turn the object into a DataFrame
+    n_rows: int | None  # None: the object is no table (a model fit, a list, a time series)
     n_cols: int | None
-    reader: Reader  # pyreadr read the file, an .rds that Rscript dumped from it, or pandas did
+    reader: Reader  # the file's route: pyreadr, rdata, pandas or the deparse reader
 
 
 @dataclass(frozen=True)
 class ManifestRow:
     file: str  # the object's file, relative to the source tree
-    sha256: str | None  # of that file; None where it is no download (base R's, dumped by R)
-    size: int | None  # in bytes, likewise
+    sha256: str  # of that file
+    size: int  # in bytes
 
 
 Manifest = Mapping[tuple[Source, str], ManifestRow]  # (source, object name) -> its file
@@ -220,7 +176,7 @@ class Loader:
                 time.sleep(int(e.headers.get('Retry-After', 10)))
 
     def _dir(self, source: Source) -> Path:
-        """The source's cache folder: the download, its extracted `tree/`, Rscript's `rds/`."""
+        """The source's cache folder: the download, its extracted `tree/`, a manifest's `files/`."""
         if source.kind == 'cran':
             return self.cache / 'cran' / f'{source.name}_{source.pin}'
         if source.kind == 'git':
@@ -259,7 +215,7 @@ class Loader:
 
     @staticmethod
     def _verify(file: Path, checksum: str | None) -> None:
-        """None skips the check: a CRAN tarball without a checksum, a file R writes."""
+        """None skips the check: a CRAN tarball without a checksum."""
         digest = hashlib.sha256(file.read_bytes()).hexdigest()
         if checksum is not None and digest != checksum:
             raise ValueError(f'{file} checksum {digest} differs from pinned {checksum}')
@@ -394,10 +350,8 @@ class Loader:
 
     def _parse(self, source: Source) -> dict[str, tuple[DataObject, pd.DataFrame | None]]:
         tree = self._tree(source)
-        dumps = self._dir(source) / 'rds'  # inside the tree of a url that is no archive
-        files = [f for f in self._files(source, tree) if not f.is_relative_to(dumps)]
         objects = {}
-        for file in files:
+        for file in self._files(source, tree):
             label = file.relative_to(tree).as_posix()
             frames, reader = self._readFile(file, source, label)
             for name, df in frames.items():
@@ -411,7 +365,7 @@ class Loader:
         """An R file through pyreadr; another file in a CRAN data/ folder by utils::data()'s
         rules, a `.R` file deparsed, a text file as read.table reads it; pandas reads the rest."""
         if file.suffix.lower() in R_FILES:
-            return self._readRFile(file, source)
+            return self._readRFile(file)
         if source.kind == 'cran' and file.suffix.lower() == '.r':
             return self._readDeparsed(file), 'deparse'
         if source.kind == 'cran':
@@ -427,33 +381,10 @@ class Loader:
         except DeparseError:
             return {file.stem: None}
 
-    def _readRFile(self, file: Path, source: Source) -> tuple[Frames, Reader]:
-        """An R file librdata rejects (geepack's muscatine, a plain data frame) is re-saved by R."""
+    @staticmethod
+    def _readRFile(file: Path) -> tuple[Frames, Reader]:
+        """An R file librdata rejects (geepack's muscatine, a plain data frame) goes to rdata."""
         try:
             return readers.readR(file), 'pyreadr'
         except R_ERRORS:
-            return self._readViaR(file, source), 'rscript'
-
-    def _readViaR(self, file: Path, source: Source) -> Frames:
-        dir = self._dir(source) / 'rds' / file.stem
-        if not dir.exists():
-            self._rscript(DUMP_R, str(file), str(dir))
-        frames = {}
-        for rds in sorted(dir.glob('*.rds')):
-            frames |= self._readDumped(rds)
-        return frames
-
-    def _readDumped(self, rds: Path) -> Frames:
-        """An .rds R saved; what librdata still rejects is no table (boot's cd4.nested, a list)."""
-        name = rds.stem.removesuffix('~')  # BASE_R marks base R's co2 beside CO2 with a tilde
-        try:
-            frames = readers.readR(rds)
-        except R_ERRORS:
-            return {name: None}
-        if not frames:  # a list object (base R's Harman23.cor) holds no table
-            return frames
-        return {name: frames[rds.stem]}
-
-    @staticmethod
-    def _rscript(script: str, *args: str) -> None:
-        subprocess.run(['Rscript', '-e', script, *args], check=True)
+            return readers.readRdata(file), 'rdata'
