@@ -36,7 +36,7 @@ def readFrame(root: Path) -> Frame:
         for label, entry in (entries or {}).items():
             tiers[label] = tier
             sources[label] = registry.source(label, entry)
-            caps[label] = entry.get('cap', file.get('cap'))
+            caps[label] = entry.get('cap')
             if 'licence' in entry:
                 licences[label] = entry['licence']
     labels = sorted(tiers, key=lambda label: TIERS.index(tiers[label]))
