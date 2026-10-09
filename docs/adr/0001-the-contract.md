@@ -62,6 +62,10 @@ any rule is a new suite version, never a recomputation.
   held out uniformly inside seen groups (a single-row group keeps its row); 10% of the groups
   of the first grouping factor held out entirely, at least one and such that at least two
   remain.
+- Clarified 2026-10-09 (#29): 10% is rounded to the nearest whole number, halves up. In the
+  held-out-rows regime every group of every grouping factor keeps a seen row. A first factor
+  of two groups has no held-out-groups regime, since holding one leaves one (10 rows); the
+  problem keeps the posterior track and the held-out-rows regime.
 
 **Oracle track.**
 
