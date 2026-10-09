@@ -63,7 +63,5 @@ def manifest() -> Manifest:
     rows = pd.read_csv(path('manifest.csv'), dtype=str, keep_default_na=False)
     entries = {}
     for row in rows.itertuples(index=False):
-        sha256 = row.sha256 or None  # empty for base R's objects, which R dumps
-        size = int(row.size) if row.size else None
-        entries[pinned[row.source], row.object] = ManifestRow(row.file, sha256, size)
+        entries[pinned[row.source], row.object] = ManifestRow(row.file, row.sha256, int(row.size))
     return entries
