@@ -4,11 +4,14 @@ at, for the family and prior keywords and writes `scan_hits.csv` (row key or dep
 field, keyword, snippet) for the hand look that fills `family` and `documented_prior` (#10).
 The `draw` step writes the seeded hand sample of ADR 0002 to `sample.csv`, 100 rows in four
 batches of 25, each further run one more batch with the next seed; `handoff` prints one batch
-as Markdown for Alex's check (#11). Run from the repo root:
+as Markdown for Alex's check (#11). `agree` writes `agreement.csv`, the share of sampled rows
+whose reading at draw time the merged registry still holds, per field and stratum (#13). Run
+from the repo root:
 
     uv run python survey/verify.py scan
     uv run python survey/verify.py draw
     uv run python survey/verify.py handoff --batch 1
+    uv run python survey/verify.py agree
 """
 
 from __future__ import annotations
@@ -22,7 +25,7 @@ from urllib.parse import quote
 
 import numpy as np
 import pandas as pd
-from schema import REGISTRY
+from schema import COLUMN_LIST_COLUMNS, REGISTRY, TERM_COLUMNS
 from sources import readFrame
 from summarise import readCsv
 
@@ -60,6 +63,8 @@ SEED = 0
 # the fields the agreement step compares, recorded at draw time
 COMPARED = ('response', 'response_type', 'trials', 'grouping_factors', 'covariates', 'interactions', 'formula', 'published_model')  # fmt: skip
 SAMPLE_COLUMNS = ('source', 'object', 'model_index', 'stratum', 'seed', 'batch', *COMPARED)
+# the agreement table's rows: strata, then each tier pooled, then all
+POOLS = (*(f'{t}/{c}' for t in TIERS for c in CONFIDENCES), *TIERS, 'all')
 # the reading a handoff shows per row
 READING = (*COMPARED, 'confidence', 'notes')
 # The page of a url source, by label prefix: `sources.yaml` names only the download. `{rest}`
@@ -94,7 +99,7 @@ the source fits or states this model. The help page is the one the reader saw.
 
 
 # =====================================================================================
-# pipeline: registry -> scan, draw, handoff
+# pipeline: registry -> scan, draw, handoff, agree
 # =====================================================================================
 class Verifier:
     def __init__(self, registry: Path, survey: Path) -> None:
@@ -135,6 +140,23 @@ class Verifier:
         sources = readFrame(self.registry).sources
         sections = [self.section(n, row, sources[row['source']]) for n, row in enumerate(rows, start=1)]  # fmt: skip
         return HANDOFF_HEAD.format(batch=batch, n=len(sections)) + ''.join(sections)
+
+    def agree(self) -> None:
+        """The share of sampled rows whose reading at draw time the merged registry still holds,
+        per field, per stratum, per tier and overall (ADR 0002)."""
+        sample = readCsv(self.survey / 'sample.csv')
+        joined = sample.merge(pd.DataFrame(self.rows), on=list(REGISTRY.key), how='left', suffixes=('', '_merged'), indicator=True)  # fmt: skip
+        kept = joined['_merge'] == 'both'  # a row the hand check took out stands in no field
+        readings = joined.fillna('')
+        compared = pd.DataFrame({f: self.stands(f, readings[f], readings[f'{f}_merged']) for f in COMPARED})  # fmt: skip
+        stood = compared.where(kept, False, axis=0)
+        pools = [readings['stratum'], readings['stratum'].str[0], pd.Series('all', index=readings.index)]
+        pooled = pd.concat([stood.assign(stratum=pool) for pool in pools]).groupby('stratum')
+        table = pooled.mean().round(3)
+        table.insert(0, 'rows', pooled.size())
+        table = table.loc[[pool for pool in POOLS if pool in table.index]]
+        table.to_csv(self.survey / 'agreement.csv', quoting=csv.QUOTE_ALL)
+        print(f'agree: {len(sample)} rows')
 
     # ---------------------------------------------------------------------------------
     # scan
@@ -249,6 +271,23 @@ class Verifier:
         prefix = prefixes[0]
         return PAGES[prefix].format(rest=label.removeprefix(prefix))
 
+    # ---------------------------------------------------------------------------------
+    # agree
+    # ---------------------------------------------------------------------------------
+    @staticmethod
+    def stands(field: str, drawn: pd.Series, merged: pd.Series) -> pd.Series:
+        """A reading rewritten in another order or spacing stands: `;`-lists are sets, `a:b` is
+        the term `b:a`, a formula's whitespace carries no meaning."""
+        if field in (*COLUMN_LIST_COLUMNS, *TERM_COLUMNS):
+            return drawn.map(Verifier.terms) == merged.map(Verifier.terms)
+        if field == 'formula':
+            return drawn.str.replace(r'\s+', '', regex=True) == merged.str.replace(r'\s+', '', regex=True)  # fmt: skip
+        return drawn == merged
+
+    @staticmethod
+    def terms(value: str) -> frozenset[frozenset[str]]:
+        return frozenset(frozenset(term.split(':')) for term in value.split(';') if term)
+
 
 # =====================================================================================
 # main
@@ -256,10 +295,10 @@ class Verifier:
 if __name__ == '__main__':
     # fmt: off
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('step', choices=('scan', 'draw', 'handoff'), help='the verification step to run')
+    parser.add_argument('step', choices=('scan', 'draw', 'handoff', 'agree'), help='the verification step to run')
     parser.add_argument('--batch', type=int, help='handoff: the batch to render')
     parser.add_argument('--registry', type=Path, default=HERE.parent / 'registry', help='folder holding registry.csv and help/')
-    parser.add_argument('--survey', type=Path, default=HERE, help='folder of the hits and sample files')
+    parser.add_argument('--survey', type=Path, default=HERE, help='folder of the hits, sample and agreement files')
     args = parser.parse_args()
     # fmt: on
     verifier = Verifier(args.registry, args.survey)
@@ -269,3 +308,5 @@ if __name__ == '__main__':
         verifier.draw()
     if args.step == 'handoff':
         print(verifier.handoff(args.batch))
+    if args.step == 'agree':
+        verifier.agree()
