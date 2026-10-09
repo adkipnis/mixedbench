@@ -14,7 +14,9 @@ from dataclasses import replace
 import numpy as np
 import pandas as pd
 import pytest
-from mixedbench.contract import Prior, Problem, refusal
+from hypothesis import given
+from hypothesis import strategies as st
+from mixedbench.contract import Prior, Problem, Scale, refusal
 from mixedbench.registry.row import Row, SlopeTerm
 
 NAN = float('nan')
@@ -103,7 +105,7 @@ def test_a_grouping_factor_is_integer_coded_with_its_levels_listed() -> None:
         'block': ('A', 'B', 'C'),
         'block:plot': ('A:p1', 'A:p2', 'B:p1', 'B:p2', 'C:p1', 'C:p2'),
     }
-    assert list(problem.table.columns) == [*problem.design, 'y', 'block', 'block:plot']
+    assert list(problem.table.columns) == [*problem.design, 'y', 'block', 'block:plot', 'rows', 'groups']  # fmt: skip
 
 
 # ==============================================================================================
@@ -119,6 +121,15 @@ def test_the_dropped_share_counts_the_rows_missing_a_model_value() -> None:
     assert -1.0 in problem.table['x'].tolist()
     withoutPlot = fixtureTable().assign(plot=lambda df: df['plot'].mask(df.index == 0))
     assert Problem.build(fixtureRow(), withoutPlot).dropped_share == 3 / 14
+
+
+def test_a_table_with_no_complete_row_is_refused() -> None:
+    """A pharmacokinetic event table (nlme Phenobarb, Quinidine) has the dose on dosing rows
+    and the response on observation rows, so every row misses a model value: there is no
+    problem to state, and `build` says so rather than returning an empty one."""
+    table = fixtureTable().assign(y=NAN)
+    with pytest.raises(ValueError, match='fixture/trial/1: no row has every model value'):
+        Problem.build(fixtureRow(), table)
 
 
 # ==============================================================================================
@@ -252,3 +263,146 @@ def test_an_ordinal_problem_names_its_thresholds_as_brms_does() -> None:
     assert problem.parameters[:3] == ('Intercept[1]', 'Intercept[2]', 'x')
     assert 'Intercept' not in problem.parameters
     assert problem.parameters[-1] == 'sd[block:plot]'
+
+
+# ==============================================================================================
+# splits
+# ==============================================================================================
+
+
+def groupedTable(sizes: list[int], crossed: int = 0) -> pd.DataFrame:
+    """`sizes[i]` rows in group `g{i}` of `g`; with `crossed`, a second factor `h` cycling
+    through that many levels; a continuous `x` and `y` that differ on every row."""
+    groups = [f'g{i}' for i, size in enumerate(sizes) for _ in range(size)]
+    n = len(groups)
+    table = pd.DataFrame({'g': groups, 'x': np.arange(n) * 0.5, 'y': np.arange(n) ** 0.5})
+    if crossed:
+        table['h'] = [f'h{i % crossed}' for i in range(n)]
+    return table
+
+
+def groupedRow(source: str = 'fixture', crossed: bool = False) -> Row:
+    factors = ('g', 'h') if crossed else ('g',)
+    return fixtureRow(
+        source=source, grouping_factors=factors, covariates=('x',), interactions=(),
+        random_slopes=(), types={},
+    )  # fmt: skip
+
+
+def regimes(problem: Problem) -> pd.DataFrame:
+    return problem.table[['rows', 'groups']].astype(str)
+
+
+def test_the_splits_are_a_pure_function_of_the_problem_id() -> None:
+    """The seed is the first 8 bytes of sha256 of the id (ADR 0001), so a rebuild anywhere
+    gives the same split, and another problem over the same table gets another split."""
+    table = groupedTable([10] * 20)
+    problem = Problem.build(groupedRow(), table)
+    again = Problem.build(groupedRow(), table)
+    other = Problem.build(groupedRow(source='other'), table)
+    assert set(regimes(problem).stack()) == {'seen', 'held'}
+    assert regimes(problem).equals(regimes(again))
+    assert not regimes(problem)['rows'].equals(regimes(other)['rows'])
+    assert not regimes(problem)['groups'].equals(regimes(other)['groups'])
+
+
+SIZES = st.lists(st.integers(1, 8), min_size=3, max_size=40)
+SOURCES = st.text(alphabet='abcxyz', min_size=1, max_size=8)
+
+
+@given(sizes=SIZES, crossed=st.integers(0, 5), source=SOURCES)
+def test_regime_rows_holds_out_a_tenth_and_every_group_keeps_a_seen_row(
+    sizes: list[int], crossed: int, source: str
+) -> None:
+    """Regime `rows` predicts inside seen groups, so every group of every factor keeps a seen
+    row and a single-row group keeps its row; it holds out the nearest whole number to 10% of
+    the rows, fewer only when the groups leave no more, as with one factor and n − G < n/10."""
+    table = groupedTable(sizes, crossed)
+    problem = Problem.build(groupedRow(source, crossed=bool(crossed)), table)
+    held = problem.table['rows'] == 'held'
+    tenth = len(table) / 10
+    for factor in problem.factors:
+        seen = problem.table.loc[~held, factor]
+        assert set(seen) == set(problem.table[factor])
+    singletons = problem.table.groupby('g')['g'].transform('size') == 1
+    assert not (held & singletons).any()
+    assert held.sum() <= tenth + 0.5
+    if not crossed:
+        assert abs(held.sum() - tenth) <= 0.5 or held.sum() == len(table) - len(sizes)
+
+
+@given(sizes=SIZES, source=SOURCES)
+def test_regime_groups_holds_out_a_tenth_of_the_first_factors_groups_whole(
+    sizes: list[int], source: str
+) -> None:
+    """Regime `groups` predicts new groups: the nearest whole number to 10% of the first
+    factor's groups is held with all its rows, at least one group and at least two remaining
+    (ADR 0001); a 3-group factor holds out one."""
+    table = groupedTable(sizes)
+    problem = Problem.build(groupedRow(source), table)
+    held = problem.table['groups'] == 'held'
+    heldGroups = set(problem.table.loc[held, 'g'])
+    seenGroups = set(problem.table.loc[~held, 'g'])
+    assert not heldGroups & seenGroups
+    assert len(heldGroups) >= 1
+    assert len(seenGroups) >= 2
+    assert abs(len(heldGroups) - len(sizes) / 10) <= 0.5 or len(heldGroups) == 1
+
+
+def test_a_first_factor_of_two_groups_has_no_groups_regime() -> None:
+    """Holding one of two groups leaves one, so ADR 0001's rule cannot hold: the problem keeps
+    the posterior track and regime `rows`, and has no `groups` column (ten registry rows)."""
+    problem = Problem.build(groupedRow(), groupedTable([6, 6]))
+    assert 'rows' in problem.table.columns
+    assert 'groups' not in problem.table.columns
+
+
+# ==============================================================================================
+# scales
+# ==============================================================================================
+
+
+def momentsOf(values: list[float], seen: pd.Series) -> Scale:
+    kept = np.asarray(values)[seen.to_numpy()]
+    return Scale(mean=float(np.mean(kept)), sd=float(np.std(kept, ddof=1)))
+
+
+def test_each_regime_scales_the_continuous_columns_by_the_rows_it_sees() -> None:
+    """No held-out row leaks into a scaler (ADR 0001): `full` holds the table's moments and each
+    regime its seen rows' (sample SD, as R's `scale`), for the continuous covariate `x` and the
+    continuous response `y` only; the table itself stays in raw units."""
+    problem = Problem.build(fixtureRow(), fixtureTable())
+    everyRow = pd.Series([True] * 12)
+    assert problem.scales == {
+        'full': {'x': momentsOf(X, everyRow), 'y': momentsOf(Y, everyRow)},
+        'rows': {
+            'x': momentsOf(X, problem.table['rows'] == 'seen'),
+            'y': momentsOf(Y, problem.table['rows'] == 'seen'),
+        },
+        'groups': {
+            'x': momentsOf(X, problem.table['groups'] == 'seen'),
+            'y': momentsOf(Y, problem.table['groups'] == 'seen'),
+        },
+    }
+    assert problem.table['x'].tolist() == X
+    assert problem.table['y'].tolist() == Y
+    count = Problem.build(fixtureRow(response='n', response_type='count'), fixtureTable())
+    assert set(count.scales['full']) == {'x'}
+
+
+def test_a_level_present_only_in_held_rows_leaves_an_all_zero_column_in_that_regime() -> None:
+    """The coding is the full table's (ADR 0001, amended 2026-10-09): `kind` gives each group
+    its own level beside a shared reference, so the held group's level has no seen row, and
+    its contrast column stays in the design, all zero over the seen rows, not dropped."""
+    table = groupedTable([4, 4, 4])
+    table['kind'] = pd.Categorical(
+        ['base', 'k0', 'k0', 'k0', 'base', 'k1', 'k1', 'k1', 'base', 'k2', 'k2', 'k2'],
+        categories=['base', 'k0', 'k1', 'k2'],
+    )
+    row = replace(groupedRow(), covariates=('x', 'kind'), types={'kind': 'categorical'})
+    problem = Problem.build(row, table)
+    seen = problem.table['groups'] == 'seen'
+    [heldLevel] = set(table.loc[~seen, 'kind']) - {'base'}
+    assert problem.design == ('Intercept', 'x', 'kind[k0]', 'kind[k1]', 'kind[k2]')
+    assert problem.table.loc[seen, f'kind[{heldLevel}]'].eq(0).all()
+    assert problem.table.loc[~seen, f'kind[{heldLevel}]'].eq(1).any()
