@@ -177,7 +177,7 @@
 "agridat","gomez.splitsplit","1","R","rep","3","nested","44","44","135","3","45","45","45","45","45","0.0","0.0","inf"
 "agridat","gomez.splitsplit","1","R","rep:nitro","3","nested","44","44","135","15","9","9","9","9","9","0.0","0.0","inf"
 "agridat","gomez.splitsplit","1","R","rep:nitro:management","3","nested","44","44","135","45","3","3","3","3","3","0.0","0.0","inf"
-"agridat","harris.wateruse","1","R","tree","1","single","2","4","992","40","21","21","26","26","26","0.0","0.0782","159.4601"
+"agridat","harris.wateruse","1","R","tree","1","single","4","4","992","40","21","21","26","26","26","0.0","0.0782","159.4601"
 "agridat","harvey.lsmeans","1","R","sire","1","single","10","10","65","9","5","5","8","8","8","0.0","0.1427","43.5581"
 "agridat","jansen.strawberry","1","R","block:male:female","1","single","11","14","144","48","3","3","3","3","3","0.0","0.0","inf"
 "agridat","keen.potatodamage","1","R","rod:energy","1","single","15","15","1152","16","72","72","72","72","72","0.0","0.0","inf"

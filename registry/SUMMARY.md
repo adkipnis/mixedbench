@@ -160,14 +160,14 @@ coefficient of variation are readable companions.
 | covariate type | n | share |
 |---|---|---|
 | continuous | 898 | 44% |
-| binary | 666 | 33% |
+| binary | 668 | 33% |
 | categorical | 383 | 19% |
 | ordered | 77 | 4% |
 
 | level | n | share |
 |---|---|---|
 | within | 1393 | 69% |
-| group | 631 | 31% |
+| group | 633 | 31% |
 
 Levels of the categorical covariates:
 
@@ -197,7 +197,7 @@ Levels of the categorical covariates:
 
 Implied design columns of a model under the observed categorical share
 (0.227) and mean columns per categorical (6.737):
-9 terms 20.73 columns, 14 terms 32.25 columns.
+9 terms 20.72 columns, 14 terms 32.24 columns.
 
 ## Design columns
 
