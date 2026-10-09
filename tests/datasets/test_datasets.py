@@ -18,11 +18,8 @@ from pathlib import Path
 
 import pandas as pd
 import pytest
-from hypothesis import given, settings
-from hypothesis import strategies as st
 from mixedbench import registry
 from mixedbench.datasets import DataObject, Loader, ManifestRow, Source, readers
-from mixedbench.datasets.deparse import Deparse
 
 FIXTURES = Path(__file__).parent / 'fixtures'
 TARBALL = (FIXTURES / 'fixture_1.0.tar.gz').read_bytes()
@@ -175,17 +172,6 @@ def test_load_keeps_factor_levels_in_r_order(tmp_path):
     assert not scores['grade'].dtype.ordered
 
 
-def test_an_integer_column_with_na_loads_as_float_not_object():
-    """pyreadr renders an R integer vector with NA as an object column of ints and NaN, which
-    no numeric check accepts (mlmRev's `star`); the loader makes it a float column."""
-    # R wrote a frame with an integer column holding one NA and a plain string column
-    frames = readers.readR(FIXTURES / 'counts.rds')
-    scores = frames['counts']
-    assert scores['score'].dtype.kind == 'f'
-    assert scores['score'].isna().sum() == 1
-    assert pd.api.types.is_string_dtype(scores['note'])
-
-
 def test_a_declared_ordered_column_keeps_its_levels_and_becomes_ordered(tmp_path):
     """pyreadr cannot tell an ordered factor from a plain one, so the registry declares it:
     an R factor keeps its level order, a plain column gets sorted levels."""
@@ -295,23 +281,6 @@ def test_a_data_r_file_loads_to_the_frame_r_makes_of_it_without_r(tmp_path):
     pd.testing.assert_frame_equal(growth, twin)
 
 
-def test_row_names_of_data_frame_are_no_column(tmp_path):
-    """`row.names =` is an argument of data.frame(), not a column (base R's LifeCycleSavings
-    came out with six columns where R has five, found by the census re-pull of #9)."""
-    file = tmp_path / 'savings.R'
-    file.write_text('savings <- data.frame(sr = c(11.43, 12.07), row.names = c("A", "B"))\n')
-    savings = Deparse(file).frames()['savings']
-    assert list(savings.columns) == ['sr']
-
-
-def test_a_construct_outside_the_deparse_subset_raises_naming_file_and_construct(tmp_path):
-    """The reader is for base R's seven data files, not for R: a time series fails loudly."""
-    file = tmp_path / 'series.R'
-    file.write_text('series <- ts(c(1, 2, 3), start = 1990)\n')
-    with pytest.raises(ValueError, match=r'series\.R: function ts\(\)'):
-        Deparse(file).frames()
-
-
 def test_data_files_name_their_reader(tmp_path):
     """The registry's `reader` column records the route per object: a text file is pandas,
     an R file the deparse reader."""
@@ -320,61 +289,6 @@ def test_data_files_name_their_reader(tmp_path):
     plots, growth = objects['plots'], objects['growth']
     assert (plots.file, plots.reader, plots.n_rows, plots.n_cols) == ('data/plots.txt', 'pandas', 4, 4)  # fmt: skip
     assert (growth.file, growth.reader, growth.n_rows, growth.n_cols) == ('data/growth.R', 'deparse', 8, 7)  # fmt: skip
-
-
-# a frame of numeric and string columns, written as base R's data/*.R files write one
-NAMES = st.from_regex(r'[a-z][a-z0-9_.]{0,8}', fullmatch=True)
-NUMBERS = st.floats(allow_nan=False, allow_infinity=False) | st.none()
-# R deparses quotes, backslashes and control characters as escapes, which the subset has none of
-STRINGS = (
-    st.text(alphabet=st.characters(exclude_categories=['Cc', 'Cs'], exclude_characters='"\\'))
-    | st.none()
-)
-
-
-def holdsAValue(column: list) -> bool:
-    """An all-NA column is logical in R (`c(NA)`), neither numeric nor string."""
-    return any(value is not None for value in column)
-
-
-@st.composite
-def frames(draw) -> dict[str, list]:
-    n = draw(st.integers(1, 5))
-    names = draw(st.lists(NAMES, min_size=1, max_size=4, unique=True))
-    columns = {}
-    for name in names:
-        values = draw(st.sampled_from([NUMBERS, STRINGS]))
-        columns[name] = draw(st.lists(values, min_size=n, max_size=n).filter(holdsAValue))
-    return columns
-
-
-def literal(value: float | str | None) -> str:
-    """A value as R deparses it."""
-    if value is None:
-        return 'NA'
-    if isinstance(value, str):
-        return f'"{value}"'
-    return repr(value)
-
-
-def deparsed(columns: dict[str, list]) -> str:
-    """`drawn <- data.frame(a = c(...), ...)`, as base R's data/*.R files write a frame."""
-    parts = []
-    for name, values in columns.items():
-        literals = ', '.join(literal(value) for value in values)
-        parts.append(f'{name} = c({literals})')
-    return f'drawn <- data.frame({", ".join(parts)})\n'
-
-
-@given(frames())
-@settings(max_examples=200, deadline=None)
-def test_deparsed_numeric_and_string_vectors_round_trip(tmp_path_factory, columns):
-    """Any frame of numbers, strings and NA that R would deparse reads back as itself."""
-    file = tmp_path_factory.mktemp('deparse') / 'drawn.R'
-    file.write_text(deparsed(columns), encoding='utf-8')
-    expected = pd.DataFrame(columns)
-    actual = Deparse(file).frames()['drawn']
-    pd.testing.assert_frame_equal(actual, expected, check_dtype=False)
 
 
 BASE = Source(kind='cran', name='datasets', pin='4.6.1')

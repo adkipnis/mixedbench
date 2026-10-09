@@ -11,7 +11,6 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-from mixedbench.datasets.readers import Frames
 
 TOKEN = re.compile(
     r"""(?P<skip>\s+|\#[^\n]*)
@@ -64,7 +63,7 @@ class Deparse:
         self.tokens = self._tokenize(file.read_text(encoding='utf-8'))
         self.at = 0
 
-    def frames(self) -> Frames:
+    def frames(self) -> dict[str, pd.DataFrame]:
         """The frame the file assigns, under the name it assigns it to; the statements after
         it may only reset a formula attribute's environment, which the frame drops anyway."""
         statements = self._statements()
