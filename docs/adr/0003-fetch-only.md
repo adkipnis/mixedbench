@@ -43,3 +43,12 @@ package mirrors exactly those files as assets of the release `mirror-1` of this 
 the source and is asked first; the mirror is asked on a 404 or a refusal (401, 403), and its
 file must carry the same pinned sha256. Nothing under another licence is mirrored; a rotted
 non-CC0 source still retires its problems.
+
+## Amendment 2026-10-09: rdata for the R files librdata rejects (#9)
+
+The two registry objects whose files librdata rejects, geepack's `muscatine.rda` and
+plonsky_2019_osf's `.RData` (`dd1`), are not retired: the pure-Python `rdata` package reads
+both, and its frames equal the Rscript dump's on columns, dtypes, levels and values. With
+that, the Rscript route leaves the loader; `reader` is `pyreadr`, `rdata`, `pandas` or
+`deparse`. A file neither pyreadr nor rdata parses (a model fit's bytecode) is one object
+without a table, as an object pyreadr cannot frame is.
