@@ -157,6 +157,7 @@ class Merger:
             unpublished = self.shard['published_model'] == 'no'
             problems += self.flag(prior & unpublished, 'documented_prior', 'only on a published model')  # fmt: skip
             problems += self.slopeProblems()
+            problems += self.interactionProblems()
         return problems
 
     def modelIndexProblems(self) -> list[dict]:
@@ -185,6 +186,18 @@ class Merger:
             problems.append(self.problem(line, 'random_slopes', f'{slope.covariate} is not a covariate'))  # fmt: skip
         if slope.factor not in splitList(row['grouping_factors']):
             problems.append(self.problem(line, 'random_slopes', f'{slope.factor} is not a grouping factor'))  # fmt: skip
+        return problems
+
+    def interactionProblems(self) -> list[dict]:
+        """Each part of an interaction is a covariate of its row, so the contract codes the
+        product from coded columns (agridat harris.wateruse's cell-means `0 + age:species`)."""
+        problems = []
+        for line, row in self.shard.iterrows():
+            covariates = splitList(row['covariates'])
+            for term in splitList(row['interactions']):
+                for part in parts(term):
+                    if part not in covariates:
+                        problems.append(self.problem(line, 'interactions', f'{part} is not a covariate'))  # fmt: skip
         return problems
 
     def licenceProblems(self) -> list[dict]:
