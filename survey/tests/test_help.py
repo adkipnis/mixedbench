@@ -2,10 +2,10 @@
 tree, and the codebook a file carries itself. Served from memory from the loader's fixtures: the
 CRAN-shaped package, a deposit zip, a GitHub archive and an OSF tarball of Arrow files."""
 
-import hashlib
 from pathlib import Path
 
 import pytest
+from conftest import sha
 from help import HelpPage
 from mixedbench.datasets import Loader, Source
 
@@ -22,10 +22,6 @@ SERVED = {
     ).read_bytes(),
     'https://osf.io/abcde/download?version=9': DATASETS,
 }
-
-
-def sha(data: bytes) -> str:
-    return hashlib.sha256(data).hexdigest()
 
 
 def gitSource(path: str) -> Source:
