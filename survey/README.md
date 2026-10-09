@@ -33,6 +33,7 @@ grill, not here.
 | `help/`, `cache/` | `pull.py`, loader, `resolve.py` | untracked: one help page per kept object (documentation, dtypes, first rows), one per Tier D deposit; downloads, extracted trees, cached API answers |
 | `shards/<table>_<label>.csv` | agents; `pull.py` writes `excluded_prescreen.csv` | one shard per reading run; `table` ∈ `registry`, `excluded`, `duplicates`, `dropped` |
 | `registry.csv` | `merge.py` | one row per dataset and documented model, at most three per object |
+| `scan_hits.csv` | `verify.py scan` | one row per keyword occurrence: a registry row's `notes`, `formula` or help page, or a Tier D deposit page once per deposit |
 | `excluded.csv` | `merge.py` | every screened-out object with a categorical reason |
 | `duplicates.csv` | `merge.py` | candidate pairs the merge flagged and the verdicts returned |
 | `dropped.csv` | `merge.py` | objects taken out of the registry and the exclusions, awaiting a re-filing shard |
@@ -602,3 +603,29 @@ replacements (`beavers`, `state`, `UKLungDeaths`, `Harman23.cor`, `Harman74.cor`
 and re-filed `hibbs.dat` and `hdi.dat`. Exclusions 2142 → 2132. `tests/test_census.py` asserts
 both directions: every exclusion is a census object, every uncapped census object is a registry
 row, an exclusion or a confirmed duplicate of either.
+
+**Family and prior** (#10, 2026-10-09). `verify.py scan` searches every registry row's
+`notes`, `formula` and help page, and once each the 38 deposit pages Tier D help pages point
+at, for family keywords (negative binomial, probit, cloglog, Weibull, gamma, lognormal,
+zero-inflated, hurdle, beta regression) and prior keywords (`prior`, `set_prior`, Stan and BUGS
+sampling statements): 106 row hits over 48 rows and 1106 deposit hits, most of them `prior` in
+deposit code (`scan_hits.csv`). Snippets alone could not settle Tier D, whose help pages only
+point at the deposit, nor the Bayesian Tiers E and T, whose Stan files, notebooks and book code
+sit in the cached repositories, not the help pages; so the hand look read the 48 hit rows'
+snippets, every Tier D row's model call in its deposit code and the 74 rows of posteriordb,
+stan_arm, pymc_examples, bambi, rethinking and ros in their cached code: 214 rows, agents
+drafting from the code, Alex deciding. Outcome (`shards/registry_family_prior.csv`): `family`
+on 45 rows (12 also with a prior), `documented_prior` alone on 61; the other 108 rows stay on
+the rule with no stated prior. Rules taken: a prior is the one passed to the row's model call,
+trimmed to the row's response in a multivariate fit; package defaults, priors only in a supplement
+not on the page and priors stated in words without parameters (arriero, kappers) are empty;
+priors in deposit files the page lists but does not show (verberk's GitHub zip, valdebenito's R
+file) are filed; an unbounded Stan scale without a sampling statement is written as such. Eight
+values joined the vocabulary: `bernoulli(cloglog)` (Stata `mecloglog`, meyel's glmer and brms
+fits), `Gamma(identity)` (sequestro), `zero_inflated_beta` (liutu), `student` (johannes),
+`gaussian` (Gaussian fits to counts and ordinal ratings: hubbard, king, berweger, naranowicz,
+two stan_arm rows), `acat` (posteriordb's rating-scale and partial-credit IRT models), `weibull`
+and `cox` (survival rows, censoring in `notes`). The three Zuur zero-inflation rows with a
+published model (SeaGrass, Turcoparasitos, Spiders) stay on the rule: the book is not open and
+no source read states their family. Reading errors the code turned up in other columns, and the
+Windows CI failure, are #15.
