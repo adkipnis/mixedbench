@@ -168,3 +168,63 @@ The blind re-read of the O/low stratum; `shards/registry_reread_o_low.csv`.
 - openml_343: `plot` (the cultivars) and the six other cover measures of 1991–94 added, the
   documented objective predicting 1994 white-clover cover from them.
 - openml_1100, pmlb_apnea1: stand.
+
+## Slope decisions (#27, 2026-10-09)
+
+The 35 rows the slope parser reported, decided on Claude's proposals revised after a colleague's
+review; `shards/registry_slopes_decisions.csv`. Rules:
+- R1: an interaction slope is dropped and only the main effects present after R's expansion
+  stay.
+- R2: `(1|g) + (0 + x|g)` is `x||g`; a lone `(0 + x|g)` is `x|g` for a categorical `x`
+  (equivalent) and an approximation for a numeric one.
+- R3: a dropped polynomial slope or a global shift keeps the covariate; a non-affine or
+  group-dependent recode is not substituted by default.
+- R4: nonlinear parameters stay empty and are refused at admission (#32).
+
+Fidelity: `equivalent` is the same random-effect structure in another basis (not the same
+prior), `approximate` changes it.
+
+- nlme Cefamandole, IGF, Muscle, Soybean: empty; random effects on nonlinear parameters,
+  refused at admission (`nonlinear_parameter_model`, #32).
+- nlme Dialyzer: `pressure|Subject`; approximate, the quadratic slope dropped.
+- nlme Ovary: empty; the slope is on `sin(2*pi*Time)`, refused at admission
+  (`non_affine_feature`, #32).
+- nlme Wafer: empty until #45 puts `Wafer:Site` in the row (its `Site` codes repeat across
+  wafers); then `voltage|Wafer;voltage|Wafer:Site`, the quadratic slopes dropped.
+- HLMdiag autism: `age2|childid`; approximate, an intercept variance the book removed is added
+  and the quadratic slope dropped.
+- agridat harris.wateruse: `day||tree`; equivalent, `ti = day/100`.
+- carData Blackmore: `age|subject`; equivalent, `I(age - 8)` a shift under a correlated
+  intercept.
+- carData KosteckiDillon: empty, an approved intercept-only approximation; `treatment` and
+  `sqrt(posttreat)` are derived columns the row lacks.
+- languageR beginningReaders: `LogFrequency||Subject;OrthLength||Subject;PC1||Subject`;
+  equivalent.
+- stan_arm ARM/Ch.20/allvar.csv: `visage||newpid`; approximate, `time = visage - baseage` a
+  shift per child.
+- pymc_examples external_pp: `GRADE||ID`; approximate, the polynomial slopes dropped.
+- pymc_examples employee: `lmx||team`; equivalent.
+- goldstein_msm playactivity.xls: `activity 1|ID;activity 2|ID;activity 4|ID`; approximate, an
+  intercept variance added (names with spaces since 3e536ad).
+- rabe_hesketh electricity: `price|id;contract|id;local|id;known|id;tod|id;seasonal|id`;
+  approximate, an intercept variance and its correlations added.
+- rabe_hesketh yogurt: `brand|house`; equivalent, K brand effects with a full covariance.
+- goldstein_msm OXBOYS.xls: `Age centered about 13 years|ID`; approximate, the quadratic slope
+  dropped.
+- koczynska_2026_osf_48, _49: the five lag-1 slopes over `cntry`; approximate,
+  `libdem_lag1:trust_lag1` dropped.
+- naranowicz_2024_osf_2 #2: `SenType|PrtpCd;Mood|Trg;SenType|Trg`; approximate,
+  `Mood:SenType` dropped.
+- timmer_2024_osf_16, _15: `Cue`, `Language`, `trial_type` over `subject`, and `Cue` (16 only)
+  and `Language` over `picture`, correlated (`|`); equivalent to the deposited script's lmer
+  terms, the filed `||` on categorical columns set aside.
+- sequestro_2024_osf_2: `condition|ppid;RTc|ppid`; _11, _12, _16: `condition|ppid;RT..s.|ppid`;
+  approximate, `condition:RT` dropped.
+- gumundsdottir_2026_osf_6: empty; time is a non-linear recode of wave (0, 1, 2, 3, 6 months),
+  refused at admission (`non_affine_feature`, #32).
+- avetisyan_2020_osf_2 E3, avetisyan_2020_osf E2: `cond|subj;cond|item`; equivalent, the K − 1
+  contrasts of `cond` span its full factorial.
+- weaving_2023_osf: `group_n|study;SDO_MC|study;GSJ|study`; approximate, `group_n:SDO_MC`
+  dropped.
+- kleisner_2026_osf #1–3: `SEX|POPULATION`; approximate, the sex-specific intercepts kept and
+  the SEX × covariate slopes dropped.
