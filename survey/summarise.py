@@ -21,8 +21,9 @@ from schema import TIERS, readCsv
 HERE = Path(__file__).parent
 TEMPLATE = HERE / 'SUMMARY.template.md'
 PRACTICE = HERE / 'practice_quantiles.yaml'
-# The v1 families of the stage table (docs/design/stages.md): the practice column takes the
-# maximum of their p90 (envelope rule 1), the minimum for the smallest group size.
+# The v1 families of the stage table (metabeta-v3's packages/glmm/docs/design/stages.md): the
+# practice column takes the maximum of their p90 (envelope rule 1), the minimum for the smallest
+# group size.
 PRACTICE_FAMILIES = ('Normal', 'Bernoulli', 'Poisson', 'negative binomial', 'binomial', 'Gamma', 'log-normal')  # fmt: skip
 PRACTICE_AXES = {
     'n_obs': 'n_obs',
@@ -48,44 +49,6 @@ TERMS = (9, 14)  # the practice survey's p90 and p95 of fixed-effect terms (enve
 K_TAIL = 10  # the summary's K table pools the levels above this (the columns rule's integer cap)
 
 
-def numeric(frame: pd.DataFrame, columns: tuple[str, ...]) -> pd.DataFrame:
-    converted = {c: pd.to_numeric(frame[c], errors='coerce') for c in columns}
-    return frame.assign(**converted)
-
-
-def quantile(values: pd.Series, q: float) -> int | float:
-    v = observed(values, q)
-    return v if isinstance(v, int) else round(v, 4)
-
-
-def quantilesOf(values: pd.Series) -> dict:
-    values = pd.Series(values).dropna()
-    out = {'n': len(values), 'min': quantile(values, 0)}
-    out |= {k: quantile(values, q) for k, q in LEVELS.items()}
-    out['max'] = quantile(values, 1)
-    return out
-
-
-def shares(values: pd.Series) -> dict:
-    counts = values.value_counts()
-    return {k: round(n / len(values), 3) for k, n in counts.items()}
-
-
-def shareTable(values: pd.Series, label: str) -> str:
-    counts = values.value_counts()
-    rows = [f'| {k} | {n} | {n / len(values):.0%} |' for k, n in counts.items()]
-    return '\n'.join([f'| {label} | n | share |', '|---|---|---|', *rows])
-
-
-def cell(value: float | None) -> str:
-    return '–' if value is None else str(value)
-
-
-def counted(values: pd.Series) -> str:
-    """`D 12, R 3` from a column of labels; `none` when empty."""
-    return ', '.join(f'{k} {n}' for k, n in values.value_counts().items()) or 'none'
-
-
 # =====================================================================================
 # pipeline: measured files -> axes -> shares -> K -> implied columns -> summary
 # =====================================================================================
@@ -95,12 +58,25 @@ class Summariser:
         self.registry = readCsv(self.root / 'registry.csv')
         self.excluded = readCsv(self.root / 'excluded.csv')
         measured = FACTOR_AXES + tuple(ROW_AXES.values())
-        self.dimensions = numeric(readCsv(self.root / 'dimensions.csv'), measured)
-        self.columns = numeric(readCsv(self.root / 'columns.csv'), ('K',))
+        self.dimensions = self.numeric(readCsv(self.root / 'dimensions.csv'), measured)
+        self.columns = self.numeric(readCsv(self.root / 'columns.csv'), ('K',))
         self.rows = self.dimensions.drop_duplicates(['source', 'object', 'model_index'])
         self.modelled = self.columns[self.columns['in_model'] == 'yes']
         self.categoricals = self.modelled[self.modelled['type'].isin(CATEGORICAL_TYPES)]
 
+    def flush(self) -> None:
+        quantiles = self.quantiles()
+        (self.root / 'quantiles.yaml').write_text(yaml.safe_dump(quantiles, sort_keys=False))
+        (self.root / 'SUMMARY.md').write_text(self.summary(quantiles))
+
+    @staticmethod
+    def numeric(frame: pd.DataFrame, columns: tuple[str, ...]) -> pd.DataFrame:
+        converted = {c: pd.to_numeric(frame[c], errors='coerce') for c in columns}
+        return frame.assign(**converted)
+
+    # ---------------------------------------------------------------------------------
+    # quantiles
+    # ---------------------------------------------------------------------------------
     def quantiles(self) -> dict:
         axes = {axis: self.axis(self.dimensions, axis) for axis in FACTOR_AXES}
         axes |= {axis: self.axis(self.rows, column) for axis, column in ROW_AXES.items()}
@@ -112,33 +88,51 @@ class Summariser:
             'axes': axes,
             'imbalance': {'balanced_share': self.balancedShare()},
             'shares': {
-                'covariate_type': shares(self.modelled['type']),
-                'level': shares(self.modelled['level']),
-                'relation': shares(self.dimensions['relation']),
-                'response_type': shares(self.registry['response_type']),
-                'reader': shares(self.registry['reader']),
-                'published_model': shares(self.registry['published_model']),
+                'covariate_type': self.shares(self.modelled['type']),
+                'level': self.shares(self.modelled['level']),
+                'relation': self.shares(self.dimensions['relation']),
+                'response_type': self.shares(self.registry['response_type']),
+                'reader': self.shares(self.registry['reader']),
+                'published_model': self.shares(self.registry['published_model']),
             },
-            'k_distribution': {int(k): v for k, v in shares(self.categoricals['K']).items()},
+            'k_distribution': {int(k): v for k, v in self.shares(self.categoricals['K']).items()},
             'implied_columns': self.impliedColumns(),
         }
 
-    # ---------------------------------------------------------------------------------
-    # axes
-    # ---------------------------------------------------------------------------------
     @staticmethod
     def axis(frame: pd.DataFrame, column: str) -> dict:
         """One axis pooled, per tier present, and without the heavy source."""
         tiers = [t for t in TIERS if (frame['tier'] == t).any()]
+        without_agridat = frame.loc[frame['source'] != HEAVY_SOURCE, column]
         return {
-            'pooled': quantilesOf(frame[column]),
-            'tiers': {t: quantilesOf(frame.loc[frame['tier'] == t, column]) for t in tiers},
-            'without_agridat': quantilesOf(frame.loc[frame['source'] != HEAVY_SOURCE, column]),
+            'pooled': Summariser.quantilesOf(frame[column]),
+            'tiers': {
+                t: Summariser.quantilesOf(frame.loc[frame['tier'] == t, column]) for t in tiers
+            },
+            'without_agridat': Summariser.quantilesOf(without_agridat),
         }
+
+    @staticmethod
+    def quantilesOf(values: pd.Series) -> dict:
+        values = pd.Series(values).dropna()
+        out = {'n': len(values), 'min': Summariser.quantile(values, 0)}
+        out |= {k: Summariser.quantile(values, q) for k, q in LEVELS.items()}
+        out['max'] = Summariser.quantile(values, 1)
+        return out
+
+    @staticmethod
+    def quantile(values: pd.Series, q: float) -> int | float:
+        v = observed(values, q)
+        return v if isinstance(v, int) else round(v, 4)
 
     def balancedShare(self) -> float:
         """Share of grouping factors whose allocation is balanced (α infinite)."""
         return round(float((self.dimensions['alpha'] == float('inf')).mean()), 3)
+
+    @staticmethod
+    def shares(values: pd.Series) -> dict:
+        counts = values.value_counts()
+        return {k: round(n / len(values), 3) for k, n in counts.items()}
 
     def impliedColumns(self) -> dict:
         """Expected design columns of a model with T terms under the observed categorical share c
@@ -163,9 +157,9 @@ class Summariser:
             'n_rows': quantiles['n_rows'],
             'n_objects': quantiles['n_objects'],
             'n_factor_rows': quantiles['n_factor_rows'],
-            'tiers': counted(self.registry['tier']),
+            'tiers': self.counted(self.registry['tier']),
             'n_excluded': len(self.excluded),
-            'excluded_reasons': counted(self.excluded['reason']),
+            'excluded_reasons': self.counted(self.excluded['reason']),
             'balanced_share': quantiles['imbalance']['balanced_share'],
             'categorical_share': implied['categorical_share'],
             'mean_columns_per_categorical': implied['mean_columns_per_categorical'],
@@ -174,13 +168,13 @@ class Summariser:
         for axis, block in quantiles['axes'].items():
             fields[f'table_{PLACEHOLDERS.get(axis, axis)}'] = self.axisTable(axis, block, practice)
         fields |= {
-            'table_relation': shareTable(self.dimensions['relation'], 'relation'),
-            'table_covariate_type': shareTable(self.modelled['type'], 'covariate type'),
-            'table_level': shareTable(self.modelled['level'], 'level'),
-            'table_k_distribution': shareTable(self.kBucketed(), 'K'),
-            'table_response_type': shareTable(self.registry['response_type'], 'response type'),
-            'table_reader': shareTable(self.registry['reader'], 'reader'),
-            'table_published_model': shareTable(self.registry['published_model'], 'published'),
+            'table_relation': self.shareTable(self.dimensions['relation'], 'relation'),
+            'table_covariate_type': self.shareTable(self.modelled['type'], 'covariate type'),
+            'table_level': self.shareTable(self.modelled['level'], 'level'),
+            'table_k_distribution': self.shareTable(self.kBucketed(), 'K'),
+            'table_response_type': self.shareTable(self.registry['response_type'], 'response type'),
+            'table_reader': self.shareTable(self.registry['reader'], 'reader'),
+            'table_published_model': self.shareTable(self.registry['published_model'], 'published'),
             'tier_d': self.tierD(),
         }
         return Template(TEMPLATE.read_text()).substitute(fields)
@@ -192,8 +186,8 @@ class Summariser:
         return k.astype(str).where(k <= K_TAIL, f'{K_TAIL + 1}+')
 
     def tierD(self) -> str:
-        """The deposit-level loss of Tier D (#26) as bullets: the links of `deposits.csv` by
-        status, the listed files by role, the data files not pulled by reason, the objects
+        """The deposit-level loss of Tier D (#26) as bullets: the links of `deposit_files.csv`
+        by status, the listed files by role, the data files not pulled by reason, the objects
         excluded by reason, and the papers that reached the registry."""
         file = self.survey / 'deposit_files.csv'
         if not file.exists():
@@ -205,14 +199,12 @@ class Summariser:
         unpulled = data[data['reason'] != '']
         excluded = self.excluded[self.excluded['tier'] == 'D']
         registered = self.registry[self.registry['tier'] == 'D']
-        labels = registered['source'].str.replace(
-            r'_(dryad|osf|zenodo|figshare)(_\d+)?$', '', regex=True
-        )
+        papers = files.loc[files['label'].isin(registered['source']), 'paper_id']
         return '\n'.join([
-            f'- Links: {len(links)} over {links["paper_id"].nunique()} papers; by status {counted(links["status"])}.',
-            f'- Listed files: {len(listed)}; by role {counted(listed["role"])}; data files not pulled: {counted(unpulled["reason"])}.',
-            f'- Objects excluded: {len(excluded)} ({counted(excluded["reason"])}).',
-            f'- Papers with a registry row: {labels.nunique()}, over {len(registered)} rows.',
+            f'- Links: {len(links)} over {links["paper_id"].nunique()} papers; by status {self.counted(links["status"])}.',
+            f'- Listed files: {len(listed)}; by role {self.counted(listed["role"])}; data files not pulled: {self.counted(unpulled["reason"])}.',
+            f'- Objects excluded: {len(excluded)} ({self.counted(excluded["reason"])}).',
+            f'- Papers with a registry row: {papers.nunique()}, over {len(registered)} rows.',
         ])  # fmt: skip
 
     @staticmethod
@@ -222,10 +214,10 @@ class Summariser:
         rows = {'pooled': block['pooled']}
         rows |= {f'tier {t}': q for t, q in block['tiers'].items()}
         rows['without agridat'] = block['without_agridat']
-        last = {'pooled': cell(Summariser.practiceP90(axis, practice))}
+        last = {'pooled': Summariser.cell(Summariser.practiceP90(axis, practice))}
         lines = [
             f'| {name} | '
-            + ' | '.join(cell(q[k]) for k in QUANTILE_KEYS)
+            + ' | '.join(Summariser.cell(q[k]) for k in QUANTILE_KEYS)
             + f' | {last.get(name, "")} |'
             for name, q in rows.items()
         ]
@@ -241,7 +233,17 @@ class Summariser:
             return min(values)
         return max(values)
 
-    def flush(self) -> None:
-        quantiles = self.quantiles()
-        (self.root / 'quantiles.yaml').write_text(yaml.safe_dump(quantiles, sort_keys=False))
-        (self.root / 'SUMMARY.md').write_text(self.summary(quantiles))
+    @staticmethod
+    def shareTable(values: pd.Series, label: str) -> str:
+        counts = values.value_counts()
+        rows = [f'| {k} | {n} | {n / len(values):.0%} |' for k, n in counts.items()]
+        return '\n'.join([f'| {label} | n | share |', '|---|---|---|', *rows])
+
+    @staticmethod
+    def counted(values: pd.Series) -> str:
+        """`D 12, R 3` from a column of labels; `none` when empty."""
+        return ', '.join(f'{k} {n}' for k, n in values.value_counts().items()) or 'none'
+
+    @staticmethod
+    def cell(value: float | None) -> str:
+        return '–' if value is None else str(value)
