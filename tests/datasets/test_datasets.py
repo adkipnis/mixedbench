@@ -178,6 +178,13 @@ def test_help_returns_the_rd_page_text(tmp_path):
     assert 'Species, age in years and weight in kg of six pets.' in page
 
 
+def test_licence_is_the_license_field_of_the_packages_description(tmp_path):
+    """The registry's `licence` column of a CRAN source comes from the package itself, verbatim;
+    the survey normalises it (ADR 0003)."""
+    loader = Loader(tmp_path, fetch=serveCurrent)
+    assert loader.licence(FIXTURE) == 'CC0'
+
+
 @needsRscript
 def test_archive_url_is_tried_after_a_miss(tmp_path):
     """CRAN moves a superseded version to `Archive/`; a pinned source must stay loadable, and
