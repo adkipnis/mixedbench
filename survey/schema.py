@@ -110,7 +110,8 @@ EXCLUSION_REASONS = (
 FAMILIES = (
     'negbinomial', 'bernoulli(probit)', 'cumulative(probit)', 'Gamma(log)', 'lognormal',
     'zero_inflated_poisson', 'zero_inflated_negbinomial', 'hurdle_poisson', 'hurdle_negbinomial',
-    'Beta',
+    'Beta', 'bernoulli(cloglog)', 'Gamma(identity)', 'zero_inflated_beta', 'student', 'gaussian',
+    'acat', 'weibull', 'cox',
 )  # fmt: skip
 COLUMN_TYPES = ('categorical', 'ordered', 'continuous')  # what `types` may declare: `col=ordered`  # fmt: skip
 

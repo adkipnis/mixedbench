@@ -32,7 +32,9 @@ index random effects; the **response** is the column a documented model explains
    for continuous, Poisson for count, logit for binary and binomial, cumulative logit for
    ordinal); only a departure is filed, as brms names it: `negbinomial`, `bernoulli(probit)`,
    `cumulative(probit)`, `Gamma(log)`, `lognormal`, `zero_inflated_poisson`,
-   `zero_inflated_negbinomial`, `hurdle_poisson`, `hurdle_negbinomial`, `Beta`. A departure
+   `zero_inflated_negbinomial`, `hurdle_poisson`, `hurdle_negbinomial`, `Beta`,
+   `bernoulli(cloglog)`, `Gamma(identity)`, `zero_inflated_beta`, `student`, `gaussian` (a
+   Gaussian fit to a count or ordinal response), `acat`, `weibull`, `cox`. A departure
    outside this list goes in `notes` as `RULE GAP:`.
    Its grouping factors, covariates and interactions as `;`-lists of column names; nested
    factors as two factors, the merge computes the relation; a random term on the combination
