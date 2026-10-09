@@ -518,7 +518,7 @@ axes:
       min: 0
       p5: 0
       p10: 0
-      p50: 0.1621
+      p50: 0.1619
       p90: 0.7478
       p95: 1.0049
       max: 4.9111
@@ -583,7 +583,7 @@ axes:
       min: 0.0296
       p5: 0.9496
       p10: 1.6866
-      p50: 34.298
+      p50: 34.5248
       p90: .inf
       p95: .inf
       max: .inf
@@ -849,17 +849,17 @@ axes:
       max: 14966
   K:
     pooled:
-      n: 462
+      n: 460
       min: 1
       p5: 2
       p10: 3
       p50: 4
       p90: 9
-      p95: 11
+      p95: 12
       max: 117
     tiers:
       R:
-        n: 168
+        n: 166
         min: 2
         p5: 3
         p10: 3
@@ -904,7 +904,7 @@ axes:
         p95: 13
         max: 14
     without_agridat:
-      n: 434
+      n: 432
       min: 1
       p5: 2
       p10: 3
@@ -919,7 +919,7 @@ shares:
     continuous: 0.439
     binary: 0.333
     categorical: 0.189
-    ordered: 0.038
+    ordered: 0.039
   level:
     within: 0.69
     group: 0.31
@@ -929,10 +929,10 @@ shares:
     nested: 0.138
     mixed: 0.089
   response_type:
-    continuous: 0.632
-    binary: 0.159
-    count: 0.106
-    ordinal: 0.063
+    continuous: 0.634
+    binary: 0.161
+    count: 0.105
+    ordinal: 0.062
     binomial: 0.022
     categorical: 0.017
   reader:
@@ -944,19 +944,19 @@ shares:
     'yes': 0.759
     'no': 0.241
 k_distribution:
-  3: 0.353
-  4: 0.216
+  3: 0.35
+  4: 0.217
   5: 0.093
   2: 0.076
-  6: 0.058
+  6: 0.059
   7: 0.052
   10: 0.035
   9: 0.03
   8: 0.022
   14: 0.009
   11: 0.009
-  1: 0.006
-  12: 0.006
+  1: 0.007
+  12: 0.007
   17: 0.004
   76: 0.004
   56: 0.002
@@ -973,6 +973,6 @@ k_distribution:
   47: 0.002
 implied_columns:
   categorical_share: 0.228
-  mean_columns_per_categorical: 4.89
-  terms_9: 16.98
-  terms_14: 26.41
+  mean_columns_per_categorical: 4.902
+  terms_9: 17.0
+  terms_14: 26.45
