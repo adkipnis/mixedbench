@@ -84,3 +84,14 @@ def test_a_row_carries_its_slope_terms_structured_and_its_verification() -> None
         SlopeTerm(covariate='situ', factor='id:item', correlated=True),
     )
     assert row.verified == 'hand'
+
+
+def test_a_slope_on_a_column_whose_name_has_spaces_is_one_covariate() -> None:
+    """Some loaded tables name a column with spaces (goldstein_msm `activity 1`); the term's
+    bars, not whitespace, separate the covariate from the factor."""
+    cells = verbAggCells() | {'random_slopes': 'activity 1|id;Age centered about 13 years||item'}  # fmt: skip
+    row = Row.parse(cells)
+    assert row.random_slopes == (
+        SlopeTerm(covariate='activity 1', factor='id', correlated=True),
+        SlopeTerm(covariate='Age centered about 13 years', factor='item', correlated=False),
+    )
