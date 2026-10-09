@@ -939,7 +939,7 @@ shares:
     pandas: 0.642
     pyreadr: 0.346
     deparse: 0.01
-    rscript: 0.003
+    rdata: 0.003
   published_model:
     'yes': 0.76
     'no': 0.24

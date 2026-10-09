@@ -241,7 +241,7 @@ its levels less one, an interaction the product.
 | pandas | 457 | 64% |
 | pyreadr | 246 | 35% |
 | deparse | 7 | 1% |
-| rscript | 2 | 0% |
+| rdata | 2 | 0% |
 
 | published | n | share |
 |---|---|---|
