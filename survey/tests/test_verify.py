@@ -64,3 +64,29 @@ def test_scan_lists_each_planted_keyword_once_with_its_snippet(tmp_path):
     snippets = {h['snippet'] for h in hits}
     assert 'The authors put a Normal(0, 1) prior on every slope.' in snippets  # newline collapsed
     assert 'glmer.nb(y ~ x + (1 | pen))' in snippets
+
+
+def test_scan_reads_a_shared_deposit_page_once(tmp_path):
+    """A Tier D help page only points at its paper's deposit page, which holds the models and the
+    code; the scan follows the pointer and lists the deposit page's hits once under the page,
+    not once per object of the deposit."""
+    registry = tmp_path / 'registry'
+    survey = tmp_path / 'survey'
+    survey.mkdir()
+    rows = [
+        {'source': 'smith_2020_osf', 'object': 'a.csv', 'model_index': '1', 'formula': 'y ~ x + (1 | id)', 'notes': ''},
+        {'source': 'smith_2020_osf_2', 'object': 'b.csv', 'model_index': '1', 'formula': 'y ~ x + (1 | id)', 'notes': ''},
+    ]  # fmt: skip
+    writeRegistry(registry, rows)
+    pointer = '# deposit page: registry/help/deposits/smith_2020_osf_abcde.txt\n\n# first rows\n'
+    writeHelp(registry, 'smith_2020_osf', 'a.csv', pointer)
+    writeHelp(registry, 'smith_2020_osf_2', 'b.csv', pointer)
+    writeHelp(
+        registry, 'deposits', 'smith_2020_osf_abcde', 'model_index: 1\nfamily: Gamma\nlink: log\n'
+    )
+    verifier = Verifier(registry, survey)
+
+    verifier.scan()
+
+    hits = readRows(survey / 'scan_hits.csv')
+    assert [hitKey(h) for h in hits] == [('smith_2020_osf_abcde', '', '', 'deposit', 'gamma')]
