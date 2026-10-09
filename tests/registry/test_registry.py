@@ -95,10 +95,8 @@ def test_every_dryad_source_of_the_registry_has_a_mirror() -> None:
     assert dryad and not unmirrored
 
 
-def test_a_url_sources_pin_is_its_checksum(tmp_path) -> None:
+def test_a_url_sources_pin_is_its_checksum() -> None:
     """A URL has no version: the file's sha256 is its pin, so the loader always checks it."""
-    pinned = {'kind': 'url', 'name': 'https://example.org/deposit.zip', 'pin': 'ab' * 32}
-    file = tmp_path / 'sources.yaml'
-    file.write_text(yaml.safe_dump({'tiers': {'D': {'deposit': pinned}}}))
-    deposit = registry.sources(file)['deposit']
+    entry = {'kind': 'url', 'name': 'https://example.org/deposit.zip', 'pin': 'ab' * 32}
+    deposit = registry.source('deposit', entry)
     assert deposit.checksum == deposit.pin == 'ab' * 32
