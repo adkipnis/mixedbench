@@ -34,6 +34,30 @@ loader = Loader(Path('cache'), manifest=registry.manifest())
 sleepstudy = loader.load(registry.sources()[row['source']], 'sleepstudy')
 ```
 
+## Loading one problem
+
+A problem is a registry row's documented model on its table, named
+`<source>/<object>/<model_index>`; materialised once, it loads from its files alone.
+
+```python
+from mixedbench.contract import Problem, load, materialise
+
+[row] = [row for row in registry.rows() if row.source == 'lme4' and row.object == 'sleepstudy']
+table = loader.load(registry.sources()[row.source], row.object, row.types)
+materialise(Problem.build(row, table), Path('cache'))  # returns the contract hash
+
+# no loader and no network from here on: the table, the column roles, the prior, the scales
+problem = load(Path('cache'), 'lme4/sleepstudy/1')
+```
+
+## The suite files
+
+- [`suite/1.1/candidates.csv`](suite/1.1/candidates.csv): the problems admitted to suite 1.1
+  with their contract hashes, written by `suite/admit.py`.
+- [`suite/1.1/refused.csv`](suite/1.1/refused.csv): the rows left out, each with its reason.
+- The registry keeps every row; the suite records why a row is out
+  ([ADR 0002](docs/adr/0002-registry-suite-versioning-licences.md)).
+
 ## The registry files
 
 - The package carries the registry files of the survey's
