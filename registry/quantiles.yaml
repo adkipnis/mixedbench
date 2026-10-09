@@ -937,9 +937,9 @@ shares:
     categorical: 0.017
   reader:
     pandas: 0.642
-    pyreadr: 0.346
+    pyreadr: 0.341
     deparse: 0.01
-    rdata: 0.003
+    rdata: 0.007
   published_model:
     'yes': 0.76
     'no': 0.24
