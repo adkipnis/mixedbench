@@ -1,16 +1,22 @@
 """A scratch survey root: `sources.yaml` pins two url sources served from memory by an injected
 fetch, `herds` (Tier D) and `cattle` (Tier R), the same hand-made grouped table under two
-column namings, so that duplicate flagging has a real pair to find. The table: region > herd
-nested, herd `h4` a singleton, `breed` a four-level categorical, `feed` herd-level, `weight`
-continuous, `sick` binary, `cases` out of `trials` binomial, `id` a column to ignore.
+column namings, so that duplicate flagging has a real pair to find, and a CRAN package `pens`
+(Tier R) holding the herds table as `herds.rds`, whose DESCRIPTION states its licence. The
+table: region > herd nested, herd `h4` a singleton, `breed` a four-level categorical, `feed`
+herd-level, `weight` continuous, `sick` binary, `cases` out of `trials` binomial, `id` a column
+to ignore.
 """
 
 import hashlib
 import io
 import sys
+import tarfile
+import tempfile
 import zipfile
 from pathlib import Path
 
+import pandas as pd
+import pyreadr
 import pytest
 import yaml
 
@@ -23,6 +29,8 @@ from mixedbench.datasets import Loader
 FIXTURES = HERE / 'fixtures'
 HERDS_URL = 'https://example.org/herds.zip'
 CATTLE_URL = 'https://example.org/cattle.zip'
+PENS_URL = 'https://cloud.r-project.org/src/contrib/pens_1.0.tar.gz'
+PENS_LICENCE = 'GPL (>= 2)'
 RENAMED = 'row,area,farm,type,diet,calving,kg,ill,positives,tested'
 
 
@@ -30,6 +38,20 @@ def zipped(folder: str, filename: str, text: str) -> bytes:
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, 'w') as archive:
         archive.writestr(f'{folder}/{filename}', text)
+    return buffer.getvalue()
+
+
+def cranTarball(package: str, licence: str, table: pd.DataFrame, name: str) -> bytes:
+    """A CRAN source tarball: a DESCRIPTION and the table as `data/<name>.rds`."""
+    description = f'Package: {package}\nVersion: 1.0\nLicense: {licence}\n'
+    with tempfile.TemporaryDirectory() as dir:
+        root = Path(dir) / package
+        (root / 'data').mkdir(parents=True)
+        (root / 'DESCRIPTION').write_text(description)
+        pyreadr.write_rds(root / 'data' / f'{name}.rds', table)
+        buffer = io.BytesIO()
+        with tarfile.open(fileobj=buffer, mode='w:gz') as archive:
+            archive.add(root, arcname=package)
     return buffer.getvalue()
 
 
@@ -44,13 +66,29 @@ def scratchMerger(registry: Path, survey: Path) -> Merger:
     archives = {
         HERDS_URL: zipped('herds', 'herds.csv', herdsText),
         CATTLE_URL: zipped('cattle', 'cattle.csv', cattleText),
+        PENS_URL: cranTarball('pens', PENS_LICENCE, pd.read_csv(FIXTURES / 'herds.csv'), 'herds'),
     }
     sources = {
         'cap': 40,
         'seed': 0,
         'tiers': {
-            'D': {'herds': {'kind': 'url', 'name': HERDS_URL, 'pin': sha(archives[HERDS_URL])}},
-            'R': {'cattle': {'kind': 'url', 'name': CATTLE_URL, 'pin': sha(archives[CATTLE_URL])}},
+            'D': {
+                'herds': {
+                    'kind': 'url',
+                    'name': HERDS_URL,
+                    'pin': sha(archives[HERDS_URL]),
+                    'licence': 'CC0 1.0 Universal',
+                }
+            },
+            'R': {
+                'cattle': {
+                    'kind': 'url',
+                    'name': CATTLE_URL,
+                    'pin': sha(archives[CATTLE_URL]),
+                    'licence': 'not stated',
+                },
+                'pens': {'kind': 'cran', 'pin': '1.0'},
+            },
         },
     }
     registry.mkdir(exist_ok=True)

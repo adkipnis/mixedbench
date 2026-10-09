@@ -16,14 +16,18 @@ class Frame:
     tiers: dict[str, str]  # label -> tier
     sources: dict[str, Source]  # label -> pinned source
     caps: dict[str, int | None]  # label -> most objects read from it, None for all of them
+    licences: dict[str, str]  # label -> its `licence:` key, verbatim, where it has one
     seed: int  # of the per-source draw where a source exceeds its cap
 
 
 def readFrame(root: Path) -> Frame:
     file = yaml.safe_load((root / 'sources.yaml').read_text())
-    tiers, caps = {}, {}
+    tiers, caps, licences = {}, {}, {}
     for tier, entries in file['tiers'].items():
         for label, entry in (entries or {}).items():
             tiers[label] = tier
             caps[label] = entry.get('cap', file.get('cap'))
-    return Frame(tiers, registry.sources(root / 'sources.yaml'), caps, file['seed'])
+            if 'licence' in entry:
+                licences[label] = entry['licence']
+    pinned = registry.sources(root / 'sources.yaml')
+    return Frame(tiers, pinned, caps, licences, file['seed'])

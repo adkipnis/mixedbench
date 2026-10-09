@@ -35,14 +35,15 @@ REGISTRY = Table(
         # identity: the source label of sources.yaml, the object as the loader enumerates it
         'source', 'object', 'model_index',
         # the documented model, every entry a column name of the loaded table
-        'response', 'response_type', 'trials', 'grouping_factors', 'covariates', 'interactions',
-        'ignore', 'types', 'formula', 'published_model',
+        'response', 'response_type', 'trials', 'family', 'grouping_factors', 'covariates',
+        'interactions', 'ignore', 'types', 'formula', 'documented_prior', 'published_model',
         # bookkeeping
         'domain', 'confidence', 'notes',
     ),
     # tier from sources.yaml; sources: `source:object` of every confirmed duplicate folded into
-    # this row, the row's own first; reader: the loader's route
-    scriptColumns={'tier': 'source', 'sources': 'tier', 'reader': 'object'},
+    # this row, the row's own first; reader: the loader's route; licence: the source's, through
+    # LICENCES
+    scriptColumns={'tier': 'source', 'sources': 'tier', 'reader': 'object', 'licence': 'reader'},
     key=('source', 'object', 'model_index'),
 )  # fmt: skip
 
@@ -104,11 +105,19 @@ EXCLUSION_REASONS = (
     'response missing or undocumented', 'derived or duplicated table', 'simulated data',
     'unreadable format', 'licence forbids redistribution', 'too large', 'not the paper\'s data',
 )  # fmt: skip
+# A departure from the contract's family rule as brms names it (ADR 0001, 0004); empty on the
+# rule. A value is added when a documented model needs it, not in advance.
+FAMILIES = (
+    'negbinomial', 'bernoulli(probit)', 'cumulative(probit)', 'Gamma(log)', 'lognormal',
+    'zero_inflated_poisson', 'zero_inflated_negbinomial', 'hurdle_poisson', 'hurdle_negbinomial',
+    'Beta',
+)  # fmt: skip
 COLUMN_TYPES = ('categorical', 'ordered', 'continuous')  # what `types` may declare: `col=ordered`  # fmt: skip
 
 ALLOWED: dict[str, dict[str, tuple[str, ...]]] = {
     'registry': {
         'response_type': RESPONSE_TYPES,
+        'family': FAMILIES,
         'published_model': YES_NO,
         'domain': DOMAINS,
         'confidence': ('high', 'medium', 'low'),
@@ -135,6 +144,41 @@ REQUIRED = {
     'duplicates': ('source_a', 'object_a', 'source_b', 'object_b', 'verdict'),
     'dropped': ('source', 'object', 'reason'),
 }  # fmt: skip
+
+# A source's licence as `sources.yaml` or its CRAN DESCRIPTION states it, verbatim -> the
+# registry's vocabulary. A string not listed refuses the merge, so a new spelling is classified
+# on sight (ADR 0003).
+LICENCES = {
+    'CC0 1.0 Universal': 'CC0-1.0',
+    'https://spdx.org/licenses/CC0-1.0.html': 'CC0-1.0',
+    'CC0: Public Domain': 'CC0-1.0',
+    'Kaggle, CC0: Public Domain': 'CC0-1.0',
+    'CC-By Attribution 4.0 International': 'CC-BY-4.0',
+    'CC BY 4.0': 'CC-BY-4.0',
+    'cc-by-4.0': 'CC-BY-4.0',
+    'Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)': 'CC-BY-NC-4.0',
+    'CC_BY-NC-SA': 'CC-BY-NC-SA-4.0',  # OpenML names no version
+    'Database: Open Database, Contents: Database Contents': 'ODbL-1.0',  # Kaggle's ODbL/DbCL
+    'GPL (>= 2)': 'GPL-2.0-or-later',
+    'GPL': 'GPL-2.0-or-later',  # R's reading of an unversioned GPL: any version
+    'GPL-2 | GPL-3': 'GPL-2.0-or-later',  # the nearest value
+    'Part of R 4.6.1': 'GPL-2.0-or-later',  # R is GPL-2 | GPL-3 (r-project.org/Licenses)
+    'GPL-2': 'GPL-2.0',
+    'GPL 2': 'GPL-2.0',
+    'GPL (>= 3)': 'GPL-3.0-or-later',
+    'GPL-3.0': 'GPL-3.0',
+    'AGPL-3': 'AGPL-3.0',
+    'MIT': 'MIT',
+    'mit-license': 'MIT',
+    'MIT + file LICENSE': 'MIT',
+    'BSD-3-Clause': 'BSD-3-Clause',
+    'Unlimited': 'public-domain',  # R: no restriction beyond the law
+    'Public': 'other',  # OpenML: access, not a licence
+    'Publicly available': 'other',
+    'other-open': 'other',
+    'Kaggle and Federal University of Espirito Santo, Brazil': 'not stated',  # an attribution
+    'not stated': 'not stated',
+}
 
 # What the loaded table must show for each declared response type. A binomial response also
 # names its trials column; ordinal and categorical responses are checked on distinct values.
