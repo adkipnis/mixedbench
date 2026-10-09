@@ -11,14 +11,14 @@ correction a benchmark change.
 
 **Versioning.**
 
-- Decision: the package version is the registry version (semver: major bumps are contract
-  changes, minor bumps are registry additions, patches are metadata fixes). Suites are named
-  after the release that freezes them (`suite-1.1`, `suite-1.2`; release 1.0 ships the
-  registry, the contract and a candidate list, no suite) and are immutable; references are
-  tagged by suite version and sampler versions.
+- Decision: the package version is the registry version (semver: a membership change of a
+  released suite never happens, so major bumps are contract changes, minor bumps are registry
+  additions, patches are metadata fixes). Suites are named after the release that freezes
+  them (`suite-1.1`, `suite-1.2`; release 1.0 ships the registry, the contract and a candidate
+  list, no suite) and are immutable; references are tagged by suite version and sampler
+  versions.
 - Decision: a problem whose source vanishes is retired from the *next* suite, never replaced in
   a released one.
-- Why: a membership change of a released suite never happens, so no bump needs to express it.
 
 **Admission to a suite.**
 
