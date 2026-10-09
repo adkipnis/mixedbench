@@ -11,11 +11,13 @@ release that freezes it.
 - [x] **2 Registry columns and verification.** Family, prior, licence, readers without R, hand sample (#6)
 - [ ] **3 Contract and candidate list.** First, the registry module owns the registry row (CSV
   dialect, row grammar, manifest), so `survey/` and the contract share one parser (#16,
-  candidate 2). `Problem` from a registry row (ADR 0001): rows, coding,
-  standardisation, family rule, prior, splits, oracle generator, id and hash; `materialise` to
-  parquet; the admission script writes suite 1.1's candidate list (membership freezes with the
-  references in 1.1, since admission needs a reference that passes the bar, ADR 0002); the
-  weekly fetch CI as the link-rot detector before going public
+  candidate 2). The `random_slopes` and `verified` columns, filled by script. `Problem`
+  from a registry row (ADR 0001, amended 2026-10-09): rows, coding, per-regime
+  standardisation, family rule, prior, splits, oracle generator, id and hash; the
+  materialised problem (parquet and JSON) as the interface; the admission script writes
+  suite 1.1's candidate list (membership freezes with the references in 1.1, since admission
+  needs a reference that passes the bar, ADR 0002); the weekly fetch CI as the link-rot
+  detector before going public
 
 ## Release 1.1 — suite 1.1 with references; the paper
 
