@@ -1,10 +1,10 @@
 n_rows: 714
 n_objects: 641
-n_factor_rows: 938
+n_factor_rows: 939
 axes:
   n_groups:
     pooled:
-      n: 938
+      n: 939
       min: 2
       p5: 4
       p10: 5
@@ -50,7 +50,7 @@ axes:
         p95: 554
         max: 13319
       O:
-        n: 13
+        n: 14
         min: 3
         p5: 3
         p10: 3
@@ -59,7 +59,7 @@ axes:
         p95: 71518
         max: 71518
     without_agridat:
-      n: 885
+      n: 886
       min: 2
       p5: 4
       p10: 5
@@ -69,13 +69,13 @@ axes:
       max: 71518
   group_size_min:
     pooled:
-      n: 938
+      n: 939
       min: 1
       p5: 1
       p10: 1
       p50: 5
-      p90: 81
-      p95: 240
+      p90: 84
+      p95: 245
       max: 18180
     tiers:
       R:
@@ -115,32 +115,32 @@ axes:
         p95: 927
         max: 8162
       O:
-        n: 13
+        n: 14
         min: 1
         p5: 1
         p10: 1
-        p50: 21
+        p50: 25
         p90: 1240
         p95: 18180
         max: 18180
     without_agridat:
-      n: 885
+      n: 886
       min: 1
       p5: 1
       p10: 1
       p50: 5
-      p90: 88
-      p95: 255
+      p90: 91
+      p95: 278
       max: 18180
   group_size_p10:
     pooled:
-      n: 938
+      n: 939
       min: 1
       p5: 1
       p10: 2
       p50: 7
       p90: 107
-      p95: 278
+      p95: 282
       max: 18180
     tiers:
       R:
@@ -180,16 +180,16 @@ axes:
         p95: 1020
         max: 8162
       O:
-        n: 13
+        n: 14
         min: 1
         p5: 1
         p10: 1
-        p50: 21
+        p50: 25
         p90: 3630
         p95: 18180
         max: 18180
     without_agridat:
-      n: 885
+      n: 886
       min: 1
       p5: 1
       p10: 2
@@ -199,12 +199,12 @@ axes:
       max: 18180
   group_size_p50:
     pooled:
-      n: 938
+      n: 939
       min: 1
       p5: 2
       p10: 3
       p50: 11
-      p90: 145
+      p90: 146
       p95: 491
       max: 18180
     tiers:
@@ -245,7 +245,7 @@ axes:
         p95: 1393
         max: 8511
       O:
-        n: 13
+        n: 14
         min: 1
         p5: 1
         p10: 1
@@ -254,23 +254,23 @@ axes:
         p95: 18180
         max: 18180
     without_agridat:
-      n: 885
+      n: 886
       min: 1
       p5: 2
       p10: 3
       p50: 11
       p90: 160
-      p95: 491
+      p95: 493
       max: 18180
   group_size_p90:
     pooled:
-      n: 938
+      n: 939
       min: 1
       p5: 3
       p10: 3
       p50: 14
       p90: 240
-      p95: 600
+      p95: 606
       max: 20425
     tiers:
       R:
@@ -298,7 +298,7 @@ axes:
         p10: 3
         p50: 15
         p90: 139
-        p95: 336
+        p95: 329
         max: 4014
       D:
         n: 158
@@ -310,7 +310,7 @@ axes:
         p95: 1898
         max: 8639
       O:
-        n: 13
+        n: 14
         min: 2
         p5: 2
         p10: 3
@@ -319,7 +319,7 @@ axes:
         p95: 20425
         max: 20425
     without_agridat:
-      n: 885
+      n: 886
       min: 2
       p5: 3
       p10: 3
@@ -329,12 +329,12 @@ axes:
       max: 20425
   group_size_max:
     pooled:
-      n: 938
+      n: 939
       min: 2
       p5: 3
       p10: 4
       p50: 18
-      p90: 290
+      p90: 300
       p95: 894
       max: 33076
     tiers:
@@ -375,26 +375,26 @@ axes:
         p95: 1898
         max: 8639
       O:
-        n: 13
+        n: 14
         min: 10
         p5: 10
         p10: 12
-        p50: 25
+        p50: 40
         p90: 18180
         p95: 33076
         max: 33076
     without_agridat:
-      n: 885
+      n: 886
       min: 2
       p5: 3
       p10: 4
       p50: 19
-      p90: 326
+      p90: 340
       p95: 937
       max: 33076
   singleton_share:
     pooled:
-      n: 938
+      n: 939
       min: 0
       p5: 0
       p10: 0
@@ -440,7 +440,7 @@ axes:
         p95: 0.2917
         max: 0.7481
       O:
-        n: 13
+        n: 14
         min: 0
         p5: 0
         p10: 0
@@ -449,7 +449,7 @@ axes:
         p95: 0.7655
         max: 0.7655
     without_agridat:
-      n: 885
+      n: 886
       min: 0
       p5: 0
       p10: 0
@@ -459,11 +459,11 @@ axes:
       max: 0.8448
   cv:
     pooled:
-      n: 938
+      n: 939
       min: 0
       p5: 0
       p10: 0
-      p50: 0.1329
+      p50: 0.1328
       p90: 0.7439
       p95: 0.9946
       max: 5.899
@@ -505,7 +505,7 @@ axes:
         p95: 0.9946
         max: 1.7829
       O:
-        n: 13
+        n: 14
         min: 0
         p5: 0
         p10: 0
@@ -514,7 +514,7 @@ axes:
         p95: 0.7665
         max: 0.7665
     without_agridat:
-      n: 885
+      n: 886
       min: 0
       p5: 0
       p10: 0
@@ -524,7 +524,7 @@ axes:
       max: 4.9111
   alpha:
     pooled:
-      n: 938
+      n: 939
       min: 0.0251
       p5: 0.9496
       p10: 1.7027
@@ -570,20 +570,20 @@ axes:
         p95: .inf
         max: .inf
       O:
-        n: 13
+        n: 14
         min: 1.6802
         p5: 1.6802
         p10: 1.7019
-        p50: 80.9739
+        p50: .inf
         p90: .inf
         p95: .inf
         max: .inf
     without_agridat:
-      n: 885
+      n: 886
       min: 0.0296
       p5: 0.9496
       p10: 1.6866
-      p50: 36.0263
+      p50: 37.9216
       p90: .inf
       p95: .inf
       max: .inf
@@ -649,7 +649,7 @@ axes:
       p5: 29
       p10: 45
       p50: 494
-      p90: 8113
+      p90: 8164
       p95: 21729
       max: 1000209
   n_grouping_factors:
@@ -706,8 +706,8 @@ axes:
         p10: 1
         p50: 1
         p90: 1
-        p95: 1
-        max: 1
+        p95: 2
+        max: 2
     without_agridat:
       n: 686
       min: 1
@@ -725,7 +725,7 @@ axes:
       p10: 1
       p50: 4
       p90: 13
-      p95: 17
+      p95: 16
       max: 277
     tiers:
       R:
@@ -753,7 +753,7 @@ axes:
         p10: 1
         p50: 4
         p90: 11
-        p95: 14
+        p95: 13
         max: 25
       D:
         n: 104
@@ -780,7 +780,7 @@ axes:
       p10: 1
       p50: 4
       p90: 12
-      p95: 16
+      p95: 15
       max: 277
   d_all:
     pooled:
@@ -849,13 +849,13 @@ axes:
       max: 14966
   K:
     pooled:
-      n: 460
+      n: 459
       min: 1
       p5: 2
       p10: 3
       p50: 4
       p90: 9
-      p95: 12
+      p95: 11
       max: 117
     tiers:
       R:
@@ -877,7 +877,7 @@ axes:
         p95: 10
         max: 10
       T:
-        n: 149
+        n: 148
         min: 1
         p5: 2
         p10: 3
@@ -904,7 +904,7 @@ axes:
         p95: 13
         max: 14
     without_agridat:
-      n: 432
+      n: 431
       min: 1
       p5: 2
       p10: 3
@@ -913,20 +913,20 @@ axes:
       p95: 11
       max: 117
 imbalance:
-  balanced_share: 0.388
+  balanced_share: 0.389
 shares:
   covariate_type:
     continuous: 0.44
-    binary: 0.331
+    binary: 0.332
     categorical: 0.19
     ordered: 0.039
   level:
-    within: 0.69
-    group: 0.31
+    within: 0.688
+    group: 0.312
   relation:
-    single: 0.565
+    single: 0.563
     crossed: 0.21
-    nested: 0.139
+    nested: 0.141
     mixed: 0.086
   response_type:
     continuous: 0.632
@@ -941,23 +941,23 @@ shares:
     deparse: 0.01
     rdata: 0.007
   published_model:
-    'yes': 0.759
-    'no': 0.241
+    'yes': 0.752
+    'no': 0.248
 k_distribution:
-  3: 0.35
-  4: 0.217
-  5: 0.093
+  3: 0.351
+  4: 0.218
+  5: 0.094
   2: 0.076
   6: 0.059
   7: 0.052
   10: 0.035
-  9: 0.03
+  9: 0.031
   8: 0.022
   14: 0.009
   11: 0.009
   1: 0.007
-  12: 0.007
   17: 0.004
+  12: 0.004
   76: 0.004
   56: 0.002
   15: 0.002
@@ -973,6 +973,6 @@ k_distribution:
   47: 0.002
 implied_columns:
   categorical_share: 0.229
-  mean_columns_per_categorical: 4.902
-  terms_9: 17.03
-  terms_14: 26.49
+  mean_columns_per_categorical: 4.889
+  terms_9: 17.0
+  terms_14: 26.45
