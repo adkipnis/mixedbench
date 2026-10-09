@@ -24,7 +24,6 @@ from pathlib import Path
 
 import pandas as pd
 from mixedbench.datasets import DataObject, Loader
-from resolve import depositPages
 from schema import CANDIDATE_COLUMNS, EXCLUDED, SCREENS, TIERS
 from sources import readFrame
 
@@ -100,7 +99,7 @@ class Puller:
         self.rows: list[dict] = []
         self.depositPages: dict[str, Path] = {}  # Tier D label -> the page of its deposit
         if 'D' in tiers:
-            self.depositPages = depositPages(self.registry, self.survey)
+            self.depositPages = self._depositPages(self.registry, self.survey)
 
     def enumerate(self) -> None:
         """One row per data object of every source of the pulled tiers, in frame order,
@@ -145,8 +144,24 @@ class Puller:
         self._write(shard, EXCLUDED.agentColumns, excluded)
 
     # ---------------------------------------------------------------------------------
-    # pipeline: object -> row -> draw -> kept rows -> shard row -> csv
+    # pipeline: deposit pages -> object -> row -> draw -> kept rows -> shard row -> csv
     # ---------------------------------------------------------------------------------
+
+    @staticmethod
+    def _depositPages(registry: Path, survey: Path) -> dict[str, Path]:
+        """Tier D label -> the page of its deposit, as `resolve.py` (survey/archive/) named
+        it; none before the listing ran."""
+        pages = {}
+        file = survey / 'deposit_files.csv'
+        if not file.exists():
+            return pages
+        with open(file, newline='') as f:
+            rows = [row for row in csv.DictReader(f) if row['label']]
+        for row in rows:
+            deposit = row['deposit'].split('.')[-1].replace('/', '_')
+            name = f'{row["paper_id"]}_{row["repository"]}_{deposit}.txt'
+            pages[row['label']] = registry / 'help' / 'deposits' / name
+        return pages
 
     def _row(self, label: str, obj: DataObject) -> dict:
         source = self.frame.sources[label]
