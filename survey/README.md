@@ -261,7 +261,9 @@ nlme row), whose `sources` lists every member; the other members' rows leave the
 Key `source`, `object`. Agent columns `source`, `object`, `reason`; the merge adds `tier`.
 Merging a `dropped_<label>.csv` shard removes its objects from `registry.csv` and
 `excluded.csv` so that a later shard can re-file them, which removes them from `dropped.csv`
-again. A shard naming an object in neither file is refused.
+again. A shard naming an object in neither file is refused. An object the loader no longer
+enumerates (a re-pull changed the census) can never be re-filed: dropping it deletes its key
+from every file, and the object that replaces it is filed under its own key (#14).
 
 ### `dimensions.csv`
 
@@ -581,3 +583,22 @@ subset (time series, matrices, iris) are no frame and were excluded already, and
 The re-pulled `shards/excluded_prescreen.csv` is not merged, since it would overwrite the
 readers' reasons with `unreadable format`. A cache built before #9 holds the dump's `rds/`
 folders, which enumeration now lists as objects; delete them.
+
+**The census and its tables agree** (#14, 2026-10-09). The text reader read a
+whitespace-separated file with pandas' python engine, which ignores quotes under a regex
+separator, so R's `write.table` output with a quoted string holding a space (stan_arm's
+`ideo2.dat`: `"NEW HAM"`) did not parse and quoted names kept their quotes; the C engine
+honours quotes as read.table does. `ideo2.dat` reads again at 10268 × 22 (its exclusion stands),
+ros's `hibbs.dat` and `hdi.dat` read for the first time, and quoted column names in 17 ARM, ROS
+and Diggle files lose their quotes; no registry object changed. ARM's `candidate_effects.dat`
+and `unemployment.dat` changed column counts at #8 and stay excluded for their reasons. The
+re-pull of Tiers E and T rewrote `candidates.csv` and the pre-screen shard (still not merged).
+`shards/dropped_census_repull.csv` deleted the 19 stale keys (18 base R objects of multi-object
+files, sequestro_2024_osf_5's `gmmMix2`), which the merge now does for any dropped object
+the loader no longer enumerates; `shards/excluded_census_repull.csv` filed their
+replacements (`beavers`, `state`, `UKLungDeaths`, `Harman23.cor`, `Harman74.cor`,
+`ability.cov`, `EXP2_3_LMM`, all no frame), the two pymc_examples objects no reader had seen
+(`Guber1999data.txt`, one row per state; `hurdat2-...txt`, HURDAT2's storm blocks, no table)
+and re-filed `hibbs.dat` and `hdi.dat`. Exclusions 2142 → 2132. `tests/test_census.py` asserts
+both directions: every exclusion is a census object, every uncapped census object is a registry
+row, an exclusion or a confirmed duplicate of either.
