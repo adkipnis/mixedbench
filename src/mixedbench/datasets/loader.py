@@ -5,6 +5,7 @@ live here; the formats are `readers.py`, the help pages `docs.py`."""
 from __future__ import annotations
 
 import hashlib
+import re
 import ssl
 import subprocess
 import tarfile
@@ -192,6 +193,11 @@ class Loader:
         for man in sorted(tree.rglob('man')):  # a repository that is an R package (rethinking)
             pages.append(docs.rdPage(man, readers.bare(file).stem))
         return '\n'.join(page for page in pages if page)
+
+    def licence(self, source: Source) -> str:
+        """The `License` field of a CRAN package's DESCRIPTION, verbatim."""
+        description = (self._tree(source) / 'DESCRIPTION').read_text()
+        return re.search(r'^License:\s*(.+)$', description, re.MULTILINE).group(1)
 
     # ------------------------------------------------------------------------------------------
     # pipeline: url -> archive -> tree -> files -> frames
