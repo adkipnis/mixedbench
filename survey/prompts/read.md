@@ -28,6 +28,12 @@ index random effects; the **response** is the column a documented model explains
    that column holds in `response_type` (not the family: a Poisson or negative binomial fit
    over counts is `count`; a binomial fit over successes out of trials is `binomial` with the
    `trials` column named; a transformed response such as `log(y)` names the raw column `y`).
+   `family` stays blank when the family rule of ADR 0001 covers the documented model (Gaussian
+   for continuous, Poisson for count, logit for binary and binomial, cumulative logit for
+   ordinal); only a departure is filed, as brms names it: `negbinomial`, `bernoulli(probit)`,
+   `cumulative(probit)`, `Gamma(log)`, `lognormal`, `zero_inflated_poisson`,
+   `zero_inflated_negbinomial`, `hurdle_poisson`, `hurdle_negbinomial`, `Beta`. A departure
+   outside this list goes in `notes` as `RULE GAP:`.
    Its grouping factors, covariates and interactions as `;`-lists of column names; nested
    factors as two factors, the merge computes the relation; a random term on the combination
    of two columns (`(1|Block:Variety)`, the whole plots of a split-plot) is the term
@@ -67,7 +73,10 @@ index random effects; the **response** is the column a documented model explains
    exists for the dataset: a posteriordb posterior, a Stan example model, a textbook's worked
    example, or a documentation example (a PyMC or bambi notebook, a Stata manual entry, the
    MixedModels.jl docs) that states the model fitted to this table (decided 2026-10-07, #24);
-   `no` when the data appear only in tests or a docstring without a model.
+   `no` when the data appear only in tests or a docstring without a model. A `yes` row whose
+   source states the priors (a Stan or BUGS model, brms `set_prior`, a textbook's words) gets
+   them in `documented_prior`, in the source's notation, on one line; blank when it states
+   none, and always blank on a `no` row.
 8. **Stan data.** A Stan data dict (posteriordb, the Stan examples) was read as the table of
    its observation-length arrays; the page says which entries are not in the table (scalars,
    group-level arrays) and which matrices became numbered columns (`X_1`, `X_2`). Integer
