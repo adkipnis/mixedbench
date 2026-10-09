@@ -1,0 +1,3 @@
+# Test fixtures are bytes: a Windows checkout must not rewrite their line endings (an ASCII
+# RData's magic stops parsing). -text, not binary, so diffs of the text fixtures still show.
+**/fixtures/** -text
