@@ -38,6 +38,10 @@ def readCran(package: Path, file: str) -> tuple[readers.Frames, readers.Reader]:
     return readers.read(package / file, file, cran=True)
 
 
+def readFixture(name: str) -> tuple[readers.Frames, readers.Reader]:
+    return readers.read(FIXTURES / name, name)
+
+
 def readExample(example: Path, file: str, layout: tuple[str, ...] | None = None) -> pd.DataFrame:
     """The one frame of a file that is not a workbook of several sheets."""
     frames, _ = readers.read(example / file, file, layout=layout)
@@ -67,7 +71,7 @@ def test_an_integer_column_with_na_reads_as_float_not_object():
     """pyreadr renders an R integer vector with NA as an object column of ints and NaN, which
     no numeric check accepts (mlmRev's `star`); the reader makes it a float column."""
     # R wrote a frame with an integer column holding one NA and a plain string column
-    frames, _ = readers.read(FIXTURES / 'counts.rds', 'counts.rds')
+    frames, _ = readFixture('counts.rds')
     counts = frames['counts']
     assert counts['score'].dtype.kind == 'f'
     assert counts['score'].isna().sum() == 1
@@ -95,7 +99,7 @@ def test_an_r_file_librdata_rejects_is_read_by_rdata(package):
 def test_a_rejected_r_file_keeps_its_frames_and_its_lists_without_a_table():
     """A Tier D `.RData` keeps model fits and lists beside its tables; rdata reads the frame,
     the list has no table, as pyreadr's unframable objects have none."""
-    frames, reader = readers.read(FIXTURES / 'fits.rda', 'fits.rda')
+    frames, reader = readFixture('fits.rda')
     assert reader == 'rdata'
     assert frames['fit'] is None
     roster = frames['roster']
@@ -108,10 +112,10 @@ def test_a_rejected_rds_is_named_by_its_file_and_one_rdata_cannot_parse_has_no_t
     """An .rds holds one unnamed object, named by its file as pyreadr names it; a model fit's
     bytecode, which rdata cannot parse, leaves the file one object without a table rather
     than failing the source."""
-    frames, reader = readers.read(FIXTURES / 'roster.rds', 'roster.rds')
+    frames, reader = readFixture('roster.rds')
     assert reader == 'rdata'
     assert frames['roster'].shape == (3, 2)
-    assert readers.read(FIXTURES / 'fit.rds', 'fit.rds') == ({'fit': None}, 'rdata')
+    assert readFixture('fit.rds') == ({'fit': None}, 'rdata')
 
 
 # ==============================================================================================
@@ -145,7 +149,7 @@ def test_a_data_r_file_reads_to_the_frame_r_makes_of_it(package):
     frame R makes (`growth.rda`, saved by make_fixture.R): labels in level order, numeric
     levels sorted as numbers, R's integers, `ordered` dropped as pyreadr drops it."""
     frames, reader = readCran(package, 'data/growth.R')
-    twin, _ = readers.read(FIXTURES / 'growth.rda', 'growth.rda')
+    twin, _ = readFixture('growth.rda')
     assert reader == 'deparse'
     pd.testing.assert_frame_equal(frames['growth'], twin['growth'])
 
@@ -159,7 +163,7 @@ def test_a_data_r_file_outside_the_deparse_subset_has_no_table(tmp_path):
 
 
 # ==============================================================================================
-# pandas files (#16)
+# pandas files (m3#16)
 # ==============================================================================================
 
 
@@ -193,7 +197,7 @@ def test_a_stan_data_dict_is_the_table_of_its_observation_length_arrays(example)
 
 def test_a_gzipped_tsv_is_read_as_the_tsv_it_wraps():
     """PMLB serves every table as `.tsv.gz`; the wrapper names no format of its own."""
-    frames, _ = readers.read(FIXTURES / 'apnea.tsv.gz', 'apnea.tsv.gz')
+    frames, _ = readFixture('apnea.tsv.gz')
     apnea = frames['apnea.tsv.gz']
     assert list(apnea.columns) == ['Scorer', 'Subject', 'target']
     assert list(apnea['Subject']) == [1, 1, 2, 2]
@@ -201,7 +205,7 @@ def test_a_gzipped_tsv_is_read_as_the_tsv_it_wraps():
 
 def test_a_parquet_file_reads():
     """OpenML serves every dataset as `dataset_<id>.pq`; the Tier O hits come that way."""
-    frames, _ = readers.read(FIXTURES / 'dataset_42.pq', 'dataset_42.pq')
+    frames, _ = readFixture('dataset_42.pq')
     assert list(frames['dataset_42.pq']['school']) == ['GP', 'GP', 'MS']
 
 
