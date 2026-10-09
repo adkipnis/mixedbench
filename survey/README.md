@@ -10,8 +10,8 @@ by script.
   [`VERDICTS.md`](VERDICTS.md).
 - **Issue numbers:** `m3#` is metabeta-v3's, where the survey ran until 2026-10-08 (spec
   m3#14); `#` is this repository's.
-- **Contract test:** metabeta-v3's `tests/surveys/test_dimension_quantiles.py` asserts the
-  shape of `quantiles.yaml`; an axis or tier name changes only with it.
+- **Contract test:** metabeta-v3's `packages/glmm/tests/surveys/test_dimension_quantiles.py`
+  asserts the shape of `quantiles.yaml`; an axis or tier name changes only with it.
 - **Writers:** agents read documentation and write shards; `merge.py` alone writes the
   canonical files.
 
@@ -60,8 +60,8 @@ One pass per tier:
    by script on response, grouping factors, covariates and interactions; open disagreements go
    to Alex.
 7. **Spot check.** 20 rows drawn with seed 0, stratified by shard, read by Alex at the source.
-8. **Verification** (ADR 0002, once after all tiers). A seeded 100-row hand sample by tier ×
-   confidence; a stratum under 80% agreement on response or grouping factors is re-read blind
+8. **Verification** (ADR 0002, once after all tiers). A seeded 100-row hand sample of Tiers
+   R, E, T and O by tier × confidence; a stratum under 80% agreement on response or grouping factors is re-read blind
    ([HISTORY](HISTORY.md#hand-sample-11-12)).
 
 ## Frame: `sources.yaml`
@@ -89,7 +89,9 @@ dropped:
 - `path` narrows a git or url tree; `file` names a suffix-less download (figshare's
   `files/<id>`) so the loader knows the format.
 - `cap` (per entry or top-level): the most objects read from one source, a draw with
-  `random.Random(seed)` over the sorted names, `seed` set at the top. Only agridat is capped, at 50.
+  `random.Random(seed)` over the sorted names, `seed` set at the top. Only agridat is capped,
+  at 50: its about 390 field trials would else be 38% of the pool, and a cap for all would
+  drop grouped tables of faraway and MASS at random (2026-10-07).
 - `mirror` (url only): the package's copy of a CC0 file whose host refuses scripts, asked after
   the host under the same pin (ADR 0003).
 - `layout`: the columns of a headerless text file, `name` (whitespace-separated) or
@@ -98,6 +100,25 @@ dropped:
   looked, and the merge refuses a git or url source without one; a CRAN entry needs none.
 - `dropped`: every candidate left out, with the reason. `nets`: the Tier O keyword net, a
   record the frame reader skips.
+
+The tiers:
+
+- **R**, at the CRAN versions of 2026-10-07: the mixed-model packages lme4, nlme, mlmRev,
+  MEMSS, glmmTMB, brms, GLMMadaptive (no data), nlmeU, SASmixed, HLMdiag, ordinal, geepack,
+  agridat; the data packages MASS, carData, lattice, HSAUR3, faraway, boot, gamlss.data,
+  medicaldata, languageR and base R's `datasets`.
+- **E**: posteriordb, the Stan example models (`ARM`, `bugs_examples`), pingouin, the PyMC
+  examples, bambi's figshare files, MixedModels.jl's Arrow artifact, Stata's [ME] and [XT]
+  manuals.
+- **T**: Hox, Snijders & Bosker, Goldstein, the Bristol CMM teaching sets, Rabe-Hesketh &
+  Skrondal, Singer & Willett, three Zuur et al. books, *Statistical Rethinking*, Fitzmaurice,
+  Laird & Ware, *Regression and Other Stories* (`ros`), West, Welch & Galecki, Diggle's APTS
+  files. Gelman's and West's sites refuse scripts, so ARM data come through `stan_arm` and
+  `ros`.
+- **D**: 60 papers' Dryad, OSF, Zenodo and figshare files, one `url` entry per file labelled
+  `<paper_id>_<repository>` (`_2`, `_3` for further files), pinned by sha256.
+- **O**: metabeta v0.5's four PMLB tables and the keyword net's hits over OpenML, UCI and
+  PMLB.
 
 ## File contracts
 
@@ -178,8 +199,8 @@ first); `reader`; `licence`, the `licence:` key or a CRAN DESCRIPTION's `License
 - `columns.csv`: key `source`, `object`, `model_index`, `column`, with `tier`; every column
   but the response, trials, grouping factors and ignored ones.
   - `type`, first match: `ordered` if declared; `binary` for two distinct values; `categorical`
-    with `K` levels if declared, a string, or an integer column with at most 10 values;
-    `continuous`.
+    with `K` levels if declared, a string, or an integer column with at most 10 values not
+    declared continuous; `continuous`.
   - `level` `group` when constant within every group of some factor (`constant_within` names
     them), else `within`; `missing_share`; `in_model` `yes` for a documented covariate.
 
@@ -317,14 +338,17 @@ need. An example object and the deciding issue follow each rule.
   modal one (BUGS kidney); m3#24, m3#25.
 - Stan: pure GP, time-series, CAR and mixture posteriors have no grouping; a GP beside random
   intercepts stays (m3#24).
+- Kept rather than excluded: aggregate responses on a real grouping, at `low` (nass.sorghum;
+  m3#22); ARM's raw tables of an early chapter, with a later chapter's multilevel fit at
+  `medium` when the grouping column is in the table (m3#24).
 - Tier D: a cited deposit or a preregistration is `not the paper's data`; per-coder or
   per-participant files without a pooled table are `derived or duplicated table`; a split by
   study stays one row per file (sievers_2020; m3#26).
 
 ## Known limits
 
-- One-level categoricals over the measured rows (stata_quinidine's `dose`, Zuur Seedling's
-  `Year`): the `K` 1 cell.
+- One-level categoricals over the measured rows (stata_quinidine's `dose` and `interval`,
+  Zuur Seedling's `Year`): the `K` 1 cell.
 - `-1` codes for missing (Goldstein's Gcsemv.xls, coursework.dta) are kept as values, for the
   contract to settle (#12).
 - Not read: ROS's Congress `.asc` files and `cows.dat`, liu_2022's merged-header workbook,
