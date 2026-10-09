@@ -24,7 +24,8 @@ from pathlib import Path
 import pandas as pd
 from help import HelpPage
 from mixedbench.datasets import DataObject, Loader
-from schema import CANDIDATE_COLUMNS, EXCLUDED, SCREENS, TIERS, readCsv, writeCsv
+from mixedbench.registry.row import readCsv, writeCsv
+from schema import CANDIDATE_COLUMNS, EXCLUDED, SCREENS, TIERS
 from sources import readFrame
 
 HERE = Path(__file__).parent

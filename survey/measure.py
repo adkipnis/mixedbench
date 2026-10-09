@@ -10,6 +10,7 @@ from itertools import combinations
 
 import numpy as np
 import pandas as pd
+from mixedbench.registry.row import parseTypes, parts, splitList
 
 # =====================================================================================
 # globals
@@ -25,21 +26,17 @@ COLUMN_COLUMNS = (*IDENTITY, 'column', 'type', 'K', 'level', 'constant_within', 
 MAX_INTEGER_LEVELS = 10
 
 
-def splitList(text: str) -> list[str]:
-    return [t.strip() for t in text.split(';') if t.strip()]
-
-
-def withComposites(df: pd.DataFrame, factors: list[str]) -> pd.DataFrame:
+def withComposites(df: pd.DataFrame, factors: tuple[str, ...]) -> pd.DataFrame:
     """A grouping factor `a:b` names no column (lme4's `(1|a:b)`, the whole plots of a
     split-plot): the combination of its parts is added under that name, one level per pair of
     levels present; a row missing a part has no level (the ARM radon survey's rows without a
     county). Built here once, so the merge's checks and the measures see a plain column."""
     composites = {}
     for factor in factors:
-        if ':' in factor:
-            parts = factor.split(':')
-            composite = df[parts[0]].astype(str)
-            for part in parts[1:]:
+        columns = parts(factor)
+        if len(columns) > 1:
+            composite = df[columns[0]].astype(str)
+            for part in columns[1:]:
                 composite = composite + ':' + df[part].astype(str)  # missing stays missing
             composites[factor] = composite
     return df.assign(**composites)
@@ -55,12 +52,6 @@ def fitAlpha(sizes: pd.Series) -> float:
     if variance == 0:
         return float('inf')
     return ((1 - 1 / g) / (g * variance) - 1) / g
-
-
-def parseTypes(text: str) -> dict[str, str]:
-    """`col=categorical;col2=continuous` -> {col: kind}."""
-    pairs = [entry.partition('=') for entry in splitList(text)]
-    return {col.strip(): kind.strip() for col, _, kind in pairs}
 
 
 def observed(values: pd.Series, q: float) -> int | float:
@@ -182,7 +173,7 @@ class Measurer:
         binary count 1, categorical K − 1, an interaction the product."""
         width = {c['column']: self.width(c) for c in self.columns()}
         interactions = splitList(self.row['interactions'])
-        dInteractions = sum(np.prod([width[c] for c in term.split(':')]) for term in interactions)
+        dInteractions = sum(np.prod([width[c] for c in parts(term)]) for term in interactions)
         dDoc = sum(width[c] for c in self.covariates) + dInteractions
         dAll = sum(width.values()) + dInteractions
         return {'d_doc': int(dDoc), 'd_all': int(dAll)}

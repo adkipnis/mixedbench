@@ -22,28 +22,26 @@ from itertools import combinations
 from pathlib import Path
 
 import pandas as pd
-from measure import (
-    COLUMN_COLUMNS,
-    DIMENSION_COLUMNS,
-    Measurer,
-    parseTypes,
-    splitList,
-    withComposites,
-)
+from measure import COLUMN_COLUMNS, DIMENSION_COLUMNS, Measurer, withComposites
 from mixedbench.datasets import DataObject, Loader
-from schema import (
-    ALLOWED,
+from mixedbench.registry.row import (
     COLUMN_LIST_COLUMNS,
     COLUMN_TYPES,
+    TERM_COLUMNS,
+    parseTypes,
+    parts,
+    readCsv,
+    splitList,
+    writeCsv,
+)
+from schema import (
+    ALLOWED,
     LICENCES,
     MAX_MODELS_PER_OBJECT,
     MAX_ORDINAL_LEVELS,
     REQUIRED,
     TABLES,
-    TERM_COLUMNS,
     Table,
-    readCsv,
-    writeCsv,
 )
 from sources import Key, readFrame
 from summarise import Summariser
@@ -283,7 +281,7 @@ class Merger:
             named += [(col, name) for name in splitList(row[col])]
         for col in TERM_COLUMNS:
             for term in splitList(row[col]):
-                named += [(col, name) for name in term.split(':')]
+                named += [(col, name) for name in parts(term)]
         named += [('types', name) for name in types]
         return [
             self.problem(line, col, f'no such column: {name}')
@@ -310,7 +308,7 @@ class Merger:
         composite factor may be a covariate."""
         covariates = set(splitList(row['covariates']))
         for term in splitList(row['interactions']):
-            covariates |= set(term.split(':'))
+            covariates |= set(parts(term))
         return [
             self.problem(line, 'grouping_factors', f'{factor} is also a covariate')
             for factor in splitList(row['grouping_factors'])

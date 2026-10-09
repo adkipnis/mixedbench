@@ -20,7 +20,7 @@ import tempfile
 from pathlib import Path
 
 from mixedbench.datasets import Source
-from schema import readCsv
+from mixedbench.registry.row import readCsv
 from sources import readFrame
 
 # =====================================================================================
