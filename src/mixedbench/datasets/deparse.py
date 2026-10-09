@@ -236,6 +236,8 @@ class Deparse:
         for keyword, node in call.arguments:
             if keyword is None:
                 raise self._error(f'an unnamed element of {call.name}()')
+            if call.name == 'data.frame' and keyword == 'row.names':  # LifeCycleSavings
+                continue  # an argument of data.frame(), not a column
             columns[keyword] = self._evaluate(node)
         return columns
 
