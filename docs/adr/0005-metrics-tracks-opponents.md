@@ -44,8 +44,8 @@ date: 2026-10-08
 - Rejected: full-rank ADVI; glmmTMB (a flat-prior point estimate muddles a posterior
   benchmark); INLA and MCMCglmm (priors cannot be made to match; Horizon).
 
-  > Superseded in part by `ROADMAP.md` (2026-10-09): INLA and MCMCglmm are dropped, not parked
-  > on the horizon.
+  > Superseded in part by the releases regrouped on 2026-10-09: INLA and MCMCglmm are dropped,
+  > not parked on the horizon.
 
 **Opponent lines, predictive track.**
 
