@@ -28,7 +28,7 @@ tiers:
     gamlss.data: {kind: cran, pin: 6.0-7}
     medicaldata: {kind: cran, pin: 0.2.0}
     languageR: {kind: cran, pin: '1.6'}
-    datasets: {kind: cran, pin: 4.6.1}
+    datasets: {kind: cran, pin: 4.6.1, licence: Part of R 4.6.1}
   E:
     # Python and Stan ecosystem examples, git revisions of 2026-10-07 (HEAD of the default
     # branch); the discovery step (#21) added Stata's [ME] manual data as a further ecosystem
@@ -45,7 +45,7 @@ tiers:
     bambi_anes: {kind: url, name: https://ndownloader.figshare.com/files/28870740, pin: 3106beb6ded5a592ea0405d23b868bd8e74c259d7a7f5242c907555692905772, file: ANES_2016_pilot.csv}
     bambi_escs: {kind: url, name: https://ndownloader.figshare.com/files/28870722, pin: 0195545797a4258de138a205a013a84022bbe23e7ff47782b179055c706300b6, file: ESCS.csv}
     bambi_carclaims: {kind: url, name: https://ndownloader.figshare.com/files/28870713, pin: 74924bf5f0a6e5aa5453d87845cea05e6b41bb2052cf6f096d7f102235ae5cdf, file: carclaims.csv}
-    bambi_batting: {kind: url, name: https://ndownloader.figshare.com/files/29749140, pin: bbbc9459632c738a07bbe0877970a7bbd1f4c2448193979337fe5bc3a4ab0228, file: Batting.csv}
+    bambi_batting: {kind: url, name: https://ndownloader.figshare.com/files/29749140, pin: bbbc9459632c738a07bbe0877970a7bbd1f4c2448193979337fe5bc3a4ab0228, file: Batting.csv, licence: CC BY 4.0}
     bambi_cherry_blossoms: {kind: url, name: https://ndownloader.figshare.com/files/31072807, pin: b859dd4f64c231c76ecb80b78f26da71e2f92698c50e0ceb93be0399dee24f51, file: cherry_blossoms.csv}
     bambi_sleepstudy: {kind: url, name: https://ndownloader.figshare.com/files/31181002, pin: 0a002bec8be2fa9d40dbbf3d5038e614d113a4fd5bf8813f6f4271c3d6294675, file: sleepstudy.csv}
     bambi_periwinkles: {kind: url, name: https://ndownloader.figshare.com/files/34446077, pin: 50da9791b7a66fbcc9ea4dd828dc7a3a66d5e067faf10f3bfd143af6c590923a, file: periwinkles.csv}
@@ -128,49 +128,49 @@ tiers:
     mixedmodels_jl: {kind: url, name: "https://osf.io/djaqb/download?version=9", pin: 86de0984a920604d27bf5d9c1031bb65b9cb960c2450c064b7fcd29a052bbd34, file: datasets.tar.gz, licence: not stated}
   T:
     # textbook companions and teaching sites, pinned 2026-10-07 by URL and sha256 (git revision for Hox)
-    hox: {kind: git, name: https://github.com/MirjamMoerbeek/Data_Sets_ML_book, pin: 55e410ee2c9d1613ca8ae74359b7d5cf5e3c8f82, path: .}  # Hox, Moerbeek & van de Schoot, 23 SPSS .sav
-    snijders_bosker: {kind: url, name: https://www.stats.ox.ac.uk/~snijders/Multilevel_Analysis_2nd_Ed_data.zip, pin: c802fa500556b3c4fdb8ae9f3b0dd241e171ce4a30d72050ee6df76a6334750c}  # Snijders & Bosker 2nd ed., one Excel workbook of every chapter's data
-    goldstein_msm: {kind: url, name: https://www.bristol.ac.uk/cmm/media/migrated/datasets-3rd-edition.zip, pin: ddc942a57c726cfa43f029e6f6ac2547438411f6bbd575759df86e136079caba}  # Goldstein, Multilevel Statistical Models 3rd ed., 12 .xls
-    goldstein_partnership: {kind: url, name: https://www.bristol.ac.uk/cmm/media/migrated/partnershipdata.zip, pin: 3a838831bc6cc2a6d44d51e348b562d8ddabf6aa6d1a7ec34b5e71c40fba63a7, layout: [id, start_age, change, episode, n_previous, social_class, partnership]}  # Goldstein, partnership data: a headerless txt, its columns in partnershipcodes.txt (also inside datasets-3rd-edition.zip)
+    hox: {kind: git, name: https://github.com/MirjamMoerbeek/Data_Sets_ML_book, pin: 55e410ee2c9d1613ca8ae74359b7d5cf5e3c8f82, path: ., licence: not stated}  # Hox, Moerbeek & van de Schoot, 23 SPSS .sav
+    snijders_bosker: {kind: url, name: https://www.stats.ox.ac.uk/~snijders/Multilevel_Analysis_2nd_Ed_data.zip, pin: c802fa500556b3c4fdb8ae9f3b0dd241e171ce4a30d72050ee6df76a6334750c, licence: not stated}  # Snijders & Bosker 2nd ed., one Excel workbook of every chapter's data
+    goldstein_msm: {kind: url, name: https://www.bristol.ac.uk/cmm/media/migrated/datasets-3rd-edition.zip, pin: ddc942a57c726cfa43f029e6f6ac2547438411f6bbd575759df86e136079caba, licence: not stated}  # Goldstein, Multilevel Statistical Models 3rd ed., 12 .xls
+    goldstein_partnership: {kind: url, name: https://www.bristol.ac.uk/cmm/media/migrated/partnershipdata.zip, pin: 3a838831bc6cc2a6d44d51e348b562d8ddabf6aa6d1a7ec34b5e71c40fba63a7, layout: [id, start_age, change, episode, n_previous, social_class, partnership], licence: not stated}  # Goldstein, partnership data: a headerless txt, its columns in partnershipcodes.txt (also inside datasets-3rd-edition.zip)
     # Bristol Centre for Multilevel Modelling teaching library: fixed-width .DAT files, their
     # columns transcribed into `layout` from the prose `.ASC` sheets (#25)
-    cmm_asian: {kind: url, name: https://www.bristol.ac.uk/cmm/media/migrated/asian.zip, pin: 2270ccafd84e84bee014e9e91deecb7b9f6c3622a5d9f1730c8077ca020fdd07, layout: [child:1-4, age:5-7, weight:8-12, birthweight:13-16, gender:17]}
-    cmm_employ: {kind: url, name: https://www.bristol.ac.uk/cmm/media/migrated/employ.zip, pin: 2ba77d436104044a2e53d8660a7bd567cec84f5e48298fad758502868515223a, layout: [area:2-5, cell:7-9, gender:11, qualified:13, employed:15-16, total:18-19]}
-    cmm_ilea567: {kind: url, name: https://www.bristol.ac.uk/cmm/media/migrated/ilea567.zip, pin: e35674734d753de0113da9b69dbab6f62fe13548efd4d3bd67b74bd14af6013a, layout: [year:1, school:2-4, score:5-6, fsm:7-8, vr1:9-10, gender:11, vrband:12, ethnic:13-14, schgender:15, denomination:16]}
+    cmm_asian: {kind: url, name: https://www.bristol.ac.uk/cmm/media/migrated/asian.zip, pin: 2270ccafd84e84bee014e9e91deecb7b9f6c3622a5d9f1730c8077ca020fdd07, layout: [child:1-4, age:5-7, weight:8-12, birthweight:13-16, gender:17], licence: not stated}
+    cmm_employ: {kind: url, name: https://www.bristol.ac.uk/cmm/media/migrated/employ.zip, pin: 2ba77d436104044a2e53d8660a7bd567cec84f5e48298fad758502868515223a, layout: [area:2-5, cell:7-9, gender:11, qualified:13, employed:15-16, total:18-19], licence: not stated}
+    cmm_ilea567: {kind: url, name: https://www.bristol.ac.uk/cmm/media/migrated/ilea567.zip, pin: e35674734d753de0113da9b69dbab6f62fe13548efd4d3bd67b74bd14af6013a, layout: [year:1, school:2-4, score:5-6, fsm:7-8, vr1:9-10, gender:11, vrband:12, ethnic:13-14, schgender:15, denomination:16], licence: not stated}
     cmm_jsp: {kind: url, name: https://www.bristol.ac.uk/cmm/media/migrated/jsp.zip, pin: 1f1fb579b6612a9a491f5517ed6c35a99d6f17a915f46343858ce1c9ec3da086, layout: [school:1-2, class:3, gender:4, social:5, ravens:6-7, student:8-11, english:12-13, maths:14-15, year:16]}
-    cmm_oxboys: {kind: url, name: https://www.bristol.ac.uk/cmm/media/migrated/oxboys.zip, pin: abb9176ff4ca936aff73b77dc73cd2b0fb76503d582eed89cc4f07d0d7094965, layout: [student:1-2, age:3-9, height:10-15, occasion:16]}
+    cmm_oxboys: {kind: url, name: https://www.bristol.ac.uk/cmm/media/migrated/oxboys.zip, pin: abb9176ff4ca936aff73b77dc73cd2b0fb76503d582eed89cc4f07d0d7094965, layout: [student:1-2, age:3-9, height:10-15, occasion:16], licence: not stated}
     cmm_rao: {kind: url, name: https://www.bristol.ac.uk/cmm/media/migrated/rao.zip, pin: 7122dfaa42e16de801ad38c65fc9c30d373cb4d755e816c77b257f1e309e407e, layout: [len8:1-4, len85:6-9, len9:11-14, len95:16-19]}
-    cmm_sci: {kind: url, name: https://www.bristol.ac.uk/cmm/media/migrated/sci.zip, pin: a19156a94fa6ab1c3e5a93a87a8a47459053a00fb3124a171bd2e1c8221448eb, layout: [centre:1-5, candidate:7-10, gender:12, written:14-16, coursework:18-20]}
+    cmm_sci: {kind: url, name: https://www.bristol.ac.uk/cmm/media/migrated/sci.zip, pin: a19156a94fa6ab1c3e5a93a87a8a47459053a00fb3124a171bd2e1c8221448eb, layout: [centre:1-5, candidate:7-10, gender:12, written:14-16, coursework:18-20], licence: not stated}
     cmm_socatt: {kind: url, name: https://www.bristol.ac.uk/cmm/media/migrated/socatt.zip, pin: 2423324418e226dfcf5b07d6c6f689893b2a01e273b6adfa34879f3ab7662bb3, layout: [district:1-2, respondent:4-7, year:9, score:11, party:13, class:15, gender:17, age:19-20, religion:22]}
     cmm_starter: {kind: url, name: https://www.bristol.ac.uk/cmm/media/migrated/starter.zip, pin: 1c38355bf02a54b51769f26aaa9ad62d2d1cd22e4675428798219144153de0d5, layout: [response]}
-    rabe_hesketh: {kind: url, name: https://www.stata-press.com/data/mlmus4/mlmus4.zip, pin: 5a544212728045d858e5a0df797e805a3865e29fddb09e5fa6c9aa4707a11529}  # Rabe-Hesketh & Skrondal 4th ed., 117 .dta
-    alda: {kind: url, name: https://stats.idre.ucla.edu/wp-content/uploads/2016/02/aldaascii.zip, pin: 14e62971f2cc5e37e3936fa775d59c1ceb045e5fbbc09239f750605d81156aaf}  # Singer & Willett, UCLA mirror, 48 csv-like .txt
-    zuur_mixed: {kind: url, name: https://www.highstat.com/Books/Book2/ZuurDataMixedModelling.zip, pin: 2210a4a3b0d78e94d66026dad7ea7ffac5afa75e4dfe013648c5da94b37582f2}  # Zuur et al. 2009, Mixed Effects Models and Extensions in Ecology with R, 34 .txt
-    zuur_glmglmm: {kind: url, name: https://www.highstat.com/Books/BGS/GLMGLMM/GLMGLMM_AllData_V2.zip, pin: 0ead3500ceecb93963ecaf8d9637958a1377bd448b1ae346652456bf9bc8da91}  # Zuur et al. 2013, Beginner's Guide to GLM and GLMM with R
-    zuur_zim: {kind: url, name: https://www.highstat.com/Books/BGS/ZIM/Data/Zuuretal_2016_ZIM_AllData.zip, pin: 5950df39b5509279f638b011fc5b01ae4f03357f971fd6f9d8d59b8596d2c801}  # Zuur et al. 2016, Beginner's Guide to Zero-Inflated Models with R
+    rabe_hesketh: {kind: url, name: https://www.stata-press.com/data/mlmus4/mlmus4.zip, pin: 5a544212728045d858e5a0df797e805a3865e29fddb09e5fa6c9aa4707a11529, licence: not stated}  # Rabe-Hesketh & Skrondal 4th ed., 117 .dta
+    alda: {kind: url, name: https://stats.idre.ucla.edu/wp-content/uploads/2016/02/aldaascii.zip, pin: 14e62971f2cc5e37e3936fa775d59c1ceb045e5fbbc09239f750605d81156aaf, licence: not stated}  # Singer & Willett, UCLA mirror, 48 csv-like .txt
+    zuur_mixed: {kind: url, name: https://www.highstat.com/Books/Book2/ZuurDataMixedModelling.zip, pin: 2210a4a3b0d78e94d66026dad7ea7ffac5afa75e4dfe013648c5da94b37582f2, licence: not stated}  # Zuur et al. 2009, Mixed Effects Models and Extensions in Ecology with R, 34 .txt
+    zuur_glmglmm: {kind: url, name: https://www.highstat.com/Books/BGS/GLMGLMM/GLMGLMM_AllData_V2.zip, pin: 0ead3500ceecb93963ecaf8d9637958a1377bd448b1ae346652456bf9bc8da91, licence: not stated}  # Zuur et al. 2013, Beginner's Guide to GLM and GLMM with R
+    zuur_zim: {kind: url, name: https://www.highstat.com/Books/BGS/ZIM/Data/Zuuretal_2016_ZIM_AllData.zip, pin: 5950df39b5509279f638b011fc5b01ae4f03357f971fd6f9d8d59b8596d2c801, licence: not stated}  # Zuur et al. 2016, Beginner's Guide to Zero-Inflated Models with R
     # added by hand on 2026-10-07 after a check for collections a reviewer would miss
-    rethinking: {kind: git, name: https://github.com/rmcelreath/rethinking, pin: ac1b3b2cda83f3e14096e2d997a6e30ad109eeee, path: data}  # McElreath, Statistical Rethinking; GitHub-only package, 49 semicolon-separated csv
-    ros: {kind: git, name: https://github.com/avehtari/ROS-Examples, pin: d35682d03d508e19ab60131e5c123643aac32bc9}  # Gelman, Hill & Vehtari, Regression and Other Stories; data under <example>/data, 106 files, 225 MB repository, overlaps stan_arm
+    rethinking: {kind: git, name: https://github.com/rmcelreath/rethinking, pin: ac1b3b2cda83f3e14096e2d997a6e30ad109eeee, path: data, licence: GPL (>= 3)}  # McElreath, Statistical Rethinking; GitHub-only package, 49 semicolon-separated csv
+    ros: {kind: git, name: https://github.com/avehtari/ROS-Examples, pin: d35682d03d508e19ab60131e5c123643aac32bc9, licence: not stated}  # Gelman, Hill & Vehtari, Regression and Other Stories; data under <example>/data, 106 files, 225 MB repository, overlaps stan_arm
     west_welch_galecki: {kind: cran, name: WWGbook, pin: 1.0.2, licence: GPL (>= 2)}  # West, Welch & Galecki, Linear Mixed Models; every dataset of the book, the author site answers 403
     # Fitzmaurice, Laird & Ware, Applied Longitudinal Analysis 2nd ed.: one .dta per dataset (obesity
     # exists as txt only); the description of each is <name>.txt beside it on the same site
     fitzmaurice_lead: {kind: url, name: https://content.sph.harvard.edu/fitzmaur/ala2e/lead.dta, pin: 91eaab7b452a597b919fe7df728f0e12ec099d829826a881f6bf57eb25eeac83}
     fitzmaurice_tlc: {kind: url, name: https://content.sph.harvard.edu/fitzmaur/ala2e/tlc.dta, pin: 75de1ca3414da3ffdfc6126207f2e97dccccf5150f6b9e8fed53921fdff10628}
     fitzmaurice_tlcmiss: {kind: url, name: https://content.sph.harvard.edu/fitzmaur/ala2e/tlcmiss.dta, pin: 90ae0a07155c012f2ce51b114a23d12df0783f79e395364214fa3c015d6ea709}
-    fitzmaurice_smoking: {kind: url, name: https://content.sph.harvard.edu/fitzmaur/ala2e/smoking.dta, pin: 91fbd32c49e04619bcf963aca6202d05299978a7c4ee6cc7dba0ee69bf934328}
-    fitzmaurice_fev1: {kind: url, name: https://content.sph.harvard.edu/fitzmaur/ala2e/fev1.dta, pin: d9c2763e0079b3f94a9ab1681052f461b79b300dc5edf8a64383b0707a90699e}
-    fitzmaurice_headache: {kind: url, name: https://content.sph.harvard.edu/fitzmaur/ala2e/headache.dta, pin: 6acfa370be70edee5e7a0b161c5500998af0a4b0c2a0818de58c639d42ca14cd}
+    fitzmaurice_smoking: {kind: url, name: https://content.sph.harvard.edu/fitzmaur/ala2e/smoking.dta, pin: 91fbd32c49e04619bcf963aca6202d05299978a7c4ee6cc7dba0ee69bf934328, licence: not stated}
+    fitzmaurice_fev1: {kind: url, name: https://content.sph.harvard.edu/fitzmaur/ala2e/fev1.dta, pin: d9c2763e0079b3f94a9ab1681052f461b79b300dc5edf8a64383b0707a90699e, licence: not stated}
+    fitzmaurice_headache: {kind: url, name: https://content.sph.harvard.edu/fitzmaur/ala2e/headache.dta, pin: 6acfa370be70edee5e7a0b161c5500998af0a4b0c2a0818de58c639d42ca14cd, licence: not stated}
     fitzmaurice_bpd: {kind: url, name: https://content.sph.harvard.edu/fitzmaur/ala2e/bpd.dta, pin: 9c1a4a4640d1c250ae86b3f1f45a07b556532da95cffc03b458dfbdfa54597c9}
     fitzmaurice_impairment: {kind: url, name: https://content.sph.harvard.edu/fitzmaur/ala2e/impairment.dta, pin: fb270bb7c628da44171a0adbfcdd877c22b81b5a9c13dc66571411563e5d566c}
-    fitzmaurice_insomnia: {kind: url, name: https://content.sph.harvard.edu/fitzmaur/ala2e/insomnia.dta, pin: 673feaef1d14e99bf02227f842e06562e9ab136af5ce297158188549eb860351}
-    fitzmaurice_tvsfp: {kind: url, name: https://content.sph.harvard.edu/fitzmaur/ala2e/tvsfp.dta, pin: acc03cb20a26a00f0914c5f83994ff53bfeb5f6f6280aa9ba6e9bd378c957f87}
-    fitzmaurice_ntp: {kind: url, name: https://content.sph.harvard.edu/fitzmaur/ala2e/ntp.dta, pin: a60022df640e2f428e341d09274aacb516e46146cdcfc9d104bc3bde04949819}
-    fitzmaurice_melanoma: {kind: url, name: https://content.sph.harvard.edu/fitzmaur/ala2e/melanoma.dta, pin: 7fcdd0ac52af650cc6791879f35d006a1cd9bfe354af19d1cc7aeed0cf294ed3}
-    fitzmaurice_muscatine: {kind: url, name: https://content.sph.harvard.edu/fitzmaur/ala2e/muscatine.dta, pin: a3c785975c72b81fc7315a3897d4dd8f798b52ef7ecf9336a0a84032eb7fd8ae}
+    fitzmaurice_insomnia: {kind: url, name: https://content.sph.harvard.edu/fitzmaur/ala2e/insomnia.dta, pin: 673feaef1d14e99bf02227f842e06562e9ab136af5ce297158188549eb860351, licence: not stated}
+    fitzmaurice_tvsfp: {kind: url, name: https://content.sph.harvard.edu/fitzmaur/ala2e/tvsfp.dta, pin: acc03cb20a26a00f0914c5f83994ff53bfeb5f6f6280aa9ba6e9bd378c957f87, licence: not stated}
+    fitzmaurice_ntp: {kind: url, name: https://content.sph.harvard.edu/fitzmaur/ala2e/ntp.dta, pin: a60022df640e2f428e341d09274aacb516e46146cdcfc9d104bc3bde04949819, licence: not stated}
+    fitzmaurice_melanoma: {kind: url, name: https://content.sph.harvard.edu/fitzmaur/ala2e/melanoma.dta, pin: 7fcdd0ac52af650cc6791879f35d006a1cd9bfe354af19d1cc7aeed0cf294ed3, licence: not stated}
+    fitzmaurice_muscatine: {kind: url, name: https://content.sph.harvard.edu/fitzmaur/ala2e/muscatine.dta, pin: a3c785975c72b81fc7315a3897d4dd8f798b52ef7ecf9336a0a84032eb7fd8ae, licence: not stated}
     fitzmaurice_epilepsy: {kind: url, name: https://content.sph.harvard.edu/fitzmaur/ala2e/epilepsy.dta, pin: 60392e5c4404fd2ab47a9c7b79a2e6c43f9177681afa9041ebf3833025eba676}
     fitzmaurice_seizure: {kind: url, name: https://content.sph.harvard.edu/fitzmaur/ala2e/seizure.dta, pin: 78248fefae6063d46aac9c20bb00ffc5a5aa55541da4564d92b1247cb00d8e23}
-    fitzmaurice_ecg: {kind: url, name: https://content.sph.harvard.edu/fitzmaur/ala2e/ecg.dta, pin: 879157e98c18e51f3fae7f1cf4c2737cc394704aa180bd49725302ede4cabd50}
-    fitzmaurice_amenorrhea: {kind: url, name: https://content.sph.harvard.edu/fitzmaur/ala2e/amenorrhea.dta, pin: ba8c0280006e3e0bd9f3e6a27f3261dd3207fab959cee0abcd24e41a30c62668}
+    fitzmaurice_ecg: {kind: url, name: https://content.sph.harvard.edu/fitzmaur/ala2e/ecg.dta, pin: 879157e98c18e51f3fae7f1cf4c2737cc394704aa180bd49725302ede4cabd50, licence: not stated}
+    fitzmaurice_amenorrhea: {kind: url, name: https://content.sph.harvard.edu/fitzmaur/ala2e/amenorrhea.dta, pin: ba8c0280006e3e0bd9f3e6a27f3261dd3207fab959cee0abcd24e41a30c62668, licence: not stated}
     fitzmaurice_contracep: {kind: url, name: https://content.sph.harvard.edu/fitzmaur/ala2e/contracep.dta, pin: ed151697a68b10d275639a0499d97d47969268359c4182211084f6dc2e90c30b}
     fitzmaurice_exercise: {kind: url, name: https://content.sph.harvard.edu/fitzmaur/ala2e/exercise.dta, pin: 07a8db0380d44dcfe0bed94819808e2bd61482e82e9402b391d2db72a02efb9c}
     fitzmaurice_diabetes: {kind: url, name: https://content.sph.harvard.edu/fitzmaur/ala2e/diabetes.dta, pin: 1659f4d30b9a78d1000be0e3ec0f8f2393f6f0d2d487507823603148bb544561}
@@ -182,18 +182,18 @@ tiers:
     fitzmaurice_rat: {kind: url, name: https://content.sph.harvard.edu/fitzmaur/ala2e/rat.dta, pin: da2c54f4ad7179b8368b8f101a45799de8342bda947ff9231faf6f4882bc75fa}
     fitzmaurice_respir: {kind: url, name: https://content.sph.harvard.edu/fitzmaur/ala2e/respir.dta, pin: 7f36723a009859dd5477bb3e33cbfff30f5fd6521bc622698159d42de8d9e7fb}
     fitzmaurice_tumor: {kind: url, name: https://content.sph.harvard.edu/fitzmaur/ala2e/tumor.dta, pin: 60ddc3d1f888a0989990b5bdf2fb73f91159325d697497d32155ffd33de73c21}
-    fitzmaurice_cd4: {kind: url, name: https://content.sph.harvard.edu/fitzmaur/ala2e/cd4.dta, pin: e9fda9377f2879594b3f73dbbb631e84482fc1df953b22f914ebd09dfff99399}
+    fitzmaurice_cd4: {kind: url, name: https://content.sph.harvard.edu/fitzmaur/ala2e/cd4.dta, pin: e9fda9377f2879594b3f73dbbb631e84482fc1df953b22f914ebd09dfff99399, licence: not stated}
     fitzmaurice_toenail: {kind: url, name: https://content.sph.harvard.edu/fitzmaur/ala2e/toenail.dta, pin: b049c0d0452552a35e580b8c9501a8ccb5ebe81d33a6bfd0b8ce96350fd2e94b}
-    fitzmaurice_progesterone: {kind: url, name: https://content.sph.harvard.edu/fitzmaur/ala2e/progesterone.dta, pin: cc1f229b57f8970ed4c12fc676d266c7dad5b2e3ed0f0c889d84d49507eb7fb6}
+    fitzmaurice_progesterone: {kind: url, name: https://content.sph.harvard.edu/fitzmaur/ala2e/progesterone.dta, pin: cc1f229b57f8970ed4c12fc676d266c7dad5b2e3ed0f0c889d84d49507eb7fb6, licence: not stated}
     fitzmaurice_arthritis: {kind: url, name: https://content.sph.harvard.edu/fitzmaur/ala2e/arthritis.dta, pin: 250c58a530de23a95494fe4be14704905a934b4e3a52d0f88d10a5719d70898f}
-    fitzmaurice_schizophrenia: {kind: url, name: https://content.sph.harvard.edu/fitzmaur/ala2e/schizophrenia.dta, pin: 5ba896a9fff1393bb9ce9414f2178f52c450d741e478d99c4616f971a5d165a8}
-    fitzmaurice_skin: {kind: url, name: https://content.sph.harvard.edu/fitzmaur/ala2e/skin.dta, pin: 9b4d1b3666557ca3a45ca6f1d74d3a10f377f7cf111bbaa7ef2b8cabd74c494e}
+    fitzmaurice_schizophrenia: {kind: url, name: https://content.sph.harvard.edu/fitzmaur/ala2e/schizophrenia.dta, pin: 5ba896a9fff1393bb9ce9414f2178f52c450d741e478d99c4616f971a5d165a8, licence: not stated}
+    fitzmaurice_skin: {kind: url, name: https://content.sph.harvard.edu/fitzmaur/ala2e/skin.dta, pin: 9b4d1b3666557ca3a45ca6f1d74d3a10f377f7cf111bbaa7ef2b8cabd74c494e, licence: not stated}
     fitzmaurice_fat: {kind: url, name: https://content.sph.harvard.edu/fitzmaur/ala2e/fat.dta, pin: a310cc6d1722fa4a243540f14e9074954634ef70c15935e1555925dfa7bd894d}
     fitzmaurice_ccs: {kind: url, name: https://content.sph.harvard.edu/fitzmaur/ala2e/ccs.dta, pin: 5411530fdf5d096f9af0de0159150db88f1e7c89b3be4ef1991c05cd01f118fa}
     fitzmaurice_obesity: {kind: url, name: https://content.sph.harvard.edu/fitzmaur/ala2e/obesity-data.txt, pin: 1d04686ffd42c342267b2f4d346c17153b682736e4f9237f0f89381309bbc6d2}
     # Diggle, Heagerty, Liang & Zeger: the APTS course page of Diggle; CD4, lead and PANSS are
     # longitudinal, the rest spatial and left to the pre-screen
-    diggle_cd4: {kind: url, name: https://www.lancaster.ac.uk/staff/diggle/APTS-data-sets/CD4_data.txt, pin: 2c071453c84ee5cb0f5837e5da1a453271c03b14665e001b1b1312a053bfc290}
+    diggle_cd4: {kind: url, name: https://www.lancaster.ac.uk/staff/diggle/APTS-data-sets/CD4_data.txt, pin: 2c071453c84ee5cb0f5837e5da1a453271c03b14665e001b1b1312a053bfc290, licence: not stated}
     diggle_lead2000: {kind: url, name: https://www.lancaster.ac.uk/staff/diggle/APTS-data-sets/lead2000_data.txt, pin: 29eb396fd42edddf9d0ff672116d68a34159fad77bfac725f9d7fd510dad3a48}
     diggle_galicia_coastline: {kind: url, name: https://www.lancaster.ac.uk/staff/diggle/APTS-data-sets/galicia_coastline.txt, pin: a92f6e322d9991dd6f331305f08c9b079223f173d37ce83d05c944df565f7826}
     diggle_maxtemp: {kind: url, name: https://www.lancaster.ac.uk/staff/diggle/APTS-data-sets/maxtemp_data.txt, pin: b6c6101ee92c2fbec5023d5521bdd5f634dcfad40f3765e295bfaf51f2af3a43}
