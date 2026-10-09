@@ -209,7 +209,7 @@ class Summariser:
             r'_(dryad|osf|zenodo|figshare)(_\d+)?$', '', regex=True
         )
         return '\n'.join([
-            f'- Links: {len(links)} of {links["paper_id"].nunique()} papers; by status {counted(links["status"])}.',
+            f'- Links: {len(links)} over {links["paper_id"].nunique()} papers; by status {counted(links["status"])}.',
             f'- Listed files: {len(listed)}; by role {counted(listed["role"])}; data files not pulled: {counted(unpulled["reason"])}.',
             f'- Objects excluded: {len(excluded)} ({counted(excluded["reason"])}).',
             f'- Papers with a registry row: {labels.nunique()}, over {len(registered)} rows.',
@@ -217,8 +217,8 @@ class Summariser:
 
     @staticmethod
     def axisTable(axis: str, block: dict, practice: dict) -> str:
-        """Rows pooled, per tier and without agridat; the pooled row ends with the practice p90."""
-        head = f'| {axis} | ' + ' | '.join(QUANTILE_KEYS) + ' | practice p90 |'
+        """Rows pooled, per tier and without agridat; the pooled row ends with the practice column."""
+        head = f'| {axis} | ' + ' | '.join(QUANTILE_KEYS) + ' | practice |'
         rows = {'pooled': block['pooled']}
         rows |= {f'tier {t}': q for t, q in block['tiers'].items()}
         rows['without agridat'] = block['without_agridat']
