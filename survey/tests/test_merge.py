@@ -72,6 +72,7 @@ def refusal(merger: Merger, shard: Path) -> pd.DataFrame:
         ({'random_slopes': 'breed'}, 'random_slopes', 'not a slope term'),
         ({'random_slopes': 'weight|herd'}, 'random_slopes', 'weight is not a covariate'),
         ({'random_slopes': 'breed||farm'}, 'random_slopes', 'farm is not a grouping factor'),
+        ({'interactions': 'breed:parity'}, 'interactions', 'parity is not a covariate'),
         (
             {'documented_prior': 'sd ~ student_t(3, 0, 2.5)', 'published_model': 'no'},
             'documented_prior',
