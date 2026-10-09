@@ -9,11 +9,13 @@ The registry is a growing census of documented problems over public grouped data
 is a frozen subset with reference posteriors. Conflating them would make every registry
 correction a benchmark change.
 
-- **Versioning.** The package version is the registry version (semver: a membership change
-  of a released suite never happens, so major bumps are contract changes, minor bumps are
-  registry additions, patches are metadata fixes). Suites are named `suite-1.0`, `suite-1.1`
-  and are immutable; references are tagged by suite version and sampler versions. A problem
-  whose source vanishes is retired from the *next* suite, never replaced in a released one.
+- **Versioning.** The package version is the registry version (semver: a membership change of
+  a released suite never happens, so major bumps are contract changes, minor bumps are
+  registry additions, patches are metadata fixes). Suites are named after the release that
+  freezes them (`suite-1.1`, `suite-1.2`; release 1.0 ships the registry, the contract and a
+  candidate list, no suite) and are immutable; references are tagged by suite version and
+  sampler versions. A problem whose source vanishes is retired from the *next* suite, never
+  replaced in a released one.
 - **Admission to a suite.** A row is verified (confidence `high`, or an agreed blind second
   reading, or hand-checked), its reference passes the bar of ADR 0004 within the compute cap
   (12 hours, four chains, one CPU node), and its response type is in the contract's family
