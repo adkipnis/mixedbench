@@ -19,7 +19,7 @@ How to read the tables:
   axis.
 
 **Corpus.** 712 registry rows over 642 datasets and 940 grouping
-factors; per tier R 252, T 244, D 104, E 99, O 13. Excluded: 2142 objects (no grouping structure 1177, derived or duplicated table 622, unreadable format 187, not the paper's data 46, simulated data 43, response missing or undocumented 36, time series without replication 30, fewer than two groups 1).
+factors; per tier R 252, T 244, D 104, E 99, O 13. Excluded: 2132 objects (no grouping structure 1164, derived or duplicated table 622, unreadable format 192, not the paper's data 46, simulated data 43, response missing or undocumented 36, time series without replication 28, fewer than two groups 1).
 
 ## Observations
 
