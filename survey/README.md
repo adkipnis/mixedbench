@@ -8,12 +8,9 @@ by script.
   [`SUMMARY.md`](../registry/SUMMARY.md), regenerated on every merge.
 - **History** per pass: [`HISTORY.md`](HISTORY.md). Alex's per-row verdicts:
   [`VERDICTS.md`](VERDICTS.md).
-- **Issue numbers:** `m3#` is metabeta-v3's, where the survey ran until 2026-10-08 (spec
-  m3#14); `#` is this repository's.
+- **Issue numbers:** `m3#` and `#` as in [`HISTORY.md`](HISTORY.md).
 - **Contract test:** metabeta-v3's `packages/glmm/tests/surveys/test_dimension_quantiles.py`
   asserts the shape of `quantiles.yaml`; an axis or tier name changes only with it.
-- **Writers:** agents read documentation and write shards; `merge.py` alone writes the
-  canonical files.
 
 ## Files
 
@@ -60,8 +57,8 @@ One pass per tier:
    by script on response, grouping factors, covariates and interactions; open disagreements go
    to Alex.
 7. **Spot check.** 20 rows drawn with seed 0, stratified by shard, read by Alex at the source.
-8. **Verification** (ADR 0002, once after all tiers). A seeded 100-row hand sample of Tiers
-   R, E, T and O by tier × confidence; a stratum under 80% agreement on response or grouping factors is re-read blind
+8. **Verification** (once after all tiers). A seeded hand sample of Tiers R, E, T and O
+   against [ADR 0002](../docs/adr/0002-registry-suite-versioning-licences.md)'s bar
    ([HISTORY](HISTORY.md#hand-sample-11-12)).
 
 ## Frame: `sources.yaml`
@@ -88,10 +85,9 @@ dropped:
   version of its source tarball. `checksum` (optional) pins a CRAN or git archive.
 - `path` narrows a git or url tree; `file` names a suffix-less download (figshare's
   `files/<id>`) so the loader knows the format.
-- `cap` (per entry or top-level): the most objects read from one source, a draw with
-  `random.Random(seed)` over the sorted names, `seed` set at the top. Only agridat is capped,
-  at 50: its about 390 field trials would else be 38% of the pool, and a cap for all would
-  drop grouped tables of faraway and MASS at random (2026-10-07).
+- `cap`: the most objects read from one source, a draw with `random.Random(seed)` over the
+  sorted names, `seed` set at the top. Only agridat is capped
+  ([HISTORY](HISTORY.md#tier-r-m320-m322-m323-2026-10-07)).
 - `mirror` (url only): the package's copy of a CC0 file whose host refuses scripts, asked after
   the host under the same pin (ADR 0003).
 - `layout`: the columns of a headerless text file, `name` (whitespace-separated) or
@@ -101,24 +97,9 @@ dropped:
 - `dropped`: every candidate left out, with the reason. `nets`: the Tier O keyword net, a
   record the frame reader skips.
 
-The tiers:
-
-- **R**, at the CRAN versions of 2026-10-07: the mixed-model packages lme4, nlme, mlmRev,
-  MEMSS, glmmTMB, brms, GLMMadaptive (no data), nlmeU, SASmixed, HLMdiag, ordinal, geepack,
-  agridat; the data packages MASS, carData, lattice, HSAUR3, faraway, boot, gamlss.data,
-  medicaldata, languageR and base R's `datasets`.
-- **E**: posteriordb, the Stan example models (`ARM`, `bugs_examples`), pingouin, the PyMC
-  examples, bambi's figshare files, MixedModels.jl's Arrow artifact, Stata's [ME] and [XT]
-  manuals.
-- **T**: Hox, Snijders & Bosker, Goldstein, the Bristol CMM teaching sets, Rabe-Hesketh &
-  Skrondal, Singer & Willett, three Zuur et al. books, *Statistical Rethinking*, Fitzmaurice,
-  Laird & Ware, *Regression and Other Stories* (`ros`), West, Welch & Galecki, Diggle's APTS
-  files. Gelman's and West's sites refuse scripts, so ARM data come through `stan_arm` and
-  `ros`.
-- **D**: 60 papers' Dryad, OSF, Zenodo and figshare files, one `url` entry per file labelled
-  `<paper_id>_<repository>` (`_2`, `_3` for further files), pinned by sha256.
-- **O**: metabeta v0.5's four PMLB tables and the keyword net's hits over OpenML, UCI and
-  PMLB.
+The sources of each tier are the entries of `sources.yaml`. Tier D has one `url` entry per
+file, labelled `<paper_id>_<repository>` (`_2`, `_3` for further files). Gelman's and West's
+sites refuse scripts, so ARM data come through `stan_arm` and `ros`.
 
 ## File contracts
 
@@ -233,97 +214,60 @@ place. An older file reads with new columns blank, so a header-only shard migrat
 
 ## Reading rules
 
-From the agents' `RULE GAP` notes and Alex's checks; `prompts/read.md` carries those agents
-need. An example object and the deciding issue follow each rule.
+[`prompts/read.md`](prompts/read.md) is the home of the reading rules. Below are the rulings
+it does not carry, from the agents' `RULE GAP` notes and Alex's checks, each with an example
+object and the deciding issue.
 
 **Grouping factors**
 
-- The columns whose levels index random effects as documented; a term on two columns is `a:b`
-  (Cultivation; m3#20, m3#22), with no level where a part is missing (m3#24).
 - Counted: a cluster that repeats even when the source treats rows as independent (Tier O's
   hospitals, ROS; m3#24, m3#25); a month or observer with enough levels and rows (Squid,
   Sparrows; m3#25); a repeating dyad the book fits (Crofoot; m3#25); a design level the first
-  reading missed (lawn's `machine:speed`; m3#23).
-- Not counted: strata and waves modelled as fixed (CES11; m3#23); field coordinates, which go
-  in `ignore` (connolly.potato; m3#22), though a Latin square's rows and columns are blocks
-  (OrchardSprays; m3#23); an observation-level effect, its term kept in the formula (m3#20); a
-  factor that classifies rather than clusters (singer; m3#23); a dyad with one row per pair
-  (Monks; m3#25).
-- A column is a grouping factor or a covariate, never both; the grouping stands and the fixed
-  term stays in the formula (Cultivation; #12).
+  reading missed (lawn's `machine:speed`; m3#23); a genotype-by-environment term fitted as
+  random (salmon.bunt; m3#22).
+- Not counted: strata and waves modelled as fixed (CES11; m3#23); field coordinates
+  (connolly.potato; m3#22), though a Latin square's rows and columns are blocks (OrchardSprays;
+  m3#23); a factor that classifies rather than clusters (singer; m3#23); a dyad with one row
+  per pair (Monks; m3#25).
+- A term `a:b` has no level where a part is missing (m3#24). Where a column is both a grouping
+  factor and a covariate, the grouping stands and the fixed term stays in the formula
+  (Cultivation; #12).
 - An area factor with many levels groups; one with a handful is a covariate (LGAclaims,
   infmort; m3#23).
 - A random intercept on the matched pair (amlxray; m3#23), the GEE cluster (geepack; m3#22), a
   frontier inefficiency term (xtfrontier1; m3#24); a single-level conditional logit is excluded
   (travel2; m3#25).
-- The random structure as the paper describes it (goodwin; m3#26) unless deposited code fits
-  another (meyel; #15). A genotype-by-environment term fitted as random is the term
-  (salmon.bunt; m3#22).
-- `ordered` is for covariates only, never for a grouping factor (Orthodont; m3#20).
 
 **Response**
 
-- `response_type` follows the column, not the fit: totals `count`, 1–5 ratings `ordinal`,
-  non-integer abundances `continuous`, a bounded score without trials `count` (eggprod,
-  InstEval; m3#22–m3#26).
-- Proportions stay `continuous`, the denominator named in the formula (MetaResp; #11); a
-  float-coded nominal stays `ordinal` (antibiotics; #11).
-- A transformed or recoded response names its raw column (schiz; m3#20, m3#25); a documented
-  normalised score is its own column (jsp_728; m3#25).
-- No documented response: the one a reader would model, `low`, `RESPONSE INFERRED:`
-  (worldcup; m3#23). In Tier D such a raw table is `response missing or undocumented`
-  (m3#26).
+- Totals are `count`, 1–5 ratings `ordinal`, non-integer abundances `continuous`, a bounded
+  score without trials `count` (eggprod, InstEval; m3#22–m3#26); a float-coded nominal stays
+  `ordinal` (antibiotics; #11).
+- A documented normalised score is its own column (jsp_728; m3#25).
 - Survival: `continuous`, the event indicator in `ignore` and `Surv(time, event)` in the
   formula (catheter; m3#24). Discrete-time hazard: the indicator is the response, `PERIOD` a
   categorical covariate (cigarette; m3#25).
-- Rows without a measured response are no observations (Phenobarb; m3#20).
-- A multivariate table is one row per response up to three, the rest in `notes` and `ignore`
-  (Soils; m3#23).
 
-**Covariates and types**
+**Covariates and model rows**
 
-- A nonlinear model's inputs are covariates; `formula` names the model class under
-  `NONLINEAR:` (Theoph; m3#20).
-- A numeric column wrapped in `factor()` is declared `categorical` (yates.oats; m3#22). A
-  baseline is a covariate, not a response (dietox; m3#22).
-- What is no column (a model's group mean, a date string, a cue level, a derived indicator)
-  stays in the formula only (pisa2000; m3#24, m3#26).
+- A baseline is a covariate, not a response (dietox; m3#22). Polynomial and derived terms name
+  their column once (muscatine; m3#22).
 - An interaction is carried only when fitted (prt; m3#22). The source document beats recall
   (Stata manuals; m3#24). The final model's terms count, not the candidates; subset fits and
   contrasts are named in the formula (m3#26).
-- Polynomial and derived terms name their column once (muscatine; m3#22).
-
-**Model rows and published models**
-
-- A further `model_index` only when the response or grouping differs; a fixed-effects
-  simplification or a variant with one row per extra level is the same model (SASmixed,
-  melanoma; m3#22, m3#24). posteriordb's ladders render the richest grouping (radon; m3#24).
-- `published_model` `yes`: a posterior, a Stan example, a textbook worked example (m3#25), a
-  documentation example stating the model; `no` for test-only data and all of Tier O; `yes`
-  throughout Tier D (m3#24, m3#26).
-- A `no` row keeps its proposed formula: the merge requires one (#11, #12).
-
-**Family and prior** (#10)
-
-- Both come from the row's model call; a prior is the one passed to it, trimmed to the row's
-  response in a multivariate fit.
-- Empty: package defaults, priors only in a supplement, priors in words without parameters
-  (arriero). Filed: priors in deposit files the page lists (verberk); an unbounded Stan scale
-  as such.
-- A family missing from the vocabulary leaves `family` blank with a `RULE GAP:` (MetaResp;
-  #11).
+- A variant with one row per extra level is the same model (SASmixed, melanoma; m3#22, m3#24).
+  posteriordb's ladders render the richest grouping (radon; m3#24).
+- `published_model` is `no` for all of Tier O (m3#24).
+- Priors in deposit files the page lists are filed (verberk; #10).
 
 **Code against prose** (#15)
 
-- Deposited code beats the paper's prose; the prose goes to `notes` (kleisner). Code not
-  deposited: the paper stands at `medium`.
+- Code not deposited: the paper stands at `medium`.
 - An evident bug files the intended model (voorspoels); where a package version changed a fit,
   the published output decides (sequestro).
 - A subset fit stays on the whole object, the subset in `notes` (szollosi).
-- Uncorrelated effects are `||` (radon_all); a fixed scale, sum-to-zero, structured covariance
-  or location-scale correlation keeps the grouping and is named in the formula (rugby,
-  gumundsdottir).
-- A multivariate fit is one row per part, the formula naming it (hubbard).
+- A fixed scale, sum-to-zero, structured covariance or location-scale correlation keeps the
+  grouping and is named in the formula (rugby, gumundsdottir).
 
 **Exclusions**
 
@@ -338,12 +282,8 @@ need. An example object and the deciding issue follow each rule.
   modal one (BUGS kidney); m3#24, m3#25.
 - Stan: pure GP, time-series, CAR and mixture posteriors have no grouping; a GP beside random
   intercepts stays (m3#24).
-- Kept rather than excluded: aggregate responses on a real grouping, at `low` (nass.sorghum;
-  m3#22); ARM's raw tables of an early chapter, with a later chapter's multilevel fit at
-  `medium` when the grouping column is in the table (m3#24).
-- Tier D: a cited deposit or a preregistration is `not the paper's data`; per-coder or
-  per-participant files without a pooled table are `derived or duplicated table`; a split by
-  study stays one row per file (sievers_2020; m3#26).
+- Kept: ARM's raw tables of an early chapter, with a later chapter's multilevel fit at `medium`
+  when the grouping column is in the table (m3#24).
 
 ## Known limits
 
