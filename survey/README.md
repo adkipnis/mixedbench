@@ -35,6 +35,7 @@ grill, not here.
 | `registry.csv` | `merge.py` | one row per dataset and documented model, at most three per object |
 | `scan_hits.csv` | `verify.py scan` | one row per keyword occurrence: a registry row's `notes`, `formula` or help page, or a Tier D deposit page once per deposit |
 | `sample.csv` | `verify.py draw` | the seeded hand sample (ADR 0002): row key, stratum, seed, batch and the compared fields as read at draw time |
+| `agreement.csv` | `verify.py agree` | per stratum, tier and overall: the sampled rows and, per compared field, the share whose reading at draw time the registry still holds |
 | `excluded.csv` | `merge.py` | every screened-out object with a categorical reason |
 | `duplicates.csv` | `merge.py` | candidate pairs the merge flagged and the verdicts returned |
 | `dropped.csv` | `merge.py` | objects taken out of the registry and the exclusions, awaiting a re-filing shard |
@@ -89,6 +90,16 @@ One pass per tier, the same steps each time:
    surviving the fold, read by Alex against the help pages and the source together with the
    open disagreements. Verdicts become corrected rows and the rules below. In Tier D Alex
    read every row.
+8. **Verification** (ADR 0002, after all tiers). `verify.py draw` takes a seeded hand sample of
+   100 rows of Tiers R, E, T and O stratified by tier × confidence, `handoff` renders it in
+   batches of 25 for Alex to check at the source, and the verdicts merge as shards.
+   `verify.py agree` compares each sampled row's reading at draw time with the merged
+   registry on response, response type, trials, grouping factors, covariates, interactions,
+   formula and published_model (`;`-lists as sets, `a:b` unordered, formulas without
+   whitespace; a row taken out of the registry disagrees everywhere) into `agreement.csv`. A
+   stratum under 80% on response or grouping factors is re-read whole by a fresh agent, blind,
+   compared as in step 6, Alex deciding; where disagreement stays high, a further batch of 25
+   is drawn with the next seed.
 
 ## Frame: `sources.yaml`
 
@@ -841,3 +852,42 @@ grouping factor or a covariate, never both: Cultivation keeps `Block:Cult`, the 
 `(1|Cult)` next to the two-level fixed `Cult` being aliased; state_wide_presidential_votes keeps
 `year_ind` as a grouping factor, the GP input in the formula. Alex leans towards reading
 coursework.dta's -1 codes as missing, for the contract to settle.
+
+**Agreement and the O/low re-read** (#13, 2026-10-09). `verify.py agree` compares each sampled
+row's reading at draw time (`sample.csv`) with the merged registry and writes
+`agreement.csv`; normalisation (sets, unordered `a:b`, formula whitespace) changed no count, so
+every disagreement is a real change. Two counting decisions: hox SocsLong.sav, taken out of the
+registry, disagrees on every field (the per-batch tallies above left it out of response and
+grouping); rabe_hesketh coursework #1, aligned to `written` by batch 3's siblings before batch 4
+checked it, counts as a disagreement on its draw-time reading. Agreement over the 100 rows:
+
+| pool | rows | response | response_type | trials | grouping_factors | covariates | interactions | formula | published_model |
+|---|---|---|---|---|---|---|---|---|---|
+| R | 42 | 0.976 | 0.976 | 1.0 | 0.976 | 0.929 | 1.0 | 0.738 | 0.786 |
+| E | 16 | 0.938 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 0.625 | 0.938 |
+| T | 40 | 0.875 | 0.925 | 0.975 | 0.95 | 0.725 | 0.875 | 0.475 | 0.575 |
+| O | 2 | 1.0 | 1.0 | 1.0 | 0.5 | 1.0 | 1.0 | 0.5 | 1.0 |
+| all | 100 | 0.93 | 0.96 | 0.99 | 0.96 | 0.86 | 0.95 | 0.61 | 0.73 |
+
+Per stratum in `agreement.csv`. One stratum fell under 80% on response or grouping factors:
+O/low, 0 of 1 on grouping (uci_760 gait, `replication` added in batch 4); the closest passing
+are T/low on response (0.812) and R/medium on grouping (0.938). The whole O/low stratum, 7 rows,
+was re-read blind by a fresh Opus agent with `prompts/read.md` into a scratch directory and
+compared as in step 6: response 7 of 7, grouping factors 4 of 7. Alex decided
+(`shards/registry_reread_o_low.csv`, 4 rows replaced, registry 714):
+
+- openml_43550: `patientid` added, crossed with `Hospital` (75% of patients in more than one
+  hospital); `City_Code_Patient` added beside `Hospital_city`.
+- openml_46630: `lesion_id` added, nested in `patient_id` (the authors' patient > lesion > image
+  hierarchy).
+- uci_760: the batch 4 reading stands against the blind reading's recalled `condition:time`.
+- openml_4541: covariates and seven interactions of Strack et al. 2014's final model, the recodes
+  named in the formula; the eighth, `diag_1_group:HbA1c_group`, in the formula only (`RULE GAP:
+  derived interaction`).
+- openml_343: `plot` (the cultivars) and the six other cover measures of 1991–94 added, the
+  documented objective predicting 1994 white-clover cover from them.
+- openml_1100, pmlb_apnea1: stand.
+
+No further batch was drawn: after the re-read no stratum is under the bar, and an untargeted
+batch of 25 would give O/low no row. The low formula (0.61) and `published_model` (0.73)
+agreement, worst in Tier T, is the cost of rendering undocumented models; the paper reports it.
