@@ -7,6 +7,8 @@ on:
   schedule:
     - cron: '0 4 * * 1'  # Mondays, 04:00 UTC
   workflow_dispatch:
+  push:  # temporary: a second hand run of #25 from the branch, removed by the next commit
+    branches: [suite/contract]
 
 permissions:
   contents: read
@@ -23,6 +25,7 @@ jobs:
       - run: uv sync
       - id: fetch
         continue-on-error: true
+        shell: bash  # named, so that pipefail keeps the script's exit code past tee
         run: uv run python survey/fetch.py | tee failures.tsv
       - name: Open and close the issues
         env:
