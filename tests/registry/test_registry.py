@@ -3,20 +3,13 @@ in the editable install and in the wheel alike."""
 
 from __future__ import annotations
 
+import typing
+
 import pandas as pd
 import yaml
 from mixedbench import registry
 
-FILES = [
-    'sources.yaml',
-    'registry.csv',
-    'excluded.csv',
-    'dimensions.csv',
-    'columns.csv',
-    'quantiles.yaml',
-    'SUMMARY.md',
-    'manifest.csv',
-]
+FILES = typing.get_args(registry.RegistryFile)
 # the normalised licences of ADR 0003, extended by #7 where CRAN's DESCRIPTIONs needed it
 LICENCES = {
     'CC0-1.0',
@@ -48,6 +41,10 @@ QUANTILES_KEYS = {
 }
 
 
+def registryRows() -> pd.DataFrame:
+    return pd.read_csv(registry.path('registry.csv'), dtype=str, keep_default_na=False)
+
+
 def test_every_registry_file_resolves_to_an_existing_file() -> None:
     paths = [registry.path(name) for name in FILES]
     assert all(p.is_file() for p in paths)
@@ -67,7 +64,7 @@ def test_quantiles_parse_with_the_keys_metabeta_asserts() -> None:
 def test_registry_rows_carry_family_documented_prior_and_a_licence() -> None:
     """The contract reads `family` and a later track `documented_prior` by name; the mirror
     fallback of ADR 0003 decides by `licence`, so no row may lack one."""
-    rows = pd.read_csv(registry.path('registry.csv'), dtype=str, keep_default_na=False)
+    rows = registryRows()
     columns = list(rows.columns)
     assert columns[columns.index('trials') + 1] == 'family'
     assert columns[columns.index('formula') + 1] == 'documented_prior'
@@ -78,7 +75,7 @@ def test_registry_rows_carry_family_documented_prior_and_a_licence() -> None:
 def test_the_manifest_names_the_file_of_every_registry_object() -> None:
     """A user's loader fetches an object only through its manifest row (#4), so a registry
     object without one, or under a source label sources.yaml lacks, could never load."""
-    rows = pd.read_csv(registry.path('registry.csv'), dtype=str, keep_default_na=False)
+    rows = registryRows()
     sources = registry.sources()
     manifest = registry.manifest()
     keys = {(sources[label], name) for label, name in zip(rows['source'], rows['object'])}
@@ -88,7 +85,7 @@ def test_the_manifest_names_the_file_of_every_registry_object() -> None:
 def test_every_dryad_source_of_the_registry_has_a_mirror() -> None:
     """Dryad refuses scripted downloads, so a registry object from Dryad loads only from the
     package's mirror of its CC0 file (ADR 0003)."""
-    rows = pd.read_csv(registry.path('registry.csv'), dtype=str, keep_default_na=False)
+    rows = registryRows()
     sources = registry.sources()
     dryad = {label for label in rows['source'] if 'datadryad.org' in sources[label].name}
     unmirrored = {label for label in dryad if sources[label].mirror is None}
