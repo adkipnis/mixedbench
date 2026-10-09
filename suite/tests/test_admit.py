@@ -14,7 +14,7 @@ from pathlib import Path
 import pandas as pd
 from mixedbench import registry
 from mixedbench.contract import contractHash, load
-from mixedbench.registry.row import COLUMNS, Row, writeCsv
+from mixedbench.registry.row import COLUMNS, Row, readCsv, writeCsv
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # the suite's scripts
 
@@ -149,3 +149,23 @@ def test_the_report_names_the_refused_rows_and_the_top_dropped_shares(tmp_path):
     assert report.index('fixture/most/1') < report.index('fixture/some/1')
     assert '0.5' in report
     assert 'fixture/none/1' not in report
+
+
+def test_the_list_and_the_refusals_are_written_beside_each_other(tmp_path):
+    """A suite version records why a registry row is out as well as which are in, since the
+    registry keeps every row (ADR 0002): both files in registry order, in the package's dialect."""
+    rows = [
+        *scratchRegistry(tmp_path, ['kept']),
+        *scratchRegistry(tmp_path, ['colours'], response_type='categorical'),
+        *scratchRegistry(tmp_path, ['curve']),
+    ]
+    tables = Tables({name: groupedTable() for name in ['kept', 'colours', 'curve']})
+    refused = {'fixture/curve/1': 'nonlinear_parameter_model: a curve (#27)'}
+    admission = Admission(rows, tables, tmp_path / 'cache', refused=refused)
+    admission.admit().write(tmp_path / 'suite')
+    candidates = readCsv(tmp_path / 'suite' / 'candidates.csv')
+    written = readCsv(tmp_path / 'suite' / 'refused.csv')
+    assert list(candidates['id']) == ['fixture/kept/1']
+    assert list(written.columns) == ['id', 'reason']
+    assert list(written['id']) == ['fixture/colours/1', 'fixture/curve/1']
+    assert written['reason'].iloc[1] == 'nonlinear_parameter_model: a curve (#27)'
