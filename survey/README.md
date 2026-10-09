@@ -128,8 +128,11 @@ dropped:
   CMM `.DAT` files, positions from 1).
 - `licence` is the collection's licence as its LICENSE file, readme, DESCRIPTION or
   repository API states it, or `not stated` once the collection was read and carries none;
-  an absent key means nobody has looked. The survey redistributes no data, so the field
-  records terms to respect and sources to cite.
+  an absent key means nobody has looked, and the merge refuses a registry row of a git or url
+  source without one. A CRAN entry needs none: the merge reads its DESCRIPTION; base R's
+  `datasets` has none in the loader's tree and carries the installed one's `Part of R 4.6.1`.
+  The survey redistributes no data, so the field records terms to respect and sources to
+  cite.
 - `dropped` lists every candidate the discovery step considered and left out, with the
   reason. `nets` is the Tier O keyword net: the repositories, the column-name keywords a
   table must document as its clustering column, and the cap; a record of a search, which
@@ -210,19 +213,29 @@ Key `source`, `object`, `model_index`. Agent columns, in order:
 | `response` | column name of the response |
 | `response_type` | `continuous` / `binary` / `count` / `binomial` / `ordinal` / `categorical`; what the column holds, not the family fitted to it |
 | `trials` | column name of the trials for a `binomial` response, blank otherwise |
+| `family` | blank where the contract's family rule applies (ADR 0001); else the documented model's family and link as brms names it: `negbinomial` / `bernoulli(probit)` / `cumulative(probit)` / `Gamma(log)` / `lognormal` / `zero_inflated_poisson` / `zero_inflated_negbinomial` / `hurdle_poisson` / `hurdle_negbinomial` / `Beta`; a departure from the rule, never a restatement of it (a Poisson count model stays blank) |
 | `grouping_factors` | `;`-list of the columns whose levels index random effects, as documented; a random term on the combination of two columns (`(1\|Block:Variety)`) is `Block:Variety`, which the merge builds from its parts |
 | `covariates` | `;`-list of the documented model's covariate columns (main effects) |
 | `interactions` | `;`-list of `a:b` terms, every part a column name |
 | `ignore` | `;`-list of columns no model should use: row ids, weights, alternate responses, coordinates |
 | `types` | `;`-list of `column=categorical`, `column=ordered` or `column=continuous` declarations for formats without column types, and `ordered` for an R ordered factor, which `pyreadr` reads as unordered; covariates only |
 | `formula` | the documented model verbatim (lme4 syntax where the source gives one); a nonlinear mixed model in words, naming the model class and its inputs |
+| `documented_prior` | the prior as the source states it, in its notation (Stan, BUGS, brms or words), one line; blank where it states none; only on a `published_model` `yes` row |
 | `published_model` | `yes` when a published model specification exists; else `no` |
 | `domain` | `ecology_biology` / `psychology_neuroscience` / `biomedicine` / `social_humanities` / `agriculture` / `education` / `economics` / `industry` / `other`; reporting only |
 | `confidence` | `high` / `medium` / `low` |
 | `notes` | free text: the documentation read, cases the prompt does not settle (`RULE GAP:`); `NONLINEAR:` opens the note of a nonlinear mixed model, `RESPONSE INFERRED:` the note of a row whose page documents no response |
 
 Script columns the merge fills: `tier`, `sources` (`source:object` of every confirmed
-duplicate folded into the row, the row's own first), `reader`.
+duplicate folded into the row, the row's own first), `reader`, `licence`. `licence` is the
+source's `licence:` key in `sources.yaml`, else a CRAN package's DESCRIPTION `License` field,
+mapped by the literal lookup `LICENCES` of `schema.py` to `CC0-1.0` / `CC-BY-4.0` /
+`CC-BY-NC-4.0` / `CC-BY-NC-SA-4.0` / `ODbL-1.0` / `GPL-2.0-or-later` / `GPL-2.0` /
+`GPL-3.0-or-later` / `GPL-3.0` / `AGPL-3.0` / `MIT` / `BSD-3-Clause` / `public-domain` /
+`other` / `not stated` (ADR 0003). The merge rewrites it on every row, so a corrected key
+reaches the rows merged earlier. `GPL-3.0-or-later` and `AGPL-3.0` were added for CRAN
+DESCRIPTIONs (#7); a string that states access or attribution but no licence (OpenML's
+`Public`) is `other` or `not stated`, never a licence it does not name.
 
 ### `excluded.csv`
 
@@ -297,9 +310,14 @@ a level with two or more rows; the response shows its declared type (`continuous
 `binary` two distinct values, `count` and `binomial` non-negative integers, `ordinal` at most
 10 distinct values, `categorical` not a float column); a `binomial` row names integer
 `trials` the response never exceeds; a column is a grouping factor or a covariate, never
-both; the object is not in the rival file; a dropped object is in one of the two. A failing
+both; `family` in its vocabulary; `documented_prior` only on a `published_model` `yes` row;
+the licence of every registry source, the shard's and those merged earlier, in the lookup, and
+a git or url source with a `licence:` key; the object is not in the rival file; a dropped
+object is in one of the two. A failing
 shard is refused with its offending rows printed and nothing written. Upsert on the key:
-merging a shard twice changes nothing, a corrected shard replaces its rows. Every merge then
+merging a shard twice changes nothing, a corrected shard replaces its rows. A file of an older
+shape is read with the new columns blank, so a schema change is migrated by merging a shard
+with the new header and no rows (`shards/registry_schema.csv`, #7). Every merge then
 measures the whole registry again.
 
 ## Reading rules
