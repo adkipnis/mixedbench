@@ -4,7 +4,7 @@ column namings, so that duplicate flagging has a real pair to find, and a CRAN p
 (Tier R) holding the herds table as `herds.rds`, whose DESCRIPTION states its licence. The
 table: region > herd nested, herd `h4` a singleton, `breed` a four-level categorical, `feed`
 herd-level, `weight` continuous, `sick` binary, `cases` out of `trials` binomial, `id` a column
-to ignore.
+to ignore. Also the one recipe that merges a shard and the one reader of a written CSV.
 """
 
 import hashlib
@@ -22,9 +22,11 @@ import yaml
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent))  # survey scripts are research code outside the package
+sys.path.insert(0, str(HERE))  # the tests import mergeShard and readRows from here
 
 from merge import Merger
 from mixedbench.datasets import Loader
+from schema import EXCLUDED, REGISTRY, readCsv, writeCsv
 
 FIXTURES = HERE / 'fixtures'
 HERDS_URL = 'https://example.org/herds.zip'
@@ -57,6 +59,31 @@ def cranTarball(package: str, licence: str, table: pd.DataFrame, name: str) -> b
 
 def sha(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
+
+
+def mergeShard(merger: Merger, shard: Path) -> Merger:
+    """The steps of `merge.py`'s `__main__`, in its order."""
+    merger.load(shard)
+    merger.validate()
+    merger.upsert()
+    merger.supersede()
+    merger.reconcile()
+    merger.measure()
+    merger.writeManifest()
+    merger.summarise()
+    merger.report()
+    return merger
+
+
+def readRows(path: Path) -> list[dict]:
+    return readCsv(path).to_dict('records')
+
+
+def emptyCensus(registry: Path) -> None:
+    """The repository's registry/ always holds both census files; a scratch one starts with
+    them empty."""
+    for table in (REGISTRY, EXCLUDED):
+        writeCsv(pd.DataFrame(columns=table.columns), registry / f'{table.name}.csv')
 
 
 def scratchMerger(registry: Path, survey: Path) -> Merger:
@@ -93,6 +120,7 @@ def scratchMerger(registry: Path, survey: Path) -> Merger:
     }
     registry.mkdir(exist_ok=True)
     (registry / 'sources.yaml').write_text(yaml.safe_dump(sources, sort_keys=False))
+    emptyCensus(registry)
     (survey / 'shards').mkdir(parents=True)
 
     def serve(url: str) -> bytes | None:

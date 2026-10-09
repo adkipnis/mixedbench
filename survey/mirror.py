@@ -19,9 +19,9 @@ import subprocess
 import tempfile
 from pathlib import Path
 
-import pandas as pd
 from mixedbench import registry
 from mixedbench.datasets import Source
+from schema import readCsv
 
 # =====================================================================================
 # globals
@@ -55,7 +55,7 @@ class Mirror:
     # ---------------------------------------------------------------------------------
     def dryadLabels(self) -> list[str]:
         """The Dryad sources a registry object loads from; each must be CC0."""
-        rows = pd.read_csv(self.registryDir / 'registry.csv', dtype=str, keep_default_na=False)
+        rows = readCsv(self.registryDir / 'registry.csv')
         labels = sorted({label for label in rows['source'] if HOST in self.sources[label].name})
         frame = (self.registryDir / 'sources.yaml').read_text()
         for label in labels:

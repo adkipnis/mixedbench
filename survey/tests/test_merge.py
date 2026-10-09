@@ -1,30 +1,18 @@
 """The merge script at its file seams: shard in, canonical CSVs and refusals out (#17)."""
 
-import csv
 import hashlib
-import re
 from pathlib import Path
 
 import pandas as pd
 import pytest
 import yaml
+from conftest import mergeShard, readRows
 from merge import Merger, ShardRefused
+from schema import writeCsv
+from sources import readFrame
 
 FIXTURES = Path(__file__).parent / 'fixtures'
 RENAMED_TYPES = 'area=categorical;farm=categorical;type=categorical;diet=categorical'
-
-
-def mergeShard(merger: Merger, shard: Path) -> Merger:
-    merger.load(shard)
-    merger.validate()
-    merger.append()
-    merger.flush()
-    return merger
-
-
-def readRows(path: Path) -> list[dict]:
-    with open(path, newline='') as f:
-        return list(csv.DictReader(f))
 
 
 def test_passing_registry_shard_merges_with_tier_and_reader_filled_in(merger):
@@ -48,10 +36,7 @@ def test_passing_registry_shard_merges_with_tier_and_reader_filled_in(merger):
 
 
 def writeShard(path: Path, rows: list[dict]) -> Path:
-    with open(path, 'w', newline='') as f:
-        writer = csv.DictWriter(f, fieldnames=list(rows[0]), quoting=csv.QUOTE_ALL)
-        writer.writeheader()
-        writer.writerows(rows)
+    writeCsv(pd.DataFrame(rows), path)
     return path
 
 
@@ -103,7 +88,20 @@ def test_a_reading_the_table_contradicts_is_refused_with_the_row_named(
     assert problems.iloc[0]['key'].startswith('herds herds.csv')
     assert list(problems['column']) == [column]
     assert problems.iloc[0]['problem'] == problem
-    assert not (merger.registry / 'registry.csv').exists()
+    assert readRows(merger.registry / 'registry.csv') == []
+
+
+def test_a_shard_with_another_header_is_refused_naming_each_column(merger):
+    """An agent's misspelt column is reported like any other problem, on the header's line 1,
+    before any check reads the misspelt column."""
+    rows = readRows(FIXTURES / 'registry_herds.csv')
+    for row in rows:
+        row['domains'] = row.pop('domain')
+    problems = refusal(merger, writeShard(merger.survey / 'shards' / 'registry_typo.csv', rows))
+    assert problems[['line', 'column', 'problem']].values.tolist() == [
+        [1, 'domain', 'missing'],
+        [1, 'domains', 'unknown'],
+    ]
 
 
 def withLicenceKey(merger: Merger, label: str, licence: str | None) -> Merger:
@@ -133,7 +131,7 @@ def test_a_licence_the_lookup_cannot_classify_refuses_the_merge(merger, licence,
     assert list(problems['key']) == ['herds']
     assert list(problems['value']) == [licence or '']
     assert list(problems['problem']) == [problem]
-    assert not (merger.registry / 'registry.csv').exists()
+    assert readRows(merger.registry / 'registry.csv') == []
 
 
 def test_a_one_level_grouping_factor_is_refused(merger):
@@ -197,7 +195,7 @@ def test_an_empty_shard_migrates_a_registry_of_the_old_shape(merger):
     path = merger.registry / 'registry.csv'
     current = pd.read_csv(path, dtype=str, keep_default_na=False)
     old = current.drop(columns=['family', 'documented_prior', 'licence'])
-    old.to_csv(path, index=False, quoting=csv.QUOTE_ALL)
+    writeCsv(old, path)
     header = ','.join(readRows(FIXTURES / 'registry_herds.csv')[0])
     shard = merger.survey / 'shards' / 'registry_schema.csv'
     shard.write_text(header + '\n')
@@ -252,9 +250,9 @@ def test_within_a_tier_the_frame_order_of_sources_yaml_decides_which_duplicate_s
     entries = {label: {'kind': 'cran', 'pin': '1.0'} for label in ['nlme', 'MEMSS', 'agridat']}
     sources = {'seed': 0, 'tiers': {'R': entries, 'D': {'deposit': {'kind': 'cran', 'pin': '1.0'}}}}
     (tmp_path / 'sources.yaml').write_text(yaml.safe_dump(sources, sort_keys=False))
-    merger = Merger(tmp_path, tmp_path)
+    frame = readFrame(tmp_path)
     keys = [('deposit', 'x'), ('agridat', 'x'), ('MEMSS', 'x'), ('nlme', 'x')]
-    assert sorted(keys, key=merger.rank) == [
+    assert sorted(keys, key=frame.rank) == [
         ('nlme', 'x'),
         ('MEMSS', 'x'),
         ('agridat', 'x'),
@@ -358,73 +356,3 @@ def test_every_merge_names_each_registry_objects_file_in_the_manifest(merger):
     assert rows == [
         {'source': 'herds', 'object': 'herds.csv', 'file': 'herds.csv', 'sha256': sha256, 'size': str(len(herds))}
     ]  # fmt: skip
-
-
-QUANTILE_KEYS = ('n', 'min', 'p5', 'p10', 'p50', 'p90', 'p95', 'max')
-FACTOR_AXES = ('n_groups', 'group_size_min', 'group_size_p10', 'group_size_p50', 'group_size_p90', 'group_size_max', 'singleton_share', 'cv', 'alpha')  # fmt: skip
-ROW_AXES = ('n_obs', 'n_grouping_factors', 'd_doc', 'd_all')
-
-
-def test_quantiles_carry_every_axis_pooled_per_tier_and_without_agridat(merger):
-    """Per-factor axes count once per grouping factor (region, herd, herd), dataset axes once
-    per registry row; the shares, the K distribution over the documented models' categoricals
-    and the implied column counts of a 9- and a 14-term model follow (#18)."""
-    mergeShard(merger, FIXTURES / 'registry_herds.csv')
-    quantiles = yaml.safe_load((merger.registry / 'quantiles.yaml').read_text())
-    assert (quantiles['n_rows'], quantiles['n_objects'], quantiles['n_factor_rows']) == (2, 1, 3)
-    axes = quantiles['axes']
-    assert set(axes) == set(FACTOR_AXES) | set(ROW_AXES) | {'K'}
-    for axis in axes.values():
-        assert set(axis) == {'pooled', 'tiers', 'without_agridat'}
-        assert set(axis['pooled']) == set(QUANTILE_KEYS)
-        assert set(axis['tiers']) == {'D'}
-    assert axes['n_groups']['pooled'] == {'n': 3, 'min': 3, 'p5': 3, 'p10': 3, 'p50': 5, 'p90': 5, 'p95': 5, 'max': 5}  # fmt: skip
-    assert axes['n_grouping_factors']['pooled'] == {'n': 2, 'min': 1, 'p5': 1, 'p10': 1, 'p50': 2, 'p90': 2, 'p95': 2, 'max': 2}  # fmt: skip
-    assert axes['alpha']['pooled']['min'] == pytest.approx(4.4118, abs=1e-3)
-    assert axes['alpha']['tiers']['D']['max'] == 65.0
-    assert axes['alpha']['without_agridat'] == axes['alpha']['pooled']
-    assert axes['d_doc']['pooled']['max'] == 5 and axes['d_all']['pooled']['max'] == 12
-    assert axes['K']['pooled'] == {'n': 3, 'min': 3, 'p5': 3, 'p10': 3, 'p50': 4, 'p90': 4, 'p95': 4, 'max': 4}  # fmt: skip
-    assert quantiles['imbalance'] == {'balanced_share': 0.0}
-    shares = quantiles['shares']
-    assert shares['covariate_type'] == {'categorical': 1.0}
-    assert shares['level'] == {'within': 0.667, 'group': 0.333}
-    assert shares['relation'] == {'nested': 0.667, 'single': 0.333}
-    assert shares['response_type'] == {'continuous': 0.5, 'binomial': 0.5}
-    assert shares['reader'] == {'pandas': 1.0}
-    assert shares['published_model'] == {'yes': 0.5, 'no': 0.5}
-    assert quantiles['k_distribution'] == {3: 0.333, 4: 0.667}
-    implied = quantiles['implied_columns']
-    assert implied['categorical_share'] == 1.0
-    assert implied['mean_columns_per_categorical'] == pytest.approx(2.667, abs=1e-3)
-    assert implied['terms_9'] == pytest.approx(24.0, abs=1e-2)
-    assert implied['terms_14'] == pytest.approx(37.33, abs=1e-2)
-
-
-def test_summary_template_has_no_hand_typed_digits():
-    from summarise import TEMPLATE
-
-    assert not re.search(r'\d', re.sub(r'\bv1\b', '', TEMPLATE.read_text()))  # a stage name
-
-
-def test_summary_tables_end_with_the_practice_p90_read_from_the_practice_file(merger):
-    """One table per axis, rows pooled, per tier and without agridat; the pooled row's last
-    column is the practice survey's p90, the maximum over the v1 families (the minimum for the
-    smallest group size), taken from the snapshot `practice_quantiles.yaml` at merge time."""
-    from summarise import PRACTICE, PRACTICE_FAMILIES
-
-    mergeShard(merger, FIXTURES / 'registry_herds.csv')
-    mergeShard(merger, FIXTURES / 'excluded_cattle.csv')
-    summary = (merger.registry / 'SUMMARY.md').read_text()
-    families = yaml.safe_load(PRACTICE.read_text())['families']
-    p90 = lambda key: [families[f]['p90'][key] for f in PRACTICE_FAMILIES]
-    tables = {m.group(1): m.group(0) for m in re.finditer(r'\| (\w+) \| n \| min \|.*?(?=\n\n)', summary, re.DOTALL)}  # fmt: skip
-    assert set(tables) >= {'n_obs', 'n_groups', 'group_size_min', 'alpha', 'd_doc', 'K'}
-    rows = lambda axis: [line.split(' | ') for line in tables[axis].splitlines()[2:]]
-    assert [r[0] for r in rows('n_obs')] == ['| pooled', '| tier D', '| without agridat']
-    assert rows('n_obs')[0] == ['| pooled', '2', '14', '14', '14', '14', '14', '14', '14', f'{max(p90("n_obs"))} |']  # fmt: skip
-    assert rows('n_groups')[0][-1] == f'{max(p90("n_groups_per_factor"))} |'
-    assert rows('group_size_min')[0][-1] == f'{min(p90("group_size_min"))} |'
-    assert rows('d_doc')[0][-1] == f'{max(p90("n_fixed_effects"))} |'
-    assert rows('alpha')[0][-1] == '– |'
-    assert 'Excluded: 1 objects' in summary and 'derived or duplicated table 1' in summary

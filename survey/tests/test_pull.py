@@ -3,15 +3,15 @@ shard out, and the screen rule on hand-made tables (#19).
 The frame is one CRAN source, the package's fixture tarball served from memory with a call
 counter, so the tests never touch the network and can see a second download."""
 
-import csv
 from pathlib import Path
 
 import pandas as pd
 import pytest
 import yaml
+from conftest import emptyCensus, mergeShard, readRows
 from merge import Merger
 from mixedbench.datasets import Loader
-from pull import Puller, screen
+from pull import Puller
 
 # the loader's own fixture: five documented data objects, one of them a data() text file
 TARBALL = (
@@ -45,11 +45,6 @@ def pull(registry: Path, survey: Path, server: Server) -> Puller:
     puller.copyHelp()
     puller.flush()
     return puller
-
-
-def readRows(path: Path) -> list[dict]:
-    with open(path, newline='') as f:
-        return list(csv.DictReader(f))
 
 
 @pytest.fixture
@@ -171,18 +166,16 @@ def test_screen_keeps_every_table_that_could_hold_groups(table, verdict):
     """Conservative by design: anything with a column that could index groups passes; only
     what cannot be a grouped table at all is discarded."""
     df = None if table is None else pd.DataFrame(table)
-    assert screen(df) == verdict
+    assert Puller.screen(df) == verdict
 
 
 def test_the_prescreen_shard_merges_into_the_exclusions(root):
     """The pull never writes a canonical file; its discards reach excluded.csv through the
     merge like any agent shard, with the tier filled in."""
     puller = pull(root, root, Server())
+    emptyCensus(root)
     merger = Merger(root, root, loader=puller.loader)
-    merger.load(root / 'shards' / 'excluded_prescreen.csv')
-    merger.validate()
-    merger.append()
-    merger.flush()
+    mergeShard(merger, root / 'shards' / 'excluded_prescreen.csv')
     rows = readRows(root / 'excluded.csv')
     assert [(r['tier'], r['source'], r['object'], r['reason']) for r in rows] == [
         ('R', 'fixture', 'wide', 'unreadable format')
