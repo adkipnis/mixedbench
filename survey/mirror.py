@@ -19,9 +19,9 @@ import subprocess
 import tempfile
 from pathlib import Path
 
-import pandas as pd
-from mixedbench import registry
 from mixedbench.datasets import Source
+from schema import readCsv
+from sources import readFrame
 
 # =====================================================================================
 # globals
@@ -41,10 +41,13 @@ script (HTTP 401). Each asset is `<source label>__<file>`; its sha256 is the sou
 class Mirror:
     def __init__(self, registryDir: Path, tag: str) -> None:
         self.registryDir, self.tag = Path(registryDir), tag
-        self.sources = registry.sources(self.registryDir / 'sources.yaml')
+        self.frame = readFrame(self.registryDir)
 
     def run(self) -> None:
         labels = self.dryadLabels()
+        if not labels:  # a rerun after every Dryad source is mirrored creates no empty release
+            print('every Dryad source of the registry has a mirror')
+            return
         with tempfile.TemporaryDirectory() as staging:
             assets = [self.stage(label, Path(staging)) for label in labels]
             self.upload(assets)
@@ -54,18 +57,20 @@ class Mirror:
     # pipeline
     # ---------------------------------------------------------------------------------
     def dryadLabels(self) -> list[str]:
-        """The Dryad sources a registry object loads from; each must be CC0."""
-        rows = pd.read_csv(self.registryDir / 'registry.csv', dtype=str, keep_default_na=False)
-        labels = sorted({label for label in rows['source'] if HOST in self.sources[label].name})
-        frame = (self.registryDir / 'sources.yaml').read_text()
-        for label in labels:
-            if CC0 not in self.entryLine(frame, label):
+        """The Dryad sources a registry object loads from that have no mirror yet, so that a
+        rerun adds no second `mirror:` key; each must be CC0."""
+        rows = readCsv(self.registryDir / 'registry.csv')
+        sources = self.frame.sources
+        labels = sorted({label for label in rows['source'] if HOST in sources[label].name})
+        unmirrored = [label for label in labels if sources[label].mirror is None]
+        for label in unmirrored:
+            if self.frame.licences[label] != CC0:
                 raise ValueError(f'{label} is not CC0: no mirror')
-        return labels
+        return unmirrored
 
     def stage(self, label: str, staging: Path) -> Path:
         """The cached download, checked against its pin, under its asset name."""
-        source = self.sources[label]
+        source = self.frame.sources[label]
         cached = self.registryDir / 'cache' / 'url' / source.pin / source.file
         digest = hashlib.sha256(cached.read_bytes()).hexdigest()
         if digest != source.pin:
@@ -86,7 +91,7 @@ class Mirror:
         frame = file.read_text()
         for label in labels:
             line = self.entryLine(frame, label)
-            url = f'https://github.com/{REPOSITORY}/releases/download/{self.tag}/{self.assetName(label, self.sources[label])}'  # fmt: skip
+            url = f'https://github.com/{REPOSITORY}/releases/download/{self.tag}/{self.assetName(label, self.frame.sources[label])}'  # fmt: skip
             mirrored = line.replace('}', f', mirror: "{url}"}}', 1)
             frame = frame.replace(line, mirrored, 1)
         file.write_text(frame)

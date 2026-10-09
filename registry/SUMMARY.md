@@ -1,22 +1,22 @@
 # Dimension survey — summary
 
 Public grouped datasets measured by script from [`registry.csv`](registry.csv); frame, method
-and reading rules in [`README.md`](../survey/README.md). Evidence for `docs/design/envelope.md`, not the
-envelope itself.
+and reading rules in [`README.md`](../survey/README.md). Evidence for the envelope in metabeta's
+design docs, not the envelope itself.
 
 How to read the tables:
 
 - Every number is filled by `merge.py` from `dimensions.csv` and `columns.csv` on each merge;
   edit `SUMMARY.template.md`, never this file.
-- Quantiles are observed values: at or below the level in the lower half, at or above it in
-  the upper half.
+- Quantiles are observed values, never interpolated: below the median the nearest value at
+  or below the level, from the median on the nearest value at or above it.
 - Per-factor axes (groups, group sizes, imbalance) count a dataset once per grouping factor;
   dataset axes (observations, grouping factors, design columns) once per registry row; `K`
   once per categorical covariate of a documented model.
-- The last column of an axis table is the practice survey's upper quantile, the maximum over
-  the v1 families in [`practice_quantiles.yaml`](../survey/practice_quantiles.yaml) (the minimum
-  for the smallest group size), read at merge time; `–` where the practice survey has no such
-  axis.
+- The last column of an axis table, `practice`, is the practice survey's upper decile, the
+  maximum over the v1 families in [`practice_quantiles.yaml`](../survey/practice_quantiles.yaml)
+  (the minimum for the smallest group size), read at merge time; `–` where the practice survey
+  has no such axis.
 
 **Corpus.** 714 registry rows over 641 datasets and 941 grouping
 factors; per tier R 252, T 244, D 104, E 101, O 13. Excluded: 2133 objects (no grouping structure 1164, derived or duplicated table 622, unreadable format 192, not the paper's data 46, simulated data 44, response missing or undocumented 36, time series without replication 28, fewer than two groups 1).
@@ -25,7 +25,7 @@ factors; per tier R 252, T 244, D 104, E 101, O 13. Excluded: 2133 objects (no g
 
 Rows with a measured response; a pharmacokinetic table's dosing rows are not observations.
 
-| n_obs | n | min | p5 | p10 | p50 | p90 | p95 | max | practice p90 |
+| n_obs | n | min | p5 | p10 | p50 | p90 | p95 | max | practice |
 |---|---|---|---|---|---|---|---|---|---|
 | pooled | 714 | 7 | 29 | 45 | 459 | 7584 | 20796 | 1000209 | 23025 |
 | tier R | 252 | 12 | 21 | 30 | 196 | 3078 | 7185 | 73421 |  |
@@ -37,7 +37,7 @@ Rows with a measured response; a pharmacokinetic table's dosing rows are not obs
 
 ## Grouping factors
 
-| n_grouping_factors | n | min | p5 | p10 | p50 | p90 | p95 | max | practice p90 |
+| n_grouping_factors | n | min | p5 | p10 | p50 | p90 | p95 | max | practice |
 |---|---|---|---|---|---|---|---|---|---|
 | pooled | 714 | 1 | 1 | 1 | 1 | 2 | 2 | 5 | 3 |
 | tier R | 252 | 1 | 1 | 1 | 1 | 2 | 2 | 4 |  |
@@ -56,7 +56,7 @@ Rows with a measured response; a pharmacokinetic table's dosing rows are not obs
 
 ## Groups per factor
 
-| n_groups | n | min | p5 | p10 | p50 | p90 | p95 | max | practice p90 |
+| n_groups | n | min | p5 | p10 | p50 | p90 | p95 | max | practice |
 |---|---|---|---|---|---|---|---|---|---|
 | pooled | 941 | 2 | 4 | 5 | 32 | 361 | 1128 | 92017 | 414 |
 | tier R | 335 | 2 | 4 | 4 | 18 | 184 | 316 | 10767 |  |
@@ -68,7 +68,7 @@ Rows with a measured response; a pharmacokinetic table's dosing rows are not obs
 
 ## Group size
 
-| group_size_min | n | min | p5 | p10 | p50 | p90 | p95 | max | practice p90 |
+| group_size_min | n | min | p5 | p10 | p50 | p90 | p95 | max | practice |
 |---|---|---|---|---|---|---|---|---|---|
 | pooled | 941 | 1 | 1 | 1 | 5 | 81 | 240 | 18180 | 1 |
 | tier R | 335 | 1 | 1 | 1 | 6 | 32 | 62 | 567 |  |
@@ -78,7 +78,7 @@ Rows with a measured response; a pharmacokinetic table's dosing rows are not obs
 | tier O | 16 | 1 | 1 | 1 | 21 | 1240 | 18180 | 18180 |  |
 | without agridat | 888 | 1 | 1 | 1 | 5 | 91 | 278 | 18180 |  |
 
-| group_size_p10 | n | min | p5 | p10 | p50 | p90 | p95 | max | practice p90 |
+| group_size_p10 | n | min | p5 | p10 | p50 | p90 | p95 | max | practice |
 |---|---|---|---|---|---|---|---|---|---|
 | pooled | 941 | 1 | 1 | 2 | 7 | 107 | 278 | 18180 | – |
 | tier R | 335 | 1 | 1 | 2 | 7 | 38 | 72 | 583 |  |
@@ -88,7 +88,7 @@ Rows with a measured response; a pharmacokinetic table's dosing rows are not obs
 | tier O | 16 | 1 | 1 | 1 | 21 | 3630 | 18180 | 18180 |  |
 | without agridat | 888 | 1 | 1 | 2 | 7 | 108 | 282 | 18180 |  |
 
-| group_size_p50 | n | min | p5 | p10 | p50 | p90 | p95 | max | practice p90 |
+| group_size_p50 | n | min | p5 | p10 | p50 | p90 | p95 | max | practice |
 |---|---|---|---|---|---|---|---|---|---|
 | pooled | 941 | 1 | 2 | 3 | 11 | 145 | 491 | 18180 | – |
 | tier R | 335 | 1 | 2 | 3 | 8 | 50 | 105 | 600 |  |
@@ -98,7 +98,7 @@ Rows with a measured response; a pharmacokinetic table's dosing rows are not obs
 | tier O | 16 | 1 | 1 | 1 | 25 | 8150 | 18180 | 18180 |  |
 | without agridat | 888 | 1 | 2 | 3 | 11 | 160 | 493 | 18180 |  |
 
-| group_size_p90 | n | min | p5 | p10 | p50 | p90 | p95 | max | practice p90 |
+| group_size_p90 | n | min | p5 | p10 | p50 | p90 | p95 | max | practice |
 |---|---|---|---|---|---|---|---|---|---|
 | pooled | 941 | 1 | 3 | 3 | 14 | 240 | 600 | 20425 | – |
 | tier R | 335 | 1 | 2 | 3 | 10 | 61 | 171 | 1204 |  |
@@ -108,7 +108,7 @@ Rows with a measured response; a pharmacokinetic table's dosing rows are not obs
 | tier O | 16 | 2 | 2 | 2 | 25 | 18180 | 20425 | 20425 |  |
 | without agridat | 888 | 2 | 3 | 3 | 15 | 257 | 730 | 20425 |  |
 
-| group_size_max | n | min | p5 | p10 | p50 | p90 | p95 | max | practice p90 |
+| group_size_max | n | min | p5 | p10 | p50 | p90 | p95 | max | practice |
 |---|---|---|---|---|---|---|---|---|---|
 | pooled | 941 | 2 | 3 | 4 | 18 | 290 | 876 | 33076 | 300 |
 | tier R | 335 | 2 | 2 | 3 | 11 | 92 | 217 | 7500 |  |
@@ -125,7 +125,7 @@ proportions, the statistic the simulator draws; a balanced allocation has infini
 concentration (share of grouping factors: 0.388). Singleton share and the
 coefficient of variation are readable companions.
 
-| alpha | n | min | p5 | p10 | p50 | p90 | p95 | max | practice p90 |
+| alpha | n | min | p5 | p10 | p50 | p90 | p95 | max | practice |
 |---|---|---|---|---|---|---|---|---|---|
 | pooled | 941 | 0.0251 | 0.9669 | 1.7027 | 49.9643 | inf | inf | inf | – |
 | tier R | 335 | 0.0251 | 1.1846 | 2.6431 | inf | inf | inf | inf |  |
@@ -135,7 +135,7 @@ coefficient of variation are readable companions.
 | tier O | 16 | 1.6802 | 1.6802 | 1.7019 | 80.9739 | inf | inf | inf |  |
 | without agridat | 888 | 0.0296 | 0.9496 | 1.6866 | 36.0263 | inf | inf | inf |  |
 
-| singleton_share | n | min | p5 | p10 | p50 | p90 | p95 | max | practice p90 |
+| singleton_share | n | min | p5 | p10 | p50 | p90 | p95 | max | practice |
 |---|---|---|---|---|---|---|---|---|---|
 | pooled | 941 | 0 | 0 | 0 | 0 | 0.0897 | 0.25 | 0.9964 | – |
 | tier R | 335 | 0 | 0 | 0 | 0 | 0.0428 | 0.1525 | 0.9964 |  |
@@ -145,7 +145,7 @@ coefficient of variation are readable companions.
 | tier O | 16 | 0 | 0 | 0 | 0 | 0.688 | 0.7655 | 0.7655 |  |
 | without agridat | 888 | 0 | 0 | 0 | 0 | 0.0902 | 0.2211 | 0.8448 |  |
 
-| cv | n | min | p5 | p10 | p50 | p90 | p95 | max | practice p90 |
+| cv | n | min | p5 | p10 | p50 | p90 | p95 | max | practice |
 |---|---|---|---|---|---|---|---|---|---|
 | pooled | 941 | 0 | 0 | 0 | 0.1329 | 0.7307 | 0.9899 | 5.899 | – |
 | tier R | 335 | 0 | 0 | 0 | 0 | 0.615 | 0.8761 | 5.899 |  |
@@ -171,7 +171,7 @@ coefficient of variation are readable companions.
 
 Levels of the categorical covariates:
 
-| K | n | min | p5 | p10 | p50 | p90 | p95 | max | practice p90 |
+| K | n | min | p5 | p10 | p50 | p90 | p95 | max | practice |
 |---|---|---|---|---|---|---|---|---|---|
 | pooled | 460 | 1 | 2 | 3 | 4 | 10 | 14 | 717 | – |
 | tier R | 166 | 2 | 3 | 3 | 4 | 9 | 10 | 56 |  |
@@ -205,7 +205,7 @@ The documented model (`d_doc`) and every covariate column of the table plus the 
 interactions (`d_all`, never below `d_doc`): continuous and binary count one, a categorical
 its levels less one, an interaction the product.
 
-| d_doc | n | min | p5 | p10 | p50 | p90 | p95 | max | practice p90 |
+| d_doc | n | min | p5 | p10 | p50 | p90 | p95 | max | practice |
 |---|---|---|---|---|---|---|---|---|---|
 | pooled | 714 | 0 | 0 | 1 | 4 | 13 | 17 | 22134 | 11 |
 | tier R | 252 | 0 | 0 | 0 | 3 | 14 | 19 | 55 |  |
@@ -215,7 +215,7 @@ its levels less one, an interaction the product.
 | tier O | 13 | 2 | 2 | 2 | 11 | 85 | 22134 | 22134 |  |
 | without agridat | 686 | 0 | 0 | 1 | 4 | 12 | 16 | 22134 |  |
 
-| d_all | n | min | p5 | p10 | p50 | p90 | p95 | max | practice p90 |
+| d_all | n | min | p5 | p10 | p50 | p90 | p95 | max | practice |
 |---|---|---|---|---|---|---|---|---|---|
 | pooled | 714 | 0 | 0 | 1 | 5 | 21 | 51 | 23770 | – |
 | tier R | 252 | 0 | 0 | 1 | 5 | 20 | 35 | 14966 |  |
@@ -250,10 +250,10 @@ its levels less one, an interaction the product.
 
 ## Tier D
 
-The practice survey's deposits, resolved and pulled by `resolve.py`; the loss by cause is the
-tier's finding.
+The practice survey's deposits, resolved and pulled by the archived `resolve.py` (tag
+`survey-archive`); the loss by cause is the tier's finding.
 
-- Links: 98 of 60 papers; by status ok 89, no files 6, unresolved 1, restricted 1, not a deposit 1.
+- Links: 98 over 60 papers; by status ok 89, no files 6, unresolved 1, restricted 1, not a deposit 1.
 - Listed files: 1632; by role other 622, data 607, script 231, documentation 172; data files not pulled: too large 30, hidden path 9.
 - Objects excluded: 917 (derived or duplicated table 572, unreadable format 158, no grouping structure 113, not the paper's data 46, response missing or undocumented 28).
 - Papers with a registry row: 38, over 104 rows.

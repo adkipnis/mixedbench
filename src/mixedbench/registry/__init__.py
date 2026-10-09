@@ -37,24 +37,26 @@ def sources(file: Path | None = None) -> dict[str, Source]:
     pinned = {}
     for entries in frame['tiers'].values():
         for label, entry in (entries or {}).items():
-            pinned[label] = Source(
-                kind=entry['kind'],
-                name=entry.get('name', label),
-                pin=str(entry['pin']),
-                checksum=entry.get('checksum'),
-                path=entry.get('path'),
-                file=entry.get('file'),
-                layout=_layout(entry),
-                mirror=entry.get('mirror'),
-            )
+            pinned[label] = source(label, entry)
     return pinned
 
 
-def _layout(entry: dict) -> tuple[str, ...] | None:
-    """The columns of a headerless text file, as the frame lists them."""
-    if 'layout' not in entry:
-        return None
-    return tuple(entry['layout'])
+def source(label: str, entry: dict) -> Source:
+    """One entry of `sources.yaml` as a pinned source."""
+    checksum = entry.get('checksum')
+    if entry['kind'] == 'url':  # a URL has no version: the file's sha256 is its pin
+        checksum = str(entry['pin'])
+    layout = tuple(entry['layout']) if 'layout' in entry else None  # headerless text
+    return Source(
+        kind=entry['kind'],
+        name=entry.get('name', label),
+        pin=str(entry['pin']),
+        checksum=checksum,
+        path=entry.get('path'),
+        file=entry.get('file'),
+        layout=layout,
+        mirror=entry.get('mirror'),
+    )
 
 
 def manifest() -> Manifest:
@@ -63,5 +65,5 @@ def manifest() -> Manifest:
     rows = pd.read_csv(path('manifest.csv'), dtype=str, keep_default_na=False)
     entries = {}
     for row in rows.itertuples(index=False):
-        entries[pinned[row.source], row.object] = ManifestRow(row.file, row.sha256, int(row.size))
+        entries[pinned[row.source], row.object] = ManifestRow(row.file, row.sha256)
     return entries

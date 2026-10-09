@@ -1,11 +1,10 @@
-"""Dataset loader for the dimension survey: pinned source as input, typed DataFrame as output.
+"""Dataset loader: pinned source as input, typed DataFrame as output.
 The pipeline url -> archive -> tree -> files -> frames and the cache live here, without R
-(ADR 0003); the formats are `readers.py`, the help pages `docs.py`."""
+(ADR 0003); the formats are `readers.py`."""
 
 from __future__ import annotations
 
 import hashlib
-import re
 import ssl
 import tarfile
 import time
@@ -19,19 +18,16 @@ from typing import Literal
 from urllib.parse import quote, urlparse
 
 import pandas as pd
-from mixedbench.datasets import docs, readers
-from mixedbench.datasets.deparse import Deparse, DeparseError
-from mixedbench.datasets.readers import DATA_FILES, R_ERRORS, R_FILES, TABLE_FILES, Frames
+from mixedbench.datasets import readers
 
 CRAN = 'https://cloud.r-project.org/src/contrib'
 R_SOURCES = 'https://cloud.r-project.org/src/base'
-ARCHIVES = ('.zip', '.tar.gz', '.tgz', '.tar')
+ARCHIVES = ('.zip', '.tar.gz')
 # Intermediate certificates a source's server leaves out of its chain, which OpenSSL, unlike
 # macOS and Windows, does not fetch itself: Harvard's content.sph.harvard.edu (Fitzmaurice et
 # al.) sends InCommon's instead of Sectigo's OV R36, from its leaf's CA Issuers URL
 TLS = ssl.create_default_context()
 TLS.load_verify_locations(Path(__file__).parent / 'intermediates.pem')
-Reader = Literal['pyreadr', 'rdata', 'pandas', 'deparse']
 ColumnType = Literal['categorical', 'ordered', 'continuous']  # what a registry row may declare
 
 
@@ -40,7 +36,7 @@ class Source:
     kind: Literal['cran', 'git', 'url']
     name: str  # CRAN package ('datasets' is base R's), GitHub repository URL, or URL of a file
     pin: str  # CRAN or R version, git revision, or the file's sha256
-    checksum: str | None = None  # sha256 of a CRAN or git archive; None skips the check
+    checksum: str | None = None  # sha256 of the download (a url's pin); None skips the check
     path: str | None = None  # git, url: file or folder inside the tree; None -> all of it
     file: str | None = None  # url: the download's file name where the URL's path has none
     layout: tuple[str, ...] | None = None  # url: the columns of a headerless text file
@@ -50,20 +46,35 @@ class Source:
 @dataclass(frozen=True)
 class DataObject:
     name: str  # the R object, or the file's path inside the source
-    file: str  # relative to the source tree; a label for the survey table, never opened
+    file: str  # relative to the source tree
     n_rows: int | None  # None: the object is no table (a model fit, a list, a time series)
     n_cols: int | None
-    reader: Reader  # the file's route: pyreadr, rdata, pandas or the deparse reader
+    reader: readers.Reader  # the file's route: pyreadr, rdata, pandas or the deparse reader
 
 
 @dataclass(frozen=True)
 class ManifestRow:
     file: str  # the object's file, relative to the source tree
     sha256: str  # of that file
-    size: int  # in bytes
 
 
 Manifest = Mapping[tuple[Source, str], ManifestRow]  # (source, object name) -> its file
+
+
+def fetch(url: str) -> bytes | None:
+    """The default fetch; None on a 404 or a refusal so the caller can try the next location;
+    a 429 (OSF after a burst of downloads) waits the `Retry-After` seconds and tries again."""
+    req = urllib.request.Request(url, headers={'User-Agent': 'mixedbench'})
+    for attempt in range(3):
+        try:
+            with urllib.request.urlopen(req, timeout=120, context=TLS) as r:
+                return r.read()
+        except urllib.error.HTTPError as e:
+            if e.code in (401, 403, 404):  # Dryad refuses a script with 401
+                return None
+            if e.code != 429 or attempt == 2:
+                raise
+            time.sleep(int(e.headers.get('Retry-After', 10)))
 
 
 # ==============================================================================================
@@ -75,15 +86,17 @@ class Loader:
     def __init__(
         self,
         cache: Path,
-        fetch: Callable[[str], bytes | None] | None = None,
+        fetch: Callable[[str], bytes | None] = fetch,
         manifest: Manifest | None = None,
     ):
-        """With a manifest, `load` fetches and reads only the object's file (ADR 0003, #4);
-        without one, the whole source, as the survey needs for objects not yet merged."""
+        """With a manifest, `load` reads only the object's file, and fetches only that file of
+        a git source (ADR 0003, #4); without one, the whole source, as the survey needs for
+        objects not yet merged."""
         self.cache = Path(cache)
-        self.fetch = fetch or self._getBytes
+        self.fetch = fetch
         self.manifest = manifest
         self._frames: dict[Source, dict[str, tuple[DataObject, pd.DataFrame | None]]] = {}
+        self._verified: set[tuple[Path, str]] = set()  # (file, checksum) pairs that matched
 
     def objects(self, source: Source) -> list[DataObject]:
         pairs = self._read(source).values()
@@ -106,88 +119,42 @@ class Loader:
                 declared[column] = df[column].astype(pd.CategoricalDtype(ordered=kind == 'ordered'))
         return df.assign(**declared)
 
-    @staticmethod
-    def _decimalPoint(values: pd.Series) -> pd.Series:
-        """A string column with decimal commas and no points (a European csv, kleisner_2026's
-        BMI) read with points; anything else as it is, so a thousands separator fails loudly."""
-        if not pd.api.types.is_string_dtype(values):
-            return values
-        if values.str.contains('.', regex=False).any():
-            return values
-        return values.str.replace(',', '.', regex=False)
-
-    def manifestRow(self, source: Source, name: str) -> ManifestRow:
-        """What the manifest records of an object, read from the whole source."""
-        file = self._read(source)[name][0].file
-        data = (self._tree(source) / file).read_bytes()
-        return ManifestRow(file, hashlib.sha256(data).hexdigest(), len(data))
-
-    def help(self, source: Source, name: str) -> str:
-        """What documents `name`: the Rd page of a CRAN object; otherwise the text files named
-        after the object's stem in its folder or a sibling folder (posteriordb's
-        `data/info/radon.info.json` beside `data/data/`), else those in the file's folder or the
-        nearest folder above it within the pinned path that has any; a Stan data dict adds which
-        entries are not in the table, a Stata or SPSS file its labels, a workbook its contents
-        sheet, and a repository that is an R package (rethinking, ROS's `rpackage/`) the Rd
-        page named after the file's stem."""
-        tree = self._tree(source)
-        if source.kind == 'cran':
-            page = docs.rdPage(tree / 'man', name)
-            if page is None:
-                raise KeyError(f'{source.name} {source.pin} has no help page for {name!r}')
-            return page
-        file = tree / self._read(source)[name][0].file
-        root = tree / (source.path or '')  # documentation is sought within the pinned path
-        if root.is_file():
-            root = root.parent
-        found = docs.sameStemDocs(tree, file) or docs.docsBeside(root, file)
-        pages = [
-            f'# {f.relative_to(tree).as_posix()}\n{f.read_text(encoding="utf-8", errors="replace")}'
-            for f in found
-        ]
-        pages.append(docs.selfNote(file))
-        for man in sorted(tree.rglob('man')):  # a repository that is an R package (rethinking)
-            pages.append(docs.rdPage(man, readers.bare(file).stem))
-        return '\n'.join(page for page in pages if page)
-
-    def licence(self, source: Source) -> str:
-        """The `License` field of a CRAN package's DESCRIPTION, verbatim."""
-        description = (self._tree(source) / 'DESCRIPTION').read_text()
-        return re.search(r'^License:\s*(.+)$', description, re.MULTILINE).group(1)
+    def tree(self, source: Source) -> Path:
+        """The source's files, extracted once: a CRAN package, a repository at a revision, or
+        what a URL serves (an archive's content, else the file in a folder of its own)."""
+        dir = self._dir(source)
+        file = self._download(source)
+        is_archive = file.name.lower().endswith(ARCHIVES)
+        if not is_archive:
+            return dir
+        tree = dir / 'tree'
+        if not tree.exists():
+            self._extract(file, tree)
+        entries = list(tree.iterdir())
+        if len(entries) == 1 and entries[0].is_dir():  # a single top-level folder is layout
+            tree = entries[0]
+        if source.name == 'datasets':  # base R's, laid out in R's sources as a CRAN package is
+            return tree / 'src/library/datasets'
+        return tree
 
     # ------------------------------------------------------------------------------------------
     # pipeline: url -> archive -> tree -> files -> frames
     # ------------------------------------------------------------------------------------------
 
-    @staticmethod
-    def _getBytes(url: str) -> bytes | None:
-        """Default fetch; None on a 404 or a refusal so the caller can try the next location;
-        a 429 (OSF after a burst of downloads) waits the `Retry-After` seconds and tries again."""
-        req = urllib.request.Request(url, headers={'User-Agent': 'mixedbench'})
-        for attempt in range(3):
-            try:
-                with urllib.request.urlopen(req, timeout=120, context=TLS) as r:
-                    return r.read()
-            except urllib.error.HTTPError as e:
-                if e.code in (401, 403, 404):  # Dryad refuses a script with 401
-                    return None
-                if e.code != 429 or attempt == 2:
-                    raise
-                time.sleep(int(e.headers.get('Retry-After', 10)))
-
     def _dir(self, source: Source) -> Path:
-        """The source's cache folder: the download, its extracted `tree/`, a manifest's `files/`."""
+        """The source's cache folder: the download, its extracted `tree/`, a git source's
+        manifest files under `files/`."""
         if source.kind == 'cran':
             return self.cache / 'cran' / f'{source.name}_{source.pin}'
         if source.kind == 'git':
-            owner, repo = source.name.removesuffix('.git').rsplit('/', 2)[-2:]
+            owner, repo = self._repo(source).split('/')
             return self.cache / 'git' / f'{owner}_{repo}_{source.pin}'
         return self.cache / 'url' / source.pin
 
     @staticmethod
     def _urls(source: Source) -> list[str]:
-        """Where the source's archive is, in the order to try."""
-        if source.name == 'datasets':  # base R's package, inside R's source tarball
+        """Where the source's download is, in the order to try."""
+        if source.name == 'datasets':  # base R's, in R's sources
             major = source.pin.split('.')[0]
             return [f'{R_SOURCES}/R-{major}/R-{source.pin}.tar.gz']
         if source.kind == 'cran':  # CRAN moves superseded versions to Archive/
@@ -207,18 +174,19 @@ class Loader:
         if not file.exists():
             file.parent.mkdir(parents=True, exist_ok=True)
             file.write_bytes(self._fetchFirst(source, urls))
-        checksum = source.checksum
-        if source.kind == 'url':  # the file's sha256 is its pin
-            checksum = source.pin
-        self._verify(file, checksum)
+        self._verify(file, source.checksum)
         return file
 
-    @staticmethod
-    def _verify(file: Path, checksum: str | None) -> None:
-        """None skips the check: a CRAN tarball without a checksum."""
-        digest = hashlib.sha256(file.read_bytes()).hexdigest()
-        if checksum is not None and digest != checksum:
+    def _verify(self, file: Path, checksum: str | None) -> None:
+        """Once per loader, in chunks, since every manifest load passes through the source's
+        archive; None skips the check: a CRAN tarball without a checksum."""
+        if checksum is None or (file, checksum) in self._verified:
+            return
+        with file.open('rb') as f:
+            digest = hashlib.file_digest(f, 'sha256').hexdigest()
+        if digest != checksum:
             raise ValueError(f'{file} checksum {digest} differs from pinned {checksum}')
+        self._verified.add((file, checksum))
 
     def _fetchFirst(self, source: Source, urls: list[str]) -> bytes:
         for url in urls:
@@ -226,24 +194,6 @@ class Loader:
             if data is not None:
                 return data
         raise FileNotFoundError(f'{source.name} {source.pin}: not at {", ".join(urls)}')
-
-    def _tree(self, source: Source) -> Path:
-        """The source's files, extracted once: a CRAN package, a repository at a revision, or
-        what a URL serves (an archive's content, else the file in a folder of its own)."""
-        dir = self._dir(source)
-        file = self._download(source)
-        is_archive = file.name.lower().endswith(ARCHIVES)
-        if not is_archive:
-            return dir
-        tree = dir / 'tree'
-        if not tree.exists():
-            self._extract(file, tree)
-        entries = list(tree.iterdir())
-        if len(entries) == 1 and entries[0].is_dir():  # a single top-level folder is layout
-            tree = entries[0]
-        if source.name == 'datasets':  # laid out in R's sources as a CRAN package is
-            return tree / 'src' / 'library' / 'datasets'
-        return tree
 
     @staticmethod
     def _extract(archive: Path, dir: Path) -> None:
@@ -256,25 +206,19 @@ class Loader:
 
     @staticmethod
     def _files(source: Source, tree: Path) -> list[Path]:
-        """The files holding data objects: a CRAN package's data/ folder as utils::data() sees
-        it; otherwise the pinned path (a file, or a folder walked) in what R or pandas read,
-        less the text files that are documentation."""
-        if source.kind == 'cran':  # data() ignores other files (`datalist`)
+        """The files holding data objects: in a CRAN package's data/ folder, otherwise in the
+        pinned path, a file or a folder walked."""
+        cran = source.kind == 'cran'
+        if cran:
             candidates = []
             if (tree / 'data').exists():  # GLMMadaptive ships no data
                 candidates = (tree / 'data').iterdir()
-            readable = R_FILES | DATA_FILES
         else:
             root = tree / (source.path or '')
             candidates = [root]
             if root.is_dir():
                 candidates = root.rglob('*')
-            readable = R_FILES | TABLE_FILES
-        files = [f for f in candidates if f.is_file() and readers.bare(f).suffix in readable]
-        files = [f for f in files if not f.name.endswith('.init.json')]  # Stan initial values
-        files = [f for f in files if '__MACOSX' not in f.parts]  # a zip's resource forks
-        if source.kind != 'cran':
-            files = [f for f in files if not docs.isDoc(f) and not docs.describesSibling(f)]
+        files = [f for f in candidates if f.is_file() and readers.isData(f, cran=cran)]
         return sorted(files)
 
     def _object(self, source: Source, name: str) -> tuple[str, pd.DataFrame | None]:
@@ -285,61 +229,26 @@ class Loader:
         row = self.manifest[source, name]
         file = self._fetchFile(source, row)
         self._verify(file, row.sha256)
-        frames, _ = self._readFile(file, source, row.file)
+        frames, _ = readers.read(file, row.file, layout=source.layout, cran=source.kind == 'cran')
         return row.file, frames[name]
 
     def _fetchFile(self, source: Source, row: ManifestRow) -> Path:
-        """One file of the source, kept under `files/` so that a partial download never
-        passes for the extracted `tree/` the enumerate path reads; a url that is no archive
-        is that file, base R's `datasets` a file of R's extracted source tarball, which keeps
-        the package below its top-level folder."""
-        if source.name == 'datasets':
-            return self._tree(source) / row.file
-        if source.kind == 'url' and not self._isArchive(source):
-            return self._download(source)
+        """The manifest's file in the extracted tree; a git source's alone from GitHub's raw URL
+        at the pinned revision, kept under `files/` so that it never passes for the `tree/` the
+        enumerate path reads."""
+        if source.kind != 'git':
+            return self.tree(source) / row.file
         file = self._dir(source) / 'files' / row.file
         if not file.exists():
             file.parent.mkdir(parents=True, exist_ok=True)
-            file.write_bytes(self._fileBytes(source, row.file))
+            revision = f'https://raw.githubusercontent.com/{self._repo(source)}/{source.pin}'
+            file.write_bytes(self._fetchFirst(source, [f'{revision}/{quote(row.file)}']))
         return file
 
     @staticmethod
-    def _isArchive(source: Source) -> bool:
-        filename = source.file or Path(urlparse(source.name).path).name
-        return filename.lower().endswith(ARCHIVES)
-
-    def _fileBytes(self, source: Source, file: str) -> bytes:
-        """git: GitHub's raw file at the pinned revision; url: the downloaded archive's member."""
-        if source.kind == 'git':
-            return self._fetchFirst(source, [self._rawUrl(source, file)])
-        return self._member(self._download(source), file)
-
-    @staticmethod
-    def _rawUrl(source: Source, file: str) -> str:
-        """Every git source is on GitHub."""
-        repo = source.name.removesuffix('.git').removeprefix('https://github.com/')
-        return f'https://raw.githubusercontent.com/{repo}/{source.pin}/{quote(file)}'
-
-    @staticmethod
-    def _member(archive: Path, file: str) -> bytes:
-        """The member at `file` in the tree; under the archive's single top-level folder if it
-        has one, which `_tree` drops as layout."""
-        if archive.suffix.lower() == '.zip':
-            with zipfile.ZipFile(archive) as z:
-                return z.read(Loader._memberName(z.namelist(), file))
-        with tarfile.open(archive) as t:
-            return t.extractfile(Loader._memberName(t.getnames(), file)).read()
-
-    @staticmethod
-    def _memberName(names: list[str], file: str) -> str:
-        tops = {name.split('/')[0] for name in names}
-        if len(tops) != 1:
-            return file
-        top = tops.pop()
-        is_folder = any(name.startswith(f'{top}/') for name in names)
-        if not is_folder:
-            return file
-        return f'{top}/{file}'
+    def _repo(source: Source) -> str:
+        """A git source's `owner/repo`; every git source is on GitHub."""
+        return source.name.removeprefix('https://github.com/')
 
     def _read(self, source: Source) -> dict[str, tuple[DataObject, pd.DataFrame | None]]:
         """Every data object of the source by name, with its frame; parsed once per source,
@@ -349,11 +258,12 @@ class Loader:
         return self._frames[source]
 
     def _parse(self, source: Source) -> dict[str, tuple[DataObject, pd.DataFrame | None]]:
-        tree = self._tree(source)
+        tree = self.tree(source)
+        cran = source.kind == 'cran'
         objects = {}
         for file in self._files(source, tree):
             label = file.relative_to(tree).as_posix()
-            frames, reader = self._readFile(file, source, label)
+            frames, reader = readers.read(file, label, layout=source.layout, cran=cran)
             for name, df in frames.items():
                 shape = (None, None)
                 if df is not None:
@@ -361,30 +271,12 @@ class Loader:
                 objects[name] = DataObject(name, label, *shape, reader), df
         return objects
 
-    def _readFile(self, file: Path, source: Source, label: str) -> tuple[Frames, Reader]:
-        """An R file through pyreadr; another file in a CRAN data/ folder by utils::data()'s
-        rules, a `.R` file deparsed, a text file as read.table reads it; pandas reads the rest."""
-        if file.suffix.lower() in R_FILES:
-            return self._readRFile(file)
-        if source.kind == 'cran' and file.suffix.lower() == '.r':
-            return self._readDeparsed(file), 'deparse'
-        if source.kind == 'cran':
-            return readers.readData(file), 'pandas'
-        return readers.readTables(file, label, source.layout), 'pandas'
-
     @staticmethod
-    def _readDeparsed(file: Path) -> Frames:
-        """A file outside the deparse subset (most of base R's: time series, matrices) is no
-        table, so that enumerating the source does not fail on it."""
-        try:
-            return Deparse(file).frames()
-        except DeparseError:
-            return {file.stem: None}
-
-    @staticmethod
-    def _readRFile(file: Path) -> tuple[Frames, Reader]:
-        """An R file librdata rejects (geepack's muscatine, a plain data frame) goes to rdata."""
-        try:
-            return readers.readR(file), 'pyreadr'
-        except R_ERRORS:
-            return readers.readRdata(file), 'rdata'
+    def _decimalPoint(values: pd.Series) -> pd.Series:
+        """A string column with decimal commas and no points (a European csv, kleisner_2026's
+        BMI) read with points; anything else as it is, so a thousands separator fails loudly."""
+        if not pd.api.types.is_string_dtype(values):
+            return values
+        if values.str.contains('.', regex=False).any():
+            return values
+        return values.str.replace(',', '.', regex=False)
