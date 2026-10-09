@@ -248,7 +248,8 @@ class Deparse:
                 frame[name] = self._vector(values)
         return pd.DataFrame(frame)
 
-    def _vector(self, values: list) -> np.ndarray | list:
+    @staticmethod
+    def _vector(values: list) -> np.ndarray | list:
         """R's type of the vector: character, integer (32-bit, as R stores it), else double;
         an integer vector with NA is double, as pyreadr's frames have it (readers.numbersAsFloat)."""
         if any(isinstance(value, str) for value in values):
