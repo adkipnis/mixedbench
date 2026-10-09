@@ -64,23 +64,28 @@ def test_every_object_gets_a_candidates_row_and_a_help_page(root):
     pull(root, root, Server())
     rows = readRows(root / 'candidates.csv')
     assert [(r['tier'], r['source'], r['pin'], r['object']) for r in rows] == [
+        ('R', 'fixture', '1.0', 'growth'),
         ('R', 'fixture', '1.0', 'pets'),
+        ('R', 'fixture', '1.0', 'plots'),
         ('R', 'fixture', '1.0', 'scores'),
         ('R', 'fixture', '1.0', 'trials'),
         ('R', 'fixture', '1.0', 'visits'),
         ('R', 'fixture', '1.0', 'wide'),
     ]
-    pets, scores, trials, visits, wide = rows
+    growth, pets, plots, scores, trials, visits, wide = rows
     assert (pets['file'], pets['n_rows'], pets['n_cols']) == ('data/pets.rda', '6', '3')
     dtypes = (pets['n_numeric'], pets['n_categorical'], pets['n_string'], pets['n_other'])
     assert dtypes == ('2', '1', '0', '0')
-    assert (scores['reader'], trials['reader'], visits['reader']) == (
-        'pyreadr',
-        'rscript',
-        'rscript',
+    readers = (
+        growth['reader'],
+        plots['reader'],
+        scores['reader'],
+        trials['reader'],
+        visits['reader'],
     )
+    assert readers == ('deparse', 'pandas', 'pyreadr', 'pandas', 'rscript')
     assert (wide['n_rows'], wide['n_cols'], wide['n_numeric']) == ('', '', '')
-    assert [r['screen'] for r in rows] == ['pass', 'pass', 'pass', 'pass', 'no frame']
+    assert [r['screen'] for r in rows] == ['pass'] * 6 + ['no frame']
     assert {r['capped'] for r in rows} == {'no'}
     assert (root / 'help' / 'fixture' / 'trials.txt').read_text().startswith('\\name{trials}')
     assert not (root / 'help' / 'fixture' / 'wide.txt').exists()
@@ -102,17 +107,17 @@ def test_a_help_page_ends_with_the_dtypes_and_first_rows_of_its_table(root):
 
 
 def test_a_source_over_its_cap_keeps_a_seeded_draw_and_lists_the_rest_as_capped(tmp_path):
-    """Two of the four passing objects are read; the other two stay enumerated with `capped`
+    """Two of the six passing objects are read; the other four stay enumerated with `capped`
     set and get no help page, the screened-out one is not capped but not read either; the
     same seed draws the same two on a second run."""
     writeFrame(tmp_path, cap=None)
-    pull(tmp_path, tmp_path, Server())  # four pages; the capped run below must leave only two
+    pull(tmp_path, tmp_path, Server())  # six pages; the capped run below must leave only two
     writeFrame(tmp_path, cap=2)
     pull(tmp_path, tmp_path, Server())
     first = readRows(tmp_path / 'candidates.csv')
     kept = [r['object'] for r in first if r['capped'] == 'no' and r['screen'] == 'pass']
     left = [r['object'] for r in first if r['capped'] == 'yes']
-    assert len(kept) == 2 and len(left) == 2
+    assert len(kept) == 2 and len(left) == 4
     assert [r['capped'] for r in first if r['screen'] != 'pass'] == ['no']
     assert sorted(f.stem for f in (tmp_path / 'help' / 'fixture').iterdir()) == sorted(kept)
     pull(tmp_path, tmp_path, Server())
@@ -146,7 +151,7 @@ def test_candidates_follow_frame_order_not_the_alphabet(tmp_path):
     (tmp_path / 'sources.yaml').write_text(yaml.safe_dump(frame, sort_keys=False))
     pull(tmp_path, tmp_path, Server())
     rows = readRows(tmp_path / 'candidates.csv')
-    assert [r['source'] for r in rows[::5]] == ['fixture', 'alpha', 'later']
+    assert [r['source'] for r in rows[::7]] == ['fixture', 'alpha', 'later']
 
 
 @pytest.mark.parametrize(
