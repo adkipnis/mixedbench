@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import hashlib
 import io
-import shutil
 import tarfile
 import urllib.error
 import urllib.request
@@ -30,8 +29,6 @@ TARBALL = (FIXTURES / 'fixture_1.0.tar.gz').read_bytes()
 CURRENT = 'https://cloud.r-project.org/src/contrib/fixture_1.0.tar.gz'
 ARCHIVE = 'https://cloud.r-project.org/src/contrib/Archive/fixture/fixture_1.0.tar.gz'
 FIXTURE = Source(kind='cran', name='fixture', pin='1.0')
-# the loader dumps every CRAN data() file through Rscript; the fixture ships one (`trials.csv`)
-needsRscript = pytest.mark.skipif(shutil.which('Rscript') is None, reason='needs Rscript')
 
 DEPOSIT = (FIXTURES / 'deposit.zip').read_bytes()
 DEPOSIT_URL = 'https://example.org/deposit.zip'
@@ -82,7 +79,6 @@ def objectsByName(loader: Loader, source: Source) -> dict[str, DataObject]:
     return {o.name: o for o in loader.objects(source)}
 
 
-@needsRscript
 def test_objects_enumerates_the_tarball(tmp_path):
     """The census denominator: every data object listed with its counts."""
     loader = Loader(tmp_path, fetch=serveCurrent)
@@ -94,17 +90,55 @@ def test_objects_enumerates_the_tarball(tmp_path):
     assert (trials.file, trials.n_rows, trials.n_cols) == ('data/trials.csv', 5, 2)
 
 
-@needsRscript
-def test_an_r_file_librdata_rejects_is_re_saved_by_r(tmp_path):
+def test_an_r_file_librdata_rejects_is_read_by_rdata(tmp_path):
     """geepack's muscatine is a plain data frame librdata calls an unrecognized object; the
-    Rscript dump turns it into a version-2 .rds pyreadr reads (spec #14, user story 15)."""
+    pure-Python rdata reads it, so no object needs R (ADR 0003, #9)."""
     loader = Loader(tmp_path, fetch=serveCurrent)
     visits = objectsByName(loader, FIXTURE)['visits']
-    assert (visits.reader, visits.n_rows, visits.n_cols) == ('rscript', 3, 2)
-    assert list(loader.load(FIXTURE, 'visits')['clinic'].cat.categories) == ['north', 'south']
+    assert (visits.reader, visits.n_rows, visits.n_cols) == ('rdata', 3, 2)
+    df = loader.load(FIXTURE, 'visits')
+    assert list(df['clinic'].cat.categories) == ['north', 'south']
+    assert list(df.index) == [0, 1, 2]
+    assert df['count'].dtype == 'int32'  # an R integer, as pyreadr reads one
 
 
-@needsRscript
+def servedObjects(tmp_path: Path, file: str) -> tuple[Loader, Source, dict[str, DataObject]]:
+    """A fixture R file from a url of its own, as an OSF deposit serves one."""
+    data = (FIXTURES / file).read_bytes()
+    url = f'https://example.org/{file}'
+    source = Source(kind='url', name=url, pin=sha(data))
+
+    def serveFile(asked: str) -> bytes | None:
+        return data if asked == url else None
+
+    loader = Loader(tmp_path, fetch=serveFile)
+    return loader, source, objectsByName(loader, source)
+
+
+def test_a_rejected_r_file_lists_its_frames_and_its_lists_without_a_table(tmp_path):
+    """A Tier D `.RData` keeps model fits and lists beside its tables; rdata reads the frame,
+    the list stays in the census with None counts, as pyreadr's unframable objects do."""
+    loader, source, objects = servedObjects(tmp_path, 'fits.rda')
+    fit, roster = objects['fit'], objects['roster']
+    assert (fit.reader, fit.n_rows, fit.n_cols) == ('rdata', None, None)
+    assert (roster.reader, roster.n_rows, roster.n_cols) == ('rdata', 3, 2)
+    df = loader.load(source, 'roster')
+    assert list(df['ward'].cat.categories) == ['a', 'b']
+    assert df['beds'].isna().sum() == 1  # an integer column with NA is float, as in `readR`
+
+
+def test_a_rejected_rds_is_named_by_its_file_and_one_rdata_cannot_parse_has_no_table(tmp_path):
+    """An .rds holds one unnamed object, named by its file as pyreadr names it; a model fit's
+    bytecode, which rdata cannot parse, leaves the file one object without a table rather
+    than failing the source."""
+    _, _, objects = servedObjects(tmp_path, 'roster.rds')
+    roster = objects['roster']
+    assert (roster.reader, roster.n_rows, roster.n_cols) == ('rdata', 3, 2)
+    _, _, objects = servedObjects(tmp_path / 'fit', 'fit.rds')
+    fit = objects['fit']
+    assert (fit.reader, fit.n_rows, fit.n_cols) == ('rdata', None, None)
+
+
 def test_an_object_pyreadr_cannot_frame_is_listed_without_counts(tmp_path):
     """gamlss.data's aep holds a matrix column; the object stays in the census with None
     counts rather than failing the whole source."""
@@ -128,7 +162,6 @@ def test_a_package_without_a_data_folder_has_no_objects(tmp_path):
     assert loader.objects(Source(kind='cran', name='nodata', pin='0.1')) == []
 
 
-@needsRscript
 def test_load_keeps_factor_levels_in_r_order(tmp_path):
     """pyreadr's own `read_r` sorts factor levels and drops unused ones; the loader restores
     R's order from parser internals, which this test pins (`bird` is an unused level)."""
@@ -142,25 +175,17 @@ def test_load_keeps_factor_levels_in_r_order(tmp_path):
     assert not scores['grade'].dtype.ordered
 
 
-@needsRscript
-def test_an_integer_column_with_na_loads_as_float_not_object(tmp_path):
+def test_an_integer_column_with_na_loads_as_float_not_object():
     """pyreadr renders an R integer vector with NA as an object column of ints and NaN, which
     no numeric check accepts (mlmRev's `star`); the loader makes it a float column."""
-    rds = tmp_path / 'scores.rds'
-    # R writes a frame with an integer column holding one NA and a plain string column
-    Loader._rscript(
-        "saveRDS(data.frame(score = c(1L, NA, 3L), note = c('a', 'b', 'c')),"
-        ' commandArgs(TRUE)[1], version = 2)',
-        str(rds),
-    )
-    frames = readers.readR(rds)
-    scores = frames['scores']
+    # R wrote a frame with an integer column holding one NA and a plain string column
+    frames = readers.readR(FIXTURES / 'counts.rds')
+    scores = frames['counts']
     assert scores['score'].dtype.kind == 'f'
     assert scores['score'].isna().sum() == 1
     assert pd.api.types.is_string_dtype(scores['note'])
 
 
-@needsRscript
 def test_a_declared_ordered_column_keeps_its_levels_and_becomes_ordered(tmp_path):
     """pyreadr cannot tell an ordered factor from a plain one, so the registry declares it:
     an R factor keeps its level order, a plain column gets sorted levels."""
@@ -173,7 +198,6 @@ def test_a_declared_ordered_column_keeps_its_levels_and_becomes_ordered(tmp_path
     assert list(pets['age'].cat.categories) == sorted(set(pets['age']))
 
 
-@needsRscript
 def test_help_returns_the_rd_page_text(tmp_path):
     loader = Loader(tmp_path, fetch=serveCurrent)
     page = loader.help(FIXTURE, 'pets')
@@ -188,7 +212,6 @@ def test_licence_is_the_license_field_of_the_packages_description(tmp_path):
     assert loader.licence(FIXTURE) == 'CC0'
 
 
-@needsRscript
 def test_archive_url_is_tried_after_a_miss(tmp_path):
     """CRAN moves a superseded version to `Archive/`; a pinned source must stay loadable, and
     a version at neither location must fail loudly rather than silently yield nothing."""
@@ -207,7 +230,6 @@ def test_archive_url_is_tried_after_a_miss(tmp_path):
         offline.objects(FIXTURE)
 
 
-@needsRscript
 def test_checksum_mismatch_is_refused(tmp_path):
     """The second call hits the cache, so the check must run on cache hits too."""
     sha = hashlib.sha256(TARBALL).hexdigest()
@@ -219,7 +241,6 @@ def test_checksum_mismatch_is_refused(tmp_path):
         loader.objects(bad)
 
 
-@needsRscript
 def test_second_loader_over_the_same_cache_fetches_nothing(tmp_path):
     """The cache lives on disk, not in the instance: a new process must not download again."""
     calls = []
@@ -238,20 +259,19 @@ def test_second_loader_over_the_same_cache_fetches_nothing(tmp_path):
 # ----------------------------------------------------------------------------------------------
 
 
-def loadAlone(tmp_path: Path, monkeypatch, name: str, file: str) -> pd.DataFrame:
-    """The fixture object loaded through a manifest with no Rscript on the path."""
-    monkeypatch.setenv('PATH', '')
+def loadAlone(tmp_path: Path, name: str, file: str) -> pd.DataFrame:
+    """The fixture object loaded through a manifest."""
     data = member(TARBALL, f'fixture/{file}')
     manifest = {(FIXTURE, name): manifestRow(file, data)}
     loader = Loader(tmp_path, fetch=serveCurrent, manifest=manifest)
     return loader.load(FIXTURE, name)
 
 
-def test_a_data_txt_loads_as_read_table_reads_it_without_r(tmp_path, monkeypatch):
+def test_a_data_txt_loads_as_read_table_reads_it_without_r(tmp_path):
     """agridat ships its tables as `data/*.txt`, which utils::data() reads with
     read.table(header = TRUE, as.is = FALSE): quoted strings become factors with sorted
     levels, `NA` is missing. The loader does the same in Python (ADR 0003)."""
-    plots = loadAlone(tmp_path, monkeypatch, 'plots', 'data/plots.txt')
+    plots = loadAlone(tmp_path, 'plots', 'data/plots.txt')
     assert list(plots.columns) == ['field', 'variety', 'plants', 'yield']
     assert list(plots['field']) == ['north A', 'south B', 'north A', 'west']
     assert list(plots['variety'].cat.categories) == ['a', 'b', 'c']
@@ -259,20 +279,29 @@ def test_a_data_txt_loads_as_read_table_reads_it_without_r(tmp_path, monkeypatch
     assert list(plots['yield'].dropna()) == [1.5, 2.0, 3.25]
 
 
-def test_a_data_csv_is_read_with_semicolons_without_r(tmp_path, monkeypatch):
+def test_a_data_csv_is_read_with_semicolons_without_r(tmp_path):
     """utils::data() reads a `.csv` in `data/` with `sep = ';'`, strings as factors."""
-    trials = loadAlone(tmp_path, monkeypatch, 'trials', 'data/trials.csv')
+    trials = loadAlone(tmp_path, 'trials', 'data/trials.csv')
     assert list(trials['arm'].cat.categories) == ['control', 'treated']
     assert list(trials['outcome']) == [0, 1, 1, 1, 0]
 
 
-def test_a_data_r_file_loads_to_the_frame_r_makes_of_it_without_r(tmp_path, monkeypatch):
+def test_a_data_r_file_loads_to_the_frame_r_makes_of_it_without_r(tmp_path):
     """Base R's `data/*.R` files are deparsed frames; the deparse reader evaluates them to the
     frame R makes (`growth.rda`, saved by make_fixture.R): labels in level order, numeric
     levels sorted as numbers, R's integers, `ordered` dropped as pyreadr drops it."""
-    growth = loadAlone(tmp_path, monkeypatch, 'growth', 'data/growth.R')
+    growth = loadAlone(tmp_path, 'growth', 'data/growth.R')
     twin = readers.readR(FIXTURES / 'growth.rda')['growth']
     pd.testing.assert_frame_equal(growth, twin)
+
+
+def test_row_names_of_data_frame_are_no_column(tmp_path):
+    """`row.names =` is an argument of data.frame(), not a column (base R's LifeCycleSavings
+    came out with six columns where R has five, found by the census re-pull of #9)."""
+    file = tmp_path / 'savings.R'
+    file.write_text('savings <- data.frame(sr = c(11.43, 12.07), row.names = c("A", "B"))\n')
+    savings = Deparse(file).frames()['savings']
+    assert list(savings.columns) == ['sr']
 
 
 def test_a_construct_outside_the_deparse_subset_raises_naming_file_and_construct(tmp_path):
@@ -283,7 +312,6 @@ def test_a_construct_outside_the_deparse_subset_raises_naming_file_and_construct
         Deparse(file).frames()
 
 
-@needsRscript  # enumerating the fixture still dumps visits.rda through R
 def test_data_files_name_their_reader(tmp_path):
     """The registry's `reader` column records the route per object: a text file is pandas,
     an R file the deparse reader."""
@@ -372,11 +400,10 @@ def serveBase(url: str) -> bytes | None:
     return buffer.getvalue() if url == BASE_URL else None
 
 
-def test_base_r_datasets_come_from_rs_source_tarball_without_r(tmp_path, monkeypatch):
+def test_base_r_datasets_come_from_rs_source_tarball_without_r(tmp_path):
     """Base R's `datasets` is a package inside R's source tarball, laid out as a CRAN package:
     its data/*.R files load through the deparse reader, its man/ holds the help pages, and the
     manifest records each file's digest like any download (ADR 0003)."""
-    monkeypatch.setenv('PATH', '')
     loader = Loader(tmp_path, fetch=serveBase)
     sleep = objectsByName(loader, BASE)['sleep']
     assert (sleep.file, sleep.reader, sleep.n_rows, sleep.n_cols) == (
@@ -787,10 +814,8 @@ def test_a_url_archive_object_extracts_only_its_file(tmp_path):
     assert cached == {'deposit.zip', 'schools.csv'}
 
 
-def test_a_cran_object_reads_only_its_file_without_rscript(tmp_path, monkeypatch):
-    """The tarball comes whole, but only the object's file is checked and read: loading `pets`
-    no longer dumps the fixture's `trials.csv` through R, so no Rscript is on the path."""
-    monkeypatch.setenv('PATH', '')
+def test_a_cran_object_reads_only_its_file(tmp_path):
+    """The tarball comes whole, but only the object's file is checked and read (#4)."""
     pets = member(TARBALL, 'fixture/data/pets.rda')
     manifest = {(FIXTURE, 'pets'): manifestRow('data/pets.rda', pets)}
     loader = Loader(tmp_path, fetch=serveCurrent, manifest=manifest)
@@ -802,23 +827,6 @@ def test_a_cran_object_reads_only_its_file_without_rscript(tmp_path, monkeypatch
         'cat',
         'dog',
     ]
-
-
-@needsRscript
-def test_rs_re_save_of_a_url_file_is_no_object_of_its_own(tmp_path):
-    """A url that is no archive has its cache folder as its tree, where R's re-save of a file
-    librdata rejects lands too; a later enumeration must still name the download, which the
-    manifest records (an OSF `.rds` of johannes_2021b came out as the re-save, #4)."""
-    visits = member(TARBALL, 'fixture/data/visits.rda')
-    url = 'https://example.org/clinic.rda'  # sorts before `rds/`, as `processed_data.rds` did
-    source = Source(kind='url', name=url, pin=sha(visits))
-
-    def serveVisits(asked: str) -> bytes | None:
-        return visits if asked == url else None
-
-    Loader(tmp_path, fetch=serveVisits).objects(source)  # R re-saves the file into the cache
-    objects = Loader(tmp_path, fetch=serveVisits).objects(source)
-    assert [(o.name, o.file, o.reader) for o in objects] == [('visits', 'clinic.rda', 'rscript')]
 
 
 def test_a_git_file_name_with_spaces_is_quoted_in_its_raw_url(tmp_path):

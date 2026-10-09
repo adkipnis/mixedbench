@@ -83,7 +83,7 @@ def test_every_object_gets_a_candidates_row_and_a_help_page(root):
         trials['reader'],
         visits['reader'],
     )
-    assert readers == ('deparse', 'pandas', 'pyreadr', 'pandas', 'rscript')
+    assert readers == ('deparse', 'pandas', 'pyreadr', 'pandas', 'rdata')
     assert (wide['n_rows'], wide['n_cols'], wide['n_numeric']) == ('', '', '')
     assert [r['screen'] for r in rows] == ['pass'] * 6 + ['no frame']
     assert {r['capped'] for r in rows} == {'no'}
