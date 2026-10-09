@@ -27,6 +27,7 @@ sys.path.insert(0, str(HERE))  # the tests import mergeShard and readRows from h
 from merge import Merger
 from mixedbench.datasets import Loader
 from schema import EXCLUDED, REGISTRY, readCsv, writeCsv
+from summarise import Summariser
 
 FIXTURES = HERE / 'fixtures'
 HERDS_URL = 'https://example.org/herds.zip'
@@ -70,7 +71,7 @@ def mergeShard(merger: Merger, shard: Path) -> Merger:
     merger.reconcile()
     merger.measure()
     merger.writeManifest()
-    merger.summarise()
+    Summariser(merger.registry, merger.survey).flush()
     merger.report()
     return merger
 
@@ -96,7 +97,6 @@ def scratchMerger(registry: Path, survey: Path) -> Merger:
         PENS_URL: cranTarball('pens', PENS_LICENCE, pd.read_csv(FIXTURES / 'herds.csv'), 'herds'),
     }
     sources = {
-        'cap': 40,
         'seed': 0,
         'tiers': {
             'D': {
