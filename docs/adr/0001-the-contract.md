@@ -1,5 +1,5 @@
 ---
-status: accepted
+status: accepted, amended 2026-10-09
 date: 2026-10-08
 ---
 
@@ -25,6 +25,9 @@ any rule is a new suite version, never a recomputation.
   always present. A continuous response is z-scored.
 - Why: every problem is stated and stored on this standardised scale (metabeta's ADR 0001 and
   0002), so one prior serves every problem and nothing is data-adapted by hand.
+
+> Amended 2026-10-09 below: the standardisation is computed per regime on the rows a fit
+> sees; the coding stays the full table's.
 
 **Family rule.**
 
@@ -70,3 +73,50 @@ any rule is a new suite version, never a recomputation.
 - Decision: a problem is `<source>/<object>/<model_index>`; its contract hash is the sha256
   over the contract version, the pinned brms and CmdStan versions and the materialised arrays.
 - Why: a changed pin or rule is visible as a changed hash.
+
+> Superseded in part by the amendment of 2026-10-09 below: the hash covers the contract
+> version and the materialised problem, not the sampler pins.
+
+## Amendment 2026-10-09: the grill of roadmap item 3
+
+**Hash.**
+
+- Decision: the contract hash is the sha256 over a canonical serialisation of the
+  materialised problem (the JSON with sorted keys, then every column in table order as its
+  name, dtype and little-endian bytes, floats as float64) and the contract version, which
+  is the package major version. The brms and CmdStan pins leave the hash: they are part
+  of a reference, recorded in the suite (ADR 0002), not of a problem.
+- Why: item 3 ships before any sampler is pinned, and a problem is a design, a family, a
+  prior and the splits. Hashing parquet bytes was rejected because a pyarrow bump would
+  become a contract change.
+
+**Standardisation and the splits.**
+
+- Decision: the standardisation is computed on the rows a fit sees: the full table for the
+  posterior track and the seen rows of each predictive regime. The materialised table holds
+  the coded columns in raw units and the per-regime means and standard deviations beside it.
+  Coding (levels, contrasts) is the full table's; a level that survives only in held-out
+  rows leaves an all-zero column in the seen rows, which the prior keeps proper.
+- Why: a scaler fit on held-out rows is leakage to a benchmark reviewer, and the predictive
+  track refits on the seen rows anyway, so no draws were ever shared across tracks.
+  Redrawing a split until every level survives was rejected: it biases toward balanced
+  problems and couples the split to the coding.
+
+**Random slopes.**
+
+- Decision: a `random_slopes` registry column, a `;`-list of `x|g` (correlated with the
+  intercept of `g`, Ω_k ~ LKJ(1)) and `x||g` (uncorrelated) terms, filled by a script that
+  parses the lme4 syntax of `formula` and hand-checked where it fails. The contract reads
+  structured columns only; nothing parses `formula`. Nested factors need nothing new:
+  `grouping_factors` already writes `(1|a/b)` as `a;a:b`.
+- Why: 97 of 714 documented models carry a slope, and intercept-only would make 14% of the
+  problems not their documented model.
+
+**Family rule, two cases.**
+
+- Decision: a censored response (`family` `cox` or `weibull`, 7 rows) is outside suite 1.1
+  like a categorical one. A Gaussian documented model on a binary, count or ordinal response
+  (12 rows) takes the rule's family.
+- Why: Gaussian on an uncensored time is a model of a different quantity, and a `cens()`
+  term is a contract extension that belongs with suite 1.2's families if ever. The second
+  case is what the rule's "by response type" was decided for.
