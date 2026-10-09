@@ -2,22 +2,20 @@ from mixedbench.contract.materialised import contractHash, load, materialise
 from mixedbench.contract.problem import (
     Prior,
     Problem,
+    Refused,
     Scale,
     columnType,
-    levels,
-    refusal,
     withComposites,
 )
 
 __all__ = [
     'Prior',
     'Problem',
+    'Refused',
     'Scale',
     'columnType',
     'contractHash',
-    'levels',
     'load',
     'materialise',
-    'refusal',
     'withComposites',
 ]

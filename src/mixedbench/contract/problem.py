@@ -55,7 +55,7 @@ def withComposites(df: pd.DataFrame, factors: tuple[str, ...]) -> pd.DataFrame:
     return df.assign(**composites)
 
 
-def levels(values: pd.Series) -> tuple:
+def levelOrder(values: pd.Series) -> tuple:
     """The loaded level order: a categorical's categories present in the column, else the
     sorted distinct values (what the loader gives a plain column declared categorical)."""
     if isinstance(values.dtype, pd.CategoricalDtype):
@@ -76,14 +76,13 @@ FAMILY = {
 CENSORED = ('cox', 'weibull')
 
 
-def refusal(row: Row) -> str | None:
-    """Why the rule does not cover the row, or None: a categorical response and a censored
-    model are outside suite 1.1 (ADR 0001); every other `family` takes the rule."""
-    if row.response_type == 'categorical':
-        return 'a categorical response is outside suite 1.1 (ADR 0001)'
-    if row.family in CENSORED:
-        return f'family {row.family} is a censored model, outside suite 1.1 (ADR 0001)'
-    return None
+class Refused(Exception):
+    """The contract states no problem for the row: the message names the row, `reason` says
+    why."""
+
+    def __init__(self, id: str, reason: str) -> None:
+        super().__init__(f'{id}: {reason}')
+        self.reason = reason
 
 
 # =====================================================================================
@@ -146,27 +145,34 @@ class Problem:
 
     @classmethod
     def build(cls, row: Row, table: pd.DataFrame) -> Problem:
-        refused = refusal(row)
-        if refused is not None:
-            raise ValueError(f'{row.source}/{row.object}/{row.model_index}: {refused}')
+        """Raises `Refused` where the contract does not cover the row."""
         return Builder(row, table).problem()
 
 
 # -------------------------------------------------------------------------------------
 # pipeline: rows -> covariates -> interactions -> response -> factors -> the problem
 # -------------------------------------------------------------------------------------
+Coded = dict[str, dict[str, pd.Series]]  # per covariate or interaction, its coded columns
+
+
 class Builder:
     def __init__(self, row: Row, table: pd.DataFrame) -> None:
         self.row = row
         self.id = f'{row.source}/{row.object}/{row.model_index}'
+        self.refuseUncovered()
         self.table = self.keptRows(withComposites(table, row.grouping_factors))
         if self.table.empty:  # nlme Phenobarb: doses and responses on different rows
-            raise ValueError(f'{self.id}: no row has every model value')
+            raise Refused(self.id, 'no row has every model value')
         self.dropped_share = (len(table) - len(self.table)) / len(table)
-        self.coded: dict[str, dict[str, pd.Series]] = {}  # covariate -> its coded columns
-        self.levels: dict[str, tuple] = {}
-        self.continuous: list[str] = []  # the continuous covariates
-        self.correlations: dict[str, tuple[str, ...]] = {}
+
+    def refuseUncovered(self) -> None:
+        """A categorical response and a censored model are outside suite 1.1 (ADR 0001); every
+        other `family` takes the family rule."""
+        if self.row.response_type == 'categorical':
+            raise Refused(self.id, 'a categorical response is outside suite 1.1 (ADR 0001)')
+        if self.row.family in CENSORED:
+            reason = f'family {self.row.family} is a censored model, outside suite 1.1 (ADR 0001)'
+            raise Refused(self.id, reason)
 
     def keptRows(self, table: pd.DataFrame) -> pd.DataFrame:
         """A row with a missing value in any model column is dropped (ADR 0001); a composite
@@ -179,19 +185,13 @@ class Builder:
         return table.dropna(subset=model)
 
     def problem(self) -> Problem:
-        for covariate in self.row.covariates:
-            self.coded[covariate] = self.codeCovariate(covariate)
-        for term in self.row.interactions:
-            self.coded[term] = self.codeInteraction(term)
-        design = {'Intercept': pd.Series(1.0, index=self.table.index)}
-        for columns in self.coded.values():
-            design.update(columns)
-        response = {self.row.response: self.codeResponse()}
-        if self.row.trials:
-            response[self.row.trials] = self.table[self.row.trials]
+        kinds = self.kinds()
+        coded = self.coded(kinds)
+        design = self.design(coded)
         factors = {factor: self.codeFactor(factor) for factor in self.row.grouping_factors}
         regimes = self.splits(factors)
-        table = pd.DataFrame(design | response | factors | regimes).reset_index(drop=True)
+        table = pd.DataFrame(design | self.response() | factors | regimes).reset_index(drop=True)
+        correlations = self.correlations(coded)
         family, link = FAMILY[self.row.response_type]
         return Problem(
             id=self.id,
@@ -199,19 +199,106 @@ class Builder:
             design=tuple(design),
             response=self.row.response,
             factors=self.row.grouping_factors,
-            levels=self.levels,
-            scales=self.scales(table),
+            levels=self.levels(kinds),
+            scales=self.scales(table, kinds),
             dropped_share=self.dropped_share,
             trials=self.row.trials or None,
             family=family,
             link=link,
-            prior=self.prior(design),
-            parameters=self.parameters(design),
-            correlations=self.correlations,
+            prior=self.prior(design, correlations),
+            parameters=self.parameters(design, coded, correlations),
+            correlations=correlations,
             contract=CONTRACT,
         )
 
-    def prior(self, design: dict[str, pd.Series]) -> dict[str, Prior]:
+    def kinds(self) -> dict[str, str]:
+        """Per covariate, its kind by the typing rule."""
+        kinds = {}
+        for column in self.row.covariates:
+            kinds[column], _ = columnType(self.table[column], self.row.types.get(column, ''))
+        return kinds
+
+    def coded(self, kinds: dict[str, str]) -> Coded:
+        """Per covariate, then per interaction, its coded columns."""
+        coded = {}
+        for covariate, kind in kinds.items():
+            coded[covariate] = self.codeCovariate(covariate, kind)
+        for term in self.row.interactions:
+            coded[term] = self.codeInteraction(term, coded)
+        return coded
+
+    def codeCovariate(self, column: str, kind: str) -> dict[str, pd.Series]:
+        """Continuous raw; binary 0/1 with the first loaded level 0; a categorical or ordered
+        factor as K − 1 treatment contrasts against the first level, `<column>[<level>]`."""
+        values = self.table[column]
+        if kind == 'continuous':
+            return {column: values.astype(float)}
+        loaded = levelOrder(values)
+        if kind == 'binary':
+            return {column: (values != loaded[0]).astype(float)}
+        return {f'{column}[{level}]': (values == level).astype(float) for level in loaded[1:]}
+
+    @staticmethod
+    def codeInteraction(term: str, coded: Coded) -> dict[str, pd.Series]:
+        """The products of the coded columns of its parts, `<a>:<b>` per pair in order."""
+        columns = {'': 1.0}
+        for part in parts(term):
+            products = {}
+            for name, column in columns.items():
+                for partName, partColumn in coded[part].items():
+                    products[f'{name}:{partName}'.removeprefix(':')] = column * partColumn
+            columns = products
+        return columns
+
+    def design(self, coded: Coded) -> dict[str, pd.Series]:
+        """`Intercept` first, then the coded columns in the row's order."""
+        design = {'Intercept': pd.Series(1.0, index=self.table.index)}
+        for columns in coded.values():
+            design.update(columns)
+        return design
+
+    def response(self) -> dict[str, pd.Series]:
+        """By `response_type`: continuous, count and binomial successes as loaded, binary 0/1
+        with the first loaded level 0, ordinal its 1-based index in the loaded level order; a
+        binomial's trials beside it."""
+        values = self.table[self.row.response]
+        if self.row.response_type == 'binary':
+            values = (values != levelOrder(values)[0]).astype(int)
+        if self.row.response_type == 'ordinal':
+            codes = pd.Categorical(values, categories=levelOrder(values)).codes
+            values = pd.Series(codes + 1, index=self.table.index)
+        response = {self.row.response: values}
+        if self.row.trials:
+            response[self.row.trials] = self.table[self.row.trials]
+        return response
+
+    def codeFactor(self, factor: str) -> pd.Series:
+        values = self.table[factor]
+        codes = pd.Categorical(values, categories=levelOrder(values)).codes
+        return pd.Series(codes, index=self.table.index)
+
+    def correlations(self, coded: Coded) -> dict[str, tuple[str, ...]]:
+        """Per factor with a correlated slope, the elements of `cor[<factor>]`: `Intercept`,
+        then the coded columns of its correlated slopes in order."""
+        correlations = {}
+        for term in self.row.random_slopes:
+            if term.correlated:
+                elements = correlations.get(term.factor, ('Intercept',))
+                correlations[term.factor] = elements + tuple(coded[term.covariate])
+        return correlations
+
+    def levels(self, kinds: dict[str, str]) -> dict[str, tuple]:
+        """The loaded level order of every recoded column: a covariate that is not continuous,
+        a binary or ordinal response, a grouping factor."""
+        recoded = [column for column, kind in kinds.items() if kind != 'continuous']
+        if self.row.response_type in ('binary', 'ordinal'):
+            recoded.append(self.row.response)
+        recoded += self.row.grouping_factors
+        return {column: levelOrder(self.table[column]) for column in recoded}
+
+    def prior(
+        self, design: dict[str, pd.Series], correlations: dict[str, tuple[str, ...]]
+    ) -> dict[str, Prior]:
         """ADR 0001's prior over the classes the problem has (brms refuses one on an absent
         class): no `Intercept` on an ordinal model, whose thresholds take brms's default."""
         classes = []
@@ -220,83 +307,39 @@ class Builder:
         if len(design) > 1:
             classes.append('b')
         classes.append('sd')
-        if any(term.correlated for term in self.row.random_slopes):
+        if correlations:
             classes.append('cor')
         if self.row.response_type == 'continuous':
             classes.append('sigma')
         return {name: PRIOR[name] for name in classes}
 
-    def parameters(self, design: dict[str, pd.Series]) -> tuple[str, ...]:
+    def parameters(
+        self,
+        design: dict[str, pd.Series],
+        coded: Coded,
+        correlations: dict[str, tuple[str, ...]],
+    ) -> tuple[str, ...]:
         """brms's block order: the fixed effects (an ordinal model's thresholds `Intercept[k]`
         in place of `Intercept`, brms's name without its `b_`), per factor `sd[<factor>]`, the
         slopes `sd[<x>|<factor>]` and `cor[<factor>]` where a slope is correlated, `sigma`."""
         names = list(design)
         if self.row.response_type == 'ordinal':
-            thresholds = len(self.levels[self.row.response]) - 1
+            thresholds = len(levelOrder(self.table[self.row.response])) - 1
             names = [f'Intercept[{k}]' for k in range(1, thresholds + 1)] + names[1:]
         for factor in self.row.grouping_factors:
-            names += self.randomEffects(factor)
+            names += self.randomEffects(factor, coded)
+            if factor in correlations:
+                names.append(f'cor[{factor}]')
         if self.row.response_type == 'continuous':
             names.append('sigma')
         return tuple(names)
 
-    def randomEffects(self, factor: str) -> list[str]:
+    def randomEffects(self, factor: str, coded: Coded) -> list[str]:
         names = [f'sd[{factor}]']
-        correlated = ['Intercept']
         for term in self.row.random_slopes:
-            if term.factor != factor:
-                continue
-            slopes = list(self.coded[term.covariate])
-            names += [f'sd[{slope}|{factor}]' for slope in slopes]
-            if term.correlated:
-                correlated += slopes
-        if len(correlated) > 1:
-            names.append(f'cor[{factor}]')
-            self.correlations[factor] = tuple(correlated)
+            if term.factor == factor:
+                names += [f'sd[{slope}|{factor}]' for slope in coded[term.covariate]]
         return names
-
-    def codeCovariate(self, column: str) -> dict[str, pd.Series]:
-        """Continuous raw; binary 0/1 with the first loaded level 0; a categorical or ordered
-        factor as K − 1 treatment contrasts against the first level, `<column>[<level>]`."""
-        values = self.table[column]
-        kind, _ = columnType(values, self.row.types.get(column, ''))
-        if kind == 'continuous':
-            self.continuous.append(column)
-            return {column: values.astype(float)}
-        loaded = self.levelsOf(column)
-        if kind == 'binary':
-            return {column: (values != loaded[0]).astype(float)}
-        return {f'{column}[{level}]': (values == level).astype(float) for level in loaded[1:]}
-
-    def codeResponse(self) -> pd.Series:
-        """By `response_type`: continuous, count and binomial successes as loaded, binary 0/1
-        with the first loaded level 0, ordinal its 1-based index in the loaded level order."""
-        values = self.table[self.row.response]
-        if self.row.response_type == 'binary':
-            return (values != self.levelsOf(self.row.response)[0]).astype(int)
-        if self.row.response_type == 'ordinal':
-            codes = pd.Categorical(values, categories=self.levelsOf(self.row.response)).codes
-            return pd.Series(codes + 1, index=self.table.index)
-        return values
-
-    def codeFactor(self, factor: str) -> pd.Series:
-        codes = pd.Categorical(self.table[factor], categories=self.levelsOf(factor)).codes
-        return pd.Series(codes, index=self.table.index)
-
-    def levelsOf(self, column: str) -> tuple:
-        self.levels[column] = levels(self.table[column])
-        return self.levels[column]
-
-    def codeInteraction(self, term: str) -> dict[str, pd.Series]:
-        """The products of the coded columns of its parts, `<a>:<b>` per pair in order."""
-        columns = {'': pd.Series(1.0, index=self.table.index)}
-        for part in parts(term):
-            products = {}
-            for name, column in columns.items():
-                for partName, partColumn in self.coded[part].items():
-                    products[f'{name}:{partName}'.removeprefix(':')] = column * partColumn
-            columns = products
-        return columns
 
     def splits(self, factors: dict[str, pd.Series]) -> dict[str, pd.Series]:
         """Seeded by the first 8 bytes of sha256 of the id; rows draw before groups. A first
@@ -338,10 +381,10 @@ class Builder:
         regime = pd.Categorical.from_codes(held.astype(int), dtype=REGIME)
         return pd.Series(regime, index=self.table.index)
 
-    def scales(self, table: pd.DataFrame) -> dict[str, dict[str, Scale]]:
+    def scales(self, table: pd.DataFrame, kinds: dict[str, str]) -> dict[str, dict[str, Scale]]:
         """The standardisation per regime on the rows a fit sees (ADR 0001, amended
         2026-10-09); the table stays in raw units."""
-        columns = list(self.continuous)
+        columns = [column for column, kind in kinds.items() if kind == 'continuous']
         if self.row.response_type == 'continuous':
             columns.append(self.row.response)
         seen = {'full': pd.Series(True, index=table.index)}
