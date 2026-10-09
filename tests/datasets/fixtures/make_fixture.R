@@ -24,7 +24,7 @@ saveRDS(scores, file.path(pkg, 'data', 'scores.rds'))
 wide <- data.frame(id = 1:3)
 wide$y <- cbind(a = 1:3, b = 4:6)
 save(wide, file = file.path(pkg, 'data', 'wide.rda'))
-# An ASCII .rda, which librdata rejects (as it does geepack's muscatine): R re-saves it.
+# An ASCII .rda, which librdata rejects (as it does geepack's muscatine): rdata reads it.
 visits <- data.frame(clinic = factor(c('north', 'south', 'north')), count = c(2L, 5L, 1L))
 save(visits, file = file.path(pkg, 'data', 'visits.rda'), ascii = TRUE)
 # R's data() reads a .csv in data/ with read.table(header = TRUE, sep = ';', as.is = FALSE).
@@ -54,8 +54,18 @@ writeLines(c(
   file.path(pkg, 'data', 'growth.R'))
 twin <- new.env()
 sys.source(file.path(pkg, 'data', 'growth.R'), envir = twin)
-# serialization v2: librdata rejects v3 with the formula attributes, as the loader's dump knows
+# serialization v2: librdata rejects v3 with the formula attributes
 save(growth, file = file.path(dirname(out), 'growth.rda'), envir = twin, version = 2)
+# An integer column with NA (mlmRev's star) beside a string column, outside the package too
+saveRDS(data.frame(score = c(1L, NA, 3L), note = c('a', 'b', 'c')),
+        file.path(dirname(out), 'counts.rds'), version = 2)
+# Single R files librdata rejects (ASCII), as OSF deposits serve them: a frame as an .rds, a
+# list beside a frame, and a compiled function, which rdata cannot parse (a model fit's bytecode)
+roster <- data.frame(ward = factor(c('b', 'a', 'b')), beds = c(4L, NA, 6L))
+saveRDS(roster, file.path(dirname(out), 'roster.rds'), ascii = TRUE)
+fit <- list(coef = c(a = 1, b = 2), call = quote(lm(y ~ x)))
+save(fit, roster, file = file.path(dirname(out), 'fits.rda'), ascii = TRUE)
+saveRDS(compiler::cmpfun(function(x) x + 1), file.path(dirname(out), 'fit.rds'), ascii = TRUE)
 writeLines(c('\\name{pets}', '\\alias{pets}', '\\docType{data}', '\\title{Six pets}',
              '\\description{Species, age in years and weight in kg of six pets.}',
              '\\usage{data(pets)}', '\\format{A data frame with 6 rows and 3 columns.}',
