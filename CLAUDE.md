@@ -185,7 +185,9 @@ funnel stage per session.
 ### Issue tracker
 
 Specs and tickets are GitHub Issues on this repo, via `gh`, one area label per issue
-(`registry`, `suite`, `references`, `tracks`, `paper`).
+(`registry`, `suite`, `references`, `tracks`, `paper`). From roadmap item 3 on, each spec
+opens its own branch off `main`; its tickets commit there, and the branch is merged into
+`main` when the spec issue closes.
 
 ### Domain docs
 
