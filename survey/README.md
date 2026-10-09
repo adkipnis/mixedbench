@@ -189,7 +189,7 @@ match, joined with ` || `), `seed`, `n_frame`.
 Key `source`, `object`; written whole by `pull.py` on every run, in frame order. Per
 enumerated data object: `tier`, `source`, `pin`, `object`, `file`, `n_rows`, `n_cols` (blank
 where the loader cannot make a DataFrame), the column counts by dtype `n_numeric`,
-`n_categorical`, `n_string`, `n_other`, `reader` (`pyreadr` / `rscript` / `pandas` / `deparse`),
+`n_categorical`, `n_string`, `n_other`, `reader` (`pyreadr` / `rdata` / `pandas` / `deparse`),
 `screen` and `capped`.
 
 `screen` is the verdict of a mechanical pre-screen on what a grouped table needs before an
@@ -568,3 +568,16 @@ to `pandas` and `deparse` and gave base R's manifest rows a digest and size; no 
 changed. The merge now replaces a re-merged row where it stands rather than moving it to the
 end. geepack's muscatine and plonsky_2019_osf's dd1, which librdata rejects, still go through
 R until #9.
+
+**The Rscript route leaves** (#9, 2026-10-09). The loader calls no R: an R file librdata
+rejects goes to the pure-Python `rdata`, reader `rdata`, in place of the ticket's `none`
+(ADR 0003's amendment). muscatine, dd and dd1 came out identical to the Rscript dump's
+frames; the re-merge `shards/registry_rdata.csv` changed only the two rows' `reader`. The
+deparse reader no longer takes data.frame()'s `row.names =` for a column (LifeCycleSavings,
+randu). The re-pull without R has 3285 census objects (3295 before): 137 `file` labels that
+named a dump (`rds/...`) now name the download, about 60 base R objects outside the deparse
+subset (time series, matrices, iris) are no frame and were excluded already, and 19
+`excluded.csv` keys, two unread pymc_examples objects and stan_arm's `ideo2.dat` wait for #14.
+The re-pulled `shards/excluded_prescreen.csv` is not merged, since it would overwrite the
+readers' reasons with `unreadable format`. A cache built before #9 holds the dump's `rds/`
+folders, which enumeration now lists as objects; delete them.
