@@ -1,6 +1,6 @@
 # Snapshot of metabeta-v3 packages/glmm/surveys/practice/quantiles.yaml at 3eedd15 (last
 # changed in 8295be0, 2026-10-06): the practice survey stays there; summarise.py reads the
-# p90 column of SUMMARY.md from this copy.
+# practice column of SUMMARY.md (the families' p90) from this copy.
 n_rows: 4325
 n_papers: 2244
 families:
