@@ -2,24 +2,6 @@
 typed DataFrames out. `loader.py` is the pipeline, `readers.py` the formats, `docs.py` the
 help pages."""
 
-from mixedbench.datasets.loader import (
-    ColumnType,
-    DataObject,
-    Loader,
-    Manifest,
-    ManifestRow,
-    Reader,
-    Source,
-)
-from mixedbench.datasets.readers import Frames
+from mixedbench.datasets.loader import DataObject, Loader, Manifest, ManifestRow, Source, fetch
 
-__all__ = [
-    'ColumnType',
-    'DataObject',
-    'Frames',
-    'Loader',
-    'Manifest',
-    'ManifestRow',
-    'Reader',
-    'Source',
-]
+__all__ = ['DataObject', 'Loader', 'Manifest', 'ManifestRow', 'Source', 'fetch']

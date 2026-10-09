@@ -37,24 +37,21 @@ def sources(file: Path | None = None) -> dict[str, Source]:
     pinned = {}
     for entries in frame['tiers'].values():
         for label, entry in (entries or {}).items():
+            checksum = entry.get('checksum')
+            if entry['kind'] == 'url':  # a URL has no version: the file's sha256 is its pin
+                checksum = str(entry['pin'])
+            layout = tuple(entry['layout']) if 'layout' in entry else None  # headerless text
             pinned[label] = Source(
                 kind=entry['kind'],
                 name=entry.get('name', label),
                 pin=str(entry['pin']),
-                checksum=entry.get('checksum'),
+                checksum=checksum,
                 path=entry.get('path'),
                 file=entry.get('file'),
-                layout=_layout(entry),
+                layout=layout,
                 mirror=entry.get('mirror'),
             )
     return pinned
-
-
-def _layout(entry: dict) -> tuple[str, ...] | None:
-    """The columns of a headerless text file, as the frame lists them."""
-    if 'layout' not in entry:
-        return None
-    return tuple(entry['layout'])
 
 
 def manifest() -> Manifest:
