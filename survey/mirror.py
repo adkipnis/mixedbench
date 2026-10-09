@@ -45,6 +45,9 @@ class Mirror:
 
     def run(self) -> None:
         labels = self.dryadLabels()
+        if not labels:  # a rerun after every Dryad source is mirrored creates no empty release
+            print('every Dryad source of the registry has a mirror')
+            return
         with tempfile.TemporaryDirectory() as staging:
             assets = [self.stage(label, Path(staging)) for label in labels]
             self.upload(assets)
