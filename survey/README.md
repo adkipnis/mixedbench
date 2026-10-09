@@ -753,8 +753,9 @@ binomial (MetaResp), nominal (antibiotics) and Bernoulli-on-a-recode (aggression
 `family` value.
 
 **Hand sample, batch 2** (#12, 2026-10-09). Alex checked batch 2 at the source;
-`shards/registry_hand_sample_2.csv` replaced its 25 rows (registry 715), unlisted fields kept as
-filed and each reason appended to notes. 14 rows stood, 11 were corrected: `formula` 11,
+`shards/registry_hand_sample_2.csv` replaced its 25 rows (registry 715); each reason is appended
+to notes, notes contradicting a correction are trimmed, and wine, KosteckiDillon and playactivity
+rise to `high` (OME stays `medium`, the nonlinear cap). 14 rows stood, 11 were corrected: `formula` 11,
 `covariates` 4, `published_model` 2, `response_type` 2, `response` 1, `grouping_factors` 1,
 `interactions` 1. Agreement: response 24/25, grouping factors 24/25. Verdicts per row:
 
