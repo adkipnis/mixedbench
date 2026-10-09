@@ -16,7 +16,7 @@ import pandas as pd
 import pytest
 from hypothesis import given
 from hypothesis import strategies as st
-from mixedbench.contract import Prior, Problem, Scale, refusal
+from mixedbench.contract import Prior, Problem, Refused, Scale
 from mixedbench.registry.row import Row, SlopeTerm
 
 NAN = float('nan')
@@ -128,7 +128,7 @@ def test_a_table_with_no_complete_row_is_refused() -> None:
     and the response on observation rows, so every row misses a model value: there is no
     problem to state, and `build` says so rather than returning an empty one."""
     table = fixtureTable().assign(y=NAN)
-    with pytest.raises(ValueError, match='fixture/trial/1: no row has every model value'):
+    with pytest.raises(Refused, match='fixture/trial/1: no row has every model value'):
         Problem.build(fixtureRow(), table)
 
 
@@ -180,19 +180,18 @@ def test_the_response_is_coded_by_its_type_and_the_family_follows_the_rule(
 def test_a_categorical_or_censored_row_is_refused_naming_the_reason(
     overrides: dict, reason: str
 ) -> None:
-    """The admission script lists refused rows by `refusal` without loading a table; `build`
-    on such a row fails with the same reason rather than fitting a model of another quantity."""
+    """`build` on such a row refuses it rather than fitting a model of another quantity, and
+    the refusal carries the reason the admission script writes to `refused.csv`."""
     row = fixtureRow(**overrides)
-    assert refusal(row) == reason
-    with pytest.raises(ValueError, match=reason.replace('(', r'\(').replace(')', r'\)')):
+    with pytest.raises(Refused) as refused:
         Problem.build(row, fixtureTable())
+    assert refused.value.reason == reason
 
 
 def test_any_other_documented_family_takes_the_rule_in_suite_1_1() -> None:
     """A negative binomial (and from suite 1.2 on a probit) replaces the rule only later (ADR
     0001); in 1.1 the row is admitted and its family is the rule's."""
     row = fixtureRow(response='n', response_type='count', family='negbinomial')
-    assert refusal(row) is None
     assert (Problem.build(row, fixtureTable()).family) == 'poisson'
 
 
