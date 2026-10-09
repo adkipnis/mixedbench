@@ -29,6 +29,7 @@ by script.
 | `schema.py`, `sources.py`, `help.py`, `measure.py`, `summarise.py` | | file contract, frame, help pages, measures, summary |
 | `verify.py` | | the rule that filled `verified` once (#26) |
 | `slopes.py` | | the parser that filled `random_slopes` once, reporting the shapes Alex decided (#27) |
+| `factors.py` | | the audit that regrouped a nested factor named by a repeating last part once (#45) |
 | `archive/` | | finished scripts and their outputs, reproducible at tag `survey-archive` ([README](archive/README.md)) |
 | `tests/` | | `uv run pytest survey/tests`, by hand; the root run never recurses here |
 
@@ -156,7 +157,9 @@ first); `reader`; `licence`, the `licence:` key or a CRAN DESCRIPTION's `License
 `verify.py` filled `verified` once through `shards/registry_verified.csv`; `slopes.py` filled
 `random_slopes` through `shards/registry_slopes.csv`, Alex's decisions on the rows it reported
 through `shards/registry_slopes_decisions.csv` (`VERDICTS.md`). A later row fills both in its
-own shard.
+own shard. `factors.py` regrouped the rows that named a nested `a:b` by a `b` whose codes repeat
+across `a` through `shards/registry_factors.csv`; Wafer's slopes, waiting on that, followed in
+`shards/registry_slopes_wafer.csv`.
 
 ### `excluded.csv`, `duplicates.csv`, `dropped.csv`
 
