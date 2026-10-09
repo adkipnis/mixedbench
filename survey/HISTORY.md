@@ -148,12 +148,12 @@ reading's open disagreements, four to eight per tier.
   Above the closing minimums of 100 Tier R rows and 40 rows from the other tiers.
 - `SUMMARY.md` puts the pooled and per-tier quantiles of every axis beside the practice
   survey's p90; the envelope edges were set in the outcome grill, not here.
-- metabeta-v3's CI test `tests/surveys/test_dimension_quantiles.py` loads `quantiles.yaml` as
-  data and asserts its axes, quantile keys, tiers, imbalance block, K distribution, shares and
-  the tier minimums.
-- It also asserts that every row of `v05_datasets.csv` is a registry key, a member of a
-  registry row's `sources` (MEMSS MathAchieve in nlme's row; base R's Theoph, Orange and
-  Indometh in MEMSS's) or an exclusion.
+- metabeta-v3's CI test `packages/glmm/tests/surveys/test_dimension_quantiles.py` loads
+  `quantiles.yaml` as data and asserts its axes, quantile keys, tiers, imbalance block, K
+  distribution, shares and the tier minimums.
+- At the closing it also asserted that every row of `v05_datasets.csv` (now in `archive/`) is
+  a registry key, a member of a registry row's `sources` (MEMSS MathAchieve in nlme's row; base
+  R's Theoph, Orange and Indometh in MEMSS's) or an exclusion.
 
 ## Registry columns and verification (#6, 2026-10-09)
 
