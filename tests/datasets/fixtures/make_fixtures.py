@@ -1,4 +1,5 @@
-"""Builds the url and git fixtures for test_datasets.py (#16). Rerun from the repo root:
+"""Builds the url and git fixtures for test_loader.py, test_readers.py and
+survey/tests/test_help.py (m3#16). Rerun from the repo root:
     uv run python tests/datasets/fixtures/make_fixtures.py
 
 `deposit.zip` is a data deposit: one `.csv` under `data/` and a codebook at the root.
