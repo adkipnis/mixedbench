@@ -1,7 +1,7 @@
 # Alex's verdicts
 
 Alex's per-row verdicts on the survey's readings, copied unchanged from the survey README of
-before the split (#20). The record around them is in [`HISTORY.md`](HISTORY.md); the rules
+before the split (this repository's #20). The record around them is in [`HISTORY.md`](HISTORY.md); the rules
 they set are in [`README.md`](README.md#reading-rules). Issue numbers are this repository's,
 except #20 and #24 inside the bullets (metabeta-v3's m3#20 and m3#24); `#1`–`#3` after an
 object is its `model_index`.
