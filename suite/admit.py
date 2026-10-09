@@ -16,7 +16,7 @@ from typing import Literal
 
 import pandas as pd
 from mixedbench import registry
-from mixedbench.contract import Problem, materialise, refusal
+from mixedbench.contract import Problem, Refused, materialise
 from mixedbench.datasets import Loader
 from mixedbench.registry.row import Row, writeCsv
 
@@ -120,7 +120,7 @@ FIDELITY: dict[str, Fidelity] = {
 # =====================================================================================
 @dataclass(frozen=True)
 class Admitted:
-    candidates: pd.DataFrame  # id, contract_hash, verified, dropped_share, fidelity
+    candidates: pd.DataFrame  # see `Admission.candidate`
     refused: dict[str, str]  # per refused problem id, the reason
     failed: dict[str, str]  # per problem id whose table did not load, the error
 
@@ -169,9 +169,8 @@ class Admission:
         failed = {}
         for row in self.rows:
             id = f'{row.source}/{row.object}/{row.model_index}'
-            reason = self.refusal(id, row)
-            if reason is not None:
-                refused[id] = reason
+            if id in self.refused:
+                refused[id] = self.refused[id]
                 continue
             try:
                 table = self.table(row)
@@ -180,27 +179,23 @@ class Admission:
                 continue
             try:
                 problem = Problem.build(row, table)
-            except ValueError as error:  # a table with no complete row (Phenobarb, #29)
-                refused[id] = str(error).removeprefix(f'{id}: ')
+            except Refused as refusal:  # the family rule, a table with no complete row (#29)
+                refused[id] = refusal.reason
                 continue
             candidates.append(self.candidate(row, problem))
-        columns = ['id', 'contract_hash', 'verified', 'dropped_share', 'fidelity']
-        return Admitted(pd.DataFrame(candidates, columns=columns), refused, failed)
+        return Admitted(pd.DataFrame(candidates), refused, failed)
 
     # ---------------------------------------------------------------------------------
     # pipeline
     # ---------------------------------------------------------------------------------
-    def refusal(self, id: str, row: Row) -> str | None:
-        """The family rule's refusal first, then the hand decision."""
-        reason = refusal(row)
-        if reason is not None:
-            return reason
-        return self.refused.get(id)
-
-    def candidate(self, row: Row, problem: Problem) -> tuple:
-        hash = materialise(problem, self.cache)
-        fidelity = self.fidelity.get(problem.id, '')
-        return (problem.id, hash, row.verified, problem.dropped_share, fidelity)
+    def candidate(self, row: Row, problem: Problem) -> dict:
+        return {
+            'id': problem.id,
+            'contract_hash': materialise(problem, self.cache),
+            'verified': row.verified,
+            'dropped_share': problem.dropped_share,
+            'fidelity': self.fidelity.get(problem.id, ''),
+        }
 
 
 # =====================================================================================
