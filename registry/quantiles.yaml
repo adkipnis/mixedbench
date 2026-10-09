@@ -916,8 +916,8 @@ imbalance:
   balanced_share: 0.388
 shares:
   covariate_type:
-    continuous: 0.444
-    binary: 0.329
+    continuous: 0.443
+    binary: 0.33
     categorical: 0.189
     ordered: 0.038
   level:
@@ -978,5 +978,5 @@ k_distribution:
 implied_columns:
   categorical_share: 0.227
   mean_columns_per_categorical: 6.737
-  terms_9: 20.73
-  terms_14: 32.25
+  terms_9: 20.72
+  terms_14: 32.24
