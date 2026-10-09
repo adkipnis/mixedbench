@@ -27,6 +27,7 @@ by script.
 | `shards/<table>_<label>.csv` | agents, `pull.py` | one shard per reading run; `table` ∈ `registry`, `excluded`, `duplicates`, `dropped` |
 | `prompts/read.md` | | the reading agent's brief |
 | `schema.py`, `sources.py`, `help.py`, `measure.py`, `summarise.py` | | file contract, frame, help pages, measures, summary |
+| `verify.py` | | the rule that filled `verified` once (#26) |
 | `archive/` | | finished scripts and their outputs, reproducible at tag `survey-archive` ([README](archive/README.md)) |
 | `tests/` | | `uv run pytest survey/tests`, by hand; the root run never recurses here |
 
@@ -135,6 +136,7 @@ Key `source`, `object`, `model_index`. Agent columns, in order:
 | `grouping_factors` | `;`-list of columns whose levels index random effects; `Block:Variety` for a term on two columns, built by the merge |
 | `covariates` | `;`-list of the main-effect columns |
 | `interactions` | `;`-list of `a:b` terms |
+| `random_slopes` | `;`-list of `x\|g` (correlated with the intercept of `g`) and `x\|\|g` (uncorrelated) terms, `x` a covariate and `g` a grouping factor of the row; blank for an intercept-only model (ADR 0001) |
 | `ignore` | `;`-list of columns no model should use: ids, weights, alternate responses, coordinates |
 | `types` | `;`-list of `column=categorical` / `ordered` / `continuous` where the file carries no type, and `ordered` for an R ordered factor; covariates only |
 | `formula` | the documented model verbatim, lme4 syntax where given; a nonlinear model in words |
@@ -142,11 +144,16 @@ Key `source`, `object`, `model_index`. Agent columns, in order:
 | `published_model` | `yes` when a published model specification exists; else `no` |
 | `domain` | `ecology_biology` / `psychology_neuroscience` / `biomedicine` / `social_humanities` / `agriculture` / `education` / `economics` / `industry` / `other` |
 | `confidence` | `high` / `medium` / `low` |
+| `verified` | why the row counts as verified (ADR 0002): `hand` (the hand sample or Tier D) / `high` (confidence `high`) / `second-reading` (a blind second reading) |
 | `notes` | what was read; `RULE GAP:` for an unsettled case; `NONLINEAR:` and `RESPONSE INFERRED:` open their rows' notes |
 
 The merge fills `tier`; `sources` (`source:object` of every duplicate folded in, its own
 first); `reader`; `licence`, the `licence:` key or a CRAN DESCRIPTION's `License`, mapped by
 `LICENCES` in `schema.py` and rewritten at every merge (ADR 0003).
+
+`random_slopes` and `verified` came in by the header-only `shards/registry_schema_2.csv`;
+`verify.py` filled `verified` once through `shards/registry_verified.csv`. A later row fills
+both in its own shard.
 
 ### `excluded.csv`, `duplicates.csv`, `dropped.csv`
 
@@ -207,6 +214,7 @@ A failing shard is refused, its offending rows printed, nothing written.
 - The response shows its type: `continuous` numeric, `binary` two values, `count` and
   `binomial` non-negative integers, `ordinal` at most 10 values, `categorical` not float; a
   `binomial` row's integer `trials` never below the response.
+- A `random_slopes` term `x|g` or `x||g`, `x` a covariate and `g` a grouping factor of the row.
 - No column both a grouping factor and a covariate; `documented_prior` only when
   `published_model` is `yes`; every registry source's licence in the lookup.
 - The object not in the rival file; a dropped object in one of the two.
