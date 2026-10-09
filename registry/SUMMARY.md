@@ -133,7 +133,7 @@ coefficient of variation are readable companions.
 | tier T | 291 | 0.0438 | 1.0843 | 1.8175 | 11.3563 | inf | inf | inf |  |
 | tier D | 158 | 0.2722 | 0.8708 | 1.7108 | 43.4569 | inf | inf | inf |  |
 | tier O | 13 | 1.6802 | 1.6802 | 1.7019 | 80.9739 | inf | inf | inf |  |
-| without agridat | 888 | 0.0296 | 0.9496 | 1.6866 | 34.298 | inf | inf | inf |  |
+| without agridat | 888 | 0.0296 | 0.9496 | 1.6866 | 34.5248 | inf | inf | inf |  |
 
 | singleton_share | n | min | p5 | p10 | p50 | p90 | p95 | max | practice p90 |
 |---|---|---|---|---|---|---|---|---|---|
@@ -153,37 +153,37 @@ coefficient of variation are readable companions.
 | tier T | 291 | 0 | 0 | 0 | 0.2911 | 0.7204 | 0.9096 | 3.5667 |  |
 | tier D | 158 | 0 | 0 | 0 | 0.1428 | 0.7504 | 0.9946 | 1.7829 |  |
 | tier O | 13 | 0 | 0 | 0 | 0.1088 | 0.7524 | 0.7665 | 0.7665 |  |
-| without agridat | 888 | 0 | 0 | 0 | 0.1621 | 0.7478 | 1.0049 | 4.9111 |  |
+| without agridat | 888 | 0 | 0 | 0 | 0.1619 | 0.7478 | 1.0049 | 4.9111 |  |
 
 ## Covariates of the documented models
 
 | covariate type | n | share |
 |---|---|---|
-| continuous | 890 | 44% |
-| binary | 675 | 33% |
-| categorical | 384 | 19% |
+| continuous | 887 | 44% |
+| binary | 672 | 33% |
+| categorical | 382 | 19% |
 | ordered | 78 | 4% |
 
 | level | n | share |
 |---|---|---|
-| within | 1399 | 69% |
-| group | 628 | 31% |
+| within | 1394 | 69% |
+| group | 625 | 31% |
 
 Levels of the categorical covariates:
 
 | K | n | min | p5 | p10 | p50 | p90 | p95 | max | practice p90 |
 |---|---|---|---|---|---|---|---|---|---|
-| pooled | 462 | 1 | 2 | 3 | 4 | 9 | 11 | 117 | – |
-| tier R | 168 | 2 | 3 | 3 | 4 | 9 | 10 | 56 |  |
+| pooled | 460 | 1 | 2 | 3 | 4 | 9 | 12 | 117 | – |
+| tier R | 166 | 2 | 3 | 3 | 4 | 9 | 10 | 56 |  |
 | tier E | 51 | 1 | 2 | 2 | 3 | 7 | 10 | 10 |  |
 | tier T | 149 | 1 | 2 | 3 | 4 | 9 | 10 | 17 |  |
 | tier D | 54 | 3 | 3 | 3 | 4 | 47 | 76 | 117 |  |
 | tier O | 40 | 2 | 2 | 2 | 4 | 10 | 13 | 14 |  |
-| without agridat | 434 | 1 | 2 | 3 | 4 | 9 | 11 | 117 |  |
+| without agridat | 432 | 1 | 2 | 3 | 4 | 9 | 11 | 117 |  |
 
 | K | n | share |
 |---|---|---|
-| 3 | 163 | 35% |
+| 3 | 161 | 35% |
 | 4 | 100 | 22% |
 | 5 | 43 | 9% |
 | 2 | 35 | 8% |
@@ -196,8 +196,8 @@ Levels of the categorical covariates:
 | 1 | 3 | 1% |
 
 Implied design columns of a model under the observed categorical share
-(0.228) and mean columns per categorical (4.89):
-9 terms 16.98 columns, 14 terms 26.41 columns.
+(0.228) and mean columns per categorical (4.902):
+9 terms 17.0 columns, 14 terms 26.45 columns.
 
 ## Design columns
 
@@ -229,10 +229,10 @@ its levels less one, an interaction the product.
 
 | response type | n | share |
 |---|---|---|
-| continuous | 452 | 63% |
-| binary | 114 | 16% |
-| count | 76 | 11% |
-| ordinal | 45 | 6% |
+| continuous | 453 | 63% |
+| binary | 115 | 16% |
+| count | 75 | 10% |
+| ordinal | 44 | 6% |
 | binomial | 16 | 2% |
 | categorical | 12 | 2% |
 
