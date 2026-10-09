@@ -12,8 +12,8 @@ likelihood that model names for it.
 
 ## Input
 
-Per object: its `candidates.csv` row and its help page
-`registry/help/<source>/<object>.txt` (documentation and the table's first rows). Columns and allowed values are in `README.md` and
+Per object: its `candidates.csv` row and its help page `registry/help/<source>/<object>.txt`
+(documentation and the table's first rows). Columns and allowed values are in `README.md` and
 `schema.py`; the merge refuses a value outside them or a column the table lacks.
 
 ## Exclude when
@@ -22,11 +22,13 @@ File the object in the excluded shard with its reason when:
 
 - no grouping factor is documented (no subject, plot, school or site that rows repeat
   within): `no grouping structure`;
-- it is one time series without replication, or a grouping column has fewer than two groups;
-- it is derived from another object of the source (summary, aggregate, subset): `derived or
-  duplicated table`;
+- it is one time series without replication (`time series without replication`), or a
+  grouping column has `fewer than two groups`;
+- it is derived from another object of the source (summary, aggregate table, subset):
+  `derived or duplicated table`; an aggregate response on a real grouping stays, at `low`;
 - the documentation calls it simulated, fictional or synthetic: `simulated data`;
-- the loader refuses its format, its licence forbids redistribution, or it is too large.
+- the loader refuses its format (`unreadable format`), its licence forbids redistribution
+  (`licence forbids redistribution`), or it is `too large`.
 
 ## Record the model
 
