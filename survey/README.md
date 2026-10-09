@@ -751,3 +751,26 @@ formula (MetaResp); a float-coded nominal response stays `ordinal`, the merge re
 column as `categorical` (antibiotics). Left open as `RULE GAP:` in notes: the documented
 binomial (MetaResp), nominal (antibiotics) and Bernoulli-on-a-recode (aggression) fits have no
 `family` value.
+
+**Hand sample, batch 2** (#12, 2026-10-09). Alex checked batch 2 at the source;
+`shards/registry_hand_sample_2.csv` replaced its 25 rows (registry 715), unlisted fields kept as
+filed and each reason appended to notes. 14 rows stood, 11 were corrected: `formula` 11,
+`covariates` 4, `published_model` 2, `response_type` 2, `response` 1, `grouping_factors` 1,
+`interactions` 1. Agreement: response 24/25, grouping factors 24/25. Verdicts per row:
+
+- stand: agridat gomez.nonnormal2, archbold.apple, yates.oats #2; faraway worldcup; HLMdiag
+  wages; gamlss.data respInf; languageR english; nlme Machines; rabe_hesketh bladder, headache;
+  zuur_zim Beavers2; mlmRev Mmmec; alda congress_pp, tolerance_pp.
+- formula only: glmmTMB Salamanders (zipm3's `spp * mined` in the zero-inflation part too);
+  pymc_examples radon (`log(activity + 0.1)`, the notebook's log_radon, and `||`); nlme
+  Phenobarb (ApgarInd on volume only, diagonal random effects, ch06.R); zuur_mixed RIKZ
+  (Exposure 8 and 10 pooled against 11); faraway choccake (`factor(temp)`).
+- corrected to a located source: rabe_hesketh wine (MLMUS3 exercise 10.9, binary `bitter`
+  additive in temp and contact, `published_model` `yes`; `bitterness` moved to `ignore`);
+  carData KosteckiDillon (Fox's appendix final model, treatment and `sqrt(posttreat)` derived
+  from `time`, random in both); MASS OME (grouped by `ID:Age`, the page's UID; OME only in the
+  second-stage regression); goldstein_msm playactivity (Table 9.3 analysis A, continuous log
+  duration with activity-specific child effects, not multinomial); hox thaieduc (chapter 6
+  uses `SEX` alone).
+- `published_model` `no`: rabe_hesketh crime (ch5.do fits county fixed effects; the
+  random-intercept rendering is inferred, `log(crmrte)` and `factor(year)` in the formula).
