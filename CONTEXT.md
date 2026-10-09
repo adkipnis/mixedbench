@@ -40,6 +40,36 @@ A frozen, versioned set of problems with reference posteriors and diagnostics, a
 verification, the diagnostics bar and the compute cap. Immutable once released.
 _Avoid_: benchmark, the registry, test set
 
+### The survey
+
+**Tier**:
+One class of sources in the frame, read as one pass: `R` CRAN packages, `E` ecosystem
+examples, `T` textbook companions, `D` data deposits of published papers, `O` open tabular
+repositories. Frame order is tier order; a duplicate keeps its earliest member.
+_Avoid_: stratum (the hand sample's tier × confidence cell), category
+
+**Shard**:
+One reading run's output, `survey/shards/<table>_<label>.csv`, which `merge.py` validates and
+upserts into a registry file. Agents write shards, never the registry.
+_Avoid_: batch (a hand sample's 25 rows), patch
+
+**Help page**:
+The documentation a reading agent gets for one data object, `registry/help/<source>/<object>.txt`:
+the source's own page, README, codebook or a paper's methods, with the table's dtypes and first
+rows.
+_Avoid_: docs, metadata
+
+**Published model**:
+A model specification published for the table (a posterior, a Stan example, a textbook's
+worked example, a documentation example); `published_model` `yes`. Without one, the row's
+documented model is the reader's proposal.
+_Avoid_: true model, reference model
+
+**Hand sample**:
+The seeded 100-row sample of the registry, stratified by tier × confidence, that Alex checked
+at the source; its per-field agreement is the registry's verification bar (ADR 0002).
+_Avoid_: spot check (the 20 rows per tier read before it), audit
+
 ### References and results
 
 **Reference posterior**:
