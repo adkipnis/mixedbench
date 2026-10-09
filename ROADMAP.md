@@ -36,7 +36,8 @@ release that freezes it.
 ## Release 1.2 — suite 1.2 and the extensions; the last planned release
 
 - [ ] **8 Suite 1.2.** Oracle-track references; negative binomial and probit from the `family`
-  column; retirements from the weekly fetch log
+  column; retirements from the weekly fetch log; random-effect blocks as the source writes
+  them (#46, grilled when this item starts)
 - [ ] **9 Extensions.** An R loader; an "as published" prior track from `documented_prior`; a
   permitted-mirror fallback for rotted sources (ADR 0003)
 
