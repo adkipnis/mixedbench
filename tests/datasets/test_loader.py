@@ -21,6 +21,12 @@ import pytest
 from mixedbench import registry
 from mixedbench.datasets import DataObject, Loader, ManifestRow, Source, fetch
 
+
+def tarMember(archive: bytes, name: str) -> bytes:
+    with tarfile.open(fileobj=io.BytesIO(archive)) as tar:
+        return tar.extractfile(name).read()
+
+
 FIXTURES = Path(__file__).parent / 'fixtures'
 TARBALL = (FIXTURES / 'fixture_1.0.tar.gz').read_bytes()
 CURRENT = 'https://cloud.r-project.org/src/contrib/fixture_1.0.tar.gz'
@@ -33,7 +39,9 @@ DEPOSIT_URL = 'https://example.org/deposit.zip'
 EXAMPLE = (FIXTURES / 'example-c0ffee1.tar.gz').read_bytes()
 EXAMPLE_REPO = 'https://github.com/acme/example'
 EXAMPLE_ARCHIVE = 'https://github.com/acme/example/archive/c0ffee1.tar.gz'
-RADON = 'https://raw.githubusercontent.com/acme/example/c0ffee1/data/radon.csv'
+EXAMPLE_GIT = Source(kind='git', name=EXAMPLE_REPO, pin='c0ffee1', path='data')
+RADON = tarMember(EXAMPLE, 'example-c0ffee1/data/radon.csv')
+RADON_URL = 'https://raw.githubusercontent.com/acme/example/c0ffee1/data/radon.csv'
 SCHOOLS = (FIXTURES / 'schools').read_bytes()  # a csv figshare serves without a suffix
 SCHOOLS_URL = 'https://ndownloader.example.org/files/123'
 DATASETS = (FIXTURES / 'datasets.tar.gz').read_bytes()  # Arrow files, as MixedModels.jl ships
@@ -67,11 +75,6 @@ def urlSource(url: str, data: bytes, **keys: str) -> Source:
 
 def manifestRow(file: str, data: bytes) -> ManifestRow:
     return ManifestRow(file, sha(data))
-
-
-def tarMember(archive: bytes, name: str) -> bytes:
-    with tarfile.open(fileobj=io.BytesIO(archive)) as tar:
-        return tar.extractfile(name).read()
 
 
 def tarball(files: dict[str, bytes]) -> bytes:
@@ -162,6 +165,26 @@ def test_checksum_mismatch_is_refused(tmp_path):
         loader.objects(bad)
 
 
+def test_one_loader_checks_each_file_against_its_digest_once(tmp_path, monkeypatch):
+    """Every manifest load passes through the source's archive; hashing a 225 MB deposit again
+    for each of its objects would dominate a run, so a loader checks a file once."""
+    hashed = []
+    digest = hashlib.file_digest
+
+    def counting(file, name):
+        hashed.append(Path(file.name).name)
+        return digest(file, name)
+
+    monkeypatch.setattr(hashlib, 'file_digest', counting)
+    pinned = Source(kind='cran', name='fixture', pin='1.0', checksum=sha(TARBALL))
+    pets = tarMember(TARBALL, 'fixture/data/pets.rda')
+    manifest = {(pinned, 'pets'): manifestRow('data/pets.rda', pets)}
+    loader = Loader(tmp_path, fetch=Server({CURRENT: TARBALL}), manifest=manifest)
+    loader.load(pinned, 'pets')
+    loader.load(pinned, 'pets')
+    assert hashed == ['fixture_1.0.tar.gz', 'pets.rda']
+
+
 def test_second_loader_over_the_same_cache_fetches_nothing(tmp_path):
     """The cache lives on disk, not in the instance: a new process must not download again."""
     server = Server({CURRENT: TARBALL})
@@ -203,7 +226,7 @@ def test_the_pinned_r_source_tarball_holds_base_rs_data(tmp_path):
 
 
 # ==============================================================================================
-# url and git sources (#16)
+# url and git sources (m3#16)
 # ==============================================================================================
 
 
@@ -234,18 +257,13 @@ def test_declared_column_types_are_applied(tmp_path):
     assert df['size'].dtype.kind == 'i'
 
 
-def test_git_source_is_fetched_as_an_archive_at_its_revision_and_cached(tmp_path):
+def test_git_source_is_fetched_as_an_archive_at_its_revision(tmp_path):
     """A repository pinned to a revision comes as GitHub's archive tarball of that revision, so
-    one fetch serves every file and README; the pinned path narrows the objects to its folder;
-    a second loader over the same cache asks for nothing."""
-    server = Server({EXAMPLE_ARCHIVE: EXAMPLE})
-    example = Source(kind='git', name=EXAMPLE_REPO, pin='c0ffee1', path='data')
-    loader = Loader(tmp_path, fetch=server)
-    objects = objectsByName(loader, example)
+    one fetch serves every file and README; the pinned path narrows the objects to its folder."""
+    loader = Loader(tmp_path, fetch=Server({EXAMPLE_ARCHIVE: EXAMPLE}))
+    objects = objectsByName(loader, EXAMPLE_GIT)
     assert set(objects) == {'data/radon.csv'}
     assert census(objects['data/radon.csv']) == ('data/radon.csv', 'pandas', 5, 3)
-    Loader(tmp_path, fetch=server).load(example, 'data/radon.csv')
-    assert server.asked == [EXAMPLE_ARCHIVE]
 
 
 def test_url_without_a_suffix_is_saved_under_the_file_the_frame_names(tmp_path):
@@ -288,37 +306,32 @@ def test_a_url_its_host_refuses_loads_from_its_mirror_under_the_same_pin(tmp_pat
 def test_a_git_object_is_fetched_alone_from_its_raw_url(tmp_path):
     """With the manifest, a git object is one file at the pinned revision, never the
     repository archive (pymc-examples is 1 GB for a few csv); the cache serves it after."""
-    radon = tarMember(EXAMPLE, 'example-c0ffee1/data/radon.csv')
-    server = Server({RADON: radon, EXAMPLE_ARCHIVE: EXAMPLE})
-    example = Source(kind='git', name=EXAMPLE_REPO, pin='c0ffee1', path='data')
-    manifest = {(example, 'data/radon.csv'): manifestRow('data/radon.csv', radon)}
-    df = Loader(tmp_path, fetch=server, manifest=manifest).load(example, 'data/radon.csv')
+    server = Server({RADON_URL: RADON, EXAMPLE_ARCHIVE: EXAMPLE})
+    manifest = {(EXAMPLE_GIT, 'data/radon.csv'): manifestRow('data/radon.csv', RADON)}
+    df = Loader(tmp_path, fetch=server, manifest=manifest).load(EXAMPLE_GIT, 'data/radon.csv')
     assert list(df['county']) == ['Anoka', 'Anoka', 'Clay', 'Clay', 'Clay']
-    Loader(tmp_path, fetch=server, manifest=manifest).load(example, 'data/radon.csv')
-    assert server.asked == [RADON]
+    Loader(tmp_path, fetch=server, manifest=manifest).load(EXAMPLE_GIT, 'data/radon.csv')
+    assert server.asked == [RADON_URL]
 
 
 def test_a_git_file_name_with_spaces_is_quoted_in_its_raw_url(tmp_path):
     """ROS keeps `HDI/data/state vote and income, 68-00.dta`; a URL cannot carry the spaces."""
-    radon = tarMember(EXAMPLE, 'example-c0ffee1/data/radon.csv')
     quoted = 'https://raw.githubusercontent.com/acme/example/c0ffee1/data/radon%20by%20county.csv'
-    example = Source(kind='git', name=EXAMPLE_REPO, pin='c0ffee1', path='data')
-    manifest = {(example, 'data/radon by county.csv'): manifestRow('data/radon by county.csv', radon)}  # fmt: skip
-    loader = Loader(tmp_path, fetch=Server({quoted: radon}), manifest=manifest)
-    assert len(loader.load(example, 'data/radon by county.csv')) == 5
+    row = manifestRow('data/radon by county.csv', RADON)
+    manifest = {(EXAMPLE_GIT, 'data/radon by county.csv'): row}
+    loader = Loader(tmp_path, fetch=Server({quoted: RADON}), manifest=manifest)
+    assert len(loader.load(EXAMPLE_GIT, 'data/radon by county.csv')) == 5
 
 
 def test_a_file_differing_from_its_manifest_checksum_is_refused(tmp_path):
     """A per-file fetch keeps the fetch-only guarantee only if every file is checked against
     the digest the package ships, on cache hits too, where a tampered file would sit."""
-    radon = tarMember(EXAMPLE, 'example-c0ffee1/data/radon.csv')
-    server = Server({RADON: radon})
-    example = Source(kind='git', name=EXAMPLE_REPO, pin='c0ffee1', path='data')
-    good = {(example, 'data/radon.csv'): manifestRow('data/radon.csv', radon)}
-    bad = {(example, 'data/radon.csv'): ManifestRow('data/radon.csv', '0' * 64)}
-    Loader(tmp_path, fetch=server, manifest=good).load(example, 'data/radon.csv')
+    server = Server({RADON_URL: RADON})
+    good = {(EXAMPLE_GIT, 'data/radon.csv'): manifestRow('data/radon.csv', RADON)}
+    bad = {(EXAMPLE_GIT, 'data/radon.csv'): ManifestRow('data/radon.csv', '0' * 64)}
+    Loader(tmp_path, fetch=server, manifest=good).load(EXAMPLE_GIT, 'data/radon.csv')
     with pytest.raises(ValueError, match='checksum'):
-        Loader(tmp_path, fetch=server, manifest=bad).load(example, 'data/radon.csv')
+        Loader(tmp_path, fetch=server, manifest=bad).load(EXAMPLE_GIT, 'data/radon.csv')
 
 
 def test_a_cran_or_url_archive_object_loads_its_file_from_the_extracted_tree(tmp_path):
