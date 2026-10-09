@@ -34,6 +34,7 @@ grill, not here.
 | `shards/<table>_<label>.csv` | agents; `pull.py` writes `excluded_prescreen.csv` | one shard per reading run; `table` ∈ `registry`, `excluded`, `duplicates`, `dropped` |
 | `registry.csv` | `merge.py` | one row per dataset and documented model, at most three per object |
 | `scan_hits.csv` | `verify.py scan` | one row per keyword occurrence: a registry row's `notes`, `formula` or help page, or a Tier D deposit page once per deposit |
+| `sample.csv` | `verify.py draw` | the seeded hand sample (ADR 0002): row key, stratum, seed, batch and the compared fields as read at draw time |
 | `excluded.csv` | `merge.py` | every screened-out object with a categorical reason |
 | `duplicates.csv` | `merge.py` | candidate pairs the merge flagged and the verdicts returned |
 | `dropped.csv` | `merge.py` | objects taken out of the registry and the exclusions, awaiting a re-filing shard |
@@ -711,3 +712,42 @@ Verdicts per finding:
 Left open: valdebenito's MCMCglmm `categorical` fits with residual variance fixed at 1 (a logit
 with an observation-level term) keep `family` blank; fims' item parameters have fixed priors
 and no estimated scale, `ii` stays a grouping factor.
+
+**Hand sample, batch 1** (#11, 2026-10-09). `verify.py draw` wrote `sample.csv`: seed 0, 100
+rows of Tiers R, E, T and O (Tier D left out, Alex read all of it), stratified by tier ×
+confidence with largest-remainder allocation and at least one row per stratum, four batches of
+25 in draw order; a further run appends one batch of 25 with the next seed and no floor.
+`verify.py handoff --batch k` renders a batch with the source's page and download URLs, the
+reading and the help page. Alex checked batch 1 at the source; `shards/registry_hand_sample_1.csv`
+replaced its 25 rows (registry 715). 8 rows stood in the compared fields (5 of them with notes
+or confidence corrected), 17 were corrected: `published_model` and `formula` 11 each,
+`covariates` 7, `interactions` 2, `response` 2, `grouping_factors` 1. Verdicts per row:
+
+- stand: alda medication_pp; rethinking PrussianHorses (notes: the Rd exists, the fixed scales
+  are priors), NWOGrants (`low`); mixedmodels_jl kb07 (the model is the rank-deficiency
+  page's); languageR lexdec (RT is already a log); stan_arm allvar (the script's J = 84 and
+  indexing slips in notes); pmlb_apnea1 (`low`, target holds cell frequencies); lme4
+  grouseticks (INDEX stays out of `grouping_factors` under #20).
+- `published_model` `no`, the formula kept as proposed: fitzmaurice melanoma (`low`; the paper's
+  model is Europe-wide, three-level), agridat tai.potato, nlme Cefamandole (`low`; the Rd fits
+  `nlsList`, no random effects) and Tetracycline2, SASmixed WaferTypes and Animal (`low`; the
+  pages only call `str`), hox estrlong (`log(estrmeas)` in the formula; `log_estr` is log10, the
+  narrative's natural log left unresolved).
+- corrected to a located source: rabe_hesketh antibiotics (GLLAMM article Table 3, nominal logit
+  with category-specific intercepts by doctor and hospital, `Wrdiag` added; `high`), aggression
+  (MLMUS4 exercise 10.4, `I(y > 0)` on `person` alone; `high`) and epilep (SABRE 13.3, `v4`
+  replaces `visit`; `high`); snijders_bosker 17A (ch17.r, Table 17.2; the country-centred and
+  country-mean terms are no columns, formula only; `high`); hox MetaResp (chapter 6 Eq. 6.21,
+  binomial logit with mode random slopes, `respisrr` and `mode:year` added; `high`) and
+  CurranLong (the PanelModeling chapter's reading growth model, `read` the response, `anti` to
+  `ignore`); ros incentives_full (Gelman, Stevens & Chan 2003 Model III; `high`); gamlss.data
+  rent99 (Fahrmeir et al. Eq. 9.8, `rentsqm` the response, district a kriged spatial effect;
+  `high`); brms loss (theta and omega estimated, not fixed); stan_bugs schools (`I(LRT^2)` and
+  the residual variance model in the formula).
+
+Decisions taken: a `published_model` `no` row keeps its proposed formula (the merge requires
+one); a response holding proportions stays `continuous`, its binomial denominator named in the
+formula (MetaResp); a float-coded nominal response stays `ordinal`, the merge refusing a float
+column as `categorical` (antibiotics). Left open as `RULE GAP:` in notes: the documented
+binomial (MetaResp), nominal (antibiotics) and Bernoulli-on-a-recode (aggression) fits have no
+`family` value.
