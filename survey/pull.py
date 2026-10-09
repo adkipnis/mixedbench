@@ -120,8 +120,8 @@ class Puller:
 
     @staticmethod
     def _depositPages(registry: Path, survey: Path) -> dict[str, Path]:
-        """Tier D label -> the page of its deposit, as `resolve.py` (survey/archive/) named
-        it; none before the listing ran."""
+        """Tier D label -> the page of its deposit, as the archived `resolve.py` (tag
+        `survey-archive`) named it; none before the listing ran."""
         pages = {}
         file = survey / 'deposit_files.csv'
         if not file.exists():
