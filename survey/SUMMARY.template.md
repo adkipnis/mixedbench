@@ -98,7 +98,7 @@ ${table_published_model}
 
 ## Tier D
 
-The practice survey's deposits, resolved and pulled by `resolve.py`; the loss by cause is the
-tier's finding.
+The practice survey's deposits, resolved and pulled by the archived `resolve.py` (tag
+`survey-archive`); the loss by cause is the tier's finding.
 
 ${tier_d}
