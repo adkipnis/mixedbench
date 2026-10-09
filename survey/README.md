@@ -352,8 +352,10 @@ Decided from the agents' `RULE GAP` notes and Alex's spot checks in the tickets 
   inefficiency term likewise (xtfrontier1; #24). Decided against for one row: travel2's
   single-level conditional logit is excluded (#25).
 - The random structure as the paper describes it, not the deepest nesting term (Tier D:
-  meyel's three factors, goodwin's stratum alone; #26). A genotype-by-environment interaction
-  the page fits as random is the random term (salmon.bunt; #22).
+  goodwin's stratum alone; #26), unless the deposited code fits another (meyel's combined
+  `PopulationID:FamilyID:BoxID`, not the paper's three factors; #15). A
+  genotype-by-environment interaction the page fits as random is the random term (salmon.bunt;
+  #22).
 - `ordered` declarations are for covariates only: nlme's `groupedData` orders subjects by
   their mean, no order a model uses (Orthodont; #20).
 
@@ -403,6 +405,24 @@ Decided from the agents' `RULE GAP` notes and Alex's spot checks in the tickets 
   exploratory-only chapter counts; #25) or a documentation example that states the model
   (PyMC, bambi, the Stata manuals, MixedModels.jl docs); `no` for data used only in tests
   and throughout Tier O; `yes` throughout Tier D (#24, #26).
+
+**Code against prose** (#15)
+
+- Deposited code that produced the published results beats the paper's prose for formula,
+  grouping and covariates; the prose goes to `notes` (meyel's combined term, kleisner's M0,
+  valdebenito's `j_date`). An evident bug files the intended model, the bug in `notes`
+  (voorspoels' `whichRandom` case); where a package version changed what a call fits, the
+  published output decides (sequestro's four subject sds under brms 2.16.1). Code not
+  deposited: the paper stands at `medium`.
+- A fit on a subset stays on the whole object, the subset named in `notes` (szollosi's trial >
+  40, ARM's survey 9158 and Minnesota).
+- Uncorrelated random effects are `||` (posteriordb radon_all, ARM hiv and earnings). A fixed
+  scale, a sum-to-zero constraint, a structured covariance or correlated location-scale terms
+  keep the grouping factor and are named in the formula (PrussianHorses, rugby, state_wide,
+  gumundsdottir's `(1 | c | NewID)`).
+- The parts of a multivariate fit are rows per response, the formula naming the part (hubbard,
+  rugby, sesame); a model with no brms family leaves `family` empty (external_pp's censored
+  Gumbel).
 
 **Exclusions**
 
@@ -629,3 +649,65 @@ and `cox` (survival rows, censoring in `notes`). The three Zuur zero-inflation r
 published model (SeaGrass, Turcoparasitos, Spiders) stay on the rule: the book is not open and
 no source read states their family. Reading errors the code turned up in other columns, and the
 Windows CI failure, are #15.
+
+**Code read** (#15, 2026-10-09). A `.gitattributes` keeps test fixtures' bytes (`-text`): a
+Windows checkout had rewritten the line endings of the ASCII `fits.rda`, whose magic then did
+not parse; CI is green on all three systems. The readings #10's code read questioned were
+checked at the source by four agents, Alex deciding; `shards/registry_code_read.csv` replaced
+54 rows and added 3 (registry 712 → 715), under the rules "Code against prose" above.
+Verdicts per finding:
+
+- szollosi_2019_osf_2 exp2.csv: corrected; the Rmd's glmer (L313, L332) has no `block:condition`,
+  `condition` is categorical, the fit is on trial > 40 and conditions 1 and 3.
+- meyel_2026_dryad: II.1, II.2 #2 and III and IV corrected to the code's combined terms
+  (`PopulationID:FamilyID:BoxID`, `PopulationID:FamilyID` for II.2, as II.2 #1 since the
+  2026-10-08 spot check), the Gamma shift `+ 0.001` (L287; the paper's `+ 0.01` in notes); I.1
+  and I.2 stand.
+- sequestro_2024_osf_{2,11,12,16}: stands; current brms codes `(0 + Intercept + condition * RTc
+  | ppid)` with five sds, but the supplement's tables (brms 2.16.1) report four, the filed
+  `(1 + condition * RT | ppid)`; notes carry the caveat and the trial filters.
+- kleisner_2026_osf #1–3: corrected; script 05 fits M0, iid correlated effects by
+  `Nationality` (one-to-one with POPULATION); the linguistic covariance of M1–M3 left the formula.
+- koczynska_2026_osf_{48,49}: corrected; `models1/2` are not deposited, but the deposited fit2
+  processing script predicts from lagged controls, so `gdppc_lag1`, `gdpgrowth_lag1`,
+  `unemp_lag1`; `medium`, the random slopes resting on the paper's Eq. 3.
+- voorspoels_2015_osf_3 d: corrected; the intended model with `subjectID:premset` and
+  `item:premset`; as deposited, `whichRandom = c('ITEM','SS')` matches no column and the fit
+  has no random effects (notes). The `premset:sampling` interaction stays as the 2026-10-08
+  hand draw kept it, though the code's Bayes factor prefers the model without it.
+- lagisz_2020_osf_3 #1–2: corrected; the scripts exist (OSF's GitHub add-on lists them at 0
+  bytes); crossed `ScalePoint`, `ArticleID`, `ExperimentID`, `EffectID`, row 2 with the
+  phylogeny on `Species_Latin`; `high`.
+- valdebenito_2020_dryad_2 #1–3: corrected; the deposited code's `random = ~site + j_date`,
+  `j_date` the day of year (72 levels), `date` to `ignore`; `high`.
+- johannes_2021b_osf_6 #3: corrected in notes; predictors centred, not standardised.
+- gumundsdottir_2026_osf*: corrected; `(1 | c | NewID)` in location and scale; _6's slope
+  variable `time` built from `wave` (0, 1, 2, 3, 6), `wave=continuous`.
+- naranowicz_2024_osf_2 #1–2: stands, the finding was wrong; the deposited script is complete
+  (2466 lines, its checksum the deposit's) and L948 and L1353 are the filed formulas.
+- hubbard_2023_osf_2 #1–3: stands in its columns; the formula names each row's part of the
+  multivariate fits `p1a`, `p1b`, `p1c`, which share no residual correlation or random effect.
+- posteriordb radon_all: corrected to `||`. state_wide_presidential_votes: corrected; the state
+  scale by region, year GPs by region and state, 17 variances on one gamma × Dirichlet budget.
+  fims_Aus_Jpn_irt: corrected to the slope-intercept form `alpha*theta - beta`.
+- stan_arm: polls.dta now renders the script's M2 (`age`, `edu`, `age:edu`, `state`; region and
+  the previous vote built in the script, formula only) on survey 9158; srrs2.dat's formula is
+  the Minnesota fit on county, the grouping `state:county` as #24 decided; allvar.csv is
+  `hiv.stan` on `treatmnt == 1` (`visage` alone); sesame.dta and sesame.data.json are the
+  structural bivariate fit (`postlet ~ regular`, `regular ~ encour`), sesame.dta #2 added,
+  `pretest` dropped (from `sesame_street2`, whose fit is commented out); Ch.21 radon.data.json
+  adds `u`; hiv.data.json and earnings.data.json are `||`; pilots.dat's formula names the
+  Gaussian on 40 cell proportions, `low`; Ch.19 pilots.data.json stands.
+- pymc_examples: item_response_nba.csv keeps `decision` (the code's `foul_called` is no
+  column), the recode in the formula; external_pp.csv is the notebook's final m7 with `FEMALE`
+  and `||`, `family` empty for the censored Gumbel; rugby.csv is the home part of a joint
+  Poisson fit with sum-to-zero team effects, the away part added as #2; cracker_choice_short.csv
+  names person effects per alternative at a fixed sd 0.1.
+- rethinking: Primates301.csv #1 is the Rd's Poisson social-learning model with a GP over
+  species (`published_model` `yes`), #2 the book's m14.11 brain-size model added (both on
+  `genus`, `low`); kl_dyads #1–2 are m14.7 without `dlndist`, `dass` or offset; PrussianHorses.csv
+  is the Rd's m0, `published_model` `yes`, `high`.
+
+Left open: valdebenito's MCMCglmm `categorical` fits with residual variance fixed at 1 (a logit
+with an observation-level term) keep `family` blank; fims' item parameters have fixed priors
+and no estimated scale, `ii` stays a grouping factor.
