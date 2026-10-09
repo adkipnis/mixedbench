@@ -35,6 +35,30 @@ One registry row under the contract: a design, a family, a prior and the splits,
 as `<source>/<object>/<model_index>`. The unit everything is computed and scored on.
 _Avoid_: dataset, task, posterior (posteriordb's word for the same thing)
 
+**Materialised problem**:
+A problem written to files: one table of the coded columns in raw units, with the response,
+the trials, the grouping factors and the two split regimes, and beside it the record a table
+cannot hold (family, prior, column roles, the per-regime scales, the contract hash). The
+package's interface to a problem; a cache rebuilt from the pins, never redistributed.
+_Avoid_: dataset, export, the parquet
+
+**Regime**:
+The rows a fit sees: the full table (posterior track), or the seen rows of a held-out-rows
+or a held-out-groups split (predictive track). Standardisation is computed per regime.
+_Avoid_: split (the partition), fold
+
+**Verified row**:
+A registry row admitted on its reading: `hand` (the hand sample and Tier D), `high` (a high
+confidence reading), or `second-reading` (a blind second reading, adjudicated where it
+disagreed). Recorded per row in the `verified` column.
+_Avoid_: validated, trusted
+
+**Candidate list**:
+The verified rows whose response is in the contract's family rule, with their contract
+hashes, written by the admission script before any reference exists. A suite is the subset
+whose references pass the bar.
+_Avoid_: the suite, shortlist
+
 **Suite**:
 A frozen, versioned set of problems with reference posteriors and diagnostics, admitted by
 verification, the diagnostics bar and the compute cap. Immutable once released.
