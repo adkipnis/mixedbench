@@ -22,16 +22,16 @@ from pyreadr import LibrdataError, PyreadrError
 from pyreadr._pyreadr_parser import PyreadrParser
 
 R_FILES = {'.rda', '.rdata', '.rds'}  # meant for pyreadr, or rdata
-_DATA_FILES = {'.r', '.tab', '.txt', '.csv'}  # meant for utils::data()
+DATA_FILES = {'.r', '.tab', '.txt', '.csv'}  # meant for utils::data()
 TABLE_FILES = {  # meant for pandas
     '.csv', '.tsv', '.tab', '.txt', '.dat', '.xlsx', '.xls', '.json', '.dta', '.sav',
-    '.arrow', '.pq', '.parquet',
+    '.arrow', '.pq',
 }  # fmt: skip
 DOC_STEMS = ('readme', 'codebook', 'description', 'notes', 'metadata', 'variables', 'dictionary')
 NOTE_SHEETS = ('contents', 'readme', 'codebook', 'notes', 'description')  # a workbook's codebook
 # LibrdataError is not a PyreadrError; the IndexError is pyreadr's value-label handler indexing
 # past the column names of a labelled data frame inside an .RData (a Tier D deposit, 2026-10-08)
-_R_ERRORS = (PyreadrError, LibrdataError, IndexError)
+R_ERRORS = (PyreadrError, LibrdataError, IndexError)
 # rdata on what it cannot parse: bytecode and ALTREP in the Tier D deposits' model fits, an
 # object type it does not know (ValueError); an environment (boot's cd4.nested, AssertionError)
 RDATA_ERRORS = (ValueError, AssertionError)
@@ -52,7 +52,7 @@ def read(
     if suffix in R_FILES:
         try:
             return readR(file), 'pyreadr'
-        except _R_ERRORS:
+        except R_ERRORS:
             return readRdata(file), 'rdata'
     if cran and suffix == '.r':
         try:
@@ -74,7 +74,7 @@ def isData(file: Path, *, cran: bool = False) -> bool:
     dict, nor a zip's resource forks."""
     readable = R_FILES | TABLE_FILES
     if cran:
-        readable = R_FILES | _DATA_FILES
+        readable = R_FILES | DATA_FILES
     if bare(file).suffix not in readable:
         return False
     if file.name.endswith('.init.json') or '__MACOSX' in file.parts:
@@ -242,7 +242,7 @@ def readTable(file: Path) -> pd.DataFrame | None:
         return readSpss(file)
     if suffix == '.arrow':
         return pd.read_feather(file)
-    if suffix in ('.pq', '.parquet'):
+    if suffix == '.pq':
         return pd.read_parquet(file)
     return readDelimited(file)
 
