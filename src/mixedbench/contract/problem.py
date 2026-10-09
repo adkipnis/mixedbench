@@ -5,8 +5,10 @@ function of the pins, the row and the contract."""
 
 from __future__ import annotations
 
+import hashlib
 from dataclasses import dataclass
 
+import numpy as np
 import pandas as pd
 from mixedbench.registry.row import Row, parts
 
@@ -102,6 +104,18 @@ PRIOR = {
 
 
 # =====================================================================================
+# the splits and scales (ADR 0001): two regimes, each a column of `seen` and `held`
+# =====================================================================================
+REGIME = pd.CategoricalDtype(['seen', 'held'])
+
+
+@dataclass(frozen=True)
+class Scale:
+    mean: float
+    sd: float  # the sample standard deviation, as R's `scale`
+
+
+# =====================================================================================
 # the problem
 # =====================================================================================
 @dataclass(frozen=True)
@@ -115,6 +129,9 @@ class Problem:
     response: str
     factors: tuple[str, ...]
     levels: dict[str, tuple]  # per recoded column, the level of each code (binary: 0 then 1)
+    # per regime (`full`, `rows`, `groups` where the problem has it), the moments of each
+    # continuous covariate and a continuous response over the rows a fit sees
+    scales: dict[str, dict[str, Scale]]
     dropped_share: float  # of the loaded rows, those missing a model value
     trials: str | None  # the trials column of a binomial response
     family: str  # brms's names, by the family rule of ADR 0001
@@ -137,10 +154,14 @@ class Problem:
 class Builder:
     def __init__(self, row: Row, table: pd.DataFrame) -> None:
         self.row = row
+        self.id = f'{row.source}/{row.object}/{row.model_index}'
         self.table = self.keptRows(withComposites(table, row.grouping_factors))
+        if self.table.empty:  # nlme Phenobarb: doses and responses on different rows
+            raise ValueError(f'{self.id}: no row has every model value')
         self.dropped_share = (len(table) - len(self.table)) / len(table)
         self.coded: dict[str, dict[str, pd.Series]] = {}  # covariate -> its coded columns
         self.levels: dict[str, tuple] = {}
+        self.continuous: list[str] = []  # the continuous covariates
         self.correlations: dict[str, tuple[str, ...]] = {}
 
     def keptRows(self, table: pd.DataFrame) -> pd.DataFrame:
@@ -165,15 +186,18 @@ class Builder:
         if self.row.trials:
             response[self.row.trials] = self.table[self.row.trials]
         factors = {factor: self.codeFactor(factor) for factor in self.row.grouping_factors}
+        regimes = self.splits(factors)
+        table = pd.DataFrame(design | response | factors | regimes).reset_index(drop=True)
         family, link = FAMILY[self.row.response_type]
         return Problem(
-            id=f'{self.row.source}/{self.row.object}/{self.row.model_index}',
+            id=self.id,
             row=self.row,
-            table=pd.DataFrame(design | response | factors).reset_index(drop=True),
+            table=table,
             design=tuple(design),
             response=self.row.response,
             factors=self.row.grouping_factors,
             levels=self.levels,
+            scales=self.scales(table),
             dropped_share=self.dropped_share,
             trials=self.row.trials or None,
             family=family,
@@ -233,6 +257,7 @@ class Builder:
         values = self.table[column]
         kind, _ = columnType(values, self.row.types.get(column, ''))
         if kind == 'continuous':
+            self.continuous.append(column)
             return {column: values.astype(float)}
         loaded = self.levelsOf(column)
         if kind == 'binary':
@@ -268,3 +293,61 @@ class Builder:
                     products[f'{name}:{partName}'.removeprefix(':')] = column * partColumn
             columns = products
         return columns
+
+    def splits(self, factors: dict[str, pd.Series]) -> dict[str, pd.Series]:
+        """Seeded by the first 8 bytes of sha256 of the id; rows draw before groups. A first
+        factor of two groups has no `groups` regime: holding one would leave one."""
+        seed = int.from_bytes(hashlib.sha256(self.id.encode()).digest()[:8], 'big')
+        rng = np.random.default_rng(seed)
+        regimes = {'rows': self.regime(self.heldRows(rng, factors))}
+        first = factors[self.row.grouping_factors[0]]
+        if first.max() + 1 > 2:
+            regimes['groups'] = self.regime(self.heldGroups(rng, first))
+        return regimes
+
+    def heldRows(self, rng: np.random.Generator, factors: dict[str, pd.Series]) -> np.ndarray:
+        """Every group of every factor keeps seen the row it shows first in the seeded order;
+        of the other rows, the first nearest whole number to 10% of all rows are held."""
+        n = len(self.table)
+        order = self.seededOrder(rng, n)  # (n,) row positions
+        spare = np.ones(n, dtype=bool)  # (n,) in seeded order
+        for codes in factors.values():
+            spare &= pd.Series(codes.to_numpy()[order]).duplicated().to_numpy()
+        held = np.zeros(n, dtype=bool)  # (n,)
+        held[order[spare][: (n + 5) // 10]] = True
+        return held
+
+    def heldGroups(self, rng: np.random.Generator, codes: pd.Series) -> np.ndarray:
+        """The nearest whole number to 10% of the groups, at least one, at least two left."""
+        groups = codes.max() + 1
+        count = min(max(1, (groups + 5) // 10), groups - 2)
+        held = self.seededOrder(rng, groups)[:count]
+        return np.isin(codes.to_numpy(), held)  # (n,)
+
+    @staticmethod
+    def seededOrder(rng: np.random.Generator, n: int) -> np.ndarray:
+        """An argsort of uniform draws, whose stream numpy keeps across versions (a shuffle's
+        algorithm it does not promise)."""
+        return np.argsort(rng.random(n), kind='stable')  # (n,)
+
+    def regime(self, held: np.ndarray) -> pd.Series:
+        regime = pd.Categorical.from_codes(held.astype(int), dtype=REGIME)
+        return pd.Series(regime, index=self.table.index)
+
+    def scales(self, table: pd.DataFrame) -> dict[str, dict[str, Scale]]:
+        """The standardisation per regime on the rows a fit sees (ADR 0001, amended
+        2026-10-09); the table stays in raw units."""
+        columns = list(self.continuous)
+        if self.row.response_type == 'continuous':
+            columns.append(self.row.response)
+        seen = {'full': pd.Series(True, index=table.index)}
+        for regime in ('rows', 'groups'):
+            if regime in table:
+                seen[regime] = table[regime] == 'seen'
+        scales = {}
+        for regime, rows in seen.items():
+            values = table.loc[rows, columns]
+            scales[regime] = {
+                c: Scale(float(values[c].mean()), float(values[c].std())) for c in columns
+            }
+        return scales
