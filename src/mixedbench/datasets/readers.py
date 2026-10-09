@@ -76,6 +76,25 @@ def numbersAsFloat(df: pd.DataFrame) -> pd.DataFrame:
 
 
 # ==============================================================================================
+# utils::data() text files
+# ==============================================================================================
+
+
+def readData(file: Path) -> Frames:
+    """A CRAN package's `data/*.txt`, `.tab` or `.csv` as utils::data() reads it:
+    read.table(header = TRUE, as.is = FALSE), with `sep = ';'` for a `.csv`. Strings become
+    categoricals with sorted levels, as read.table sorts them: in codepoint order, R's in the
+    C locale, where R's ICU collation sorts agridat's lillemo.wheat `Ba04` before `BT06`."""
+    sep = r'\s+'
+    if file.suffix.lower() == '.csv':
+        sep = ';'
+    df = pd.read_csv(file, sep=sep, quotechar='"', na_values=['NA'], keep_default_na=False)
+    strings = df.columns[df.dtypes.map(pd.api.types.is_string_dtype)]
+    factors = {column: df[column].astype('category') for column in strings}
+    return {file.stem: df.assign(**factors)}
+
+
+# ==============================================================================================
 # pandas files
 # ==============================================================================================
 

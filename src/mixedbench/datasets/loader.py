@@ -407,14 +407,16 @@ class Loader:
         return objects
 
     def _readFile(self, file: Path, source: Source, label: str) -> tuple[Frames, Reader]:
-        """An R file through pyreadr; a CRAN data/ text file follows utils::data() rules only R
-        knows, so R saves it as .rds first; pandas reads the rest."""
+        """An R file through pyreadr; another file in a CRAN data/ folder by utils::data()'s
+        rules, a `.R` file through R, a text file as read.table reads it; pandas reads the rest."""
         if source.name == 'datasets':  # every file is an .rds R dumped
             return self._readDumped(file), 'rscript'
         if file.suffix.lower() in R_FILES:
             return self._readRFile(file, source)
-        if source.kind == 'cran':
+        if source.kind == 'cran' and file.suffix.lower() == '.r':
             return self._readViaR(file, source), 'rscript'
+        if source.kind == 'cran':
+            return readers.readData(file), 'pandas'
         return readers.readTables(file, label, source.layout), 'pandas'
 
     def _readRFile(self, file: Path, source: Source) -> tuple[Frames, Reader]:

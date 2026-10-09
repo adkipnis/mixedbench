@@ -231,18 +231,6 @@ def test_second_loader_over_the_same_cache_fetches_nothing(tmp_path):
 
 
 @needsRscript
-def test_csv_data_object_takes_the_rscript_route(tmp_path):
-    """A `.csv` in `data/` is read by R's `data()` rules (`sep = ';'`, strings as factors);
-    the loader dumps it through Rscript and reports that route."""
-    loader = Loader(tmp_path, fetch=serveCurrent)
-    trials = objectsByName(loader, FIXTURE)['trials']
-    assert trials.reader == 'rscript'
-    df = loader.load(FIXTURE, 'trials')
-    assert list(df['arm'].cat.categories) == ['control', 'treated']
-    assert list(df['outcome']) == [0, 1, 1, 1, 0]
-
-
-@needsRscript
 def test_base_r_datasets_are_dumped_from_the_namespace(tmp_path):
     """Base R's `datasets` ships no tarball; its tree is a dump of the namespace made by R."""
     base = Source(kind='cran', name='datasets', pin='base')
@@ -276,6 +264,47 @@ def test_base_r_names_differing_in_case_only_both_survive_the_dump(tmp_path):
     assert (objects['co2'].n_rows, objects['co2'].n_cols) == (468, 1)  # the Mauna Loa series
     assert 'Potvin' in loader.help(base, 'CO2')
     assert 'Mauna Loa' in loader.help(base, 'co2')
+
+
+# ----------------------------------------------------------------------------------------------
+# utils::data() files read without R (#8)
+# ----------------------------------------------------------------------------------------------
+
+
+def loadAlone(tmp_path: Path, monkeypatch, name: str, file: str) -> pd.DataFrame:
+    """The fixture object loaded through a manifest with no Rscript on the path."""
+    monkeypatch.setenv('PATH', '')
+    data = member(TARBALL, f'fixture/{file}')
+    manifest = {(FIXTURE, name): manifestRow(file, data)}
+    loader = Loader(tmp_path, fetch=serveCurrent, manifest=manifest)
+    return loader.load(FIXTURE, name)
+
+
+def test_a_data_txt_loads_as_read_table_reads_it_without_r(tmp_path, monkeypatch):
+    """agridat ships its tables as `data/*.txt`, which utils::data() reads with
+    read.table(header = TRUE, as.is = FALSE): quoted strings become factors with sorted
+    levels, `NA` is missing. The loader does the same in Python (ADR 0003)."""
+    plots = loadAlone(tmp_path, monkeypatch, 'plots', 'data/plots.txt')
+    assert list(plots.columns) == ['field', 'variety', 'plants', 'yield']
+    assert list(plots['field']) == ['north A', 'south B', 'north A', 'west']
+    assert list(plots['variety'].cat.categories) == ['a', 'b', 'c']
+    assert plots['plants'].isna().sum() == 1
+    assert list(plots['yield'].dropna()) == [1.5, 2.0, 3.25]
+
+
+def test_a_data_csv_is_read_with_semicolons_without_r(tmp_path, monkeypatch):
+    """utils::data() reads a `.csv` in `data/` with `sep = ';'`, strings as factors."""
+    trials = loadAlone(tmp_path, monkeypatch, 'trials', 'data/trials.csv')
+    assert list(trials['arm'].cat.categories) == ['control', 'treated']
+    assert list(trials['outcome']) == [0, 1, 1, 1, 0]
+
+
+@needsRscript  # enumerating the fixture still dumps visits.rda through R
+def test_a_data_txt_object_names_the_pandas_reader(tmp_path):
+    """The registry's `reader` column records the route per object; a text file is pandas."""
+    loader = Loader(tmp_path, fetch=serveCurrent)
+    plots = objectsByName(loader, FIXTURE)['plots']
+    assert (plots.file, plots.reader, plots.n_rows, plots.n_cols) == ('data/plots.txt', 'pandas', 4, 4)  # fmt: skip
 
 
 # ----------------------------------------------------------------------------------------------
