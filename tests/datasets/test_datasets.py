@@ -694,6 +694,17 @@ def test_a_banner_of_hash_lines_above_the_table_is_skipped(tmp_path):
     assert loader.help(formats, 'formats/cd4.txt') == '# banner\n#\n# CD4 counts by subject\n#'
 
 
+def test_r_write_table_output_loads_with_its_quotes_and_row_names(tmp_path):
+    """ARM's ideo2.dat is R's write.table output: quoted strings, one holding a space, and row
+    names under a header one field short. Quotes delimit a field, as read.table reads them, and
+    the row names are no column."""
+    formats = Source(kind='git', name=EXAMPLE_REPO, pin='c0ffee1', path='formats')
+    loader = Loader(tmp_path, fetch=serveExample)
+    ideology = loader.load(formats, 'formats/ideology.dat')
+    assert list(ideology.columns) == ['state', 'score']
+    assert list(ideology['state']) == ['NEW HAM', 'NEW HAM', 'NEVADA']
+
+
 def test_a_declared_layout_reads_a_headerless_file(tmp_path):
     """The Bristol CMM `.DAT` files are fixed-width with their columns in a prose `.ASC`, and
     Goldstein's partnership file whitespace-separated with a codes list; the frame declares
