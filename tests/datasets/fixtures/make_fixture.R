@@ -6,7 +6,7 @@ pkg <- file.path(build, 'fixture')
 dir.create(file.path(pkg, 'data'), recursive = TRUE, showWarnings = FALSE)
 dir.create(file.path(pkg, 'man'), showWarnings = FALSE)
 writeLines(c('Package: fixture', 'Version: 1.0', 'Title: Loader Test Fixture',
-             'Description: Five tiny data objects, each documented.', 'License: CC0'),
+             'Description: Seven tiny data objects, each documented.', 'License: CC0'),
            file.path(pkg, 'DESCRIPTION'))
 set.seed(1)
 pets <- data.frame(
@@ -30,6 +30,32 @@ save(visits, file = file.path(pkg, 'data', 'visits.rda'), ascii = TRUE)
 # R's data() reads a .csv in data/ with read.table(header = TRUE, sep = ';', as.is = FALSE).
 writeLines(c('arm;outcome', 'control;0', 'treated;1', 'control;1', 'treated;1', 'control;0'),
            file.path(pkg, 'data', 'trials.csv'))
+# A .txt as agridat ships them: tab-separated, quoted header and strings, NA for missing;
+# read.table(header = TRUE, as.is = FALSE) sorts the levels, so `variety` comes out a, b, c.
+writeLines(c('"field"\t"variety"\t"plants"\t"yield"', '"north A"\t"b"\t12\t1.5',
+             '"south B"\t"a"\t10\tNA', '"north A"\t"c"\t9\t2', '"west"\t"b"\tNA\t3.25'),
+           file.path(pkg, 'data', 'plots.txt'))
+# A .R in the deparse subset of base R's data/ files (ChickWeight.R, infert.R, sleep.R): R
+# evaluates it once more and saves the frame as growth.rda beside this script, outside the
+# package, so that the loader tests compare against R's own reading without needing R.
+writeLines(c(
+  '### Growth of four plants, in the style of base R\'s ChickWeight.R',
+  '"growth" <-',
+  '  structure(list(height = c(1.5, 2, NA, 3.25, -0.5, 4, 2.5, 1e-3),',
+  '    pot = c(1:3, 5:9), # one pot lost',
+  '    plant = ordered(rep.int(1:4, 2), levels = c(3, 1, 4, 2),',
+  '      labels = c("p3", "p1", "p4", "p2")),',
+  '    soil = factor(c(1, 2, 2, 1, NA, 2, 1, 2), levels = 1:2, labels = c("clay", "sand")),',
+  '    block = gl(2, 4), dose = factor(rep(c(10, 2), 4)), site = c(rep("a b", 7), NA)),',
+  '  row.names = 1:8, class = c("groupedData", "data.frame"),',
+  '  formula = height ~ pot | plant, outer = ~ soil, labels = list(y = "Height"))',
+  'environment(attr(growth, "formula")) <- emptyenv()',
+  'environment(attr(growth, "outer")) <- emptyenv()'),
+  file.path(pkg, 'data', 'growth.R'))
+twin <- new.env()
+sys.source(file.path(pkg, 'data', 'growth.R'), envir = twin)
+# serialization v2: librdata rejects v3 with the formula attributes, as the loader's dump knows
+save(growth, file = file.path(dirname(out), 'growth.rda'), envir = twin, version = 2)
 writeLines(c('\\name{pets}', '\\alias{pets}', '\\docType{data}', '\\title{Six pets}',
              '\\description{Species, age in years and weight in kg of six pets.}',
              '\\usage{data(pets)}', '\\format{A data frame with 6 rows and 3 columns.}',
@@ -41,6 +67,13 @@ writeLines(c('\\name{scores}', '\\alias{scores}', '\\docType{data}', '\\title{Fo
 writeLines(c('\\name{trials}', '\\alias{trials}', '\\docType{data}', '\\title{Five trials}',
              '\\description{Arm and binary outcome of five trials.}', '\\keyword{datasets}'),
            file.path(pkg, 'man', 'trials.Rd'))
+writeLines(c('\\name{plots}', '\\alias{plots}', '\\docType{data}', '\\title{Plots}',
+             '\\description{Field, variety, plant count and yield of four plots.}',
+             '\\keyword{datasets}'),
+           file.path(pkg, 'man', 'plots.Rd'))
+writeLines(c('\\name{growth}', '\\alias{growth}', '\\docType{data}', '\\title{Growth}',
+             '\\description{Height of four plants in eight pots.}', '\\keyword{datasets}'),
+           file.path(pkg, 'man', 'growth.Rd'))
 writeLines(c('\\name{wide}', '\\alias{wide}', '\\docType{data}', '\\title{Wide}',
              '\\description{Three ids with a two-column matrix response.}', '\\keyword{datasets}'),
            file.path(pkg, 'man', 'wide.Rd'))
