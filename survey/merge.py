@@ -22,7 +22,8 @@ from itertools import combinations
 from pathlib import Path
 
 import pandas as pd
-from measure import COLUMN_COLUMNS, DIMENSION_COLUMNS, Measurer, withComposites
+from measure import COLUMN_COLUMNS, DIMENSION_COLUMNS, Measurer
+from mixedbench.contract import withComposites
 from mixedbench.datasets import DataObject, Loader
 from mixedbench.registry.row import (
     COLUMN_LIST_COLUMNS,
