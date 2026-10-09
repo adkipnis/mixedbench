@@ -66,8 +66,8 @@ documented model is the reader's proposal.
 _Avoid_: true model, reference model
 
 **Hand sample**:
-The seeded 100-row sample of the registry, stratified by tier × confidence, that Alex checked
-at the source; its per-field agreement is the registry's verification bar (ADR 0002).
+The seeded 100-row sample of Tiers R, E, T and O, stratified by tier × confidence, that Alex
+checked at the source; its per-field agreement is the registry's verification bar (ADR 0002).
 _Avoid_: spot check (the 20 rows per tier read before it), audit
 
 ### References and results
