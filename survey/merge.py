@@ -4,9 +4,10 @@ A shard is `shards/<table>_<label>.csv` with exactly the agent columns of its ta
 (schema.py). The script loads every named object through the package's dataset loader,
 validates the shard against the table it returns, refuses a failing shard printing the
 offending rows, and otherwise upserts on the table's row key, so merging the same shard twice
-changes nothing and a corrected shard replaces its earlier rows. The census tables land in
-`registry/`, the survey's bookkeeping tables (duplicates, dropped) in `survey/`. Run from the
-repo root:
+changes nothing and a corrected shard replaces its earlier rows. Every merge then folds
+confirmed duplicates, measures the whole registry and rewrites the manifest and the summary.
+The census tables land in `registry/`, the survey's bookkeeping tables (duplicates, dropped)
+in `survey/`. Run from the repo root:
 
     uv run python survey/merge.py survey/shards/registry_lme4.csv
 """
@@ -14,7 +15,6 @@ repo root:
 from __future__ import annotations
 
 import argparse
-import csv
 import hashlib
 import re
 import sys
@@ -41,11 +41,12 @@ from schema import (
     REQUIRED,
     TABLES,
     TERM_COLUMNS,
-    TIERS,
     TYPES_COLUMN,
     Table,
+    readCsv,
+    writeCsv,
 )
-from sources import readFrame
+from sources import Key, readFrame
 from summarise import Summariser
 
 # =====================================================================================
@@ -64,40 +65,6 @@ SUPERSEDES = {
 RECONCILED = ('registry', 'duplicates', 'dropped')  # merges that can change the duplicate fold
 CENSUS = ('registry', 'excluded')  # shard tables in registry/; duplicates, dropped in survey/
 MANIFEST_COLUMNS = ['source', 'object', 'file', 'sha256', 'size']
-Key = tuple[str, str]  # (source label, object name)
-
-
-def isNumeric(values: pd.Series) -> bool:
-    return pd.api.types.is_numeric_dtype(values)
-
-
-def isCount(values: pd.Series) -> bool:
-    if not isNumeric(values):
-        return False
-    return bool(((values >= 0) & (values == values.round())).all())
-
-
-def isBinary(values: pd.Series) -> bool:
-    return values.nunique() == 2
-
-
-def isOrdinal(values: pd.Series) -> bool:
-    return values.nunique() <= MAX_ORDINAL_LEVELS
-
-
-def isCategorical(values: pd.Series) -> bool:
-    return not pd.api.types.is_float_dtype(values)
-
-
-# What the response column must show for its declared type, and the complaint if it does not.
-RESPONSE_CHECKS = {
-    'continuous': (isNumeric, 'is not numeric'),
-    'binary': (isBinary, 'does not have two distinct values'),
-    'count': (isCount, 'is not integer-valued'),
-    'binomial': (isCount, 'is not integer-valued'),
-    'ordinal': (isOrdinal, f'has more than {MAX_ORDINAL_LEVELS} levels'),
-    'categorical': (isCategorical, 'is not categorical'),
-}
 
 
 class ShardRefused(Exception):
@@ -110,24 +77,15 @@ class ShardRefused(Exception):
         )
 
 
-def readCsv(path: Path) -> pd.DataFrame:
-    return pd.read_csv(path, dtype=str, keep_default_na=False)
-
-
-def writeCsv(frame: pd.DataFrame, path: Path) -> None:
-    frame.to_csv(path, index=False, quoting=csv.QUOTE_ALL)
-
-
 # =====================================================================================
-# pipeline: shard -> validate -> upsert -> reconcile duplicates -> measure -> summarise
+# pipeline: shard -> validate -> upsert -> supersede -> reconcile duplicates -> measure
+# -> manifest -> summary -> report
 # =====================================================================================
 class Merger:
     def __init__(self, registry: Path, survey: Path, loader: Loader | None = None) -> None:
         self.registry, self.survey = Path(registry), Path(survey)
         self.loader = loader or Loader(self.registry / 'cache')
-        frame = readFrame(self.registry)
-        self.tiers, self.sources, self.licences = frame.tiers, frame.sources, frame.licences
-        self.order = {label: i for i, label in enumerate(frame.tiers)}  # sources.yaml order
+        self.frame = readFrame(self.registry)
 
     def canonical(self, table: Table) -> pd.DataFrame:
         """The table's file in its current columns: a file of an older shape gains the new
@@ -142,23 +100,19 @@ class Merger:
         return dir / f'{name}.csv'
 
     def objects(self, label: str) -> dict[str, DataObject]:
-        return {o.name: o for o in self.loader.objects(self.sources[label])}
+        return {o.name: o for o in self.loader.objects(self.frame.sources[label])}
 
     def verbatimLicence(self, label: str) -> str | None:
         """The source's `licence:` key, else the `License` field of its CRAN package's
         DESCRIPTION, verbatim (base R's has none, so `datasets` carries a key); None for a git
         or url source nobody has looked at."""
-        source = self.sources[label]
-        if label in self.licences:
-            return self.licences[label]
+        source = self.frame.sources[label]
+        if label in self.frame.licences:
+            return self.frame.licences[label]
         if source.kind == 'cran':
             description = (self.loader.tree(source) / 'DESCRIPTION').read_text()
             return re.search(r'^License:\s*(.+)$', description, re.MULTILINE).group(1)
         return None
-
-    def rank(self, key: Key) -> tuple[int, int, str]:
-        """Frame order of an object: its tier, its source's place in `sources.yaml`, its name."""
-        return (TIERS.index(self.tiers[key[0]]), self.order[key[0]], key[1])
 
     # ---------------------------------------------------------------------------------
     # load
@@ -180,7 +134,7 @@ class Merger:
         for _, row in self.shard.iterrows():
             a = (row['source_a'], row['object_a'])
             b = (row['source_b'], row['object_b'])
-            ordered.append(sorted([a, b], key=self.rank))
+            ordered.append(sorted([a, b], key=self.frame.rank))
         self.shard[['source_a', 'object_a']] = [a for a, _ in ordered]
         self.shard[['source_b', 'object_b']] = [b for _, b in ordered]
 
@@ -188,7 +142,7 @@ class Merger:
     # validate
     # ---------------------------------------------------------------------------------
     def validate(self) -> None:
-        self.validateHeader()
+        self.refuse(self.validateHeader())  # the checks below index every agent column
         problems = self.validateValues()
         if self.table.name == 'registry':
             problems += self.validateAgainstTables()
@@ -197,18 +151,24 @@ class Merger:
             problems += self.rivalProblems()
         if self.table.name == 'dropped':
             problems += self.unknownObjects()
+        self.refuse(problems)
+
+    @staticmethod
+    def refuse(problems: list[dict]) -> None:
         if problems:
             raise ShardRefused(pd.DataFrame(problems))
-        self.fillScriptColumns()
 
-    def validateHeader(self) -> None:
+    def validateHeader(self) -> list[dict]:
+        """The shard's header is the table's agent columns; line 1 is the header line."""
         present = set(self.shard.columns)
         expected = set(self.table.agentColumns)
-        if present == expected:
-            return
-        problems = [('header', '', 'missing', c) for c in sorted(expected - present)]
-        problems += [('header', '', 'unknown', c) for c in sorted(present - expected)]
-        raise ShardRefused(pd.DataFrame(problems, columns=['line', 'column', 'problem', 'value']))
+        problems = [self.headerProblem(c, 'missing') for c in sorted(expected - present)]
+        problems += [self.headerProblem(c, 'unknown') for c in sorted(present - expected)]
+        return problems
+
+    @staticmethod
+    def headerProblem(column: str, text: str) -> dict:
+        return {'line': 1, 'key': '', 'column': column, 'value': '', 'problem': text}
 
     def validateValues(self) -> list[dict]:
         name = self.table.name
@@ -238,7 +198,8 @@ class Merger:
         earlier, since the merge rewrites every row's licence."""
         merged = set(self.canonical(TABLES['registry'])['source'])
         named = merged | set(self.shard['source'])
-        labels = named & set(self.sources)  # a label not in sources.yaml is flagged by its row
+        # a label not in sources.yaml is flagged by its row
+        labels = named & set(self.frame.sources)
         problems = []
         for label in sorted(labels):
             verbatim = self.verbatimLicence(label)
@@ -293,11 +254,11 @@ class Merger:
         return problems
 
     def validateRow(self, line: int, row: pd.Series) -> list[dict]:
-        if row['source'] not in self.sources:
+        if row['source'] not in self.frame.sources:
             return [self.problem(line, 'source', 'not in sources.yaml')]
         if row['object'] not in self.objects(row['source']):
             return [self.problem(line, 'object', f'not an object of {row["source"]}')]
-        source = self.sources[row['source']]
+        source = self.frame.sources[row['source']]
         types = parseTypes(row[TYPES_COLUMN])
         problems = []
         for kind in types.values():
@@ -360,20 +321,41 @@ class Merger:
     def responseProblems(self, line: int, row: pd.Series, df: pd.DataFrame) -> list[dict]:
         """The response column shows what its declared type says."""
         response, kind = row['response'], row['response_type']
-        fits, complaint = RESPONSE_CHECKS[kind]
+        complaint = self.responseComplaint(kind, df[response].dropna())
         problems = []
-        if not fits(df[response].dropna()):
+        if complaint is not None:
             problems.append(self.problem(line, 'response_type', f'{response} {complaint}'))
         if kind == 'binomial':
             problems += self.trialsProblems(line, row, df)
         return problems
+
+    @staticmethod
+    def responseComplaint(kind: str, values: pd.Series) -> str | None:
+        """What the response column fails to show of its declared type; None when it fits."""
+        if kind == 'continuous' and not pd.api.types.is_numeric_dtype(values):
+            return 'is not numeric'
+        if kind == 'binary' and values.nunique() != 2:
+            return 'does not have two distinct values'
+        if kind in ('count', 'binomial') and not Merger.isCount(values):
+            return 'is not integer-valued'
+        if kind == 'ordinal' and values.nunique() > MAX_ORDINAL_LEVELS:
+            return f'has more than {MAX_ORDINAL_LEVELS} levels'
+        if kind == 'categorical' and pd.api.types.is_float_dtype(values):
+            return 'is not categorical'
+        return None
+
+    @staticmethod
+    def isCount(values: pd.Series) -> bool:
+        if not pd.api.types.is_numeric_dtype(values):
+            return False
+        return bool(((values >= 0) & (values == values.round())).all())
 
     def trialsProblems(self, line: int, row: pd.Series, df: pd.DataFrame) -> list[dict]:
         """A binomial response names integer trials it never exceeds."""
         response, trials = row['response'], row['trials']
         if trials == '':
             return [self.problem(line, 'trials', 'binomial names its trials')]
-        if not isCount(df[trials].dropna()):
+        if not self.isCount(df[trials].dropna()):
             return [self.problem(line, 'trials', f'{trials} is not integer-valued')]
         if (df[response] > df[trials]).any():
             return [self.problem(line, 'trials', f'{response} exceeds {trials}')]
@@ -381,17 +363,18 @@ class Merger:
 
     def fillScriptColumns(self) -> None:
         if 'tier' in self.table.scriptColumns:
-            self.shard['tier'] = self.shard['source'].map(self.tiers)
+            self.shard['tier'] = self.shard['source'].map(self.frame.tiers)
         if 'reader' in self.table.scriptColumns:
             self.shard['reader'] = [self.objects(s)[o].reader for s, o in self.shardObjects()]
         if 'sources' in self.table.scriptColumns:
             self.shard['sources'] = self.shard['source'] + ':' + self.shard['object']
 
     # ---------------------------------------------------------------------------------
-    # append
+    # upsert
     # ---------------------------------------------------------------------------------
-    def append(self) -> None:
+    def upsert(self) -> None:
         """Upsert on the row key: existing keys are replaced in place, new rows appended."""
+        self.fillScriptColumns()
         old = self.canonical(self.table)
         shard = self.shard
         if self.table.name == 'dropped':
@@ -406,11 +389,6 @@ class Merger:
         self.added = len(new) - self.replaced
         self.merged = merged.reset_index(drop=True)
         writeCsv(self.merged, self.file(self.table.name))
-        self.supersede()
-        self.flagged = 0
-        if self.table.name in RECONCILED:
-            self.reconcile()
-        self.measure()
 
     def inCensus(self) -> pd.Series:
         """A dropped object the loader no longer enumerates can never be re-filed, so its key
@@ -441,6 +419,10 @@ class Merger:
     # reconcile duplicates: fold confirmed groups, flag new candidates
     # ---------------------------------------------------------------------------------
     def reconcile(self) -> None:
+        """Only a merge that changes the registry or the verdicts can change the fold."""
+        self.flagged = 0
+        if self.table.name not in RECONCILED:
+            return
         registry = self.canonical(TABLES['registry'])
         duplicates = self.canonical(TABLES['duplicates'])
         registry = self.fold(registry, self.sameGroups(duplicates))
@@ -473,7 +455,7 @@ class Merger:
         sources = registry['source'] + ':' + registry['object']
         keep = pd.Series(True, index=registry.index)
         for group in groups:
-            members = sorted(group, key=self.rank)
+            members = sorted(group, key=self.frame.rank)
             present = [m for m in members if m in set(keys)]
             if not present:
                 continue
@@ -485,19 +467,22 @@ class Merger:
     def flagCandidates(self, registry: pd.DataFrame, duplicates: pd.DataFrame) -> list[dict]:
         """Pairs of registry objects with equal row count and sorted column cardinalities that
         no verdict row covers yet, earliest tier first."""
-        objects = sorted(set(zip(registry['source'], registry['object'])), key=self.rank)
-        signatures = {key: self.signature(key) for key in objects}
+        objects = sorted(set(zip(registry['source'], registry['object'])), key=self.frame.rank)
+        groups: dict[tuple, list[Key]] = {}  # signature -> its objects in frame order
+        for key in objects:
+            groups.setdefault(self.signature(key), []).append(key)
         first = zip(duplicates['source_a'], duplicates['object_a'])
         second = zip(duplicates['source_b'], duplicates['object_b'])
         decided = set(zip(first, second))  # pairs are stored earliest tier first too
-        flagged = []
-        for a, b in combinations(objects, 2):
-            if signatures[a] == signatures[b] and (a, b) not in decided:
-                flagged.append({'source_a': a[0], 'object_a': a[1], 'source_b': b[0], 'object_b': b[1], 'verdict': 'flagged', 'notes': ''})  # fmt: skip
-        return flagged
+        pairs = [pair for group in groups.values() for pair in combinations(group, 2)]
+        undecided = [(a, b) for a, b in pairs if (a, b) not in decided]
+        return [
+            {'source_a': a[0], 'object_a': a[1], 'source_b': b[0], 'object_b': b[1], 'verdict': 'flagged', 'notes': ''}
+            for a, b in undecided
+        ]  # fmt: skip
 
     def signature(self, key: Key) -> tuple[int, tuple[int, ...]]:
-        df = self.loader.load(self.sources[key[0]], key[1])
+        df = self.loader.load(self.frame.sources[key[0]], key[1])
         return (len(df), tuple(sorted(df.nunique())))
 
     # ---------------------------------------------------------------------------------
@@ -509,28 +494,30 @@ class Merger:
         dimensions, columns = [], []
         for _, row in registry.iterrows():
             types = parseTypes(row['types'])
-            df = self.loader.load(self.sources[row['source']], row['object'], types)
+            df = self.loader.load(self.frame.sources[row['source']], row['object'], types)
             measurer = Measurer(df, row.to_dict())
             dimensions += measurer.dimensions()
             columns += measurer.columns()
         writeCsv(pd.DataFrame(dimensions, columns=DIMENSION_COLUMNS), self.registry / 'dimensions.csv')  # fmt: skip
         writeCsv(pd.DataFrame(columns, columns=COLUMN_COLUMNS), self.registry / 'columns.csv')
-        self.writeManifest(registry)
-        Summariser(self.registry, self.survey, registry, self.canonical(TABLES['excluded'])).flush()
 
-    def writeManifest(self, registry: pd.DataFrame) -> None:
+    def writeManifest(self) -> None:
         """The file each registry object loads from, with its digest and size (#4)."""
+        registry = self.canonical(TABLES['registry'])
         rows = []
         for label, name in registry[['source', 'object']].drop_duplicates().itertuples(index=False):  # fmt: skip
             file = self.objects(label)[name].file
-            data = (self.loader.tree(self.sources[label]) / file).read_bytes()
+            data = (self.loader.tree(self.frame.sources[label]) / file).read_bytes()
             sha256 = hashlib.sha256(data).hexdigest()
             rows.append({'source': label, 'object': name, 'file': file, 'sha256': sha256, 'size': len(data)})  # fmt: skip
         manifest = pd.DataFrame(rows, columns=MANIFEST_COLUMNS)
         manifest = manifest.astype({'size': 'Int64'})  # base R's None would make it float
         writeCsv(manifest, self.registry / 'manifest.csv')
 
-    def flush(self) -> None:
+    def summarise(self) -> None:
+        Summariser(self.registry, self.survey).flush()
+
+    def report(self) -> None:
         print(f'{self.table.name}: {self.added} rows added, {self.replaced} replaced, {len(self.merged)} total')  # fmt: skip
         if self.flagged:
             print(f'duplicates: {self.flagged} candidate pairs flagged, confirm through a duplicates shard')  # fmt: skip
@@ -553,5 +540,10 @@ if __name__ == '__main__':
         merger.validate()
     except ShardRefused as e:
         sys.exit(str(e))
-    merger.append()
-    merger.flush()
+    merger.upsert()
+    merger.supersede()
+    merger.reconcile()
+    merger.measure()
+    merger.writeManifest()
+    merger.summarise()
+    merger.report()

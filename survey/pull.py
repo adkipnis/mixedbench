@@ -17,7 +17,6 @@ pull; the others keep their rows, shard rows and help pages). Run from the repo 
 from __future__ import annotations
 
 import argparse
-import csv
 import random
 import shutil
 from pathlib import Path
@@ -25,7 +24,7 @@ from pathlib import Path
 import pandas as pd
 from help import HelpPage
 from mixedbench.datasets import DataObject, Loader
-from schema import CANDIDATE_COLUMNS, EXCLUDED, SCREENS, TIERS
+from schema import CANDIDATE_COLUMNS, EXCLUDED, SCREENS, TIERS, readCsv, writeCsv
 from sources import readFrame
 
 HERE = Path(__file__).parent
@@ -33,48 +32,6 @@ MIN_ROWS = 3  # two groups, one of them with two observations
 MIN_COLS = 2  # a response and a grouping factor
 HEAD_ROWS = 8  # appended to each help page with the dtypes
 HEAD_COLUMNS = 60  # a genotype matrix's thousands of columns are not read column by column
-
-
-def countDtypes(df: pd.DataFrame) -> dict[str, int]:
-    counts = {'n_numeric': 0, 'n_categorical': 0, 'n_string': 0, 'n_other': 0}
-    for dtype in df.dtypes:
-        if isinstance(dtype, pd.CategoricalDtype):
-            counts['n_categorical'] += 1
-        elif pd.api.types.is_bool_dtype(dtype):
-            counts['n_other'] += 1
-        elif pd.api.types.is_numeric_dtype(dtype):
-            counts['n_numeric'] += 1
-        elif pd.api.types.is_string_dtype(dtype):
-            counts['n_string'] += 1
-        else:
-            counts['n_other'] += 1
-    return counts
-
-
-def canGroup(values: pd.Series) -> bool:
-    """Whether a column's values could index groups: not fractional (R stores integer codes
-    as doubles), two or more distinct values, and some value repeated."""
-    if pd.api.types.is_float_dtype(values):
-        present = values.dropna()
-        if len(present) == 0 or not (present == present.round()).all():
-            return False
-    distinct = values.nunique(dropna=True)
-    return 2 <= distinct < len(values)
-
-
-def screen(df: pd.DataFrame | None) -> str:
-    """The pre-screen verdict, one of SCREENS: what a grouped table needs before an agent
-    reads its documentation."""
-    if df is None:
-        return 'no frame'
-    if df.shape[0] < MIN_ROWS:
-        return 'under 3 rows'
-    if df.shape[1] < MIN_COLS:
-        return 'one column'
-    for column in df.columns:
-        if canGroup(df[column]):
-            return 'pass'
-    return 'no repeated column'
 
 
 # =====================================================================================
@@ -93,11 +50,7 @@ class Puller:
         self.help = HelpPage(self.loader)
         self.frame = readFrame(self.registry)
         self.tiers = tiers
-        # frame order: tier, then the order of `sources.yaml`
-        self.order = sorted(
-            self.frame.tiers, key=lambda label: TIERS.index(self.frame.tiers[label])
-        )
-        self.labels = [label for label in self.order if self.frame.tiers[label] in tiers]
+        self.labels = [label for label in self.frame.labels if self.frame.tiers[label] in tiers]
         self.rows: list[dict] = []
         self.depositPages: dict[str, Path] = {}  # Tier D label -> the page of its deposit
         if 'D' in tiers:
@@ -138,12 +91,28 @@ class Puller:
         """`candidates.csv` whole, and the screened-out objects as an exclusion shard; the rows
         of tiers not pulled are kept from the existing file, everything in frame order."""
         rows = self._kept() + self.rows
-        rows.sort(key=lambda row: self.order.index(row['source']))
-        self._write(self.survey / 'candidates.csv', CANDIDATE_COLUMNS, rows)
+        rows.sort(key=lambda row: self.frame.rank((row['source'], row['object'])))
+        candidates = pd.DataFrame(rows, columns=CANDIDATE_COLUMNS)
+        writeCsv(candidates, self.survey / 'candidates.csv')
         excluded = [self._exclusion(row) for row in rows if row['screen'] != 'pass']
         (self.survey / 'shards').mkdir(exist_ok=True)
         shard = self.survey / 'shards' / 'excluded_prescreen.csv'
-        self._write(shard, EXCLUDED.agentColumns, excluded)
+        writeCsv(pd.DataFrame(excluded, columns=EXCLUDED.agentColumns), shard)
+
+    @staticmethod
+    def screen(df: pd.DataFrame | None) -> str:
+        """The pre-screen verdict, one of SCREENS: what a grouped table needs before an agent
+        reads its documentation."""
+        if df is None:
+            return 'no frame'
+        if df.shape[0] < MIN_ROWS:
+            return 'under 3 rows'
+        if df.shape[1] < MIN_COLS:
+            return 'one column'
+        for column in df.columns:
+            if Puller._canGroup(df[column]):
+                return 'pass'
+        return 'no repeated column'
 
     # ---------------------------------------------------------------------------------
     # pipeline: deposit pages -> object -> row -> draw -> kept rows -> shard row -> csv
@@ -157,8 +126,8 @@ class Puller:
         file = survey / 'deposit_files.csv'
         if not file.exists():
             return pages
-        with open(file, newline='') as f:
-            rows = [row for row in csv.DictReader(f) if row['label']]
+        files = readCsv(file)
+        rows = files[files['label'] != ''].to_dict('records')
         for row in rows:
             deposit = row['deposit'].split('.')[-1].replace('/', '_')
             name = f'{row["paper_id"]}_{row["repository"]}_{deposit}.txt'
@@ -171,7 +140,7 @@ class Puller:
         counts = {'n_numeric': '', 'n_categorical': '', 'n_string': '', 'n_other': ''}
         if obj.n_rows is not None:
             df = self.loader.load(source, obj.name)
-            counts = countDtypes(df)
+            counts = self._countDtypes(df)
         return {
             'tier': self.frame.tiers[label],
             'source': label,
@@ -182,8 +151,35 @@ class Puller:
             'n_cols': '' if obj.n_cols is None else obj.n_cols,
             **counts,
             'reader': obj.reader,
-            'screen': screen(df),
+            'screen': self.screen(df),
         }
+
+    @staticmethod
+    def _countDtypes(df: pd.DataFrame) -> dict[str, int]:
+        counts = {'n_numeric': 0, 'n_categorical': 0, 'n_string': 0, 'n_other': 0}
+        for dtype in df.dtypes:
+            if isinstance(dtype, pd.CategoricalDtype):
+                counts['n_categorical'] += 1
+            elif pd.api.types.is_bool_dtype(dtype):
+                counts['n_other'] += 1
+            elif pd.api.types.is_numeric_dtype(dtype):
+                counts['n_numeric'] += 1
+            elif pd.api.types.is_string_dtype(dtype):
+                counts['n_string'] += 1
+            else:
+                counts['n_other'] += 1
+        return counts
+
+    @staticmethod
+    def _canGroup(values: pd.Series) -> bool:
+        """Whether a column's values could index groups: not fractional (R stores integer codes
+        as doubles), two or more distinct values, and some value repeated."""
+        if pd.api.types.is_float_dtype(values):
+            present = values.dropna()
+            if len(present) == 0 or not (present == present.round()).all():
+                return False
+        distinct = values.nunique(dropna=True)
+        return 2 <= distinct < len(values)
 
     @staticmethod
     def _firstRows(df: pd.DataFrame) -> str:
@@ -207,9 +203,8 @@ class Puller:
         file = self.survey / 'candidates.csv'
         if not file.exists():
             return []
-        with open(file, newline='') as f:
-            rows = list(csv.DictReader(f))
-        return [row for row in rows if row['tier'] not in self.tiers]
+        rows = readCsv(file)
+        return rows[~rows['tier'].isin(self.tiers)].to_dict('records')
 
     @staticmethod
     def _exclusion(row: dict) -> dict:
@@ -220,15 +215,6 @@ class Puller:
             'reason': SCREENS[row['screen']],
             'detail': row['screen'],
         }
-
-    @staticmethod
-    def _write(path: Path, columns: tuple[str, ...], rows: list[dict]) -> None:
-        with open(path, 'w', newline='') as f:
-            writer = csv.DictWriter(
-                f, fieldnames=columns, quoting=csv.QUOTE_ALL, extrasaction='ignore'
-            )
-            writer.writeheader()
-            writer.writerows(rows)
 
 
 # =====================================================================================

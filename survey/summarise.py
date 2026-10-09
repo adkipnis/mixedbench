@@ -13,7 +13,7 @@ from string import Template
 import pandas as pd
 import yaml
 from measure import observed
-from schema import TIERS
+from schema import TIERS, readCsv
 
 # =====================================================================================
 # globals
@@ -48,23 +48,17 @@ TERMS = (9, 14)  # the practice survey's p90 and p95 of fixed-effect terms (enve
 K_TAIL = 10  # the summary's K table pools the levels above this (the columns rule's integer cap)
 
 
-def readCsv(path: Path) -> pd.DataFrame:
-    return pd.read_csv(path, dtype=str, keep_default_na=False)
-
-
 def numeric(frame: pd.DataFrame, columns: tuple[str, ...]) -> pd.DataFrame:
     converted = {c: pd.to_numeric(frame[c], errors='coerce') for c in columns}
     return frame.assign(**converted)
 
 
-def quantile(values: pd.Series, q: float) -> int | float | None:
-    if values.empty:
-        return None
+def quantile(values: pd.Series, q: float) -> int | float:
     v = observed(values, q)
     return v if isinstance(v, int) else round(v, 4)
 
 
-def quantiles(values: pd.Series) -> dict:
+def quantilesOf(values: pd.Series) -> dict:
     values = pd.Series(values).dropna()
     out = {'n': len(values), 'min': quantile(values, 0)}
     out |= {k: quantile(values, q) for k, q in LEVELS.items()}
@@ -96,12 +90,10 @@ def counted(values: pd.Series) -> str:
 # pipeline: measured files -> axes -> shares -> K -> implied columns -> summary
 # =====================================================================================
 class Summariser:
-    def __init__(
-        self, root: Path, survey: Path, registry: pd.DataFrame, excluded: pd.DataFrame
-    ) -> None:
+    def __init__(self, root: Path, survey: Path) -> None:
         self.root, self.survey = Path(root), Path(survey)  # the registry folder, the survey's
-        self.registry = registry
-        self.excluded = excluded
+        self.registry = readCsv(self.root / 'registry.csv')
+        self.excluded = readCsv(self.root / 'excluded.csv')
         measured = FACTOR_AXES + tuple(ROW_AXES.values())
         self.dimensions = numeric(readCsv(self.root / 'dimensions.csv'), measured)
         self.columns = numeric(readCsv(self.root / 'columns.csv'), ('K',))
@@ -139,27 +131,20 @@ class Summariser:
         """One axis pooled, per tier present, and without the heavy source."""
         tiers = [t for t in TIERS if (frame['tier'] == t).any()]
         return {
-            'pooled': quantiles(frame[column]),
-            'tiers': {t: quantiles(frame.loc[frame['tier'] == t, column]) for t in tiers},
-            'without_agridat': quantiles(frame.loc[frame['source'] != HEAVY_SOURCE, column]),
+            'pooled': quantilesOf(frame[column]),
+            'tiers': {t: quantilesOf(frame.loc[frame['tier'] == t, column]) for t in tiers},
+            'without_agridat': quantilesOf(frame.loc[frame['source'] != HEAVY_SOURCE, column]),
         }
 
     def balancedShare(self) -> float:
         """Share of grouping factors whose allocation is balanced (α infinite)."""
-        if self.dimensions.empty:
-            return 0.0
         return round(float((self.dimensions['alpha'] == float('inf')).mean()), 3)
 
     def impliedColumns(self) -> dict:
         """Expected design columns of a model with T terms under the observed categorical share c
         and mean K − 1: T (c (K − 1) + (1 − c)), one column per non-categorical term."""
-        if self.modelled.empty:
-            empty = {f'terms_{t}': None for t in TERMS}
-            return {'categorical_share': None, 'mean_columns_per_categorical': None} | empty
         share = float(self.modelled['type'].isin(CATEGORICAL_TYPES).mean())
-        perCategorical = (
-            float((self.categoricals['K'] - 1).mean()) if len(self.categoricals) else 0.0
-        )
+        perCategorical = float((self.categoricals['K'] - 1).mean())
         perTerm = share * perCategorical + (1 - share)
         return {
             'categorical_share': round(share, 3),

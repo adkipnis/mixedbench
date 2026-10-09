@@ -1,4 +1,4 @@
-"""File contract of the GLMM dimension survey: columns, allowed values and row keys of
+"""File contract of the GLMM dimension survey: columns, allowed values, row keys and dialect of
 `registry.csv`, `excluded.csv`, `duplicates.csv` and `dropped.csv`, and the shape of
 `sources.yaml`. The merge script enforces it; agents write shards with exactly the agent
 columns. Documented for humans in README.md. The practice survey's schema is the model;
@@ -7,7 +7,11 @@ nothing is imported across surveys.
 
 from __future__ import annotations
 
+import csv
 from dataclasses import dataclass
+from pathlib import Path
+
+import pandas as pd
 
 
 # =====================================================================================
@@ -89,6 +93,18 @@ SCREENS = {
     'no repeated column': 'no grouping structure',
 }
 MAX_MODELS_PER_OBJECT = 3
+
+
+# =====================================================================================
+# csv dialect: every cell a quoted string, an empty cell the empty string
+# =====================================================================================
+def readCsv(path: Path) -> pd.DataFrame:
+    return pd.read_csv(path, dtype=str, keep_default_na=False)
+
+
+def writeCsv(frame: pd.DataFrame, path: Path) -> None:
+    frame.to_csv(path, index=False, quoting=csv.QUOTE_ALL)
+
 
 # =====================================================================================
 # allowed values
