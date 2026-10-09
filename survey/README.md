@@ -189,7 +189,7 @@ match, joined with ` || `), `seed`, `n_frame`.
 Key `source`, `object`; written whole by `pull.py` on every run, in frame order. Per
 enumerated data object: `tier`, `source`, `pin`, `object`, `file`, `n_rows`, `n_cols` (blank
 where the loader cannot make a DataFrame), the column counts by dtype `n_numeric`,
-`n_categorical`, `n_string`, `n_other`, `reader` (`pyreadr` / `rscript` / `pandas`),
+`n_categorical`, `n_string`, `n_other`, `reader` (`pyreadr` / `rscript` / `pandas` / `deparse`),
 `screen` and `capped`.
 
 `screen` is the verdict of a mechanical pre-screen on what a grouped table needs before an
@@ -533,6 +533,11 @@ grouping factor or a response; they stay in the formula.
   liu_2022's workbook with a merged group header, walker_2021b's text sentinels among
   counts; a `.txt` data file of the PyMC examples not enumerated under #24's older rule.
 - Not representable: polynomial and derived terms on a column, multiple membership.
+- Base R's census was taken from R's namespace; the loader now enumerates the files of R's
+  source tarball (#8), so 18 base R exclusions name an object no file is named after
+  (`beaver1` and `beaver2` live in `beavers.R`, the `state.*` vectors in `state.R`) and 48
+  are listed without a table (time series, arrays, `iris`'s `gl(labels =)`). No registry row
+  is among them.
 
 ## Closing (#27)
 
@@ -545,3 +550,21 @@ its axes, quantile keys, tiers, imbalance block, K distribution, shares and the 
 minimums, and that every row of `v05_datasets.csv` is a registry key, a member of a registry
 row's `sources` (MEMSS MathAchieve in nlme's row; base R's Theoph, Orange and Indometh in
 MEMSS's) or an exclusion.
+
+## Registry columns and verification (#6)
+
+**Readers without R** (#8, 2026-10-09). The 34 registry objects that loaded through the
+Rscript dump and have a Python reader now load without R (ADR 0003): agridat's 27
+`data/*.txt` files (28 rows) through a utils::data() reader (read.table's header,
+whitespace, quote and `NA` rules, strings as factors with sorted levels), base R's 7
+`data/*.R` files through the deparse reader (`src/mixedbench/datasets/deparse.py`, the subset
+of R those seven files use), fetched from R 4.6.1's source tarball with its sha256 instead of
+dumped from R's namespace. Each new frame was compared once with the Rscript dump's on
+columns, dtype kinds, levels, values and the ordered flag: 33 identical; lillemo.wheat's
+`env` holds the same values but sorts its levels in codepoint order (`BT06` before `Ba04`),
+where R's ICU collation puts `Ba04` first; its first level, the reference of treatment
+coding, is `Aa03` either way. The re-merge `shards/registry_readers.csv` set their `reader`
+to `pandas` and `deparse` and gave base R's manifest rows a digest and size; no measure
+changed. The merge now replaces a re-merged row where it stands rather than moving it to the
+end. geepack's muscatine and plonsky_2019_osf's dd1, which librdata rejects, still go through
+R until #9.
