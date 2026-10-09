@@ -6,8 +6,8 @@ from pinned sources and never redistributed; a frozen, versioned suite with NUTS
 posteriors; metrics, tracks and opponent lines.
 
 Under construction: see [`ROADMAP.md`](ROADMAP.md), the decisions in `docs/adr/` and the
-vocabulary in [`CONTEXT.md`](CONTEXT.md). The registry comes from the dimension survey of
-[metabeta-v3](https://github.com/adkipnis/metabeta-v3) (`packages/glmm/surveys/dimensions`).
+vocabulary in [`CONTEXT.md`](CONTEXT.md). The registry comes from the dimension survey in
+[`survey/`](survey/README.md), begun in [metabeta-v3](https://github.com/adkipnis/metabeta-v3).
 
 ## Install
 
@@ -36,9 +36,8 @@ sleepstudy = loader.load(registry.sources()[row['source']], 'sleepstudy')
 
 ## The registry files
 
-- The package carries the eight registry files: `sources.yaml`, `registry.csv`,
-  `excluded.csv`, `dimensions.csv`, `columns.csv`, `quantiles.yaml`, `SUMMARY.md`,
-  `manifest.csv`.
+- The package carries the registry files of the survey's
+  [Files table](survey/README.md#files), without the untracked `help/` and `cache/`.
 - `mixedbench.registry.path(name)` returns the installed path of one, `path()` their
   directory.
 - `manifest.csv` names the file each object loads from, with its sha256 and size.
