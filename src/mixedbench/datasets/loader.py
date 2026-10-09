@@ -20,8 +20,7 @@ from urllib.parse import quote, urlparse
 
 import pandas as pd
 from mixedbench.datasets import docs, readers
-from mixedbench.datasets.deparse import Deparse, DeparseError
-from mixedbench.datasets.readers import DATA_FILES, R_ERRORS, R_FILES, TABLE_FILES, Frames
+from mixedbench.datasets.readers import Reader
 
 CRAN = 'https://cloud.r-project.org/src/contrib'
 R_SOURCES = 'https://cloud.r-project.org/src/base'
@@ -31,7 +30,6 @@ ARCHIVES = ('.zip', '.tar.gz', '.tgz', '.tar')
 # al.) sends InCommon's instead of Sectigo's OV R36, from its leaf's CA Issuers URL
 TLS = ssl.create_default_context()
 TLS.load_verify_locations(Path(__file__).parent / 'intermediates.pem')
-Reader = Literal['pyreadr', 'rdata', 'pandas', 'deparse']
 ColumnType = Literal['categorical', 'ordered', 'continuous']  # what a registry row may declare
 
 
@@ -256,25 +254,19 @@ class Loader:
 
     @staticmethod
     def _files(source: Source, tree: Path) -> list[Path]:
-        """The files holding data objects: a CRAN package's data/ folder as utils::data() sees
-        it; otherwise the pinned path (a file, or a folder walked) in what R or pandas read,
-        less the text files that are documentation."""
-        if source.kind == 'cran':  # data() ignores other files (`datalist`)
+        """The files holding data objects: in a CRAN package's data/ folder, otherwise in the
+        pinned path, a file or a folder walked."""
+        cran = source.kind == 'cran'
+        if cran:
             candidates = []
             if (tree / 'data').exists():  # GLMMadaptive ships no data
                 candidates = (tree / 'data').iterdir()
-            readable = R_FILES | DATA_FILES
         else:
             root = tree / (source.path or '')
             candidates = [root]
             if root.is_dir():
                 candidates = root.rglob('*')
-            readable = R_FILES | TABLE_FILES
-        files = [f for f in candidates if f.is_file() and readers.bare(f).suffix in readable]
-        files = [f for f in files if not f.name.endswith('.init.json')]  # Stan initial values
-        files = [f for f in files if '__MACOSX' not in f.parts]  # a zip's resource forks
-        if source.kind != 'cran':
-            files = [f for f in files if not docs.isDoc(f) and not docs.describesSibling(f)]
+        files = [f for f in candidates if f.is_file() and readers.isData(f, cran=cran)]
         return sorted(files)
 
     def _object(self, source: Source, name: str) -> tuple[str, pd.DataFrame | None]:
@@ -285,7 +277,7 @@ class Loader:
         row = self.manifest[source, name]
         file = self._fetchFile(source, row)
         self._verify(file, row.sha256)
-        frames, _ = self._readFile(file, source, row.file)
+        frames, _ = readers.read(file, row.file, layout=source.layout, cran=source.kind == 'cran')
         return row.file, frames[name]
 
     def _fetchFile(self, source: Source, row: ManifestRow) -> Path:
@@ -350,41 +342,14 @@ class Loader:
 
     def _parse(self, source: Source) -> dict[str, tuple[DataObject, pd.DataFrame | None]]:
         tree = self._tree(source)
+        cran = source.kind == 'cran'
         objects = {}
         for file in self._files(source, tree):
             label = file.relative_to(tree).as_posix()
-            frames, reader = self._readFile(file, source, label)
+            frames, reader = readers.read(file, label, layout=source.layout, cran=cran)
             for name, df in frames.items():
                 shape = (None, None)
                 if df is not None:
                     shape = df.shape
                 objects[name] = DataObject(name, label, *shape, reader), df
         return objects
-
-    def _readFile(self, file: Path, source: Source, label: str) -> tuple[Frames, Reader]:
-        """An R file through pyreadr; another file in a CRAN data/ folder by utils::data()'s
-        rules, a `.R` file deparsed, a text file as read.table reads it; pandas reads the rest."""
-        if file.suffix.lower() in R_FILES:
-            return self._readRFile(file)
-        if source.kind == 'cran' and file.suffix.lower() == '.r':
-            return self._readDeparsed(file), 'deparse'
-        if source.kind == 'cran':
-            return readers.readData(file), 'pandas'
-        return readers.readTables(file, label, source.layout), 'pandas'
-
-    @staticmethod
-    def _readDeparsed(file: Path) -> Frames:
-        """A file outside the deparse subset (most of base R's: time series, matrices) is no
-        table, so that enumerating the source does not fail on it."""
-        try:
-            return Deparse(file).frames()
-        except DeparseError:
-            return {file.stem: None}
-
-    @staticmethod
-    def _readRFile(file: Path) -> tuple[Frames, Reader]:
-        """An R file librdata rejects (geepack's muscatine, a plain data frame) goes to rdata."""
-        try:
-            return readers.readR(file), 'pyreadr'
-        except R_ERRORS:
-            return readers.readRdata(file), 'rdata'

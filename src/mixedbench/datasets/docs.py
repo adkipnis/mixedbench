@@ -13,7 +13,6 @@ import pyreadstat
 from mixedbench.datasets import readers
 
 DOC_FILES = {'.md', '.txt', '.rst', ''}  # text beside a data file
-DOC_STEMS = ('readme', 'codebook', 'description', 'notes', 'metadata', 'variables', 'dictionary')
 
 
 def sameStemDocs(tree: Path, file: Path) -> list[Path]:
@@ -29,31 +28,10 @@ def docsBeside(root: Path, file: Path) -> list[Path]:
     folders = [file.parent, *file.parent.parents]
     for folder in folders[: folders.index(root) + 1]:
         files = sorted(f for f in folder.iterdir() if f.is_file())
-        docs = [f for f in files if isDoc(f)]
+        docs = [f for f in files if readers.isDoc(f)]
         if docs:
             return docs
     return []
-
-
-def isDoc(file: Path) -> bool:
-    """Markdown and reST; a `.txt` named like documentation (`codebook.txt`, not a data
-    file such as the PyMC examples' `Guber1999data.txt`); a suffix-less file in capitals
-    (`README`, `LICENSE`), not a dotfile or a suffix-less data file."""
-    suffix = file.suffix.lower()
-    if suffix in ('.md', '.rst'):
-        return True
-    if suffix == '.txt':
-        return any(stem in file.stem.lower() for stem in DOC_STEMS)
-    return suffix == '' and file.name.isupper()
-
-
-def describesSibling(file: Path) -> bool:
-    """A `.txt` named after a data file of another format beside it (Fitzmaurice's `lead.txt`
-    beside `lead.dta`, ROS's `bypass.txt` beside `bypass.csv`) is its description, no data."""
-    if file.suffix.lower() != '.txt':
-        return False
-    siblings = [f for f in file.parent.iterdir() if f.is_file() and f != file]
-    return any(readers.bare(f).stem == file.stem.lower() for f in siblings)
 
 
 # ==============================================================================================
