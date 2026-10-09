@@ -84,7 +84,7 @@ def test_objects_enumerates_the_tarball(tmp_path):
     """The census denominator: every data object listed with its counts."""
     loader = Loader(tmp_path, fetch=serveCurrent)
     objects = objectsByName(loader, FIXTURE)
-    assert set(objects) == {'pets', 'scores', 'trials', 'visits', 'wide'}
+    assert set(objects) == {'growth', 'pets', 'plots', 'scores', 'trials', 'visits', 'wide'}
     pets, scores, trials = objects['pets'], objects['scores'], objects['trials']
     assert (pets.file, pets.n_rows, pets.n_cols) == ('data/pets.rda', 6, 3)
     assert (scores.file, scores.n_rows, scores.n_cols) == ('data/scores.rds', 4, 2)
@@ -197,7 +197,7 @@ def test_archive_url_is_tried_after_a_miss(tmp_path):
 
     loader = Loader(tmp_path, fetch=serveArchive)
     objects = objectsByName(loader, FIXTURE)
-    assert set(objects) == {'pets', 'scores', 'trials', 'visits', 'wide'}
+    assert set(objects) == {'growth', 'pets', 'plots', 'scores', 'trials', 'visits', 'wide'}
     assert asked == [CURRENT, ARCHIVE]
     offline = Loader(tmp_path / 'empty', fetch=serveNothing)
     with pytest.raises(FileNotFoundError, match='fixture 1.0'):
@@ -211,7 +211,7 @@ def test_checksum_mismatch_is_refused(tmp_path):
     good = Source(kind='cran', name='fixture', pin='1.0', checksum=sha)
     bad = Source(kind='cran', name='fixture', pin='1.0', checksum='0' * 64)
     loader = Loader(tmp_path, fetch=serveCurrent)
-    assert len(loader.objects(good)) == 5
+    assert len(loader.objects(good)) == 7
     with pytest.raises(ValueError, match='checksum'):
         loader.objects(bad)
 
