@@ -2,7 +2,7 @@
 once by script from the archived hand sample, the tier and the confidence."""
 
 import pandas as pd
-from verify import verification
+from verified import verification
 
 
 def registryRows(rows: list[tuple[str, str, str, str, str]]) -> pd.DataFrame:
