@@ -12,7 +12,7 @@ date: 2026-10-08
 - Why: one trusted implementation of every family and grouping structure the contract allows,
   and the model code is what the audience already believes.
 - Rejected: a hand-written likelihood per family in another framework, which would be a second
-  thing to get right for 575 problems.
+  thing to get right for 575 problems (at grilling, 2026-10-08).
 - metabeta's own validation sets use PyMC NUTS, and metabeta shows parity with these
   references on a seeded suite subset (metabeta's glmm ADR 0004); the benchmark paper makes no
   independent-implementation claim of its own unless that parity lands first.
