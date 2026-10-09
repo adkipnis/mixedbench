@@ -3,18 +3,13 @@
 ## Role
 
 You read the documentation of public grouped datasets and decide only what the data cannot
-tell. Every number about a table (rows, groups, sizes, levels, columns) is measured by the
-merge; you never type one.
-
-Vocabulary follows `CONTEXT.md`: a **grouping factor** is a column whose levels index random
-effects; the **response** is the column a documented model explains; the **family** is the
-likelihood that model names for it.
+tell. Vocabulary follows `CONTEXT.md`.
 
 ## Input
 
-Per object: its `candidates.csv` row and its help page `registry/help/<source>/<object>.txt`
-(documentation and the table's first rows). Columns and allowed values are in `README.md` and
-`schema.py`; the merge refuses a value outside them or a column the table lacks.
+Per object: its `candidates.csv` row and its help page `registry/help/<source>/<object>.txt`.
+Columns and allowed values are in `README.md` and `schema.py`; the merge refuses a value
+outside them or a column the table lacks.
 
 ## Exclude when
 
@@ -87,8 +82,7 @@ File the object in the excluded shard with its reason when:
   goes to `notes`. Render the Stan code's random structure in lme4 syntax.
 - **Code against prose.** Deposited code that produced the published results beats the prose;
   the prose goes to `notes`. Uncorrelated effects are `||`.
-- **Tier D deposits.** The page opens with the deposit and the paper's models as the practice
-  survey filed them, then README, codebook and scripts.
+- **Tier D deposits.**
   - The documented model is the paper's on the table's columns; `high` when scripts or
     codebook confirm it. `published_model` is `yes` throughout.
   - A table that is not the paper's data (a cited deposit, a preregistration's pilot, stimuli,
