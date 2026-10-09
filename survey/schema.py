@@ -92,7 +92,6 @@ SCREENS = {
     'one column': 'no grouping structure',
     'no repeated column': 'no grouping structure',
 }
-MAX_MODELS_PER_OBJECT = 3
 
 
 # =====================================================================================
@@ -149,8 +148,6 @@ COLUMN_LIST_COLUMNS = ('covariates', 'ignore')
 # `;`-separated lists of terms, a term a column name or `a:b` with every part a column name: a
 # grouping factor on the combination of two columns (`(1|Block:Variety)`) or an interaction
 TERM_COLUMNS = ('grouping_factors', 'interactions')
-# `col=categorical;col2=continuous`
-TYPES_COLUMN = 'types'
 
 REQUIRED = {
     'registry': (
@@ -161,6 +158,8 @@ REQUIRED = {
     'duplicates': ('source_a', 'object_a', 'source_b', 'object_b', 'verdict'),
     'dropped': ('source', 'object', 'reason'),
 }  # fmt: skip
+MAX_MODELS_PER_OBJECT = 3
+MAX_ORDINAL_LEVELS = 10  # an ordinal response with more distinct values is refused
 
 # A source's licence as `sources.yaml` or its CRAN DESCRIPTION states it, verbatim -> the
 # registry's vocabulary. A string not listed refuses the merge, so a new spelling is classified
@@ -196,7 +195,3 @@ LICENCES = {
     'Kaggle and Federal University of Espirito Santo, Brazil': 'not stated',  # an attribution
     'not stated': 'not stated',
 }
-
-# What the loaded table must show for each declared response type. A binomial response also
-# names its trials column; ordinal and categorical responses are checked on distinct values.
-MAX_ORDINAL_LEVELS = 10
