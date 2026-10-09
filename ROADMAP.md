@@ -12,7 +12,7 @@ release that freezes it.
   `pyproject.toml` (MIT, `references` extra), CI matrix, the memory files copied; metabeta's
   research extra depends on `mixedbench` (uv path source while developing, PyPI pin at release)
   and its quantiles contract test reads the installed package's `quantiles.yaml`
-- [ ] **2 Registry columns and verification.** `family`, `documented_prior` and `licence` by
+- [x] **2 Registry columns and verification.** `family`, `documented_prior` and `licence` by
   script plus a hand look at the keyword hits; Python readers for CRAN's `data/*.txt` and the
   base R objects (no R, ADR 0003); the seeded 100-row hand sample and its per-field agreement
   table; corrections merged as shards
