@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import pytest
 from mixedbench import registry
-from mixedbench.registry.row import Row, parts, readCsv
+from mixedbench.registry.row import Row, SlopeTerm, parts, readCsv
 
 
 def installedRow(source: str, object: str, model_index: int) -> registry.Row:
@@ -53,6 +53,11 @@ def verbAggCells() -> dict[str, str]:
         ('types', 'resp', 'not a column type: '),
         ('interactions', 'Anger:', 'a term with an empty part: Anger:'),
         ('grouping_factors', 'id;:item', 'a term with an empty part: :item'),
+        ('random_slopes', 'Anger', 'not a slope term: Anger'),
+        ('random_slopes', 'Anger|||id', 'not a slope term: Anger|||id'),
+        ('random_slopes', 'Anger | id', 'not a slope term: Anger | id'),
+        ('verified', 'yes', 'not a verification: yes'),
+        ('verified', '', 'not a verification: '),  # required: every row says why it is in
     ],
 )
 def test_a_cell_the_grammar_refuses_raises_naming_the_row_and_the_column(
@@ -65,3 +70,17 @@ def test_a_cell_the_grammar_refuses_raises_naming_the_row_and_the_column(
         Row.parse(cells)
     key = f'lme4 VerbAgg {cells["model_index"]}'  # the row as the file names it
     assert str(info.value) == f'registry row {key}, column {column}: {reason}'
+
+
+def test_a_row_carries_its_slope_terms_structured_and_its_verification() -> None:
+    """The contract reads a random slope as a covariate, a factor and whether it is correlated
+    with the factor's intercept, never the `x|g` text (ADR 0001); `x||g` is uncorrelated and a
+    composite factor stays one term."""
+    cells = verbAggCells() | {'random_slopes': 'Anger|id;btype||item;situ|id:item', 'verified': 'hand'}  # fmt: skip
+    row = Row.parse(cells)
+    assert row.random_slopes == (
+        SlopeTerm(covariate='Anger', factor='id', correlated=True),
+        SlopeTerm(covariate='btype', factor='item', correlated=False),
+        SlopeTerm(covariate='situ', factor='id:item', correlated=True),
+    )
+    assert row.verified == 'hand'

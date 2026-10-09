@@ -5,6 +5,7 @@ this module; the contract reads it through `Row`."""
 from __future__ import annotations
 
 import csv
+import re
 from dataclasses import dataclass, fields
 from pathlib import Path
 from typing import Literal, get_args
@@ -24,10 +25,14 @@ Family = Literal[
     'acat', 'weibull', 'cox',
 ]  # fmt: skip
 ColumnType = Literal['categorical', 'ordered', 'continuous']  # what `types` may declare
+# Why a row counts as verified (ADR 0002): the hand sample or Tier D, a high-confidence
+# reading, or a blind second reading
+Verified = Literal['hand', 'high', 'second-reading']
 
 RESPONSE_TYPES: tuple[str, ...] = get_args(ResponseType)
 FAMILIES: tuple[str, ...] = get_args(Family)
 COLUMN_TYPES: tuple[str, ...] = get_args(ColumnType)
+VERIFIED: tuple[str, ...] = get_args(Verified)
 
 
 # =====================================================================================
@@ -62,6 +67,23 @@ def parts(term: str) -> tuple[str, ...]:
     return tuple(term.split(':'))
 
 
+# a `random_slopes` term: covariate `x`, then `|` (correlated with the intercept of `g`) or `||`
+# (uncorrelated), then grouping factor `g`
+SLOPE_TERM = re.compile(r'(?P<covariate>[^|\s]+)(?P<bars>\|\|?)(?P<factor>[^|\s]+)')
+
+
+@dataclass(frozen=True)
+class SlopeTerm:
+    covariate: str
+    factor: str  # a term of `grouping_factors`, `a:b` for a composite
+    correlated: bool
+
+    @classmethod
+    def parse(cls, text: str) -> SlopeTerm:
+        match = SLOPE_TERM.fullmatch(text)
+        return cls(match['covariate'], match['factor'], correlated=match['bars'] == '|')
+
+
 def parseTypes(text: str) -> dict[str, str]:
     """`col=categorical;col2=continuous` -> {col: kind}."""
     pairs = [entry.partition('=') for entry in splitList(text)]
@@ -92,6 +114,7 @@ class Row:
     grouping_factors: tuple[str, ...]
     covariates: tuple[str, ...]
     interactions: tuple[str, ...]
+    random_slopes: tuple[SlopeTerm, ...]
     ignore: tuple[str, ...]
     types: dict[str, ColumnType]
     formula: str
@@ -100,6 +123,7 @@ class Row:
     # bookkeeping
     domain: str
     confidence: str
+    verified: Verified
     notes: str
 
     @classmethod
@@ -115,6 +139,9 @@ class Row:
             typed[column] = splitList(cells[column])
         typed['model_index'] = int(cells['model_index'])
         typed['types'] = parseTypes(cells['types'])
+        typed['random_slopes'] = tuple(
+            SlopeTerm.parse(t) for t in splitList(cells['random_slopes'])
+        )
         return cls(**typed)
 
     @staticmethod
@@ -134,6 +161,11 @@ class Row:
             for term in splitList(cells[column]):
                 if '' in parts(term):
                     refusals.append((column, f'a term with an empty part: {term}'))
+        for term in splitList(cells['random_slopes']):
+            if SLOPE_TERM.fullmatch(term) is None:
+                refusals.append(('random_slopes', f'not a slope term: {term}'))
+        if cells['verified'] not in VERIFIED:
+            refusals.append(('verified', f'not a verification: {cells["verified"]}'))
         return refusals
 
 
