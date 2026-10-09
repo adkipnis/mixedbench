@@ -389,13 +389,17 @@ class Merger:
     def append(self) -> None:
         """Upsert on the row key: existing keys are replaced in place, new rows appended."""
         old = self.canonical(self.table)
-        new = self.shard.reindex(columns=self.table.columns).reset_index(drop=True)
+        shard = self.shard
+        if self.table.name == 'dropped':
+            shard = shard[self.inCensus()]
+        new = shard.reindex(columns=self.table.columns).reset_index(drop=True)
         key = list(self.table.key)
         # groups in order of first appearance: a replaced key keeps its place
         merged = pd.concat([old, new]).groupby(key, sort=False).last().reset_index()[old.columns]
         if self.table.name == 'registry':
             merged = self.withLicences(merged)
         self.replaced = len(old) + len(new) - len(merged)
+        self.added = len(new) - self.replaced
         self.merged = merged.reset_index(drop=True)
         writeCsv(self.merged, self.file(self.table.name))
         self.supersede()
@@ -403,6 +407,12 @@ class Merger:
         if self.table.name in RECONCILED:
             self.reconcile()
         self.measure()
+
+    def inCensus(self) -> pd.Series:
+        """A dropped object the loader no longer enumerates can never be re-filed, so its key
+        leaves every file instead of waiting in dropped.csv (#14)."""
+        present = [o in self.objects(s) for s, o in self.shardObjects()]
+        return pd.Series(present, index=self.shard.index)
 
     def withLicences(self, registry: pd.DataFrame) -> pd.DataFrame:
         """Every row's licence, rows merged earlier too: a licence is its source's, so a
@@ -515,8 +525,7 @@ class Merger:
         writeCsv(manifest, self.registry / 'manifest.csv')
 
     def flush(self) -> None:
-        new = len(self.shard) - self.replaced
-        print(f'{self.table.name}: {new} rows added, {self.replaced} replaced, {len(self.merged)} total')  # fmt: skip
+        print(f'{self.table.name}: {self.added} rows added, {self.replaced} replaced, {len(self.merged)} total')  # fmt: skip
         if self.flagged:
             print(f'duplicates: {self.flagged} candidate pairs flagged, confirm through a duplicates shard')  # fmt: skip
 

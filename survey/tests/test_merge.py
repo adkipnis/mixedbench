@@ -281,6 +281,17 @@ def test_a_dropped_shard_moves_an_object_from_the_exclusions_to_the_registry(mer
     assert list(problems['problem']) == ['not in registry.csv or excluded.csv']
 
 
+def test_a_dropped_object_the_census_no_longer_enumerates_leaves_every_file(merger):
+    """A re-pull can stop enumerating an excluded object (base R's beaver1 once beavers.R
+    reads as one object, #14); nothing can re-file it, so dropping it deletes its key."""
+    gone = {'source': 'cattle', 'object': 'cattle.old', 'reason': 'no grouping structure', 'detail': ''}  # fmt: skip
+    mergeShard(merger, writeShard(merger.survey / 'shards' / 'excluded_gone.csv', [gone]))
+    drop = {'source': 'cattle', 'object': 'cattle.old', 'reason': 'no longer a census object'}
+    mergeShard(merger, writeShard(merger.survey / 'shards' / 'dropped_gone.csv', [drop]))
+    assert readRows(merger.registry / 'excluded.csv') == []
+    assert readRows(merger.survey / 'dropped.csv') == []
+
+
 def test_the_census_lands_in_the_registry_and_the_bookkeeping_in_the_survey(splitMerger):
     """registry/ is what the package ships, so a merge writes only the census there; the
     duplicate flags and the dropped list stay with the survey's working files."""
