@@ -1,6 +1,7 @@
 """Admit the registry's rows to suite 1.1 (ADR 0002): every row the family rule covers is built
 into its problem and materialised under the cache, and its contract hash goes into the
-candidate list, in registry order. Run from the repo root:
+candidate list, in registry order; a refused row goes into the refusals with its reason. Run
+from the repo root:
 
     uv run python suite/admit.py
 """
@@ -21,7 +22,7 @@ from mixedbench.registry.row import Row, writeCsv
 
 ROOT = Path(__file__).resolve().parents[1]
 CACHE = ROOT / 'registry' / 'cache'
-CANDIDATES = ROOT / 'suite' / '1.1' / 'candidates.csv'
+SUITE = ROOT / 'suite' / '1.1'
 
 # =====================================================================================
 # the hand decisions, by problem id
@@ -33,6 +34,11 @@ REFUSED = {
     'nlme/IGF/1': 'nonlinear_parameter_model: random effects on nonlinear parameters (#27)',
     'nlme/Muscle/1': 'nonlinear_parameter_model: random effects on nonlinear parameters (#27)',
     'nlme/Soybean/1': 'nonlinear_parameter_model: random effects on nonlinear parameters (#27)',
+    # one-compartment pharmacokinetic models, the nlme tables and Stata's fuller copies (notes)
+    'nlme/Phenobarb/1': 'nonlinear_parameter_model: a pharmacokinetic model (#32)',
+    'nlme/Quinidine/1': 'nonlinear_parameter_model: a pharmacokinetic model (#32)',
+    'stata_phenobarb/phenobarb.dta/1': 'nonlinear_parameter_model: a pharmacokinetic model (#32)',
+    'stata_quinidine/quinidine.dta/1': 'nonlinear_parameter_model: a pharmacokinetic model (#32)',
     'nlme/Ovary/1': 'non_affine_feature: the slope is on sin(2*pi*Time) (#27)',
     'gumundsdottir_2026_osf_6/Questionnaire_data_long/1': (
         'non_affine_feature: time is a non-linear recode of wave (#27)'
@@ -117,6 +123,13 @@ class Admitted:
     candidates: pd.DataFrame  # id, contract_hash, verified, dropped_share, fidelity
     refused: dict[str, str]  # per refused problem id, the reason
     failed: dict[str, str]  # per problem id whose table did not load, the error
+
+    def write(self, dir: Path) -> None:
+        """The candidate list and the refusals with their reasons, both in registry order."""
+        dir.mkdir(parents=True, exist_ok=True)
+        writeCsv(self.candidates, dir / 'candidates.csv')
+        refused = pd.DataFrame(self.refused.items(), columns=['id', 'reason'])
+        writeCsv(refused, dir / 'refused.csv')
 
     def report(self, top: int = 10) -> str:
         """The refusals, the failures, and the `top` candidates by dropped share, largest
@@ -204,4 +217,4 @@ if __name__ == '__main__':
     print(admitted.report())
     if admitted.failed:
         sys.exit(1)  # a list missing a row would drop it silently
-    writeCsv(admitted.candidates, CANDIDATES)
+    admitted.write(SUITE)
