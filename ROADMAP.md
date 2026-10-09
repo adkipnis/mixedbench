@@ -9,7 +9,9 @@ release that freezes it.
 
 - [x] **1 Repository.** Loader and survey moved from metabeta-v3 with history, package and CI
 - [x] **2 Registry columns and verification.** Family, prior, licence, readers without R, hand sample (#6)
-- [ ] **3 Contract and candidate list.** `Problem` from a registry row (ADR 0001): rows, coding,
+- [ ] **3 Contract and candidate list.** First, the registry module owns the registry row (CSV
+  dialect, row grammar, manifest), so `survey/` and the contract share one parser (#16,
+  candidate 2). `Problem` from a registry row (ADR 0001): rows, coding,
   standardisation, family rule, prior, splits, oracle generator, id and hash; `materialise` to
   parquet; the admission script writes suite 1.1's candidate list (membership freezes with the
   references in 1.1, since admission needs a reference that passes the bar, ADR 0002); the
@@ -36,5 +38,4 @@ release that freezes it.
 - [ ] **9 Extensions.** An R loader; an "as published" prior track from `documented_prior`; a
   permitted-mirror fallback for rotted sources (ADR 0003)
 
-No further releases are planned. INLA and MCMCglmm lines are dropped (ADR 0005 parked them;
-their priors cannot be made to match the contract's).
+No further releases are planned.
