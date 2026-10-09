@@ -142,7 +142,7 @@ The same bar as code: simplicity and a linear read, for every Markdown file.
 
 ## Working with me
 
-- Responses maximally human-readable and concise; a long one opens with a TL;DR.
+- Responses maximally human-readable and concise; a long one closes with a TL;DR.
 - State assumptions for routine calls. When readings lead to materially different work,
   present at most four options with a recommendation; if still unclear, stop and ask.
 - Propose a short plan before non-trivial edits.
