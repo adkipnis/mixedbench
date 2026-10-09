@@ -23,6 +23,7 @@ import shutil
 from pathlib import Path
 
 import pandas as pd
+from help import HelpPage
 from mixedbench.datasets import DataObject, Loader
 from schema import CANDIDATE_COLUMNS, EXCLUDED, SCREENS, TIERS
 from sources import readFrame
@@ -89,6 +90,7 @@ class Puller:
     ) -> None:
         self.registry, self.survey = Path(registry), Path(survey)
         self.loader = loader or Loader(self.registry / 'cache')
+        self.help = HelpPage(self.loader)
         self.frame = readFrame(self.registry)
         self.tiers = tiers
         # frame order: tier, then the order of `sources.yaml`
@@ -125,7 +127,7 @@ class Puller:
             source = self.frame.sources[row['source']]
             file = self.registry / 'help' / row['source'] / f'{row["object"]}.txt'
             file.parent.mkdir(parents=True, exist_ok=True)
-            page = self.loader.help(source, row['object'])
+            page = self.help.page(source, row['object'])
             if row['source'] in self.depositPages:  # one page per deposit, read once per deposit
                 deposit = self.depositPages[row['source']].relative_to(self.registry.parent)
                 page = f'# deposit page: {deposit}\n\n{page}'

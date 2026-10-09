@@ -1,11 +1,10 @@
 """Dataset loader for the dimension survey: pinned source as input, typed DataFrame as output.
 The pipeline url -> archive -> tree -> files -> frames and the cache live here, without R
-(ADR 0003); the formats are `readers.py`, the help pages `docs.py`."""
+(ADR 0003); the formats are `readers.py`."""
 
 from __future__ import annotations
 
 import hashlib
-import re
 import ssl
 import tarfile
 import time
@@ -19,7 +18,7 @@ from typing import Literal
 from urllib.parse import quote, urlparse
 
 import pandas as pd
-from mixedbench.datasets import docs, readers
+from mixedbench.datasets import readers
 from mixedbench.datasets.readers import Reader
 
 CRAN = 'https://cloud.r-project.org/src/contrib'
@@ -58,7 +57,6 @@ class DataObject:
 class ManifestRow:
     file: str  # the object's file, relative to the source tree
     sha256: str  # of that file
-    size: int  # in bytes
 
 
 Manifest = Mapping[tuple[Source, str], ManifestRow]  # (source, object name) -> its file
@@ -147,45 +145,6 @@ class Loader:
         if values.str.contains('.', regex=False).any():
             return values
         return values.str.replace(',', '.', regex=False)
-
-    def manifestRow(self, source: Source, name: str) -> ManifestRow:
-        """What the manifest records of an object, read from the whole source."""
-        file = self._read(source)[name][0].file
-        data = (self.tree(source) / file).read_bytes()
-        return ManifestRow(file, hashlib.sha256(data).hexdigest(), len(data))
-
-    def help(self, source: Source, name: str) -> str:
-        """What documents `name`: the Rd page of a CRAN object; otherwise the text files named
-        after the object's stem in its folder or a sibling folder (posteriordb's
-        `data/info/radon.info.json` beside `data/data/`), else those in the file's folder or the
-        nearest folder above it within the pinned path that has any; a Stan data dict adds which
-        entries are not in the table, a Stata or SPSS file its labels, a workbook its contents
-        sheet, and a repository that is an R package (rethinking, ROS's `rpackage/`) the Rd
-        page named after the file's stem."""
-        tree = self.tree(source)
-        if source.kind == 'cran':
-            page = docs.rdPage(tree / 'man', name)
-            if page is None:
-                raise KeyError(f'{source.name} {source.pin} has no help page for {name!r}')
-            return page
-        file = tree / self._read(source)[name][0].file
-        root = tree / (source.path or '')  # documentation is sought within the pinned path
-        if root.is_file():
-            root = root.parent
-        found = docs.sameStemDocs(tree, file) or docs.docsBeside(root, file)
-        pages = [
-            f'# {f.relative_to(tree).as_posix()}\n{f.read_text(encoding="utf-8", errors="replace")}'
-            for f in found
-        ]
-        pages.append(docs.selfNote(file))
-        for man in sorted(tree.rglob('man')):  # a repository that is an R package (rethinking)
-            pages.append(docs.rdPage(man, readers.bare(file).stem))
-        return '\n'.join(page for page in pages if page)
-
-    def licence(self, source: Source) -> str:
-        """The `License` field of a CRAN package's DESCRIPTION, verbatim."""
-        description = (self.tree(source) / 'DESCRIPTION').read_text()
-        return re.search(r'^License:\s*(.+)$', description, re.MULTILINE).group(1)
 
     # ------------------------------------------------------------------------------------------
     # pipeline: url -> archive -> tree -> files -> frames

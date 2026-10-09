@@ -60,5 +60,5 @@ def manifest() -> Manifest:
     rows = pd.read_csv(path('manifest.csv'), dtype=str, keep_default_na=False)
     entries = {}
     for row in rows.itertuples(index=False):
-        entries[pinned[row.source], row.object] = ManifestRow(row.file, row.sha256, int(row.size))
+        entries[pinned[row.source], row.object] = ManifestRow(row.file, row.sha256)
     return entries

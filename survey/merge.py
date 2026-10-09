@@ -15,6 +15,8 @@ from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
+import re
 import sys
 from itertools import combinations
 from pathlib import Path
@@ -143,13 +145,15 @@ class Merger:
         return {o.name: o for o in self.loader.objects(self.sources[label])}
 
     def verbatimLicence(self, label: str) -> str | None:
-        """The source's `licence:` key, else its CRAN package's DESCRIPTION (base R's has
-        none, so `datasets` carries a key); None for a git or url source nobody has looked at."""
+        """The source's `licence:` key, else the `License` field of its CRAN package's
+        DESCRIPTION, verbatim (base R's has none, so `datasets` carries a key); None for a git
+        or url source nobody has looked at."""
         source = self.sources[label]
         if label in self.licences:
             return self.licences[label]
         if source.kind == 'cran':
-            return self.loader.licence(source)
+            description = (self.loader.tree(source) / 'DESCRIPTION').read_text()
+            return re.search(r'^License:\s*(.+)$', description, re.MULTILINE).group(1)
         return None
 
     def rank(self, key: Key) -> tuple[int, int, str]:
@@ -518,8 +522,10 @@ class Merger:
         """The file each registry object loads from, with its digest and size (#4)."""
         rows = []
         for label, name in registry[['source', 'object']].drop_duplicates().itertuples(index=False):  # fmt: skip
-            row = self.loader.manifestRow(self.sources[label], name)
-            rows.append({'source': label, 'object': name, 'file': row.file, 'sha256': row.sha256, 'size': row.size})  # fmt: skip
+            file = self.objects(label)[name].file
+            data = (self.loader.tree(self.sources[label]) / file).read_bytes()
+            sha256 = hashlib.sha256(data).hexdigest()
+            rows.append({'source': label, 'object': name, 'file': file, 'sha256': sha256, 'size': len(data)})  # fmt: skip
         manifest = pd.DataFrame(rows, columns=MANIFEST_COLUMNS)
         manifest = manifest.astype({'size': 'Int64'})  # base R's None would make it float
         writeCsv(manifest, self.registry / 'manifest.csv')

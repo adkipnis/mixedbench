@@ -66,7 +66,7 @@ def urlSource(url: str, data: bytes, **keys: str) -> Source:
 
 
 def manifestRow(file: str, data: bytes) -> ManifestRow:
-    return ManifestRow(file, sha(data), len(data))
+    return ManifestRow(file, sha(data))
 
 
 def tarMember(archive: bytes, name: str) -> bytes:
@@ -315,7 +315,7 @@ def test_a_file_differing_from_its_manifest_checksum_is_refused(tmp_path):
     server = Server({RADON: radon})
     example = Source(kind='git', name=EXAMPLE_REPO, pin='c0ffee1', path='data')
     good = {(example, 'data/radon.csv'): manifestRow('data/radon.csv', radon)}
-    bad = {(example, 'data/radon.csv'): ManifestRow('data/radon.csv', '0' * 64, len(radon))}
+    bad = {(example, 'data/radon.csv'): ManifestRow('data/radon.csv', '0' * 64)}
     Loader(tmp_path, fetch=server, manifest=good).load(example, 'data/radon.csv')
     with pytest.raises(ValueError, match='checksum'):
         Loader(tmp_path, fetch=server, manifest=bad).load(example, 'data/radon.csv')
