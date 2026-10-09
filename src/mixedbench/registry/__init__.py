@@ -6,9 +6,9 @@ from importlib.metadata import distribution
 from pathlib import Path
 from typing import Literal
 
-import pandas as pd
 import yaml
 from mixedbench.datasets import Manifest, ManifestRow, Source
+from mixedbench.registry.row import Row, readCsv
 
 RegistryFile = Literal[
     'sources.yaml',
@@ -62,8 +62,15 @@ def source(label: str, entry: dict) -> Source:
 def manifest() -> Manifest:
     """The file every registry object loads from, for `Loader(cache, manifest=manifest())`."""
     pinned = sources()
-    rows = pd.read_csv(path('manifest.csv'), dtype=str, keep_default_na=False)
+    rows = readCsv(path('manifest.csv'))
     entries = {}
     for row in rows.itertuples(index=False):
         entries[pinned[row.source], row.object] = ManifestRow(row.file, row.sha256)
     return entries
+
+
+def rows(file: Path | None = None) -> list[Row]:
+    """Every row of `registry.csv`, typed; `file` is a `registry.csv` other than the installed
+    one."""
+    cells = readCsv(file or path('registry.csv'))
+    return [Row.parse(record) for record in cells.to_dict('records')]
