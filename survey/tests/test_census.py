@@ -5,7 +5,7 @@ check notices."""
 from pathlib import Path
 
 import pandas as pd
-from schema import readCsv
+from mixedbench.registry.row import readCsv, splitList
 from sources import Key
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -19,7 +19,7 @@ def registryMembers(registry: pd.DataFrame) -> set[Key]:
     """Every object a registry row stands for, the duplicates folded into it included."""
     members = set()
     for listed in registry['sources']:
-        for member in listed.split(';'):
+        for member in splitList(listed):
             source, object = member.split(':', 1)
             members.add((source, object))
     return members

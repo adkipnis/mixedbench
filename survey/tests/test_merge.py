@@ -8,7 +8,7 @@ import pytest
 import yaml
 from conftest import FIXTURES, mergeShard, readRows
 from merge import Merger, ShardRefused
-from schema import readCsv, writeCsv
+from mixedbench.registry.row import readCsv, writeCsv
 from sources import readFrame
 
 RENAMED_TYPES = 'area=categorical;farm=categorical;type=categorical;diet=categorical'

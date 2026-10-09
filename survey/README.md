@@ -103,8 +103,10 @@ sites refuse scripts, so ARM data come through `stan_arm` and `ros`.
 
 ## File contracts
 
-`schema.py` holds every column and allowed value; `tests/test_docs.py` asserts that this
-section names each one. Every CSV field is quoted.
+`schema.py` holds every column and allowed value; the registry row's column order, its
+response types, families and column types, the dialect and the list, term and `types` grammars
+are the package's (`src/mixedbench/registry/row.py`), and `schema.py` imports them.
+`tests/test_docs.py` asserts that this section names each one. Every CSV field is quoted.
 
 ### `candidates.csv` and the pre-screen
 
