@@ -40,6 +40,11 @@ def test_passing_registry_shard_merges_with_tier_and_reader_filled_in(merger):
     assert {r['reader'] for r in rows} == {'pandas'}
     assert rows[0]['sources'] == 'herds:herds.csv'
     assert rows[1]['formula'] == 'cbind(cases, trials - cases) ~ breed + (1 | herd)'
+    assert {r['licence'] for r in rows} == {'CC0-1.0'}  # sources.yaml: `CC0 1.0 Universal`
+    columns = list(rows[0])
+    assert columns[columns.index('trials') + 1] == 'family'
+    assert columns[columns.index('formula') + 1] == 'documented_prior'
+    assert columns[columns.index('reader') + 1] == 'licence'
 
 
 def writeShard(path: Path, rows: list[dict]) -> Path:
@@ -48,6 +53,16 @@ def writeShard(path: Path, rows: list[dict]) -> Path:
         writer.writeheader()
         writer.writerows(rows)
     return path
+
+
+def test_a_cran_sources_licence_is_read_from_its_description(merger):
+    """CRAN entries of sources.yaml carry no `licence:` key: the merge reads the package's own
+    DESCRIPTION through the loader and normalises it (ADR 0003)."""
+    rows = readRows(FIXTURES / 'registry_herds.csv')
+    rows[0] |= {'source': 'pens', 'object': 'herds'}
+    mergeShard(merger, writeShard(merger.survey / 'shards' / 'registry_pens.csv', rows[:1]))
+    merged = readRows(merger.registry / 'registry.csv')
+    assert [(r['source'], r['licence']) for r in merged] == [('pens', 'GPL-2.0-or-later')]
 
 
 def refusal(merger: Merger, shard: Path) -> pd.DataFrame:
@@ -67,6 +82,12 @@ def refusal(merger: Merger, shard: Path) -> pd.DataFrame:
         ({'response_type': 'count'}, 'response_type', 'weight is not integer-valued'),
         ({'model_index': '4'}, 'model_index', 'at most 3 models per object'),
         ({'covariates': 'breed;herd'}, 'grouping_factors', 'herd is also a covariate'),
+        ({'family': 'poisson'}, 'family', 'not allowed'),  # a restatement of the family rule
+        (
+            {'documented_prior': 'sd ~ student_t(3, 0, 2.5)', 'published_model': 'no'},
+            'documented_prior',
+            'only on a published model',
+        ),
     ],
 )
 def test_a_reading_the_table_contradicts_is_refused_with_the_row_named(
@@ -82,6 +103,36 @@ def test_a_reading_the_table_contradicts_is_refused_with_the_row_named(
     assert problems.iloc[0]['key'].startswith('herds herds.csv')
     assert list(problems['column']) == [column]
     assert problems.iloc[0]['problem'] == problem
+    assert not (merger.registry / 'registry.csv').exists()
+
+
+def withLicenceKey(merger: Merger, label: str, licence: str | None) -> Merger:
+    """The scratch merger over a sources.yaml whose `label` has another `licence:` key, or none."""
+    path = merger.registry / 'sources.yaml'
+    sources = yaml.safe_load(path.read_text())
+    entries = {label: entry for tier in sources['tiers'].values() for label, entry in tier.items()}
+    entries[label].pop('licence', None)
+    if licence is not None:
+        entries[label]['licence'] = licence
+    path.write_text(yaml.safe_dump(sources, sort_keys=False))
+    return Merger(merger.registry, merger.survey, loader=merger.loader)
+
+
+@pytest.mark.parametrize(
+    'licence, problem',
+    [
+        ('Creative Commons Zero', 'not in the licence lookup'),
+        (None, 'no licence: key in sources.yaml'),  # an absent key means nobody has looked
+    ],
+)
+def test_a_licence_the_lookup_cannot_classify_refuses_the_merge(merger, licence, problem):
+    """A new spelling is classified on sight, never silently made `other`: the merge names the
+    source and the string and writes nothing."""
+    merger = withLicenceKey(merger, 'herds', licence)
+    problems = refusal(merger, FIXTURES / 'registry_herds.csv')
+    assert list(problems['key']) == ['herds']
+    assert list(problems['value']) == [licence or '']
+    assert list(problems['problem']) == [problem]
     assert not (merger.registry / 'registry.csv').exists()
 
 
@@ -124,6 +175,25 @@ def test_merging_the_same_shard_twice_changes_nothing(merger):
     mergeShard(merger, FIXTURES / 'excluded_cattle.csv')
     after = {p.name: p.read_bytes() for p in merger.registry.glob('*.csv')}
     assert after == before
+
+
+def test_an_empty_shard_migrates_a_registry_of_the_old_shape(merger):
+    """The one-time migration of #7 is a merge of a shard with the new header and no rows: the
+    old rows gain `family` and `documented_prior` empty and `licence` filled, in the new column
+    order; merging it again changes nothing."""
+    mergeShard(merger, FIXTURES / 'registry_herds.csv')
+    path = merger.registry / 'registry.csv'
+    current = pd.read_csv(path, dtype=str, keep_default_na=False)
+    old = current.drop(columns=['family', 'documented_prior', 'licence'])
+    old.to_csv(path, index=False, quoting=csv.QUOTE_ALL)
+    header = ','.join(readRows(FIXTURES / 'registry_herds.csv')[0])
+    shard = merger.survey / 'shards' / 'registry_schema.csv'
+    shard.write_text(header + '\n')
+    mergeShard(merger, shard)
+    migrated = path.read_bytes()
+    assert pd.read_csv(path, dtype=str, keep_default_na=False).equals(current)
+    mergeShard(merger, shard)
+    assert path.read_bytes() == migrated
 
 
 def test_equal_row_count_and_column_cardinalities_flag_a_duplicate_candidate(merger):

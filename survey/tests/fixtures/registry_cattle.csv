@@ -1,2 +1,2 @@
-"source","object","model_index","response","response_type","trials","grouping_factors","covariates","interactions","ignore","types","formula","published_model","domain","confidence","notes"
-"cattle","cattle.csv","1","kg","continuous","","area;farm","type;diet","","row","area=categorical;farm=categorical;type=categorical;diet=categorical","kg ~ type + diet + (1 | area/farm)","no","agriculture","high","package copy of the herds table"
+"source","object","model_index","response","response_type","trials","family","grouping_factors","covariates","interactions","ignore","types","formula","documented_prior","published_model","domain","confidence","notes"
+"cattle","cattle.csv","1","kg","continuous","","","area;farm","type;diet","","row","area=categorical;farm=categorical;type=categorical;diet=categorical","kg ~ type + diet + (1 | area/farm)","","no","agriculture","high","package copy of the herds table"

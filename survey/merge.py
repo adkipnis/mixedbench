@@ -33,6 +33,7 @@ from schema import (
     ALLOWED,
     COLUMN_LIST_COLUMNS,
     COLUMN_TYPES,
+    LICENCES,
     MAX_MODELS_PER_OBJECT,
     MAX_ORDINAL_LEVELS,
     REQUIRED,
@@ -123,12 +124,16 @@ class Merger:
         self.registry, self.survey = Path(registry), Path(survey)
         self.loader = loader or Loader(self.registry / 'cache')
         frame = readFrame(self.registry)
-        self.tiers, self.sources = frame.tiers, frame.sources
+        self.tiers, self.sources, self.licences = frame.tiers, frame.sources, frame.licences
         self.order = {label: i for i, label in enumerate(frame.tiers)}  # sources.yaml order
 
     def canonical(self, table: Table) -> pd.DataFrame:
+        """The table's file in its current columns: a file of an older shape gains the new
+        columns empty (#7)."""
         path = self.file(table.name)
-        return readCsv(path) if path.exists() else pd.DataFrame(columns=table.columns)
+        if not path.exists():
+            return pd.DataFrame(columns=table.columns)
+        return readCsv(path).reindex(columns=table.columns, fill_value='')
 
     def file(self, name: str) -> Path:
         dir = self.registry if name in CENSUS else self.survey
@@ -136,6 +141,16 @@ class Merger:
 
     def objects(self, label: str) -> dict[str, DataObject]:
         return {o.name: o for o in self.loader.objects(self.sources[label])}
+
+    def verbatimLicence(self, label: str) -> str | None:
+        """The source's `licence:` key, else its CRAN package's DESCRIPTION (base R's has
+        none, so `datasets` carries a key); None for a git or url source nobody has looked at."""
+        source = self.sources[label]
+        if label in self.licences:
+            return self.licences[label]
+        if source.kind == 'cran':
+            return self.loader.licence(source)
+        return None
 
     def rank(self, key: Key) -> tuple[int, int, str]:
         """Frame order of an object: its tier, its source's place in `sources.yaml`, its name."""
@@ -173,6 +188,7 @@ class Merger:
         problems = self.validateValues()
         if self.table.name == 'registry':
             problems += self.validateAgainstTables()
+            problems += self.licenceProblems()
         if self.table.name in RIVALS:
             problems += self.rivalProblems()
         if self.table.name == 'dropped':
@@ -200,6 +216,9 @@ class Merger:
             problems += self.flag(bad, col, 'not allowed')
         if name == 'registry':
             problems += self.modelIndexProblems()
+            prior = self.shard['documented_prior'] != ''
+            unpublished = self.shard['published_model'] == 'no'
+            problems += self.flag(prior & unpublished, 'documented_prior', 'only on a published model')  # fmt: skip
         return problems
 
     def modelIndexProblems(self) -> list[dict]:
@@ -208,6 +227,22 @@ class Merger:
         number = pd.to_numeric(index, errors='coerce')
         outside = number.notna() & ~number.between(1, MAX_MODELS_PER_OBJECT)
         problems += self.flag(outside, 'model_index', f'at most {MAX_MODELS_PER_OBJECT} models per object')  # fmt: skip
+        return problems
+
+    def licenceProblems(self) -> list[dict]:
+        """Every registry source's licence is in the lookup, the shard's and those merged
+        earlier, since the merge rewrites every row's licence."""
+        merged = set(self.canonical(TABLES['registry'])['source'])
+        named = merged | set(self.shard['source'])
+        labels = named & set(self.sources)  # a label not in sources.yaml is flagged by its row
+        problems = []
+        for label in sorted(labels):
+            verbatim = self.verbatimLicence(label)
+            problem = {'line': '', 'key': label, 'column': 'licence', 'value': verbatim or ''}
+            if verbatim is None:
+                problems.append(problem | {'problem': 'no licence: key in sources.yaml'})
+            elif verbatim not in LICENCES:
+                problems.append(problem | {'problem': 'not in the licence lookup'})
         return problems
 
     def rivalProblems(self) -> list[dict]:
@@ -354,9 +389,11 @@ class Merger:
     def append(self) -> None:
         """Upsert on the row key: existing keys are replaced in place, new rows appended."""
         old = self.canonical(self.table)
-        new = self.shard[self.table.columns].reset_index(drop=True)
+        new = self.shard.reindex(columns=self.table.columns).reset_index(drop=True)
         key = list(self.table.key)
         merged = pd.concat([old, new]).drop_duplicates(subset=key, keep='last')
+        if self.table.name == 'registry':
+            merged = self.withLicences(merged)
         self.replaced = len(old) + len(new) - len(merged)
         self.merged = merged.reset_index(drop=True)
         writeCsv(self.merged, self.file(self.table.name))
@@ -365,6 +402,14 @@ class Merger:
         if self.table.name in RECONCILED:
             self.reconcile()
         self.measure()
+
+    def withLicences(self, registry: pd.DataFrame) -> pd.DataFrame:
+        """Every row's licence, rows merged earlier too: a licence is its source's, so a
+        corrected key reaches every row of the source at the next merge."""
+        licences = {
+            label: LICENCES[self.verbatimLicence(label)] for label in set(registry['source'])
+        }
+        return registry.assign(licence=registry['source'].map(licences))
 
     def supersede(self) -> None:
         """The shard's objects leave the files this merge wins over."""
