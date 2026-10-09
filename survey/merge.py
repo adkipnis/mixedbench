@@ -41,7 +41,6 @@ from schema import (
     REQUIRED,
     TABLES,
     TERM_COLUMNS,
-    TYPES_COLUMN,
     Table,
     readCsv,
     writeCsv,
@@ -86,33 +85,6 @@ class Merger:
         self.registry, self.survey = Path(registry), Path(survey)
         self.loader = loader or Loader(self.registry / 'cache')
         self.frame = readFrame(self.registry)
-
-    def canonical(self, table: Table) -> pd.DataFrame:
-        """The table's file in its current columns: a file of an older shape gains the new
-        columns empty (#7)."""
-        path = self.file(table.name)
-        if not path.exists():
-            return pd.DataFrame(columns=table.columns)
-        return readCsv(path).reindex(columns=table.columns, fill_value='')
-
-    def file(self, name: str) -> Path:
-        dir = self.registry if name in CENSUS else self.survey
-        return dir / f'{name}.csv'
-
-    def objects(self, label: str) -> dict[str, DataObject]:
-        return {o.name: o for o in self.loader.objects(self.frame.sources[label])}
-
-    def verbatimLicence(self, label: str) -> str | None:
-        """The source's `licence:` key, else the `License` field of its CRAN package's
-        DESCRIPTION, verbatim (base R's has none, so `datasets` carries a key); None for a git
-        or url source nobody has looked at."""
-        source = self.frame.sources[label]
-        if label in self.frame.licences:
-            return self.frame.licences[label]
-        if source.kind == 'cran':
-            description = (self.loader.tree(source) / 'DESCRIPTION').read_text()
-            return re.search(r'^License:\s*(.+)$', description, re.MULTILINE).group(1)
-        return None
 
     # ---------------------------------------------------------------------------------
     # load
@@ -210,24 +182,48 @@ class Merger:
                 problems.append(problem | {'problem': 'not in the licence lookup'})
         return problems
 
+    def verbatimLicence(self, label: str) -> str | None:
+        """The source's `licence:` key, else the `License` field of its CRAN package's
+        DESCRIPTION, verbatim (base R's has none, so `datasets` carries a key); None for a git
+        or url source nobody has looked at."""
+        source = self.frame.sources[label]
+        if label in self.frame.licences:
+            return self.frame.licences[label]
+        if source.kind == 'cran':
+            description = (self.loader.tree(source) / 'DESCRIPTION').read_text()
+            return re.search(r'^License:\s*(.+)$', description, re.MULTILINE).group(1)
+        return None
+
     def rivalProblems(self) -> list[dict]:
         rival = TABLES[RIVALS[self.table.name]]
         taken = self.objectsIn(rival)
-        return self.flag(self.shardObjects().isin(taken), 'object', f'also in {rival.name}.csv')
+        return self.flag(self.keysOf(self.shard).isin(taken), 'object', f'also in {rival.name}.csv')
 
     def unknownObjects(self) -> list[dict]:
         """A dropped object must be somewhere to drop it from."""
         known = self.objectsIn(TABLES['registry']) | self.objectsIn(TABLES['excluded'])
-        unknown = ~self.shardObjects().isin(known)
+        unknown = ~self.keysOf(self.shard).isin(known)
         return self.flag(unknown, 'object', 'not in registry.csv or excluded.csv')
 
     def objectsIn(self, table: Table) -> set[Key]:
-        rows = self.canonical(table)
-        return set(zip(rows['source'], rows['object']))
+        return set(self.keysOf(self.canonical(table)))
 
-    def shardObjects(self) -> pd.Series:
-        keys = list(zip(self.shard['source'], self.shard['object']))
-        return pd.Series(keys, index=self.shard.index)
+    @staticmethod
+    def keysOf(rows: pd.DataFrame) -> pd.Series:
+        """Each row's (source, object), on the rows' index."""
+        return pd.Series(list(zip(rows['source'], rows['object'])), index=rows.index)
+
+    def canonical(self, table: Table) -> pd.DataFrame:
+        """The table's file in its current columns: a file of an older shape gains the new
+        columns empty (#7)."""
+        path = self.file(table.name)
+        if not path.exists():
+            return pd.DataFrame(columns=table.columns)
+        return readCsv(path).reindex(columns=table.columns, fill_value='')
+
+    def file(self, name: str) -> Path:
+        dir = self.registry if name in CENSUS else self.survey
+        return dir / f'{name}.csv'
 
     def flag(self, mask: pd.Series, column: str, text: str) -> list[dict]:
         return [self.problem(line, column, text) for line in self.shard.index[mask]]
@@ -259,11 +255,11 @@ class Merger:
         if row['object'] not in self.objects(row['source']):
             return [self.problem(line, 'object', f'not an object of {row["source"]}')]
         source = self.frame.sources[row['source']]
-        types = parseTypes(row[TYPES_COLUMN])
+        types = parseTypes(row['types'])
         problems = []
         for kind in types.values():
             if kind not in COLUMN_TYPES:
-                problems.append(self.problem(line, TYPES_COLUMN, f'not a column type: {kind}'))
+                problems.append(self.problem(line, 'types', f'not a column type: {kind}'))
         untyped = self.loader.load(source, row['object'])
         problems += self.missingColumns(line, row, set(untyped.columns), types)
         if problems:
@@ -275,6 +271,9 @@ class Merger:
         problems += self.responseProblems(line, row, df)
         return problems
 
+    def objects(self, label: str) -> dict[str, DataObject]:
+        return {o.name: o for o in self.loader.objects(self.frame.sources[label])}
+
     def missingColumns(
         self, line: int, row: pd.Series, columns: set[str], types: dict[str, str]
     ) -> list[dict]:
@@ -285,7 +284,7 @@ class Merger:
         for col in TERM_COLUMNS:
             for term in splitList(row[col]):
                 named += [(col, name) for name in term.split(':')]
-        named += [(TYPES_COLUMN, name) for name in types]
+        named += [('types', name) for name in types]
         return [
             self.problem(line, col, f'no such column: {name}')
             for col, name in named
@@ -361,14 +360,6 @@ class Merger:
             return [self.problem(line, 'trials', f'{response} exceeds {trials}')]
         return []
 
-    def fillScriptColumns(self) -> None:
-        if 'tier' in self.table.scriptColumns:
-            self.shard['tier'] = self.shard['source'].map(self.frame.tiers)
-        if 'reader' in self.table.scriptColumns:
-            self.shard['reader'] = [self.objects(s)[o].reader for s, o in self.shardObjects()]
-        if 'sources' in self.table.scriptColumns:
-            self.shard['sources'] = self.shard['source'] + ':' + self.shard['object']
-
     # ---------------------------------------------------------------------------------
     # upsert
     # ---------------------------------------------------------------------------------
@@ -390,10 +381,18 @@ class Merger:
         self.merged = merged.reset_index(drop=True)
         writeCsv(self.merged, self.file(self.table.name))
 
+    def fillScriptColumns(self) -> None:
+        if 'tier' in self.table.scriptColumns:
+            self.shard['tier'] = self.shard['source'].map(self.frame.tiers)
+        if 'reader' in self.table.scriptColumns:
+            self.shard['reader'] = [self.objects(s)[o].reader for s, o in self.keysOf(self.shard)]
+        if 'sources' in self.table.scriptColumns:
+            self.shard['sources'] = self.shard['source'] + ':' + self.shard['object']
+
     def inCensus(self) -> pd.Series:
         """A dropped object the loader no longer enumerates can never be re-filed, so its key
         leaves every file instead of waiting in dropped.csv (#14)."""
-        present = [o in self.objects(s) for s, o in self.shardObjects()]
+        present = [o in self.objects(s) for s, o in self.keysOf(self.shard)]
         return pd.Series(present, index=self.shard.index)
 
     def withLicences(self, registry: pd.DataFrame) -> pd.DataFrame:
@@ -406,14 +405,13 @@ class Merger:
 
     def supersede(self) -> None:
         """The shard's objects leave the files this merge wins over."""
-        objects = set(self.shardObjects()) if 'source' in self.shard else set()
+        objects = set(self.keysOf(self.shard)) if 'source' in self.shard else set()
         for name in SUPERSEDES[self.table.name]:
             path = self.file(name)
             if not path.exists():
                 continue
             rows = readCsv(path)
-            keys = pd.Series(list(zip(rows['source'], rows['object'])), index=rows.index)
-            writeCsv(rows[~keys.isin(objects)], path)
+            writeCsv(rows[~self.keysOf(rows).isin(objects)], path)
 
     # ---------------------------------------------------------------------------------
     # reconcile duplicates: fold confirmed groups, flag new candidates
@@ -451,7 +449,7 @@ class Merger:
         """Each confirmed group becomes the row(s) of its earliest member in the registry,
         `sources` listing every member of the group, present or already folded away; the
         other present members' rows leave the registry."""
-        keys = pd.Series(list(zip(registry['source'], registry['object'])), index=registry.index)
+        keys = self.keysOf(registry)
         sources = registry['source'] + ':' + registry['object']
         keep = pd.Series(True, index=registry.index)
         for group in groups:
@@ -467,7 +465,7 @@ class Merger:
     def flagCandidates(self, registry: pd.DataFrame, duplicates: pd.DataFrame) -> list[dict]:
         """Pairs of registry objects with equal row count and sorted column cardinalities that
         no verdict row covers yet, earliest tier first."""
-        objects = sorted(set(zip(registry['source'], registry['object'])), key=self.frame.rank)
+        objects = sorted(set(self.keysOf(registry)), key=self.frame.rank)
         groups: dict[tuple, list[Key]] = {}  # signature -> its objects in frame order
         for key in objects:
             groups.setdefault(self.signature(key), []).append(key)
@@ -501,6 +499,9 @@ class Merger:
         writeCsv(pd.DataFrame(dimensions, columns=DIMENSION_COLUMNS), self.registry / 'dimensions.csv')  # fmt: skip
         writeCsv(pd.DataFrame(columns, columns=COLUMN_COLUMNS), self.registry / 'columns.csv')
 
+    # ---------------------------------------------------------------------------------
+    # manifest: registry objects -> manifest.csv
+    # ---------------------------------------------------------------------------------
     def writeManifest(self) -> None:
         """The file each registry object loads from, with its digest and size (#4)."""
         registry = self.canonical(TABLES['registry'])
@@ -511,12 +512,11 @@ class Merger:
             sha256 = hashlib.sha256(data).hexdigest()
             rows.append({'source': label, 'object': name, 'file': file, 'sha256': sha256, 'size': len(data)})  # fmt: skip
         manifest = pd.DataFrame(rows, columns=MANIFEST_COLUMNS)
-        manifest = manifest.astype({'size': 'Int64'})  # base R's None would make it float
         writeCsv(manifest, self.registry / 'manifest.csv')
 
-    def summarise(self) -> None:
-        Summariser(self.registry, self.survey).flush()
-
+    # ---------------------------------------------------------------------------------
+    # report
+    # ---------------------------------------------------------------------------------
     def report(self) -> None:
         print(f'{self.table.name}: {self.added} rows added, {self.replaced} replaced, {len(self.merged)} total')  # fmt: skip
         if self.flagged:
@@ -545,5 +545,5 @@ if __name__ == '__main__':
     merger.reconcile()
     merger.measure()
     merger.writeManifest()
-    merger.summarise()
+    Summariser(args.registry, args.survey).flush()
     merger.report()
