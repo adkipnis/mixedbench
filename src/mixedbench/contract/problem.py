@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import hashlib
 from dataclasses import dataclass
+from importlib.metadata import version
 
 import numpy as np
 import pandas as pd
@@ -118,10 +119,12 @@ class Scale:
 # =====================================================================================
 # the problem
 # =====================================================================================
+CONTRACT = int(version('mixedbench').partition('.')[0])  # the contract version (ADR 0001)
+
+
 @dataclass(frozen=True)
 class Problem:
     id: str  # <source>/<object>/<model_index>
-    row: Row
     table: pd.DataFrame  # the coded columns in raw units; one row per kept row
     # column roles in `table`: the design columns in order, `Intercept` first; the response;
     # the grouping factors as 0-based codes
@@ -139,6 +142,7 @@ class Problem:
     prior: dict[str, Prior]  # per brms class the problem has
     parameters: tuple[str, ...]  # the global parameters by the naming rule, in order
     correlations: dict[str, tuple[str, ...]]  # per `cor[<factor>]` block, its elements in order
+    contract: int  # the version of the contract the problem was built under
 
     @classmethod
     def build(cls, row: Row, table: pd.DataFrame) -> Problem:
@@ -191,7 +195,6 @@ class Builder:
         family, link = FAMILY[self.row.response_type]
         return Problem(
             id=self.id,
-            row=self.row,
             table=table,
             design=tuple(design),
             response=self.row.response,
@@ -205,6 +208,7 @@ class Builder:
             prior=self.prior(design),
             parameters=self.parameters(design),
             correlations=self.correlations,
+            contract=CONTRACT,
         )
 
     def prior(self, design: dict[str, pd.Series]) -> dict[str, Prior]:
