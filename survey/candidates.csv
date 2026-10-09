@@ -1093,7 +1093,7 @@
 "R","datasets","4.6.1","ChickWeight","data/ChickWeight.R","578","4","2","2","0","0","deparse","pass","no"
 "R","datasets","4.6.1","DNase","data/DNase.R","176","3","2","1","0","0","deparse","pass","no"
 "R","datasets","4.6.1","EuStockMarkets","data/EuStockMarkets.R","","","","","","","deparse","no frame","no"
-"R","datasets","4.6.1","Formaldehyde","data/Formaldehyde.R","","","","","","","deparse","no frame","no"
+"R","datasets","4.6.1","Formaldehyde","data/Formaldehyde.R","6","2","2","0","0","0","deparse","no repeated column","no"
 "R","datasets","4.6.1","HairEyeColor","data/HairEyeColor.R","","","","","","","deparse","no frame","no"
 "R","datasets","4.6.1","Harman23.cor","data/Harman23.cor.R","","","","","","","deparse","no frame","no"
 "R","datasets","4.6.1","Harman74.cor","data/Harman74.cor.R","","","","","","","deparse","no frame","no"
