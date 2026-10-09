@@ -59,3 +59,15 @@ both, and its frames equal the Rscript dump's on columns, dtypes, levels and val
 that, the Rscript route leaves the loader; `reader` is `pyreadr`, `rdata`, `pandas` or
 `deparse`. A file neither pyreadr nor rdata parses (a model fit's bytecode) is one object
 without a table, as an object pyreadr cannot frame is.
+
+## Amendment 2026-10-09: materialised problems are a cache; the weekly fetch opens issues
+
+A materialised problem (one parquet and one JSON, ADR 0001) is derived from a pin, a
+registry row and the contract, so it lives under `registry/cache/` like the fetched files:
+never committed, never uploaded, rebuilt from the pins. Committing or hosting the arrays
+would be redistribution with another file extension. The suite commits ids and contract
+hashes only, and a test rebuilds a sample and compares them. The materialised files are the
+package's interface to a problem: `Problem` loads from them, and metabeta never fetches a
+source. The weekly fetch opens one GitHub issue per failing source, labelled `registry`, and
+closes it when the source returns; item 8's retirements read that history. A committed log
+was rejected because it would make a bot the author of registry commits.
