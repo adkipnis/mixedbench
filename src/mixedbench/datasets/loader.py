@@ -21,6 +21,7 @@ from urllib.parse import quote, urlparse
 
 import pandas as pd
 from mixedbench.datasets import docs, readers
+from mixedbench.datasets.deparse import Deparse
 from mixedbench.datasets.readers import DATA_FILES, R_ERRORS, R_FILES, TABLE_FILES, Frames
 
 CRAN = 'https://cloud.r-project.org/src/contrib'
@@ -30,7 +31,7 @@ ARCHIVES = ('.zip', '.tar.gz', '.tgz', '.tar')
 # al.) sends InCommon's instead of Sectigo's OV R36, from its leaf's CA Issuers URL
 TLS = ssl.create_default_context()
 TLS.load_verify_locations(Path(__file__).parent / 'intermediates.pem')
-Reader = Literal['pyreadr', 'rscript', 'pandas']
+Reader = Literal['pyreadr', 'rscript', 'pandas', 'deparse']
 ColumnType = Literal['categorical', 'ordered', 'continuous']  # what a registry row may declare
 
 # Reads one data/ file the way utils::data() does and saves each object in it as its own .rds,
@@ -408,13 +409,13 @@ class Loader:
 
     def _readFile(self, file: Path, source: Source, label: str) -> tuple[Frames, Reader]:
         """An R file through pyreadr; another file in a CRAN data/ folder by utils::data()'s
-        rules, a `.R` file through R, a text file as read.table reads it; pandas reads the rest."""
+        rules, a `.R` file deparsed, a text file as read.table reads it; pandas reads the rest."""
         if source.name == 'datasets':  # every file is an .rds R dumped
             return self._readDumped(file), 'rscript'
         if file.suffix.lower() in R_FILES:
             return self._readRFile(file, source)
         if source.kind == 'cran' and file.suffix.lower() == '.r':
-            return self._readViaR(file, source), 'rscript'
+            return Deparse(file).frames(), 'deparse'
         if source.kind == 'cran':
             return readers.readData(file), 'pandas'
         return readers.readTables(file, label, source.layout), 'pandas'
