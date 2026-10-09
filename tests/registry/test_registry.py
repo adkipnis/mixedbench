@@ -17,6 +17,24 @@ FILES = [
     'SUMMARY.md',
     'manifest.csv',
 ]
+# the normalised licences of ADR 0003, extended by #7 where CRAN's DESCRIPTIONs needed it
+LICENCES = {
+    'CC0-1.0',
+    'CC-BY-4.0',
+    'CC-BY-NC-4.0',
+    'CC-BY-NC-SA-4.0',
+    'ODbL-1.0',
+    'GPL-2.0-or-later',
+    'GPL-2.0',
+    'GPL-3.0-or-later',
+    'GPL-3.0',
+    'AGPL-3.0',
+    'MIT',
+    'BSD-3-Clause',
+    'public-domain',
+    'other',
+    'not stated',
+}
 # the top-level keys metabeta's contract test asserts (packages/glmm/tests/surveys/)
 QUANTILES_KEYS = {
     'n_rows',
@@ -44,6 +62,17 @@ def test_the_directory_holds_exactly_the_registry_files() -> None:
 def test_quantiles_parse_with_the_keys_metabeta_asserts() -> None:
     quantiles = yaml.safe_load(registry.path('quantiles.yaml').read_text())
     assert set(quantiles) == QUANTILES_KEYS
+
+
+def test_registry_rows_carry_family_documented_prior_and_a_licence() -> None:
+    """The contract reads `family` and a later track `documented_prior` by name; the mirror
+    fallback of ADR 0003 decides by `licence`, so no row may lack one."""
+    rows = pd.read_csv(registry.path('registry.csv'), dtype=str, keep_default_na=False)
+    columns = list(rows.columns)
+    assert columns[columns.index('trials') + 1] == 'family'
+    assert columns[columns.index('formula') + 1] == 'documented_prior'
+    assert columns[columns.index('reader') + 1] == 'licence'
+    assert set(rows['licence']) <= LICENCES
 
 
 def test_the_manifest_names_the_file_of_every_registry_object() -> None:
