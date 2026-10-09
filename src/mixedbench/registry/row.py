@@ -68,8 +68,9 @@ def parts(term: str) -> tuple[str, ...]:
 
 
 # a `random_slopes` term: covariate `x`, then `|` (correlated with the intercept of `g`) or `||`
-# (uncorrelated), then grouping factor `g`
-SLOPE_TERM = re.compile(r'(?P<covariate>[^|\s]+)(?P<bars>\|\|?)(?P<factor>[^|\s]+)')
+# (uncorrelated), then grouping factor `g`; a name may hold spaces (`activity 1`), not at its ends
+NAME = r'[^|\s](?:[^|]*[^|\s])?'
+SLOPE_TERM = re.compile(rf'(?P<covariate>{NAME})(?P<bars>\|\|?)(?P<factor>{NAME})')
 
 
 @dataclass(frozen=True)
