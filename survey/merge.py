@@ -27,7 +27,9 @@ from mixedbench.datasets import DataObject, Loader
 from mixedbench.registry.row import (
     COLUMN_LIST_COLUMNS,
     COLUMN_TYPES,
+    SLOPE_TERM,
     TERM_COLUMNS,
+    SlopeTerm,
     parseTypes,
     parts,
     readCsv,
@@ -153,6 +155,7 @@ class Merger:
             prior = self.shard['documented_prior'] != ''
             unpublished = self.shard['published_model'] == 'no'
             problems += self.flag(prior & unpublished, 'documented_prior', 'only on a published model')  # fmt: skip
+            problems += self.slopeProblems()
         return problems
 
     def modelIndexProblems(self) -> list[dict]:
@@ -161,6 +164,26 @@ class Merger:
         number = pd.to_numeric(index, errors='coerce')
         outside = number.notna() & ~number.between(1, MAX_MODELS_PER_OBJECT)
         problems += self.flag(outside, 'model_index', f'at most {MAX_MODELS_PER_OBJECT} models per object')  # fmt: skip
+        return problems
+
+    def slopeProblems(self) -> list[dict]:
+        """A `random_slopes` term is `x|g` or `x||g`, `x` a covariate and `g` a grouping
+        factor of its row (ADR 0001)."""
+        problems = []
+        for line, row in self.shard.iterrows():
+            for term in splitList(row['random_slopes']):
+                problems += self.slopeTermProblems(line, row, term)
+        return problems
+
+    def slopeTermProblems(self, line: int, row: pd.Series, term: str) -> list[dict]:
+        if SLOPE_TERM.fullmatch(term) is None:
+            return [self.problem(line, 'random_slopes', 'not a slope term')]
+        slope = SlopeTerm.parse(term)
+        problems = []
+        if slope.covariate not in splitList(row['covariates']):
+            problems.append(self.problem(line, 'random_slopes', f'{slope.covariate} is not a covariate'))  # fmt: skip
+        if slope.factor not in splitList(row['grouping_factors']):
+            problems.append(self.problem(line, 'random_slopes', f'{slope.factor} is not a grouping factor'))  # fmt: skip
         return problems
 
     def licenceProblems(self) -> list[dict]:
