@@ -11,7 +11,7 @@ Coverage of the reference's central 50% and 90% intervals for the practitioner. 
 metric on the standardised global parameters, because an approximation with every marginal
 right and the correlations wrong (mean-field VI) is invisible to the first two: the
 classifier two-sample test (C2ST, sbibm's primary; fixed small MLP, five-fold; 0.5 means
-indistinguishable) and MMD with the median heuristic are both computed in suite 1.0 and one is
+indistinguishable) and MMD with the median heuristic are both computed in suite 1.1 and one is
 chosen empirically in the opponent-line ticket, read against the chain-split null. Energy
 distance and rank statistics were dropped as a second kernel metric and a metabeta-specific
 one. There is no Gelman-sphere standard for "approximation versus NUTS"; posteriordb compares
@@ -23,7 +23,7 @@ universal pair, RMSE and AUC secondary for the ML reader. The reference's poster
 predictive is the ceiling; the group-held-out regime integrates over a new group's random
 effects.
 
-**Oracle track.** Defined in ADR 0001, references shipped from suite 1.1; SBC-scale
+**Oracle track.** Defined in ADR 0001, references shipped from suite 1.2; SBC-scale
 replication is the user's compute.
 
 **Opponent lines, posterior track.** All from the one brms-generated Stan model, so prior

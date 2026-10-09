@@ -24,8 +24,8 @@ serves every problem and nothing is data-adapted by hand.
 **Family rule.** By response type: continuous → Gaussian identity, binary → Bernoulli logit,
 count → Poisson log, binomial → Binomial logit with the trials column, ordinal → cumulative
 logit. Negative binomial and probit, where the registry's `family` column names them, replace
-the rule from suite 1.1 on; Gamma, zero-inflated and hurdle families stay on the rule until
-a lab note settles their scaling. Categorical responses are outside suite 1.0. Poisson rather
+the rule from suite 1.2 on; Gamma, zero-inflated and hurdle families stay on the rule until
+a lab note settles their scaling. Categorical responses are outside suite 1.1. Poisson rather
 than negative binomial as the count default because the benchmark measures posterior
 accuracy, not fit: an overdispersed Poisson posterior is a well-defined target, while a
 negative-binomial shape on equidispersed data is the case that breaks NUTS, and practice fits
