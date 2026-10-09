@@ -238,9 +238,10 @@ its levels less one, an interaction the product.
 
 | reader | n | share |
 |---|---|---|
-| pandas | 429 | 60% |
+| pandas | 457 | 64% |
 | pyreadr | 246 | 35% |
-| rscript | 37 | 5% |
+| deparse | 7 | 1% |
+| rscript | 2 | 0% |
 
 | published | n | share |
 |---|---|---|
