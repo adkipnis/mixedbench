@@ -809,3 +809,35 @@ rabe_hesketh coursework #1 takes `written`, the bivariate model's first response
 (ch16.r fits them for both responses); mlmRev Chem97 #1 `score` `ordinal`. Both coursework.dta
 responses code missing as -1 (202 and 180 rows), kept as values and noted; whether the
 contract recodes them is open.
+
+**Hand sample, batch 4** (#12, 2026-10-09). Alex checked batch 4 at the source;
+`shards/registry_hand_sample_4.csv` replaced its 25 rows (registry 714), notes as in batch 2,
+rows corrected to a located source raised to `high`. 9 rows stood (4 of them with a note), 16
+were corrected: `formula` 9, `published_model` 9, `response` 2, `covariates` 1, `interactions`
+1, `grouping_factors` 1. Agreement: response 23/25, grouping factors 24/25. Verdicts per row:
+
+- stand: rabe_hesketh coursework #1 (the verdict read the single-response row of before batch
+  3's siblings; the aligned `written` row kept); alda wages_pp (Table 5.4 Model C); posteriordb
+  radon_all; stata_catheter (Weibull, patient intercept); stata_earthquake (the [ME] menl
+  example); SASmixed Cultivation, zuur_zim OrangedCrownedWarblers, datasets OrchardSprays,
+  lattice barley (notes only).
+- formula: carData Blackmore (chap-7.R's `bcnPower(exercise, 0.25, 0.1)`); nlme Ovary (an
+  independent sine slope by Mare, ch05.R); goldstein_msm HUNGARY #2 (stored column names);
+  posteriordb timssAusTwn (the person matrix W's taiwan × female + book14, no columns, in the
+  formula only), state_wide_presidential_votes (the Stan mean written out); stan_arm radon
+  (`y` the response, log(0.1) for three zeros; `radon` to `ignore`).
+- corrected to a located source: zuur_mixed RIKZDATAEnv (Chapter18.r M1, `log(DIN)` with
+  smooths of Year, day and coordinates, `published_model` `yes`); rabe_hesketh thailand (MLMUS4
+  exercise 10.7, `wt1` a frequency weight, `published_model` `yes`).
+- `published_model` `no`, the formula kept as proposed: hox Galo; agridat vargas.wheat2.yield
+  (PLS); nlme Relaxin; MASS immer (both years or their mean, Loc fixed); rabe_hesketh garrett
+  (pooled xtpcse); zuur_zim SpidersHongKongV2 #2 (hurdle models); pingouin cronbach_alpha.
+- uci_760 gait: `replication` a grouping factor in `subject:condition:replication`, the
+  proposed formula extended by it.
+
+Decisions taken: Alex's verdicts first emptied the formula of eleven `no` rows; batch 1's rule
+holds (a `no` row keeps its proposed formula, the merge requires one). A column stays a
+grouping factor or a covariate, never both: Cultivation keeps `Block:Cult`, the help page's
+`(1|Cult)` next to the two-level fixed `Cult` being aliased; state_wide_presidential_votes keeps
+`year_ind` as a grouping factor, the GP input in the formula. Alex leans towards reading
+coursework.dta's -1 codes as missing, for the contract to settle.
