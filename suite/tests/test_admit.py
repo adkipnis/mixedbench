@@ -114,8 +114,7 @@ def test_a_row_whose_random_effects_were_changed_carries_its_fidelity(tmp_path):
 
 
 class FailingTables(Tables):
-    """The loader's verdict on a rotted source: a checksum mismatch is a ValueError, as a
-    contract refusal is, so only where it is raised tells the two apart."""
+    """The loader's verdict on a rotted source: a checksum mismatch."""
 
     def __call__(self, row: Row) -> pd.DataFrame:
         if row.object == 'rotted':
@@ -141,7 +140,14 @@ def test_the_report_names_the_refused_rows_and_the_top_dropped_shares(tmp_path):
         *scratchRegistry(tmp_path, ['none', 'most', 'some']),
         *scratchRegistry(tmp_path, ['colours'], response_type='categorical'),
     ]
-    tables = Tables({'none': groupedTable(), 'most': groupedTable(6), 'some': groupedTable(3)})
+    tables = Tables(
+        {
+            'none': groupedTable(),
+            'most': groupedTable(6),
+            'some': groupedTable(3),
+            'colours': groupedTable(),
+        }
+    )
     admission = Admission(rows, tables, tmp_path / 'cache')
     report = admission.admit().report(top=2)
     assert 'fixture/colours/1' in report
