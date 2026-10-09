@@ -775,3 +775,30 @@ rise to `high` (OME stays `medium`, the nonlinear cap). 14 rows stood, 11 were c
   uses `SEX` alone).
 - `published_model` `no`: rabe_hesketh crime (ch5.do fits county fixed effects; the
   random-intercept rendering is inferred, `log(crmrte)` and `factor(year)` in the formula).
+
+**Hand sample, batch 3** (#12, 2026-10-09). Alex checked batch 3 at the source;
+`shards/registry_hand_sample_3.csv` replaced 24 rows and hox SocsLong.sav was re-filed as
+`simulated data` (`dropped_hand_sample_3.csv`, then `excluded_hand_sample_3.csv`; registry 714).
+Notes as in batch 2: reasons appended, contradicted passages trimmed, coursework #2 and autism
+raised to `high`. 15 rows stood (schooleffects with its notes trimmed), 9 were corrected:
+`formula` 6, `published_model` 3, `covariates` 1, `interactions` 1, `response_type` 1; 1 left the
+registry. Agreement: response 25/25, grouping factors 25/25. The agreement step (#13) meets a
+sampled row no longer in the registry. Verdicts per row:
+
+- stand: stata_toenail; medicaldata indometh, opt (the linear rendering is no published survival
+  analysis); agridat cox.stripsplit; stan_arm cty.dat, hiv.data.json; stata_pefrate;
+  rabe_hesketh schooleffects (a cohort column alone is no grouping factor), bp, homeless
+  (`housing` three ordered values, the stored product `s8lint` a covariate); rethinking Trolley;
+  faraway eggprod; languageR warlpiri; nlmeU fcat (the chapter 19 script fits the crossed
+  intercepts, no native trials column); brms inhaler.
+- formula only: zuur_mixed DeerEcervi (`I(Ecervi > 0)`, the Bernoulli presence model, the raw
+  column kept); stata_nlswork3 (metobit with `ul(1.9)`); HLMdiag autism (the book's final
+  chapter 6 model, no random intercept, no quadratic-by-group term); agridat
+  burgueno.unreplicated (m2's AR1(col) × AR1(row) residual).
+- corrected to a located source: rabe_hesketh coursework #2 (the review's bivariate model,
+  `published_model` `yes`); snijders_bosker sheet 16 #2 (ch16.r, Table 16.2: `iq_verb * ses` and
+  the school means `sch_iqv * sch_ses`); mlmRev Chem97 #2 (`score` `ordinal`, ordered A-level
+  grades).
+- `published_model` `no`: agridat nass.sorghum (the help fits Illinois corn); cmm_ilea567
+  (the seven-predictor model is not in the source).
+- excluded: hox SocsLong.sav, `simulated data` per the author's data appendix (DataStories.pdf).
