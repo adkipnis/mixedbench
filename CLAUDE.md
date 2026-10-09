@@ -42,7 +42,7 @@ docs/adr/               lab/ and experiments/ planned
 - Python 3.14 via `uv` only: `uv run` for everything, `uv sync --extra references` for the
   runner stack (brms and cmdstanr in an R subprocess). `ruff format`, `pytest`. Run commands
   from the repository root, without `cd`.
-- CI: GitHub Actions on the matrix of ADR 0003.
+- CI: GitHub Actions on the matrix of ADR 0003, the weekly full fetch on Ubuntu.
 - Ask before adding a heavyweight dependency.
 
 ## Code
@@ -80,9 +80,9 @@ docs/adr/               lab/ and experiments/ planned
 ### Tests
 
 - Test-driven with the `tdd` skill: agree the seams, write the failing test, then the
-  minimal code. Unit tests for the contract, the metrics against known distributions, the
-  readers on tiny fixtures; `hypothesis` for property tests. A test that fetches a source is
-  marked `network` and runs only in CI.
+  minimal code. Unit tests for the contract (coding, standardisation, splits, the hash), the
+  metrics against known distributions, the readers on tiny fixtures; `hypothesis` for
+  property tests. A test that fetches a source is marked `network` and runs only in CI.
 - Tests live in `tests/`, mirroring `src/`. Each test says in one or two sentences why it
   exists, unless painfully obvious. Bind the object under test, then call it; small named
   helpers instead of lambdas and repeated comprehensions.
@@ -91,8 +91,8 @@ docs/adr/               lab/ and experiments/ planned
 ### Lab notes versus experiments
 
 - `lab/`: small design choices (C2ST versus MMD), one `YYYY-MM-DD-slug/` folder per note, a
-  notebook committed with outputs, indexed in `lab/README.md` with the decision. The package
-  never imports from it.
+  notebook committed with outputs plus any PDFs, indexed in `lab/README.md` with the
+  decision. The package never imports from it.
 - `experiments/`: rerunnable scripted studies that feed the paper, rerun with flags.
 
 ### Design
@@ -112,7 +112,7 @@ makes code harder to understand or change.
 - Define errors out of existence: shape the interface so the invalid case cannot arise
   (accept the empty set, validate once at construction). What remains fails loudly: no
   fallbacks, no defensive `try`/`except`, no speculative generality. Branch only for cases
-  observed on real inputs.
+  observed on real inputs; add the next branch when use hits it.
 - Design it twice: for a non-trivial interface, name two candidate designs and why one wins
   before writing code.
 - Obvious over clever, in code you write, review or rewrite: the simplest form a reader
