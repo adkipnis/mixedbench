@@ -37,21 +37,26 @@ def sources(file: Path | None = None) -> dict[str, Source]:
     pinned = {}
     for entries in frame['tiers'].values():
         for label, entry in (entries or {}).items():
-            checksum = entry.get('checksum')
-            if entry['kind'] == 'url':  # a URL has no version: the file's sha256 is its pin
-                checksum = str(entry['pin'])
-            layout = tuple(entry['layout']) if 'layout' in entry else None  # headerless text
-            pinned[label] = Source(
-                kind=entry['kind'],
-                name=entry.get('name', label),
-                pin=str(entry['pin']),
-                checksum=checksum,
-                path=entry.get('path'),
-                file=entry.get('file'),
-                layout=layout,
-                mirror=entry.get('mirror'),
-            )
+            pinned[label] = source(label, entry)
     return pinned
+
+
+def source(label: str, entry: dict) -> Source:
+    """One entry of `sources.yaml` as a pinned source."""
+    checksum = entry.get('checksum')
+    if entry['kind'] == 'url':  # a URL has no version: the file's sha256 is its pin
+        checksum = str(entry['pin'])
+    layout = tuple(entry['layout']) if 'layout' in entry else None  # headerless text
+    return Source(
+        kind=entry['kind'],
+        name=entry.get('name', label),
+        pin=str(entry['pin']),
+        checksum=checksum,
+        path=entry.get('path'),
+        file=entry.get('file'),
+        layout=layout,
+        mirror=entry.get('mirror'),
+    )
 
 
 def manifest() -> Manifest:
