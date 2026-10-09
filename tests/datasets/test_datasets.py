@@ -233,42 +233,6 @@ def test_second_loader_over_the_same_cache_fetches_nothing(tmp_path):
     assert calls == [CURRENT]
 
 
-@needsRscript
-def test_base_r_datasets_are_dumped_from_the_namespace(tmp_path):
-    """Base R's `datasets` ships no tarball; its tree is a dump of the namespace made by R."""
-    base = Source(kind='cran', name='datasets', pin='base')
-    loader = Loader(tmp_path, fetch=serveNothing)
-    iris = objectsByName(loader, base)['iris']
-    assert (iris.file, iris.n_rows, iris.n_cols) == ('data/iris.rds', 150, 5)
-    species = loader.load(base, 'iris')['Species']
-    assert list(species.cat.categories) == ['setosa', 'versicolor', 'virginica']
-
-
-@needsRscript
-def test_base_r_objects_report_the_rscript_route_and_have_help_pages(tmp_path):
-    """The survey records the route per object (#19); base R arrives only through R, and its
-    help pages come from R's own Rd database since there is no tarball with a man/ folder."""
-    base = Source(kind='cran', name='datasets', pin='base')
-    loader = Loader(tmp_path, fetch=serveNothing)
-    assert objectsByName(loader, base)['iris'].reader == 'rscript'
-    page = loader.help(base, 'iris')
-    assert '\\alias{iris}' in page
-    assert 'Anderson' in page
-
-
-@needsRscript
-def test_base_r_names_differing_in_case_only_both_survive_the_dump(tmp_path):
-    """Base R holds CO2 (a grouped table) and co2 (a time series); on a case-insensitive file
-    system one `<name>.rds` would overwrite the other, as happened in the #23 pull."""
-    base = Source(kind='cran', name='datasets', pin='base')
-    loader = Loader(tmp_path, fetch=serveNothing)
-    objects = objectsByName(loader, base)
-    assert (objects['CO2'].n_rows, objects['CO2'].n_cols) == (84, 5)
-    assert (objects['co2'].n_rows, objects['co2'].n_cols) == (468, 1)  # the Mauna Loa series
-    assert 'Potvin' in loader.help(base, 'CO2')
-    assert 'Mauna Loa' in loader.help(base, 'co2')
-
-
 # ----------------------------------------------------------------------------------------------
 # utils::data() files read without R (#8)
 # ----------------------------------------------------------------------------------------------
@@ -383,6 +347,65 @@ def test_deparsed_numeric_and_string_vectors_round_trip(tmp_path_factory, column
     expected = pd.DataFrame(columns)
     actual = Deparse(file).frames()['drawn']
     pd.testing.assert_frame_equal(actual, expected, check_dtype=False)
+
+
+BASE = Source(kind='cran', name='datasets', pin='4.6.1')
+BASE_URL = 'https://cloud.r-project.org/src/base/R-4/R-4.6.1.tar.gz'
+SLEEP_R = b'sleep <- data.frame(extra = c(0.7, -1.6, 3.4, 0.8), group = gl(2, 2))\n'
+SLEEP_RD = b"\\name{sleep}\n\\alias{sleep}\n\\title{Student's Sleep Data}\n"
+
+
+def serveBase(url: str) -> bytes | None:
+    """R's source tarball in miniature: base R's `datasets` package under src/library/."""
+    files = {
+        'R-4.6.1/src/library/datasets/data/sleep.R': SLEEP_R,
+        'R-4.6.1/src/library/datasets/data/lynx.R': b'lynx <- stats::ts(c(269, 321))\n',
+        'R-4.6.1/src/library/datasets/man/sleep.Rd': SLEEP_RD,
+        'R-4.6.1/src/library/stats/DESCRIPTION.in': b'Package: stats\n',
+    }
+    buffer = io.BytesIO()
+    with tarfile.open(fileobj=buffer, mode='w:gz') as tar:
+        for name, data in files.items():
+            info = tarfile.TarInfo(name)
+            info.size = len(data)
+            tar.addfile(info, io.BytesIO(data))
+    return buffer.getvalue() if url == BASE_URL else None
+
+
+def test_base_r_datasets_come_from_rs_source_tarball_without_r(tmp_path, monkeypatch):
+    """Base R's `datasets` is a package inside R's source tarball, laid out as a CRAN package:
+    its data/*.R files load through the deparse reader, its man/ holds the help pages, and the
+    manifest records each file's digest like any download (ADR 0003)."""
+    monkeypatch.setenv('PATH', '')
+    loader = Loader(tmp_path, fetch=serveBase)
+    sleep = objectsByName(loader, BASE)['sleep']
+    assert (sleep.file, sleep.reader, sleep.n_rows, sleep.n_cols) == (
+        'data/sleep.R',
+        'deparse',
+        4,
+        2,
+    )
+    assert list(loader.load(BASE, 'sleep')['group'].cat.categories) == ['1', '2']
+    assert "Student's Sleep Data" in loader.help(BASE, 'sleep')
+    assert loader.manifestRow(BASE, 'sleep') == manifestRow('data/sleep.R', SLEEP_R)
+
+
+def test_a_base_r_file_outside_the_deparse_subset_is_listed_without_a_table(tmp_path):
+    """Most of base R's data/*.R files are time series or matrices; enumerating the source
+    must not fail on them, as it does not on an R object pyreadr cannot frame."""
+    loader = Loader(tmp_path, fetch=serveBase)
+    lynx = objectsByName(loader, BASE)['lynx']
+    assert (lynx.reader, lynx.n_rows, lynx.n_cols) == ('deparse', None, None)
+
+
+@pytest.mark.network
+def test_the_pinned_r_source_tarball_holds_base_rs_data(tmp_path):
+    """The pin in sources.yaml: R 4.6.1's tarball, checksummed, with ChickWeight and sleep."""
+    base = registry.sources()['datasets']
+    loader = Loader(tmp_path)
+    objects = objectsByName(loader, base)
+    assert (objects['ChickWeight'].n_rows, objects['ChickWeight'].n_cols) == (578, 4)
+    assert loader.load(base, 'sleep').shape == (20, 3)
 
 
 # ----------------------------------------------------------------------------------------------
@@ -779,16 +802,6 @@ def test_a_cran_object_reads_only_its_file_without_rscript(tmp_path, monkeypatch
         'cat',
         'dog',
     ]
-
-
-@needsRscript
-def test_a_base_r_object_loads_through_the_manifest_from_rs_dump(tmp_path):
-    """Base R's `datasets` has no tarball to take a file from: R dumps the namespace as before,
-    and the manifest carries no checksum, since the dump is R's output, not a download."""
-    base = Source(kind='cran', name='datasets', pin='base')
-    manifest = {(base, 'iris'): ManifestRow('data/iris.rds', None, None)}
-    loader = Loader(tmp_path, fetch=serveNothing, manifest=manifest)
-    assert loader.load(base, 'iris').shape == (150, 5)
 
 
 @needsRscript
