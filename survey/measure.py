@@ -57,25 +57,6 @@ def fitAlpha(sizes: pd.Series) -> float:
     return ((1 - 1 / g) / (g * variance) - 1) / g
 
 
-def columnType(values: pd.Series, declared: str) -> tuple[str, int | str]:
-    """The one typing rule, in order: ordered categorical; exactly two distinct values is binary;
-    a declared or typed categorical, a string, or an integer with few distinct values is
-    categorical with K levels; otherwise continuous. K is blank for a continuous column."""
-    distinct = values.dropna().nunique()
-    dtype = values.dtype
-    if isinstance(dtype, pd.CategoricalDtype) and dtype.ordered:
-        return 'ordered', distinct
-    if distinct == 2:
-        return 'binary', 2
-    if declared == 'continuous':
-        return 'continuous', ''
-    if isinstance(dtype, pd.CategoricalDtype) or pd.api.types.is_string_dtype(dtype):
-        return 'categorical', distinct
-    if pd.api.types.is_integer_dtype(dtype) and distinct <= MAX_INTEGER_LEVELS:
-        return 'categorical', distinct
-    return 'continuous', ''
-
-
 def parseTypes(text: str) -> dict[str, str]:
     """`col=categorical;col2=continuous` -> {col: kind}."""
     pairs = [entry.partition('=') for entry in splitList(text)]
@@ -158,7 +139,7 @@ class Measurer:
     # ---------------------------------------------------------------------------------
     def describe(self, column: str) -> dict:
         values = self.df[column]
-        kind, levels = columnType(values, self.declared.get(column, ''))
+        kind, levels = self.columnType(values, self.declared.get(column, ''))
         constantWithin = [f for f in self.factors if self.constantWithin(column, f)]
         return {
             'type': kind,
@@ -168,6 +149,25 @@ class Measurer:
             'missing_share': round(float(values.isna().mean()), 4),
             'in_model': 'yes' if column in self.covariates else 'no',
         }
+
+    @staticmethod
+    def columnType(values: pd.Series, declared: str) -> tuple[str, int | str]:
+        """The one typing rule, in order: ordered categorical; exactly two distinct values is
+        binary; a declared or typed categorical, a string, or an integer with few distinct values
+        is categorical with K levels; otherwise continuous. K is blank for a continuous column."""
+        distinct = values.dropna().nunique()
+        dtype = values.dtype
+        if isinstance(dtype, pd.CategoricalDtype) and dtype.ordered:
+            return 'ordered', distinct
+        if distinct == 2:
+            return 'binary', 2
+        if declared == 'continuous':
+            return 'continuous', ''
+        if isinstance(dtype, pd.CategoricalDtype) or pd.api.types.is_string_dtype(dtype):
+            return 'categorical', distinct
+        if pd.api.types.is_integer_dtype(dtype) and distinct <= MAX_INTEGER_LEVELS:
+            return 'categorical', distinct
+        return 'continuous', ''
 
     def constantWithin(self, column: str, factor: str) -> bool:
         distinct = self.df.groupby(factor, observed=True)[column].nunique()
