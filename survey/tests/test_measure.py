@@ -2,15 +2,12 @@
 Dirichlet α, the relation between factors, column types and levels, d_doc and d_all, every
 expected value computed by hand from `fixtures/herds.csv`."""
 
-from pathlib import Path
-
 import numpy as np
 import pandas as pd
 import pytest
-from conftest import readRows
+from conftest import FIXTURES, readRows
 from measure import Measurer, fitAlpha
 
-FIXTURES = Path(__file__).parent / 'fixtures'
 CATEGORICAL = ('region', 'herd', 'breed', 'feed')
 
 

@@ -5,13 +5,10 @@ check notices."""
 from pathlib import Path
 
 import pandas as pd
+from schema import readCsv
+from sources import Key
 
 ROOT = Path(__file__).resolve().parents[2]
-Key = tuple[str, str]  # (source label, object name)
-
-
-def readCsv(path: Path) -> pd.DataFrame:
-    return pd.read_csv(path, dtype=str, keep_default_na=False)
 
 
 def keys(rows: pd.DataFrame) -> set[Key]:

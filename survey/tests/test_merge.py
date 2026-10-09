@@ -6,12 +6,11 @@ from pathlib import Path
 import pandas as pd
 import pytest
 import yaml
-from conftest import mergeShard, readRows
+from conftest import FIXTURES, mergeShard, readRows
 from merge import Merger, ShardRefused
-from schema import writeCsv
+from schema import readCsv, writeCsv
 from sources import readFrame
 
-FIXTURES = Path(__file__).parent / 'fixtures'
 RENAMED_TYPES = 'area=categorical;farm=categorical;type=categorical;diet=categorical'
 
 
@@ -193,7 +192,7 @@ def test_an_empty_shard_migrates_a_registry_of_the_old_shape(merger):
     order; merging it again changes nothing."""
     mergeShard(merger, FIXTURES / 'registry_herds.csv')
     path = merger.registry / 'registry.csv'
-    current = pd.read_csv(path, dtype=str, keep_default_na=False)
+    current = readCsv(path)
     old = current.drop(columns=['family', 'documented_prior', 'licence'])
     writeCsv(old, path)
     header = ','.join(readRows(FIXTURES / 'registry_herds.csv')[0])
@@ -201,7 +200,7 @@ def test_an_empty_shard_migrates_a_registry_of_the_old_shape(merger):
     shard.write_text(header + '\n')
     mergeShard(merger, shard)
     migrated = path.read_bytes()
-    assert pd.read_csv(path, dtype=str, keep_default_na=False).equals(current)
+    assert readCsv(path).equals(current)
     mergeShard(merger, shard)
     assert path.read_bytes() == migrated
 

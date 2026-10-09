@@ -2,14 +2,12 @@
 out (#18), over the scratch registry of conftest."""
 
 import re
-from pathlib import Path
 
 import pytest
 import yaml
-from conftest import mergeShard
+from conftest import FIXTURES, mergeShard
 from summarise import PRACTICE, PRACTICE_FAMILIES, TEMPLATE
 
-FIXTURES = Path(__file__).parent / 'fixtures'
 QUANTILE_KEYS = ('n', 'min', 'p5', 'p10', 'p50', 'p90', 'p95', 'max')
 FACTOR_AXES = ('n_groups', 'group_size_min', 'group_size_p10', 'group_size_p50', 'group_size_p90', 'group_size_max', 'singleton_share', 'cv', 'alpha')  # fmt: skip
 ROW_AXES = ('n_obs', 'n_grouping_factors', 'd_doc', 'd_all')
