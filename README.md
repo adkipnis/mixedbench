@@ -36,9 +36,11 @@ sleepstudy = loader.load(registry.sources()[row['source']], 'sleepstudy')
 
 ## The registry files
 
-The package carries the eight registry files; `mixedbench.registry.path(name)` returns the
-installed path of one (`sources.yaml`, `registry.csv`, `excluded.csv`, `dimensions.csv`,
-`columns.csv`, `quantiles.yaml`, `SUMMARY.md`, `manifest.csv`) and `path()` their directory;
-`manifest.csv` names the file each object loads from, with its sha256 and size. In this repository
-they live in [`registry/`](registry/), written by `survey/merge.py` only; start with
-[`SUMMARY.md`](registry/SUMMARY.md).
+- The package carries the eight registry files: `sources.yaml`, `registry.csv`,
+  `excluded.csv`, `dimensions.csv`, `columns.csv`, `quantiles.yaml`, `SUMMARY.md`,
+  `manifest.csv`.
+- `mixedbench.registry.path(name)` returns the installed path of one, `path()` their
+  directory.
+- `manifest.csv` names the file each object loads from, with its sha256 and size.
+- In this repository they live in [`registry/`](registry/), written by `survey/merge.py`
+  only; start with [`SUMMARY.md`](registry/SUMMARY.md).
