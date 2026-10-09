@@ -391,7 +391,8 @@ class Merger:
         old = self.canonical(self.table)
         new = self.shard.reindex(columns=self.table.columns).reset_index(drop=True)
         key = list(self.table.key)
-        merged = pd.concat([old, new]).drop_duplicates(subset=key, keep='last')
+        # groups in order of first appearance: a replaced key keeps its place
+        merged = pd.concat([old, new]).groupby(key, sort=False).last().reset_index()[old.columns]
         if self.table.name == 'registry':
             merged = self.withLicences(merged)
         self.replaced = len(old) + len(new) - len(merged)
