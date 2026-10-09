@@ -34,6 +34,8 @@ reading's open disagreements, four to eight per tier.
 
 ## Tier R (m3#20, m3#22, m3#23, 2026-10-07)
 
+- **Cap**: only agridat is capped, at 50: its about 390 field trials would else be 38% of the
+  pool, and a cap for all would drop grouped tables of faraway and MASS at random.
 - **Pilot** (m3#20): lme4, nlme and mlmRev by four Sonnet agents, five rows read by Alex. The
   first rules came from it: `ordered` on grouping factors, dosing rows counted as
   observations, vague nonlinear formulas.
