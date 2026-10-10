@@ -227,7 +227,8 @@ A failing shard is refused, its offending rows printed, nothing written.
 - The object not in the rival file; a dropped object in one of the two.
 
 Upsert on the key: a shard merged twice changes nothing, a corrected shard replaces its rows in
-place. An older file reads with new columns blank, so a header-only shard migrates a schema.
+place. An older file reads with new columns blank, so a header-only shard migrates a schema
+whose new columns the row grammar accepts empty.
 
 ## Reading rules
 
