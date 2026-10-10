@@ -31,21 +31,17 @@ No R needed: every dataset loads in Python.
 ```python
 from pathlib import Path
 
-from mixedbench import registry
-from mixedbench.contract import Problem, load, materialise
+from mixedbench import suite
 
-cache = Path('cache')
-[row] = [row for row in registry.rows() if row.id == 'lme4/sleepstudy/1']
-table = registry.Tables(cache).load(row)  # fetched from CRAN at its pin
-materialise(Problem.build(row, table), cache)
-problem = load('lme4/sleepstudy/1', cache)  # later, offline
+# fetched from CRAN at its pin and checked against suite 1.1's list; later calls are offline
+problem = suite.load('lme4/sleepstudy/1', Path('cache'))
 ```
 
 Check out the [demo](https://github.com/adkipnis/mixedbench/blob/main/examples/demo.ipynb) for a friendly introduction.
 
 ## Contents
 
-- The package `mixedbench`: `registry` (the registry files, summarised in
+- The package `mixedbench`: `suite` (a problem by its id, in one call), `registry` (the registry files, summarised in
   [`SUMMARY.md`](https://github.com/adkipnis/mixedbench/blob/main/registry/SUMMARY.md)), `datasets` (the loader) and `contract`
   (`Problem`, `materialise`, `load`).
 - [`suite/1.1/candidates.csv`](https://github.com/adkipnis/mixedbench/blob/main/suite/1.1/candidates.csv): the candidate problems of
