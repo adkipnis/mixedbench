@@ -16,13 +16,14 @@ Each module owns one design decision that no other module depends on.
 
 | module | owns | imported by |
 |---|---|---|
-| `registry/row.py` | how a `registry.csv` row is written and read; nothing else parses a cell | `registry`, `contract/problem.py`, `suite/admit.py`, the survey |
-| `registry/__init__.py` | the installed registry files as objects; `Tables` from a row to its typed table | `suite/admit.py`, the survey |
+| `registry/row.py` | how a `registry.csv` row is written and read; nothing else parses a cell | `registry`, `contract/problem.py`, `suite`, `suite/admit.py`, the survey |
+| `registry/__init__.py` | the installed registry files as objects; `Tables` from a row to its typed table | `suite`, `suite/admit.py`, the survey |
 | `datasets/loader.py` | a pinned source to tables: download, checksum on every load, cache, declared column types | `registry`, the survey |
 | `datasets/readers.py` | the file formats, a class per format family, and which files are data | `loader.py`, `survey/help.py` |
 | `datasets/deparse.py` | base R's `data/*.R` files, read without R | `readers.py` |
-| `contract/problem.py` | the contract's rules: typing, coding, family, prior, splits, scales, parameter names | `contract`, through it `suite/admit.py` and the survey |
-| `contract/materialised.py` | a problem's files on disk and the contract hash over them | `contract`, through it `suite/admit.py` |
+| `contract/problem.py` | the contract's rules: typing, coding, family, prior, splits, scales, parameter names | `contract`, through it `suite`, `suite/admit.py` and the survey |
+| `contract/materialised.py` | a problem's files on disk and the contract hash over them | `contract`, through it `suite` and `suite/admit.py` |
+| `suite/__init__.py` | a suite's problems by id: built and materialised on first use, checked against the suite's list in the wheel | the user |
 | `suite/admit.py` | the admission of suite 1.1 and its hand decisions; writes `suite/1.1/` | run as a script |
 
 ## Design
