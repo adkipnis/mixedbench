@@ -176,6 +176,12 @@ class Row:
                 # cell-means `0 + age:species`)
                 if part != '' and part not in covariates:
                     refusals.append(('interactions', f'{part} is not a covariate'))
+        # a column is a grouping factor or a covariate, never both (SASmixed Cultivation's
+        # `(1|Cult)` next to `Inoc * Cult` reads as the whole-plot term `Block:Cult`); a part of
+        # a composite factor may be a covariate
+        for factor in splitList(cells['grouping_factors']):
+            if factor in covariates:
+                refusals.append(('grouping_factors', f'{factor} is also a covariate'))
         if cells['verified'] not in VERIFIED:
             refusals.append(('verified', f'not a verification: {cells["verified"]}'))
         return refusals
