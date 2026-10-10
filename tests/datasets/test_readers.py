@@ -108,6 +108,16 @@ def test_a_rejected_r_file_keeps_its_frames_and_its_lists_without_a_table():
     assert roster['beds'].isna().sum() == 1  # an integer column with NA is float, as pyreadr's
 
 
+def test_pyreadr_and_rdata_read_the_same_frame_alike():
+    """R saved one frame twice, binary for pyreadr and ASCII for rdata: whichever reader takes a
+    file, its table is the same, factor order, integers with and without NA, strings and
+    logicals with and without NA included."""
+    binary, pyreadr = readFixture('twins.rda')
+    ascii, rdata = readFixture('twins_ascii.rda')
+    assert (pyreadr, rdata) == ('pyreadr', 'rdata')
+    pd.testing.assert_frame_equal(binary['twins'], ascii['twins'])
+
+
 def test_a_rejected_rds_is_named_by_its_file_and_one_rdata_cannot_parse_has_no_table():
     """An .rds holds one unnamed object, named by its file as pyreadr names it; a model fit's
     bytecode, which rdata cannot parse, leaves the file one object without a table rather

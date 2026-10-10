@@ -36,7 +36,7 @@ from pyreadr._pyreadr_parser import PyreadrParser
 # =====================================================================================
 # file kinds and R errors
 # =====================================================================================
-# the suffices each reader takes, and the names that point to documentation.
+# the suffixes each reader takes, and the names that point to documentation.
 R_FILES = {'.rda', '.rdata', '.rds'}  # meant for pyreadr, or rdata
 DATA_FILES = {'.r', '.tab', '.txt', '.csv'}  # meant for utils::data()
 TABLE_FILES = {  # meant for pandas
@@ -187,11 +187,14 @@ class RFile:
 
     @staticmethod
     def _pyreadrTypes(table: pd.DataFrame) -> pd.DataFrame:
-        """The nullable dtypes of rdata as pyreadr's: an R integer column int32,
-        float where it holds NA, a string column pandas' default string."""
+        """The nullable dtypes of rdata as pyreadr's: an R integer column int32, a logical bool,
+        either float where it holds NA, a string column pandas' default string."""
         types = {}
         for column in table.columns[table.dtypes == 'Int32']:
             types[column] = 'int32'
+        for column in table.columns[table.dtypes == 'boolean']:
+            types[column] = 'bool'
+        for column in list(types):
             if table[column].isna().any():
                 types[column] = 'float64'
         for column in table.columns[table.dtypes == 'string']:
