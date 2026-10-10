@@ -317,7 +317,7 @@ def test_the_census_lands_in_the_registry_and_the_bookkeeping_in_the_survey(spli
     registryFiles = sorted(p.name for p in merger.registry.iterdir() if p.is_file())
     surveyFiles = sorted(p.name for p in merger.survey.iterdir() if p.is_file())
     assert registryFiles == ['SUMMARY.md', 'columns.csv', 'dimensions.csv', 'excluded.csv', 'manifest.csv', 'quantiles.yaml', 'registry.csv', 'sources.yaml']  # fmt: skip
-    assert surveyFiles == ['README.md', 'dropped.csv', 'duplicates.csv']  # the README is scratch
+    assert surveyFiles == ['dropped.csv', 'duplicates.csv']
 
 
 def test_a_composite_grouping_factor_merges_and_gets_its_own_dimension_row(merger):

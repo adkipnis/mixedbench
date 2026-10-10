@@ -4,8 +4,7 @@ column namings, so that duplicate flagging has a real pair to find, and a CRAN p
 (Tier R) holding the herds table as `herds.rds`, whose DESCRIPTION states its licence. The
 table: region > herd nested, herd `h4` a singleton, `breed` a four-level categorical, `feed`
 herd-level, `weight` continuous, `sick` binary, `cases` out of `trials` binomial, `id` a column
-to ignore. A scratch README in the survey folder holds a stale counts block. Also the one
-recipe that merges a shard and the one reader of a written CSV.
+to ignore. Also the one recipe that merges a shard and the one reader of a written CSV.
 """
 
 import hashlib
@@ -37,12 +36,6 @@ CATTLE_URL = 'https://example.org/cattle.zip'
 PENS_URL = 'https://cloud.r-project.org/src/contrib/pens_1.0.tar.gz'
 PENS_LICENCE = 'GPL (>= 2)'
 RENAMED = 'row,area,farm,type,diet,calving,kg,ill,positives,tested'
-README = (
-    '# pens\n\nA pitch.\n\n'
-    '<!-- corpus: written by survey/merge.py from registry/SUMMARY.md -->\n'
-    '**Corpus.** stale.\n'
-    '<!-- /corpus -->\n\n## Install\n'
-)
 
 
 def zipped(folder: str, filename: str, text: str) -> bytes:
@@ -79,7 +72,7 @@ def mergeShard(merger: Merger, shard: Path) -> Merger:
     merger.reconcile()
     merger.measure()
     merger.writeManifest()
-    Summariser(merger.registry, merger.survey, merger.survey / 'README.md').flush()
+    Summariser(merger.registry, merger.survey).flush()
     merger.report()
     return merger
 
@@ -130,7 +123,6 @@ def scratchMerger(registry: Path, survey: Path) -> Merger:
     (registry / 'sources.yaml').write_text(yaml.safe_dump(sources, sort_keys=False))
     emptyCensus(registry)
     (survey / 'shards').mkdir(parents=True)
-    (survey / 'README.md').write_text(README)
 
     def serve(url: str) -> bytes | None:
         return archives.get(url)
