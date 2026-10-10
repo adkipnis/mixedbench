@@ -16,6 +16,7 @@ a built Problem
 -> its contract hash                                        contractHash
 -> the table as parquet, the record and the hash as JSON    materialise
 -> the problem read back, refused if its hash moved         load
+-> the hash its files were written with, if any             storedHash
 """
 
 from __future__ import annotations
@@ -75,6 +76,14 @@ def load(id: str, cache: Path) -> Problem:
     if contractHash(problem) != stored['hash']:
         raise ValueError(f'{id}: the files in {dir} do not match their contract hash; rebuild them')
     return problem
+
+
+def storedHash(id: str, cache: Path) -> str | None:
+    """None where the problem has no files under `cache`."""
+    record = _problemDir(id, cache) / 'problem.json'
+    if not record.exists():
+        return None
+    return json.loads(record.read_text())['hash']
 
 
 def _problemDir(id: str, cache: Path) -> Path:

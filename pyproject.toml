@@ -1,6 +1,6 @@
 [project]
 name = "mixedbench"
-version = "1.0.2"
+version = "1.0.3"
 description = "A benchmark of posterior approximation and prediction on real grouped data for GLMMs"
 readme = "README.md"
 license = "MIT AND CC-BY-4.0"
@@ -52,8 +52,9 @@ requires = ["hatchling>=1.27"]  # PEP 639 licence expression and licence files
 build-backend = "hatchling.build"
 
 # The repository keeps one copy of the registry files at registry/; the wheel carries them as
-# mixedbench/registry/files/. The editable install copies them into site-packages too, so the
-# cache keys make `uv run` reinstall after merge.py rewrites one.
+# mixedbench/registry/files/, and each suite's list as mixedbench/suite/files/<version>/.
+# The editable install copies them into site-packages too,
+# so the cache keys make `uv run` reinstall after merge.py or admit.py rewrites one.
 [tool.hatch.build.targets.wheel]
 packages = ["src/mixedbench"]
 
@@ -66,6 +67,7 @@ packages = ["src/mixedbench"]
 "registry/quantiles.yaml" = "mixedbench/registry/files/quantiles.yaml"
 "registry/SUMMARY.md" = "mixedbench/registry/files/SUMMARY.md"
 "registry/manifest.csv" = "mixedbench/registry/files/manifest.csv"
+"suite/1.1/candidates.csv" = "mixedbench/suite/files/1.1/candidates.csv"
 
 [tool.hatch.build.targets.sdist]
 only-include = [
@@ -78,6 +80,7 @@ only-include = [
     "registry/quantiles.yaml",
     "registry/SUMMARY.md",
     "registry/manifest.csv",
+    "suite/1.1/candidates.csv",
 ]
 
 [tool.uv]
@@ -86,6 +89,7 @@ cache-keys = [
     { file = "registry/*.csv" },
     { file = "registry/*.yaml" },
     { file = "registry/SUMMARY.md" },
+    { file = "suite/*/candidates.csv" },
 ]
 
 [tool.ruff]
