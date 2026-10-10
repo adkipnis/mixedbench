@@ -137,6 +137,15 @@ def test_a_data_txt_reads_as_read_table_reads_it(package):
     assert list(plots['yield'].dropna()) == [1.5, 2.0, 3.25]
 
 
+def test_a_data_txt_sorts_levels_in_code_point_order(tmp_path):
+    """read.table sorts levels as R does in the C locale, by code point: agridat's lillemo.wheat
+    has `BT06` before `Ba04`, where the ICU collation of R's default locale puts `Ba04` first."""
+    file = tmp_path / 'lillemo.txt'
+    file.write_text('"site"\n"Ba04"\n"BT06"\n')
+    tables, _ = readers.read(file, 'data/lillemo.txt', cran=True)
+    assert list(tables['lillemo']['site'].cat.categories) == ['BT06', 'Ba04']
+
+
 def test_a_data_csv_is_read_with_semicolons(package):
     """utils::data() reads a `.csv` in `data/` with `sep = ';'`, strings as factors."""
     trials = readCran(package, 'data/trials.csv')[0]['trials']
