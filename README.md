@@ -65,5 +65,5 @@ GitHub. All versions share the DOI [10.5281/zenodo.23285683](https://doi.org/10.
 
 ## Licence
 
-- Code: [MIT](https://github.com/adkipnis/mixedbench/blob/main/LICENSE). Registry and suite files: [CC BY 4.0](https://github.com/adkipnis/mixedbench/blob/main/LICENSE-CC-BY-4.0).
+- Code: [MIT](https://github.com/adkipnis/mixedbench/blob/main/LICENSE). Registry and suite files: [CC BY 4.0](https://github.com/adkipnis/mixedbench/blob/main/docs/LICENSE-CC-BY-4.0).
 - The data keep their sources' terms: they are fetched at first use, not redistributed.

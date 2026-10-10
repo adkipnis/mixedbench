@@ -71,7 +71,7 @@ def test_the_metadata_names_both_licences(installed: tuple[Path, dict]) -> None:
 def test_both_licence_files_ship_in_the_wheel(installed: tuple[Path, dict]) -> None:
     target, _ = installed
     distribution = installedDistribution(target)
-    licences = {file.name for file in distribution.files if file.parent.name == 'licenses'}
+    licences = {file.name for file in distribution.files if 'licenses' in file.parts}
     assert licences == {'LICENSE', 'LICENSE-CC-BY-4.0'}
 
 
