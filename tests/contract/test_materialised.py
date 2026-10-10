@@ -90,7 +90,7 @@ def test_a_loaded_problem_equals_the_built_one_and_carries_the_written_hash(
     hash the one the suite lists."""
     built = fixtureProblem(response_type)
     written = materialise(built, tmp_path)
-    loaded = load(tmp_path, built.id)
+    loaded = load(built.id, tmp_path)
     assertSameProblem(loaded, built)
     assert written == storedHash(tmp_path) == contractHash(loaded)
 
@@ -106,7 +106,7 @@ def test_loading_needs_only_the_two_files(tmp_path: Path, monkeypatch: pytest.Mo
     materialise(built, tmp_path)
     assert {p.name for p in tmp_path.rglob('*') if p.is_file()} == {'table.parquet', 'problem.json'}
     monkeypatch.setattr(socket, 'socket', refuseNetwork)
-    assertSameProblem(load(tmp_path, built.id), built)
+    assertSameProblem(load(built.id, tmp_path), built)
 
 
 # ==============================================================================================
@@ -138,7 +138,7 @@ def test_the_hash_ignores_the_json_key_order(rng: random.Random) -> None:
         written = materialise(PROBLEM, Path(cache))
         _, record = problemFiles(Path(cache))
         record.write_text(json.dumps(shuffled(json.loads(record.read_text()), rng)))
-        assert contractHash(load(Path(cache), PROBLEM.id)) == written
+        assert contractHash(load(PROBLEM.id, Path(cache))) == written
 
 
 WRITER_OPTIONS = st.fixed_dictionaries(
@@ -162,7 +162,7 @@ def test_the_hash_ignores_the_parquet_writers_options(options: dict) -> None:
         written = materialise(PROBLEM, Path(cache))
         table, _ = problemFiles(Path(cache))
         pd.read_parquet(table).to_parquet(table, index=False, **options)
-        assert contractHash(load(Path(cache), PROBLEM.id)) == written
+        assert contractHash(load(PROBLEM.id, Path(cache))) == written
 
 
 def perturbedCell(table: pd.DataFrame, column: str, row: int) -> pd.DataFrame:
@@ -193,7 +193,7 @@ def test_a_changed_array_fails_to_load(column: str, row: int) -> None:
         table, _ = problemFiles(Path(cache))
         perturbedCell(pd.read_parquet(table), column, row).to_parquet(table, index=False)
         with pytest.raises(ValueError, match=MISMATCH):
-            load(Path(cache), PROBLEM.id)
+            load(PROBLEM.id, Path(cache))
 
 
 def leafPaths(value: object, path: tuple = ()) -> list[tuple]:
@@ -237,7 +237,7 @@ def test_a_changed_json_value_fails_to_load(data: st.DataObject) -> None:
         path = data.draw(st.sampled_from(paths))
         record.write_text(json.dumps(perturbedLeaf(stored, path)))
         with pytest.raises(ValueError, match=MISMATCH):
-            load(Path(cache), PROBLEM.id)
+            load(PROBLEM.id, Path(cache))
 
 
 def test_another_contract_version_is_another_hash() -> None:
