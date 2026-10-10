@@ -1,5 +1,5 @@
-"""__init__.py reads the registry files the package ships; the loader's users, the contract
-and metabeta read them only through it.
+"""__init__.py reads mixedbench's registry files;
+the loader's users and the contract read them only through it.
 
 pipeline:
 ---------
