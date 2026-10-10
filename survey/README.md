@@ -214,16 +214,17 @@ A failing shard is refused, its offending rows printed, nothing written.
 - Header, required fields, allowed values, `model_index` 1 to 3.
 - The package's row grammar (`Row.refusals`), in its words: the vocabularies, the list, term
   and `types` grammars, a `random_slopes` term `x|g` or `x||g` with `x` a covariate and `g` a
-  grouping factor of the row, every part of an interaction a covariate. A row it refuses is
-  checked against its table only at the next merge.
+  grouping factor of the row, every part of an interaction a covariate, no column both a
+  grouping factor and a covariate. A row it refuses is checked against its table only at the
+  next merge.
 - Source in the frame, object in the source, every named column (each part of `a:b`) in the
   table.
 - Each grouping factor has two levels and a level with two rows.
 - The response shows its type: `continuous` numeric, `binary` two values, `count` and
   `binomial` non-negative integers, `ordinal` at most 10 values, `categorical` not float; a
   `binomial` row's integer `trials` never below the response.
-- No column both a grouping factor and a covariate; `documented_prior` only when
-  `published_model` is `yes`; every registry source's licence in the lookup.
+- `documented_prior` only when `published_model` is `yes`; every registry source's licence in
+  the lookup.
 - The object not in the rival file; a dropped object in one of the two.
 
 Upsert on the key: a shard merged twice changes nothing, a corrected shard replaces its rows in
