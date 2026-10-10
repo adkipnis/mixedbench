@@ -26,6 +26,8 @@ dev = [
     "pytest",
     "hypothesis",
     "ruff",
+    "jupyter",
+    "nbmake",
 ]
 
 [build-system]
