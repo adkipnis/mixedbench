@@ -15,6 +15,7 @@ registry/               the census files the package ships; help/ and cache/ unt
 survey/                 the pipeline that builds registry/ (survey/README.md); archive/ finished
 tests/                  mirrors src/; survey/tests run by hand
 docs/adr/               the decisions
+examples/               demo.ipynb, committed with its outputs and run weekly; cache/ untracked
 ```
 
 Planned ([`ROADMAP.md`](ROADMAP.md)): `contract/`, `suite/`, `references/`, `metrics/` and
