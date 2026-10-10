@@ -141,13 +141,11 @@ def test_a_data_txt_reads_as_r_reads_it_in_the_c_locale():
     """utils::data() reads agridat's `data/*.txt` with read.table(header = TRUE, as.is = FALSE),
     in the C locale as R CMD INSTALL does: `typed.rda` is R's own reading of `typed.txt`.
     It pins a quoted field with a space, `T`/`F` as logicals and levels by code point
-    (`BT06` before `Ba04`, as in agridat's lillemo.wheat).
-    The one known gap, integers int64 where R's are int32, waits for a contract change (#54)."""
+    (`BT06` before `Ba04`, as in agridat's lillemo.wheat) and integers as R's int32 (#54)."""
     tables, reader = readers.read(FIXTURES / 'typed.txt', 'data/typed.txt', cran=True)
     twin, _ = readFixture('typed.rda')
-    expected = twin['typed'].astype({'plot': 'int64'})
     assert reader == 'pandas'
-    pd.testing.assert_frame_equal(tables['typed'], expected)
+    pd.testing.assert_frame_equal(tables['typed'], twin['typed'])
 
 
 def test_a_data_csv_is_read_with_semicolons(package):
