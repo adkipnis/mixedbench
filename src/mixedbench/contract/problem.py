@@ -1,7 +1,7 @@
-"""problem.py defines the contract (ADR 0001): a registry row and its table in, a `Problem` out.
+"""problem.py defines the contract: a registry row and its table in, a `Problem` out.
 
-`Problem.build` takes the typed row and the loader's typed table (loaded with the row's `types`)
-and returns the coded design, the response, the family, the prior and the parameter names.
+`Problem.build` takes the typed row and the loader's typed table (loaded with the row's `types`);
+it returns the coded design, response, family, prior and parameter names.
 A problem is a pure function of the pins, the row and the contract:
 the coding follows the loaded level order and the splits are seeded by the problem id.
 The table stays in raw units; each regime's scales are recorded beside it, over the rows a fit sees.
@@ -32,9 +32,8 @@ import pandas as pd
 from mixedbench.registry.row import Row, parts
 
 # =====================================================================================
-# the typing rule, shared with the survey's measures so that d_doc is the design's width
+# the typing rule
 # =====================================================================================
-# A string or integer column with at most this many distinct values is a categorical (spec #14).
 MAX_INTEGER_LEVELS = 10
 
 
@@ -42,6 +41,7 @@ def columnType(values: pd.Series, declared: str) -> tuple[str, int | str]:
     """The one typing rule, in order: ordered categorical; exactly two distinct values is
     binary; a declared or typed categorical, a string, or an integer with few distinct values
     is categorical with K levels; otherwise continuous. K is blank for a continuous column."""
+    # TODO: again the docstring looks bloated
     distinct = values.dropna().nunique()
     dtype = values.dtype
     if isinstance(dtype, pd.CategoricalDtype) and dtype.ordered:
@@ -62,6 +62,7 @@ def withComposites(table: pd.DataFrame, factors: tuple[str, ...]) -> pd.DataFram
     split-plot): the combination of its parts is added under that name, one level per pair of
     levels present; a row missing a part has no level (the ARM radon survey's rows without a
     county). Built here once, so the merge's checks and the measures see a plain column."""
+    # TODO: see above
     composites = {}
     for factor in factors:
         columns = parts(factor)
@@ -132,7 +133,7 @@ class Problem:
 # =====================================================================================
 # the builder
 # =====================================================================================
-# the pipeline behind `Problem.build`, one step per rule of ADR 0001
+# the pipeline behind `Problem.build`, one step per rule of ADR 0001 # TODO: don't mention ADRs in source code
 Coded = dict[str, dict[str, pd.Series]]  # per covariate or interaction, its coded columns
 
 
