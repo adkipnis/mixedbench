@@ -1,5 +1,4 @@
-"""row.py defines the format of a `registry.csv` row
-(the survey writes the file and the contract reads it).
+"""row.py defines the format of a `registry.csv` row.
 
 pipeline:
 ---------
