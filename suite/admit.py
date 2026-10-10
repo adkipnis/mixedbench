@@ -225,6 +225,7 @@ SUITE = ROOT / 'suite' / '1.1'
 
 if __name__ == '__main__':
     admitted = Admission(registry.rows(), registry.Tables(CACHE).load, CACHE).admit()
+    # TODO: this is a bit convoluted
     print(admitted.report())
     if admitted.failed:
         sys.exit(1)  # a list missing a row would drop it silently
