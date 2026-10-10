@@ -30,7 +30,7 @@ Family = Literal[
     'Beta', 'bernoulli(cloglog)', 'Gamma(identity)', 'zero_inflated_beta', 'student', 'gaussian',
     'acat', 'weibull', 'cox',
 ]  # fmt: skip
-ColumnType = Literal['categorical', 'ordered', 'continuous']  # what `types` may declare
+ColumnType = Literal['categorical', 'ordered', 'continuous']
 Verified = Literal['hand', 'high', 'second-reading']
 
 
