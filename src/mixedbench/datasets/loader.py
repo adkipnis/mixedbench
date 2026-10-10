@@ -13,7 +13,7 @@ a pinned Source
 -> the download from the first URL that answers (verified)     _urls, _download
 -> its tree (the source's files on disk)                       tree
 -> the files holding data                                      _fetchFile | _files
--> every object of those files as a frame (by name)            readers.read
+-> every object of those files as a table (by name)            readers.read
 -> one object as a typed table                                 load
 """
 
@@ -113,7 +113,7 @@ class Loader:
         self.cache = Path(cache)
         self.fetch = fetch
         self.manifest = manifest
-        self._frames: dict[Source, dict[str, tuple[DataObject, pd.DataFrame | None]]] = {}
+        self._tables: dict[Source, dict[str, tuple[DataObject, pd.DataFrame | None]]] = {}
         self._verified: set[tuple[Path, str]] = set()  # (file, checksum) pairs that matched
 
     def objects(self, source: Source) -> list[DataObject]:
@@ -147,7 +147,7 @@ class Loader:
         return tree
 
     # ------------------------------------------------------------------------------------------
-    # url -> archive -> tree -> files -> frames
+    # url -> archive -> tree -> files -> tables
     # ------------------------------------------------------------------------------------------
 
     def _dir(self, source: Source) -> Path:
@@ -233,8 +233,8 @@ class Loader:
         row = self.manifest[source, name]
         file = self._fetchFile(source, row)
         self._verify(file, row.sha256)
-        frames, _ = readers.read(file, row.file, layout=source.layout, cran=source.kind == 'cran')
-        return row.file, frames[name]
+        tables, _ = readers.read(file, row.file, layout=source.layout, cran=source.kind == 'cran')
+        return row.file, tables[name]
 
     def _fetchFile(self, source: Source, row: ManifestRow) -> Path:
         """A git source's file comes alone from GitHub's raw URL,
@@ -255,9 +255,9 @@ class Loader:
     def _read(self, source: Source) -> dict[str, tuple[DataObject, pd.DataFrame | None]]:
         """Parsed once per source: pyreadr is slow on factors,
         and a survey merge asks for a table several times."""
-        if source not in self._frames:
-            self._frames[source] = self._parse(source)
-        return self._frames[source]
+        if source not in self._tables:
+            self._tables[source] = self._parse(source)
+        return self._tables[source]
 
     def _parse(self, source: Source) -> dict[str, tuple[DataObject, pd.DataFrame | None]]:
         tree = self.tree(source)
@@ -265,8 +265,8 @@ class Loader:
         objects = {}
         for file in self._files(source, tree):
             label = file.relative_to(tree).as_posix()
-            frames, reader = readers.read(file, label, layout=source.layout, cran=cran)
-            for name, df in frames.items():
+            tables, reader = readers.read(file, label, layout=source.layout, cran=cran)
+            for name, df in tables.items():
                 shape = (None, None)
                 if df is not None:
                     shape = df.shape
