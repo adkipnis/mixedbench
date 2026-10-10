@@ -10,7 +10,6 @@ import pandas as pd
 import pytest
 from mixedbench import registry
 from mixedbench.contract import Problem, materialise
-from mixedbench.datasets import Loader
 from mixedbench.registry.row import Row, readCsv
 
 CANDIDATES = Path(__file__).parents[1] / 'suite' / '1.1' / 'candidates.csv'
@@ -34,12 +33,10 @@ def unmirrored(candidates: pd.DataFrame, rows: dict[str, Row]) -> pd.DataFrame:
 def test_a_seeded_subset_of_the_candidates_rebuilds_to_its_hashes(tmp_path: Path) -> None:
     rows = rowsById()
     subset = unmirrored(readCsv(CANDIDATES), rows).sample(SUBSET, random_state=SEED)
-    loader = Loader(tmp_path, manifest=registry.manifest())
-    sources = registry.sources()
+    tables = registry.Tables(tmp_path)
     rebuilt = {}
     for id in subset['id']:
         row = rows[id]
-        table = loader.load(sources[row.source], row.object, row.types)
-        rebuilt[id] = materialise(Problem.build(row, table), tmp_path)
+        rebuilt[id] = materialise(Problem.build(row, tables.load(row)), tmp_path)
     committed = dict(zip(subset['id'], subset['contract_hash']))
     assert rebuilt == committed
