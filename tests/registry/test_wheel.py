@@ -17,16 +17,18 @@ import pytest
 from mixedbench import registry
 
 ROOT = Path(__file__).parents[2]
-# imports both packages from the target, reports where they and the registry files resolve
+# imports both packages from the target, reports where they, the registry files and the suite's
+# list resolve
 REPORT = """
 import json, typing
 import mixedbench.datasets
-from mixedbench import registry
+from mixedbench import registry, suite
 files = [registry.path(name) for name in typing.get_args(registry.RegistryFile)]
 print(json.dumps({
     'datasets': mixedbench.datasets.__file__,
     'registry': registry.__file__,
     'files': [str(p) for p in files if p.is_file()],
+    'suite': str(suite.path('1.1') / 'candidates.csv'),
 }))
 """
 
@@ -59,6 +61,12 @@ def test_the_registry_files_resolve_inside_the_install(installed: tuple[Path, di
     files = typing.get_args(registry.RegistryFile)
     assert len(report['files']) == len(files)
     assert all(Path(p).is_relative_to(target) for p in report['files'])
+
+
+def test_the_suites_list_resolves_inside_the_install(installed: tuple[Path, dict]) -> None:
+    target, report = installed
+    assert Path(report['suite']).is_file()
+    assert Path(report['suite']).is_relative_to(target)
 
 
 def test_the_metadata_names_both_licences(installed: tuple[Path, dict]) -> None:
