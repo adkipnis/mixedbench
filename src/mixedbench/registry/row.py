@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import Literal, get_args
 
 import pandas as pd
+from mixedbench.datasets import ColumnType
 
 # =====================================================================================
 # vocabularies
@@ -30,7 +31,6 @@ Family = Literal[
     'Beta', 'bernoulli(cloglog)', 'Gamma(identity)', 'zero_inflated_beta', 'student', 'gaussian',
     'acat', 'weibull', 'cox',
 ]  # fmt: skip
-ColumnType = Literal['categorical', 'ordered', 'continuous']
 Verified = Literal['hand', 'high', 'second-reading']
 
 
