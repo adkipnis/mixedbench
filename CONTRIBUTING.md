@@ -34,6 +34,7 @@ src/mixedbench/
   registry/     the registry files as Python objects
   datasets/     the loader: a pinned source in, typed tables out
   contract/     the rules that turn a registry row and its table into a problem
+  suite/        a problem by its id, built on first use and checked against its suite
 registry/       the registry files, written by survey/merge.py
 suite/          the admission script and each suite's candidate list
 survey/         the pipeline that built the registry
