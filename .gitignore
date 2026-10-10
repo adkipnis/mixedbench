@@ -11,3 +11,5 @@ dist/
 # rebuilt from pins (cache) and by survey/pull.py (help), never committed
 registry/cache/
 registry/help/
+# the demo notebook's cache, fetched where it runs
+examples/cache/
