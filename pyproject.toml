@@ -9,7 +9,7 @@ requires-python = ">=3.14"
 dependencies = [
     "pandas",
     "pyyaml",
-    "pyreadr",
+    "pyreadr>=0.5.7,<0.6",  # readers.RFile parses with its internal PyreadrParser
     "openpyxl",
     "xlrd",
     "pyreadstat",
