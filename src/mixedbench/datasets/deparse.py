@@ -26,24 +26,11 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-# =====================================================================================
-# tokens and the parse tree
-# =====================================================================================
-# what the tokenizer matches, and the nodes the parser builds from it.
-TOKEN = re.compile(
-    r"""(?P<skip>\s+|\#[^\n]*)
-      | (?P<number>(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?)
-      | (?P<string>"[^"\\]*")
-      | (?P<name>[A-Za-z.][A-Za-z0-9._]*)
-      | (?P<op><-|[-~|:=(),])
-      | (?P<other>.)""",
-    re.VERBOSE,
-)
-# the attributes structure() sets on a data frame, nlme's groupedData ones among them: a table
-# keeps none of them, so they are parsed and never evaluated (`formula = weight ~ Time | Chick`)
-DROPPED = ('row.names', 'class', 'formula', 'outer', 'labels', 'units')
 
-
+# =====================================================================================
+# the parse tree
+# =====================================================================================
+# the nodes the parser builds from the tokens.
 @dataclass(frozen=True)
 class Symbol:
     name: str
@@ -75,6 +62,20 @@ class DeparseError(ValueError):
 # =====================================================================================
 class Deparse:
     """A recursive-descent parser and evaluator over one data/*.R file."""
+
+    TOKEN = re.compile(
+        r"""(?P<skip>\s+|\#[^\n]*)
+          | (?P<number>(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?)
+          | (?P<string>"[^"\\]*")
+          | (?P<name>[A-Za-z.][A-Za-z0-9._]*)
+          | (?P<op><-|[-~|:=(),])
+          | (?P<other>.)""",
+        re.VERBOSE,
+    )
+    # the attributes structure() sets on a data frame, nlme's groupedData ones among them: a
+    # table keeps none of them, so they are parsed and never evaluated
+    # (`formula = weight ~ Time | Chick`)
+    DROPPED = ('row.names', 'class', 'formula', 'outer', 'labels', 'units')
 
     def __init__(self, file: Path):
         self.file = file
@@ -108,7 +109,7 @@ class Deparse:
     def _tokenize(self, text: str) -> list[tuple[str, str]]:
         """(kind, text) pairs, whitespace and comments dropped."""
         tokens = []
-        for match in TOKEN.finditer(text):
+        for match in Deparse.TOKEN.finditer(text):
             kind = match.lastgroup
             if kind == 'other':
                 raise self._error(f'character {match.group()!r}')
@@ -284,7 +285,7 @@ class Deparse:
         """A list made a frame by its attributes; the attributes themselves are dropped."""
         _, body = call.arguments[0]
         for keyword, _ in call.arguments[1:]:
-            if keyword not in DROPPED:
+            if keyword not in Deparse.DROPPED:
                 raise self._error(f'attribute {keyword}= of structure()')
         return self._table(self._evaluate(body))
 
