@@ -1,11 +1,3 @@
-The code of mixedbench is licensed under the MIT License below. The registry files
-(`registry/`), the suite files (`suite/`) and the reference posteriors are licensed under the
-Creative Commons Attribution 4.0 International License (CC BY 4.0,
-https://creativecommons.org/licenses/by/4.0/). The upstream data the registry points to keeps
-its own licences and is never redistributed here.
-
---------------------------------------------------------------------------------------------
-
 MIT License
 
 Copyright (c) 2026 Alex Kipnis
