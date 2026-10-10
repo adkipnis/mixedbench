@@ -4,7 +4,7 @@ version = "1.0.0"
 description = "A benchmark of posterior approximation and prediction on real grouped data for GLMMs"
 readme = "README.md"
 license = "MIT AND CC-BY-4.0"
-license-files = ["LICENSE", "LICENSE-CC-BY-4.0"]
+license-files = ["LICENSE", "docs/LICENSE-CC-BY-4.0"]
 authors = [{ name = "Alex Kipnis", email = "adkipnis@users.noreply.github.com" }]
 requires-python = ">=3.11"
 classifiers = [
