@@ -1,5 +1,5 @@
 ---
-status: accepted
+status: accepted, amended 2026-10-10
 date: 2026-10-08
 ---
 
@@ -57,3 +57,13 @@ date: 2026-10-08
 **Not measured.**
 
 - Wall-clock (ADR 0004).
+
+## Amendment 2026-10-10: the grill of roadmap item 5
+
+- Decision: the predictive track's ceiling, the reference's posterior predictive on each
+  regime's seen rows, ships with suite 1.2; suite 1.1's predictive track carries the
+  opponent lines without it.
+- Decision: whether the regimes stay one seeded 10% split or become grouped K-fold (#47) is
+  settled before suite 1.1 freezes, by a lab note scoring cheap predictive lines (a GLM, a
+  REML mixed model) under both. After the freeze, a change of the splits is a new contract.
+- Why: the splits are in the materialised problem and so in the contract hash.
