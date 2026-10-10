@@ -145,7 +145,11 @@ The same bar as code: simplicity and a linear read, for every Markdown file.
 
 - Short bullets, the essentials first, detail in appendices or a linked file.
 - One home per fact; elsewhere a link to it. A count lives in a generated file (`SUMMARY.md`),
-  never typed into prose.
+  never typed into prose; the one exception, the README's dataset count, is pinned by an
+  offline test against `quantiles.yaml`.
+- `README.md` is for users and reads in one screen: badges on top, a short what and why,
+  install, one quickstart box, contents, contributing, citing, licence. Links are absolute to
+  `main`, so PyPI renders them; decisions, provenance and detail stay one link away.
 - A living rule sits with the method it governs; the record of how it was decided goes to a
   dated history (`survey/HISTORY.md`).
 - Issue numbers of metabeta-v3 carry the prefix `m3#`.
