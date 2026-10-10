@@ -3,9 +3,20 @@ contract and the survey's merge never parse a cell themselves."""
 
 from __future__ import annotations
 
+from pathlib import Path
+
+import pandas as pd
 import pytest
 from mixedbench import registry
-from mixedbench.registry.row import Row, SlopeTerm, parts, readCsv
+from mixedbench.registry.row import Row, SlopeTerm, parts, readCsv, writeCsv
+
+
+def test_the_dialect_round_trips_an_empty_cell_and_a_cell_with_a_comma(tmp_path: Path) -> None:
+    """Every cell is a quoted string and the empty cell stays `''`, never NaN: a `notes` cell
+    may hold commas and quotes, and `Row.parse` reads an empty `family` as the rule."""
+    frame = pd.DataFrame({'family': ['', 'student'], 'notes': ['a, "b"', '']})
+    writeCsv(frame, tmp_path / 'rows.csv')
+    assert readCsv(tmp_path / 'rows.csv').equals(frame)
 
 
 def installedRow(source: str, object: str, model_index: int) -> registry.Row:

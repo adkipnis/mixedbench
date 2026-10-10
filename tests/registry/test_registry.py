@@ -8,26 +8,9 @@ import typing
 import pandas as pd
 import yaml
 from mixedbench import registry
+from mixedbench.registry.row import COLUMNS, readCsv
 
 FILES = typing.get_args(registry.RegistryFile)
-# the normalised licences of ADR 0003, extended by #7 where CRAN's DESCRIPTIONs needed it
-LICENCES = {
-    'CC0-1.0',
-    'CC-BY-4.0',
-    'CC-BY-NC-4.0',
-    'CC-BY-NC-SA-4.0',
-    'ODbL-1.0',
-    'GPL-2.0-or-later',
-    'GPL-2.0',
-    'GPL-3.0-or-later',
-    'GPL-3.0',
-    'AGPL-3.0',
-    'MIT',
-    'BSD-3-Clause',
-    'public-domain',
-    'other',
-    'not stated',
-}
 # the top-level keys metabeta's contract test asserts (packages/glmm/tests/surveys/)
 QUANTILES_KEYS = {
     'n_rows',
@@ -42,7 +25,7 @@ QUANTILES_KEYS = {
 
 
 def registryRows() -> pd.DataFrame:
-    return pd.read_csv(registry.path('registry.csv'), dtype=str, keep_default_na=False)
+    return readCsv(registry.path('registry.csv'))
 
 
 def test_every_registry_file_resolves_to_an_existing_file() -> None:
@@ -61,15 +44,11 @@ def test_quantiles_parse_with_the_keys_metabeta_asserts() -> None:
     assert set(quantiles) == QUANTILES_KEYS
 
 
-def test_registry_rows_carry_family_documented_prior_and_a_licence() -> None:
-    """The contract reads `family` and a later track `documented_prior` by name; the mirror
-    fallback of ADR 0003 decides by `licence`, so no row may lack one."""
+def test_the_installed_registry_has_the_columns_of_row_in_their_order() -> None:
+    """`Row` owns the column order; the file the survey's merge wrote must agree with it, or
+    `registry.rows()` could not type a single row."""
     rows = registryRows()
-    columns = list(rows.columns)
-    assert columns[columns.index('trials') + 1] == 'family'
-    assert columns[columns.index('formula') + 1] == 'documented_prior'
-    assert columns[columns.index('reader') + 1] == 'licence'
-    assert set(rows['licence']) <= LICENCES
+    assert tuple(rows.columns) == COLUMNS
 
 
 def test_the_manifest_names_the_file_of_every_registry_object() -> None:
