@@ -6,10 +6,14 @@ the awkward files met in the pull, plus single R files as deposits serve them.""
 from __future__ import annotations
 
 import tarfile
+from collections.abc import Sequence
+from functools import partial
 from pathlib import Path
 
 import pandas as pd
 import pytest
+from hypothesis import HealthCheck, given, settings
+from hypothesis import strategies as st
 from mixedbench.datasets import readers
 
 FIXTURES = Path(__file__).parent / 'fixtures'
@@ -344,3 +348,88 @@ def test_a_cran_data_folder_holds_what_utils_data_reads(package, tmp_path):
     readme.write_text('x y\n1 2\n')
     assert not readers.isData(datalist, cran=True)
     assert readers.isData(readme, cran=True)
+
+
+# ==============================================================================================
+# text floats, correctly rounded (#57)
+# ==============================================================================================
+# pandas' own text-to-float conversion is not correctly rounded, and differs by platform:
+# these Scores cells of pingouin's mixed_anova_unbalanced.csv (rows 35, 37, 45) are an ulp off
+# on x86, and moved a contract hash between Linux and macOS.
+SCORES = ('5.7182891913492195', '6.5410087949313915', '6.2657383060625955')
+
+
+def test_numbers_from_text_round_as_python_float():
+    """Python's float() rounds correctly on every platform; the loader's declared continuous
+    columns go through numbers too."""
+    numbers = readers.numbers(pd.Series([*SCORES, None]))
+    assert list(numbers[:3]) == [float(text) for text in SCORES]
+    assert numbers.isna().iloc[3]
+
+
+def lines(
+    scores: Sequence[str], separator: str = ' ', header: bool = True, width: int = 0, tail: str = ''
+) -> str:
+    rows = [f'{score.ljust(width)}{separator}Therapy' for score in scores]
+    if header:
+        rows.insert(0, f'Scores{separator}Group')
+    return '\n'.join(rows) + '\n' + tail
+
+
+TEXT_ROUTES = {  # route: file name, the text it holds, read's options
+    'sniffed separator': ('scores.csv', partial(lines, separator=','), {}),
+    'whitespace': ('scores.txt', partial(lines, separator='  '), {}),
+    'cran data folder': ('scores.txt', lines, {'cran': True}),
+    'layout of spans': (  # 24 characters hold the longest repr of a double
+        'scores.dat',
+        partial(lines, header=False, width=24),
+        {'layout': ('Scores:1-24', 'Group:26-32')},
+    ),
+    'layout of names': (
+        'scores.dat',
+        partial(lines, header=False),
+        {'layout': ('Scores', 'Group')},
+    ),
+    'padded fields': (  # read as text first
+        'scores.csv',
+        partial(lines, separator=',', tail='NA     ,Therapy\n'),
+        {},
+    ),
+}
+
+
+def readScores(route: str, scores: Sequence[str], dir: Path) -> list[float]:
+    name, text, options = TEXT_ROUTES[route]
+    file = dir / name
+    file.write_text(text(scores))
+    tables, _ = readers.read(file, name, **options)
+    [table] = tables.values()
+    return list(table['Scores'][: len(scores)])
+
+
+@pytest.mark.parametrize('route', TEXT_ROUTES)
+def test_text_floats_read_as_python_float_on_every_text_path(route, tmp_path):
+    """Each pandas text reader converts on its own: the C engine, the python engine that sniffs
+    the separator, and read_fwf."""
+    assert readScores(route, SCORES, tmp_path) == [float(text) for text in SCORES]
+
+
+DOUBLES = st.floats(allow_nan=False, allow_infinity=False, allow_subnormal=False)
+
+
+@pytest.mark.parametrize('route', TEXT_ROUTES)
+@given(values=st.lists(DOUBLES, min_size=1, max_size=20))
+@settings(deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
+def test_any_double_reads_back_unchanged_on_every_text_path(route, values, tmp_path):
+    """repr() writes the shortest text that float() reads back as the same double;
+    a reader that rounds correctly reads it back too."""
+    scores = [repr(value) for value in values]
+    assert readScores(route, scores, tmp_path) == values
+
+
+def test_json_records_read_as_python_float(tmp_path):
+    """pandas' JSON parser is an ulp off on ARM as well, unless asked to be precise."""
+    file = tmp_path / 'scores.json'
+    file.write_text('[' + ','.join(f'{{"Scores": {score}}}' for score in SCORES) + ']')
+    tables, _ = readers.read(file, 'scores.json')
+    assert list(tables['scores.json']['Scores']) == [float(text) for text in SCORES]
