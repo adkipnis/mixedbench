@@ -123,10 +123,10 @@ class Loader:
     def load(
         self, source: Source, name: str, types: Mapping[str, ColumnType] | None = None
     ) -> pd.DataFrame:
-        file, df = self._object(source, name)
-        if df is None:
+        file, table = self._object(source, name)
+        if table is None:
             raise ValueError(f'{source.name} {source.pin} {file}: {name!r} is no DataFrame')
-        return df.assign(**self._declared(df, types or {}))
+        return table.assign(**self._declared(table, types or {}))
 
     def tree(self, source: Source) -> Path:
         """The source's files, extracted once:
@@ -228,8 +228,8 @@ class Loader:
 
     def _object(self, source: Source, name: str) -> tuple[str, pd.DataFrame | None]:
         if self.manifest is None:
-            obj, df = self._read(source)[name]
-            return obj.file, df
+            obj, table = self._read(source)[name]
+            return obj.file, table
         row = self.manifest[source, name]
         file = self._fetchFile(source, row)
         self._verify(file, row.sha256)
@@ -266,23 +266,24 @@ class Loader:
         for file in self._files(source, tree):
             label = file.relative_to(tree).as_posix()
             tables, reader = readers.read(file, label, layout=source.layout, cran=cran)
-            for name, df in tables.items():
+            for name, table in tables.items():
                 shape = (None, None)
-                if df is not None:
-                    shape = df.shape
-                objects[name] = DataObject(name, label, *shape, reader), df
+                if table is not None:
+                    shape = table.shape
+                objects[name] = DataObject(name, label, *shape, reader), table
         return objects
 
     @staticmethod
-    def _declared(df: pd.DataFrame, types: Mapping[str, ColumnType]) -> dict[str, pd.Series]:
+    def _declared(table: pd.DataFrame, types: Mapping[str, ColumnType]) -> dict[str, pd.Series]:
         """What a format cannot carry: column types for text and Excel,
         the order pyreadr drops from an R factor."""
         declared = {}
         for column, kind in types.items():
             if kind == 'continuous':
-                declared[column] = pd.to_numeric(Loader._decimalPoint(df[column]))
+                declared[column] = pd.to_numeric(Loader._decimalPoint(table[column]))
             else:  # a categorical keeps its levels under a CategoricalDtype without categories
-                declared[column] = df[column].astype(pd.CategoricalDtype(ordered=kind == 'ordered'))
+                dtype = pd.CategoricalDtype(ordered=kind == 'ordered')
+                declared[column] = table[column].astype(dtype)
         return declared
 
     @staticmethod
