@@ -4,6 +4,7 @@ PYTHONPATH; its dependencies come from the test's environment."""
 
 from __future__ import annotations
 
+import importlib.metadata
 import json
 import os
 import shutil
@@ -58,3 +59,22 @@ def test_the_registry_files_resolve_inside_the_install(installed: tuple[Path, di
     files = typing.get_args(registry.RegistryFile)
     assert len(report['files']) == len(files)
     assert all(Path(p).is_relative_to(target) for p in report['files'])
+
+
+def test_the_metadata_names_both_licences(installed: tuple[Path, dict]) -> None:
+    """The wheel bundles code under MIT and registry files under CC BY 4.0."""
+    target, _ = installed
+    distribution = installedDistribution(target)
+    assert distribution.metadata['License-Expression'] == 'MIT AND CC-BY-4.0'
+
+
+def test_both_licence_files_ship_in_the_wheel(installed: tuple[Path, dict]) -> None:
+    target, _ = installed
+    distribution = installedDistribution(target)
+    licences = {file.name for file in distribution.files if file.parent.name == 'licenses'}
+    assert licences == {'LICENSE', 'LICENSE-CC-BY-4.0'}
+
+
+def installedDistribution(target: Path) -> importlib.metadata.Distribution:
+    [distribution] = importlib.metadata.distributions(path=[str(target)])
+    return distribution
