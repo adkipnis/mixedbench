@@ -3,9 +3,10 @@ and allowed value of schema.py, and the read prompt speaks the glossary (CONTEXT
 
 import re
 from pathlib import Path
+from typing import get_args
 
 import pytest
-from mixedbench.registry.row import FAMILIES, RESPONSE_TYPES, VERIFIED
+from mixedbench.registry.row import Family, ResponseType, Verified
 from schema import ALLOWED, CANDIDATE_COLUMNS, SCREENS, TABLES
 
 HERE = Path(__file__).resolve().parents[1]
@@ -28,7 +29,8 @@ def test_readme_documents_every_allowed_value(table):
 
 def test_readme_documents_the_row_vocabularies():
     """The registry's vocabularies are the package's row grammar, not schema.py's (#48)."""
-    for value in (*RESPONSE_TYPES, *FAMILIES, *VERIFIED):
+    values = (*get_args(ResponseType), *get_args(Family), *get_args(Verified))
+    for value in values:
         assert f'`{value}`' in README, f'registry value {value!r} undocumented'
 
 
