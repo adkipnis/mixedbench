@@ -273,7 +273,7 @@ class Deparse:
     def _vector(values: list) -> np.ndarray | list:
         """R's type of the vector: character, integer (32-bit, as R stores it), else double.
         An integer vector with NA is double,
-        as pyreadr's tables have it (readers._numbersAsFloat)."""
+        as pyreadr's tables have it (readers.RFile._numbersAsFloat)."""
         if any(isinstance(value, str) for value in values):
             return values
         if all(isinstance(value, int) for value in values):  # NA, None, is no int

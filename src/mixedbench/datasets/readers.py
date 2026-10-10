@@ -1,20 +1,18 @@
 """readers.py defines which file formats exist, how each becomes tables and which files hold data.
 
 An R file goes through pyreadr (with R's level order restored)
-or through the pure-Python rdata where librdata rejects it.
-A file in a CRAN package's data/ folder is read by utils::data()'s rules.
+or through the pure-Python rdata where librdata rejects it (RFile).
+A file in a CRAN package's data/ folder is read by utils::data()'s rules (DataFolder).
 Base R's data/*.R files are read by the deparse reader.
-Every other format goes through pandas:
+Every other format goes through pandas (PandasFile, JsonFile):
 one table per file, named by its label, or one per data sheet of a workbook.
 
 pipeline:
 ---------
 a file in a source's tree
 -> data, not documentation                               isData
--> its reader, by suffix and folder                      read
--> every object of the file as a table (by name)         _readR | _readRdata | Deparse.tables |
-                                                         _readData | _readWorkbook | _readLayout |
-                                                         _readTable
+-> its format family, by suffix and folder               read
+-> every object of the file as a table (by name)         RFile | DataFolder | PandasFile .read
 """
 
 from __future__ import annotations
@@ -60,33 +58,17 @@ FRAME_CLASSES = r'Missing constructor for R class "(data\.table|tbl_df|tbl)"'
 def read(
     file: Path, label: str, *, layout: tuple[str, ...] | None = None, cran: bool = False
 ) -> tuple[dict[str, pd.DataFrame | None], Reader]:
-    """The file's objects as tables, by name, and the reader that read them.
-    A file other than a workbook is one object, named by its `label`.
-    `layout` declares the columns of a headerless text file."""
-    suffix = file.suffix.lower()
-    if suffix in R_FILES:
-        try:
-            return _readR(file), 'pyreadr'
-        except R_ERRORS:
-            return _readRdata(file), 'rdata'
-    if cran and suffix == '.r':
-        try:
-            return Deparse(file).tables(), 'deparse'
-        except DeparseError:  # most of base R's data/*.R files: time series, matrices
-            return {file.stem: None}, 'deparse'
+    """The file's objects as tables, by name, and the reader that read them."""
+    if file.suffix.lower() in R_FILES:
+        return RFile.read(file)
     if cran:
-        return _readData(file), 'pandas'
-    if bare(file).suffix in ('.xlsx', '.xls'):
-        return _readWorkbook(file, label), 'pandas'
-    if layout is not None:
-        return {label: _readLayout(file, layout)}, 'pandas'
-    return {label: _readTable(file)}, 'pandas'
+        return DataFolder.read(file)
+    return PandasFile.read(file, label, layout), 'pandas'
 
 
 def isData(file: Path, *, cran: bool = False) -> bool:
-    """In a CRAN package's data/ folder, what utils::data() reads.
-    Elsewhere what R or pandas read, less the text files that document data,
-    and never Stan initial values beside a data dict or a zip's resource forks."""
+    """What utils::data() reads in a CRAN package's data/ folder, elsewhere what R or pandas
+    read less documentation, and never Stan initial values or a zip's resource forks."""
     readable = R_FILES | TABLE_FILES
     if cran:
         readable = R_FILES | DATA_FILES
@@ -128,289 +110,342 @@ def bare(file: Path) -> Path:
 # =====================================================================================
 # R files
 # =====================================================================================
-# pyreadr first, with R's level order restored; the pure-Python rdata where librdata refuses.
-def _readR(path: Path) -> dict[str, pd.DataFrame | None]:
-    """`pyreadr.read_r`, except that factor levels keep R's order
-    and that an object pyreadr cannot turn into a DataFrame is None.
-    A file librdata rejects raises."""
-    parser = PyreadrParser()
-    parser.parse(bytes(path))
-    tables = {}
-    for parsed in parser.table_data:
-        name = parsed.name or path.stem  # an .rds carries no object name
-        if parsed.dim_num > 2:  # an array, which pyreadr hands to xarray
-            tables[name] = None
-            continue
+class RFile:
+    """An .rda, .RData or .rds file, through pyreadr, or through rdata where librdata refuses."""
+
+    @staticmethod
+    def read(path: Path) -> tuple[dict[str, pd.DataFrame | None], Reader]:
         try:
-            table = parsed.convert_to_dataframe()
-        except PyreadrError:  # a matrix column
+            return RFile._pyreadr(path), 'pyreadr'
+        except R_ERRORS:
+            return RFile._rdata(path), 'rdata'
+
+    # ------------------------------------------------------------------------------------------
+    # file -> pyreadr | rdata -> tables
+    # ------------------------------------------------------------------------------------------
+
+    @staticmethod
+    def _pyreadr(path: Path) -> dict[str, pd.DataFrame | None]:
+        """Like `pyreadr.read_r`, but factor levels keep R's order
+        and an object pyreadr cannot turn into a DataFrame is None."""
+        parser = PyreadrParser()
+        parser.parse(bytes(path))
+        tables = {}
+        for parsed in parser.table_data:
+            name = parsed.name or path.stem  # an .rds carries no object name
+            if parsed.dim_num > 2:  # an array, which pyreadr hands to xarray
+                tables[name] = None
+                continue
+            try:
+                table = parsed.convert_to_dataframe()
+            except PyreadrError:  # a matrix column
+                tables[name] = None
+                continue
+            for position, labels in parsed.value_labels.items():  # {column: {code: label}}
+                column = table.columns[position]
+                levels = [labels[code] for code in sorted(labels)]  # R orders levels by code
+                # pyreadr used astype('category'), which sorts levels and drops unused ones
+                table[column] = table[column].cat.set_categories(levels)
+            tables[name] = RFile._numbersAsFloat(table)
+        return tables
+
+    @staticmethod
+    def _numbersAsFloat(table: pd.DataFrame) -> pd.DataFrame:
+        """An object column of ints and NaN, pyreadr's R integer vector with NA, becomes float."""
+        numbers = {}
+        for column in table.columns[table.dtypes == object]:
+            present = table[column].dropna()
+            if present.map(lambda v: isinstance(v, (int, float))).all():
+                numbers[column] = pd.to_numeric(table[column])
+        return table.assign(**numbers)
+
+    @staticmethod
+    def _rdata(path: Path) -> dict[str, pd.DataFrame | None]:
+        """Through the pure-Python rdata, where a list or a model fit is no table."""
+        try:
+            objects = RFile._rdataObjects(path)
+        except RDATA_ERRORS:
+            return {path.stem: None}
+        tables = {}
+        for name, value in objects.items():
+            if name.startswith('.'):  # R's hidden objects (`.Random.seed`), left out as ls() does
+                continue
             tables[name] = None
-            continue
-        for position, labels in parsed.value_labels.items():  # {column: {code: label}}
-            column = table.columns[position]
-            levels = [labels[code] for code in sorted(labels)]  # R orders levels by code
-            # pyreadr used astype('category'), which sorts levels and drops unused ones
-            table[column] = table[column].cat.set_categories(levels)
-        tables[name] = _numbersAsFloat(table)
-    return tables
+            if isinstance(value, pd.DataFrame):
+                # R's integer row names, 1-based or a subset's, as pyreadr's 0-based range
+                tables[name] = RFile._pyreadrTypes(value.reset_index(drop=True))
+        return tables
 
+    @staticmethod
+    def _rdataObjects(path: Path) -> dict:
+        """An .rds holds one object, named by the file as `_pyreadr` names it."""
+        with warnings.catch_warnings():
+            warnings.filterwarnings('ignore', FRAME_CLASSES, UserWarning)
+            if path.suffix.lower() == '.rds':
+                return {path.stem: rdata.read_rds(path)}
+            return rdata.read_rda(path)
 
-def _numbersAsFloat(table: pd.DataFrame) -> pd.DataFrame:
-    """pyreadr renders an R integer vector with NA as an object column of ints and NaN.
-    Such a column becomes float, a string column stays as it is."""
-    numbers = {}
-    for column in table.columns[table.dtypes == object]:
-        present = table[column].dropna()
-        if present.map(lambda v: isinstance(v, (int, float))).all():
-            numbers[column] = pd.to_numeric(table[column])
-    return table.assign(**numbers)
-
-
-def _readRdata(path: Path) -> dict[str, pd.DataFrame | None]:
-    """An R file librdata rejects, through the pure-Python rdata.
-    A list or a model fit is no table."""
-    try:
-        objects = _rdataObjects(path)
-    except RDATA_ERRORS:
-        return {path.stem: None}
-    tables = {}
-    for name, value in objects.items():
-        if name.startswith('.'):  # R's hidden objects (`.Random.seed`), left out as ls() does
-            continue
-        tables[name] = None
-        if isinstance(value, pd.DataFrame):
-            # R's integer row names, 1-based or a subset's, as pyreadr's 0-based range
-            tables[name] = _pyreadrTypes(value.reset_index(drop=True))
-    return tables
-
-
-def _rdataObjects(path: Path) -> dict:
-    """An .rds holds one object, named by the file as `_readR` names it."""
-    with warnings.catch_warnings():
-        warnings.filterwarnings('ignore', FRAME_CLASSES, UserWarning)
-        if path.suffix.lower() == '.rds':
-            return {path.stem: rdata.read_rds(path)}
-        return rdata.read_rda(path)
-
-
-def _pyreadrTypes(table: pd.DataFrame) -> pd.DataFrame:
-    """rdata's nullable dtypes as pyreadr's: an R integer column int32,
-    float where it holds NA (`_numbersAsFloat`), a string column pandas' default string."""
-    types = {}
-    for column in table.columns[table.dtypes == 'Int32']:
-        types[column] = 'int32'
-        if table[column].isna().any():
-            types[column] = 'float64'
-    for column in table.columns[table.dtypes == 'string']:
-        types[column] = 'str'
-    return table.astype(types)
+    @staticmethod
+    def _pyreadrTypes(table: pd.DataFrame) -> pd.DataFrame:
+        """The nullable dtypes of rdata as pyreadr's: an R integer column int32,
+        float where it holds NA, a string column pandas' default string."""
+        types = {}
+        for column in table.columns[table.dtypes == 'Int32']:
+            types[column] = 'int32'
+            if table[column].isna().any():
+                types[column] = 'float64'
+        for column in table.columns[table.dtypes == 'string']:
+            types[column] = 'str'
+        return table.astype(types)
 
 
 # =====================================================================================
-# utils::data() text files
+# a CRAN package's data/ folder
 # =====================================================================================
-# a CRAN package's data/ text files, read as R reads them, without R.
-def _readData(file: Path) -> dict[str, pd.DataFrame | None]:
-    """A CRAN package's `data/*.txt`, `.tab` or `.csv` as utils::data() reads it:
-    read.table(header = TRUE, as.is = FALSE), with `sep = ';'` for a `.csv`.
-    Strings become categoricals with levels in code-point order, as read.table sorts them
-    in the C locale, not by the ICU collation of R's default locale."""
-    sep = r'\s+'
-    if file.suffix.lower() == '.csv':
-        sep = ';'
-    table = pd.read_csv(file, sep=sep, quotechar='"', na_values=['NA'], keep_default_na=False)
-    strings = table.columns[table.dtypes.map(pd.api.types.is_string_dtype)]
-    factors = {column: table[column].astype('category') for column in strings}
-    return {file.stem: table.assign(**factors)}
+class DataFolder:
+    """A text or .R file in a CRAN package's data/ folder, read as utils::data() reads it."""
+
+    @staticmethod
+    def read(file: Path) -> tuple[dict[str, pd.DataFrame | None], Reader]:
+        if file.suffix.lower() == '.r':
+            return DataFolder._deparse(file), 'deparse'
+        return DataFolder._readTable(file), 'pandas'
+
+    # ------------------------------------------------------------------------------------------
+    # file -> deparse | read.table -> tables
+    # ------------------------------------------------------------------------------------------
+
+    @staticmethod
+    def _deparse(file: Path) -> dict[str, pd.DataFrame | None]:
+        try:
+            return Deparse(file).tables()
+        except DeparseError:  # most of base R's data/*.R files: time series, matrices
+            return {file.stem: None}
+
+    @staticmethod
+    def _readTable(file: Path) -> dict[str, pd.DataFrame | None]:
+        """read.table(header = TRUE, as.is = FALSE), with `sep = ';'` for a `.csv`.
+        Levels sort by code point, as R sorts them in the C locale, not by ICU collation."""
+        sep = r'\s+'
+        if file.suffix.lower() == '.csv':
+            sep = ';'
+        table = pd.read_csv(file, sep=sep, quotechar='"', na_values=['NA'], keep_default_na=False)
+        strings = table.columns[table.dtypes.map(pd.api.types.is_string_dtype)]
+        factors = {column: table[column].astype('category') for column in strings}
+        return {file.stem: table.assign(**factors)}
 
 
 # =====================================================================================
 # pandas files
 # =====================================================================================
-# every other format: one object per file, except a workbook's data sheets.
-def _readWorkbook(file: Path, label: str) -> dict[str, pd.DataFrame | None]:
-    """One object per data sheet, `<label>!<sheet>`, names stripped as in text files.
-    A workbook of one data sheet is the file.
-    Sheets named like documentation (`Contents`) and empty ones (Excel's default `Sheet2`)
-    are none."""
-    sheets = pd.read_excel(file, sheet_name=None)
-    data = [name for name, table in sheets.items() if not isNoteSheet(name) and len(table)]
-    objects = {}
-    for name in data:
-        key = f'{label}!{name}'
-        if len(data) == 1:
-            key = label
-        objects[key] = sheets[name].rename(columns=lambda c: str(c).strip())
-    return objects
+class PandasFile:
+    """Any other file, through pandas: one table named by its label,
+    or one per data sheet of a workbook."""
+
+    @staticmethod
+    def read(
+        file: Path, label: str, layout: tuple[str, ...] | None
+    ) -> dict[str, pd.DataFrame | None]:
+        """`layout` declares the columns of a headerless text file."""
+        if bare(file).suffix in ('.xlsx', '.xls'):
+            return PandasFile._readWorkbook(file, label)
+        if layout is not None:
+            return {label: PandasFile._readLayout(file, layout)}
+        return {label: PandasFile._readByExtension(file)}
+
+    @staticmethod
+    def isNoteSheet(name: str) -> bool:
+        return any(stem in name.lower() for stem in NOTE_SHEETS)
+
+    @staticmethod
+    def banner(file: Path) -> tuple[list[str], str]:
+        """The lines starting with `#` that open the file, and the header line after them."""
+        opener = open
+        if file.suffix.lower() == '.gz':
+            opener = gzip.open
+        lines = []
+        with opener(file, 'rb') as f:
+            for raw in f:
+                line = raw.decode('utf-8', errors='replace')
+                if not line.startswith('#'):
+                    return lines, line
+                lines.append(line.rstrip())
+        return lines, ''
+
+    # ------------------------------------------------------------------------------------------
+    # file -> workbook | layout | extension -> tables
+    # ------------------------------------------------------------------------------------------
+
+    @staticmethod
+    def _readWorkbook(file: Path, label: str) -> dict[str, pd.DataFrame | None]:
+        """One object per data sheet, `<label>!<sheet>`, a workbook of one data sheet the file.
+        Sheets named like documentation (`Contents`) and empty ones (`Sheet2`) are none."""
+        sheets = pd.read_excel(file, sheet_name=None)
+        data = []
+        for name, table in sheets.items():
+            if not PandasFile.isNoteSheet(name) and len(table):
+                data.append(name)
+        objects = {}
+        for name in data:
+            key = f'{label}!{name}'
+            if len(data) == 1:
+                key = label
+            # names stripped as in text files
+            objects[key] = sheets[name].rename(columns=lambda c: str(c).strip())
+        return objects
+
+    @staticmethod
+    def _readLayout(file: Path, layout: tuple[str, ...]) -> pd.DataFrame:
+        """`name:start-end` entries are fixed-width columns, plain names whitespace-separated ones.
+        Character positions count from 1, as layout sheets do."""
+        names, spans = [], []
+        for entry in layout:
+            name, _, span = entry.partition(':')
+            names.append(name)
+            if span:
+                start, _, end = span.partition('-')
+                spans.append((int(start) - 1, int(end or start)))
+        if spans:
+            return pd.read_fwf(file, colspecs=spans, names=names, header=None)
+        return pd.read_csv(file, sep=r'\s+', names=names, header=None)
+
+    @staticmethod
+    def _readByExtension(file: Path) -> pd.DataFrame | None:
+        suffix = bare(file).suffix
+        if suffix == '.json':
+            return JsonFile.read(file)
+        if suffix == '.dta':
+            return PandasFile._readStata(file)
+        if suffix == '.sav':
+            return PandasFile._readSpss(file)
+        if suffix == '.arrow':
+            return pd.read_feather(file)
+        if suffix == '.pq':
+            return pd.read_parquet(file)
+        return PandasFile._readDelimited(file)
+
+    @staticmethod
+    def _readStata(file: Path) -> pd.DataFrame:
+        """Read by pandas, or by pyreadstat where pandas misparses the value-label section,
+        with the labels applied the same way."""
+        try:
+            return pd.read_stata(file)
+        except struct.error:
+            labelled = {'apply_value_formats': True, 'formats_as_category': True}
+            table, _ = pyreadstat.read_dta(str(file), **labelled)
+            return table
+
+    @staticmethod
+    def _readSpss(file: Path) -> pd.DataFrame:
+        """Value labels that cover every value of a column make it a categorical in code order.
+        Labels on a scale's extremes alone (`lowest`, `highest`) leave it numeric."""
+        table, meta = pyreadstat.read_sav(str(file))
+        labelled = {}
+        for column, labels in meta.variable_value_labels.items():
+            present = set(table[column].dropna())
+            if present <= set(labels):  # pandas would make every value a category
+                levels = [labels[code] for code in sorted(labels)]
+                labelled[column] = pd.Categorical(table[column].map(labels), categories=levels)
+        return table.assign(**labelled)
+
+    @staticmethod
+    def _readDelimited(file: Path) -> pd.DataFrame | None:
+        """The separator sniffed, or whitespace where the header holds none of the usual ones.
+        A `#` banner above the table is skipped, and what does not parse is no table."""
+        # undecodable bytes (a latin-1 degree sign) replaced, a byte-order mark dropped
+        options = {'encoding': 'utf-8-sig', 'encoding_errors': 'replace'}
+        lines, header = PandasFile.banner(file)
+        # the sniffer needs the python engine, which ignores quotes under a regex separator; the C
+        # engine honours them, as read.table does (R's write.table output)
+        sep, engine = None, 'python'
+        if not any(mark in header for mark in ',;\t|'):  # columns aligned with runs of spaces
+            sep, engine = r'\s+', 'c'
+        try:  # pandas opens a `.gz` itself
+            table = pd.read_csv(file, sep=sep, skiprows=len(lines), engine=engine, **options)
+        except pd.errors.ParserError:
+            return None
+        return PandasFile._tidyText(table)
+
+    @staticmethod
+    def _tidyText(table: pd.DataFrame) -> pd.DataFrame:
+        """Padded names and fields (`NA       `) stripped,
+        so that a column of numbers with `NA` is numeric with missing values."""
+        table = table.rename(columns=lambda name: str(name).strip())
+        tidy = {}
+        for column in table.columns[table.dtypes.map(pd.api.types.is_string_dtype)]:
+            values = table[column].str.strip().replace({'': None, 'NA': None})
+            numbers = pd.to_numeric(values, errors='coerce')
+            if numbers.notna().sum() == values.notna().sum():  # every present value a number
+                values = numbers
+            tidy[column] = values
+        return table.assign(**tidy)
 
 
-def isNoteSheet(name: str) -> bool:
-    return any(stem in name.lower() for stem in NOTE_SHEETS)
+# =====================================================================================
+# JSON files
+# =====================================================================================
+class JsonFile:
+    """A .json or .json.zip file: JSON records, or a Stan data dict as the table of its
+    observations."""
 
+    @staticmethod
+    def read(file: Path) -> pd.DataFrame | None:
+        data = JsonFile.unwrap(file)
+        content = json.loads(data)
+        if not isinstance(content, dict):
+            return pd.read_json(io.BytesIO(data))
+        return JsonFile._observations(content)
 
-def _readLayout(file: Path, layout: tuple[str, ...]) -> pd.DataFrame:
-    """A headerless text file read as its source declares it:
-    `name:start-end` entries are fixed-width columns, plain names whitespace-separated ones.
-    Character positions count from 1, as layout sheets do."""
-    names, spans = [], []
-    for entry in layout:
-        name, _, span = entry.partition(':')
-        names.append(name)
-        if span:
-            start, _, end = span.partition('-')
-            spans.append((int(start) - 1, int(end or start)))
-    if spans:
-        return pd.read_fwf(file, colspecs=spans, names=names, header=None)
-    return pd.read_csv(file, sep=r'\s+', names=names, header=None)
+    @staticmethod
+    def unwrap(file: Path) -> bytes:
+        if file.suffix.lower() != '.zip':
+            return file.read_bytes()
+        with zipfile.ZipFile(file) as z:
+            member = z.namelist()[0]
+            return z.read(member)
 
+    @staticmethod
+    def observationLength(content: dict) -> int | None:
+        """The modal length of the dict's arrays, a Stan data dict's number of observations."""
+        lengths = [len(value) for value in content.values() if isinstance(value, list)]
+        if not lengths:
+            return None
+        return max(set(lengths), key=lengths.count)
 
-def _readTable(file: Path) -> pd.DataFrame | None:
-    """pandas by extension, None where the file holds no table."""
-    suffix = bare(file).suffix
-    if suffix == '.json':
-        return _readJson(unwrap(file))
-    if suffix == '.dta':
-        return _readStata(file)
-    if suffix == '.sav':
-        return _readSpss(file)
-    if suffix == '.arrow':
-        return pd.read_feather(file)
-    if suffix == '.pq':
-        return pd.read_parquet(file)
-    return _readDelimited(file)
+    @staticmethod
+    def arrayDepth(value: list) -> int:
+        """Dimensions of a nested array: 1 for a vector, 2 for a matrix, and so on."""
+        return len(JsonFile.arrayShape(value))
 
+    @staticmethod
+    def arrayShape(value: list) -> list[int]:
+        shape = []
+        while isinstance(value, list):
+            shape.append(len(value))
+            value = value[0] if value else None
+        return shape
 
-def unwrap(file: Path) -> bytes:
-    """The file's content, out of its `.zip` wrapper where it has one."""
-    if file.suffix.lower() != '.zip':
-        return file.read_bytes()
-    with zipfile.ZipFile(file) as z:
-        member = z.namelist()[0]
-        return z.read(member)
+    # ------------------------------------------------------------------------------------------
+    # dict -> observations -> table
+    # ------------------------------------------------------------------------------------------
 
-
-def _readStata(file: Path) -> pd.DataFrame:
-    """pandas, except for a file whose value-label section it misparses,
-    which pyreadstat reads with the labels applied the same way."""
-    try:
-        return pd.read_stata(file)
-    except struct.error:
-        table, _ = pyreadstat.read_dta(
-            str(file), apply_value_formats=True, formats_as_category=True
-        )
-        return table
-
-
-def _readSpss(file: Path) -> pd.DataFrame:
-    """A column whose value labels cover every value it holds becomes a categorical in code order.
-    Labels on a scale's extremes alone (`lowest`, `highest` on a numeric score) leave it numeric,
-    where pandas would make every value a category."""
-    table, meta = pyreadstat.read_sav(str(file))
-    labelled = {}
-    for column, labels in meta.variable_value_labels.items():
-        present = set(table[column].dropna())
-        if present <= set(labels):
-            levels = [labels[code] for code in sorted(labels)]
-            labelled[column] = pd.Categorical(table[column].map(labels), categories=levels)
-    return table.assign(**labelled)
-
-
-def _readDelimited(file: Path) -> pd.DataFrame | None:
-    """The separator sniffed, unless the header holds none of the usual ones:
-    columns aligned with runs of spaces are then read whitespace-separated,
-    which the sniffer would miscount.
-    A banner of `#` lines above the table is skipped, and what does not parse is no table.
-    Undecodable bytes (a latin-1 degree sign) are replaced, a byte-order mark dropped.
-    pandas opens a `.gz` itself."""
-    options = {'encoding': 'utf-8-sig', 'encoding_errors': 'replace'}
-    lines, header = banner(file)
-    # the sniffer needs the python engine, which ignores quotes under a regex separator; the C
-    # engine honours them, as read.table does (R's write.table output)
-    sep, engine = None, 'python'
-    if not any(mark in header for mark in ',;\t|'):
-        sep, engine = r'\s+', 'c'
-    try:
-        table = pd.read_csv(file, sep=sep, skiprows=len(lines), engine=engine, **options)
-    except pd.errors.ParserError:
-        return None
-    return _tidyText(table)
-
-
-def banner(file: Path) -> tuple[list[str], str]:
-    """The lines starting with `#` that open the file, and the header line after them."""
-    opener = open
-    if file.suffix.lower() == '.gz':
-        opener = gzip.open
-    lines = []
-    with opener(file, 'rb') as f:
-        for raw in f:
-            line = raw.decode('utf-8', errors='replace')
-            if not line.startswith('#'):
-                return lines, line
-            lines.append(line.rstrip())
-    return lines, ''
-
-
-def _tidyText(table: pd.DataFrame) -> pd.DataFrame:
-    """Padded fields (`idnum, state`, `NA       `) stripped,
-    so that a name is the name and a column of numbers with `NA` is numeric with missing values."""
-    table = table.rename(columns=lambda name: str(name).strip())
-    tidy = {}
-    for column in table.columns[table.dtypes.map(pd.api.types.is_string_dtype)]:
-        values = table[column].str.strip().replace({'': None, 'NA': None})
-        numbers = pd.to_numeric(values, errors='coerce')
-        if numbers.notna().sum() == values.notna().sum():  # every present value a number
-            values = numbers
-        tidy[column] = values
-    return table.assign(**tidy)
-
-
-# -------------------------------------------------------------------------------------
-# JSON: records, or a Stan data dict
-# -------------------------------------------------------------------------------------
-def _readJson(data: bytes) -> pd.DataFrame | None:
-    """JSON records as pandas reads them,
-    a Stan data dict as the table of its arrays of the modal length, the observations.
-    Scalars, arrays of another length (group-level data) and arrays of three or more dimensions
-    are no columns, an N-row matrix is its numbered columns (`X_1`, `X_2`).
-    A dict without arrays (a descriptor) is no table."""
-    content = json.loads(data)
-    if not isinstance(content, dict):
-        return pd.read_json(io.BytesIO(data))
-    n = observationLength(content)
-    if n is None:
-        return None
-    columns = {}
-    for name, value in content.items():
-        if not isinstance(value, list) or len(value) != n:
-            continue
-        depth = arrayDepth(value)
-        if depth > 2:
-            continue
-        if depth == 2:  # a matrix, one row per observation
-            for k in range(len(value[0])):
-                columns[f'{name}_{k + 1}'] = [row[k] for row in value]
-        else:
-            columns[name] = value
-    return pd.DataFrame(columns)
-
-
-def observationLength(content: dict) -> int | None:
-    """The modal length of the dict's arrays, a Stan data dict's number of observations."""
-    lengths = [len(value) for value in content.values() if isinstance(value, list)]
-    if not lengths:
-        return None
-    return max(set(lengths), key=lengths.count)
-
-
-def arrayDepth(value: list) -> int:
-    """Dimensions of a nested array: 1 for a vector, 2 for a matrix, and so on."""
-    return len(arrayShape(value))
-
-
-def arrayShape(value: list) -> list[int]:
-    shape = []
-    while isinstance(value, list):
-        shape.append(len(value))
-        value = value[0] if value else None
-    return shape
+    @staticmethod
+    def _observations(content: dict) -> pd.DataFrame | None:
+        """The arrays of the modal length are the columns, a dict without arrays no table.
+        Scalars, arrays of another length and of three or more dimensions are no columns."""
+        n = JsonFile.observationLength(content)
+        if n is None:
+            return None
+        columns = {}
+        for name, value in content.items():
+            if not isinstance(value, list) or len(value) != n:
+                continue
+            depth = JsonFile.arrayDepth(value)
+            if depth > 2:
+                continue
+            if depth == 2:  # a matrix, one row per observation, as numbered columns
+                for k in range(len(value[0])):
+                    columns[f'{name}_{k + 1}'] = [row[k] for row in value]
+            else:
+                columns[name] = value
+        return pd.DataFrame(columns)
