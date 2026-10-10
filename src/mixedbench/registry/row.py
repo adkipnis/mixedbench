@@ -1,6 +1,12 @@
-"""The format of a `registry.csv` row: the CSV dialect, the columns, the vocabularies of the
-columns the package reads and the cell grammars. The survey's merge writes the file through
-this module; the contract reads it through `Row`."""
+"""row.py defines the format of a `registry.csv` row
+(the survey writes the file and the contract reads it).
+
+pipeline:
+---------
+registry.csv
+-> cells as strings                     readCsv
+-> typed Row | refused cells            Row.parse | Row.refusals
+"""
 
 from __future__ import annotations
 
@@ -15,9 +21,9 @@ import pandas as pd
 # =====================================================================================
 # vocabularies
 # =====================================================================================
+# the legal values per column; `Row.refusals` refuses any other.
 ResponseType = Literal['continuous', 'binary', 'count', 'binomial', 'ordinal', 'categorical']
-# A departure from the contract's family rule as brms names it (ADR 0001, 0004); empty on the
-# rule. A value is added when a documented model needs it, not in advance.
+# brms's name of a family that departs from the contract's family rule; '' keeps the rule
 Family = Literal[
     'negbinomial', 'bernoulli(probit)', 'cumulative(probit)', 'Gamma(log)', 'lognormal',
     'zero_inflated_poisson', 'zero_inflated_negbinomial', 'hurdle_poisson', 'hurdle_negbinomial',
@@ -25,34 +31,27 @@ Family = Literal[
     'acat', 'weibull', 'cox',
 ]  # fmt: skip
 ColumnType = Literal['categorical', 'ordered', 'continuous']  # what `types` may declare
-# Why a row counts as verified (ADR 0002): the hand sample or Tier D, a high-confidence
-# reading, or a blind second reading
 Verified = Literal['hand', 'high', 'second-reading']
 
-RESPONSE_TYPES: tuple[str, ...] = get_args(ResponseType)
-FAMILIES: tuple[str, ...] = get_args(Family)
-COLUMN_TYPES: tuple[str, ...] = get_args(ColumnType)
-VERIFIED: tuple[str, ...] = get_args(Verified)
-
 
 # =====================================================================================
-# csv dialect: every cell a quoted string, an empty cell the empty string
+# csv helpers
 # =====================================================================================
+# every cell is a quoted string and reads back exactly as written.
 def readCsv(path: Path) -> pd.DataFrame:
     return pd.read_csv(path, dtype=str, keep_default_na=False)
 
 
-def writeCsv(frame: pd.DataFrame, path: Path) -> None:
-    frame.to_csv(path, index=False, quoting=csv.QUOTE_ALL)
+def writeCsv(df: pd.DataFrame, path: Path) -> None:
+    df.to_csv(path, index=False, quoting=csv.QUOTE_ALL)
 
 
 # =====================================================================================
-# cell grammars
+# cell formats
 # =====================================================================================
-# `;`-separated lists of column names of the loaded table
+# a cell holding more than one value writes it as text
+# (;-list, an a:b term, an x|g slope, col=kind types).
 COLUMN_LIST_COLUMNS = ('covariates', 'ignore')
-# `;`-separated lists of terms, a term a column name or `a:b` with every part a column name: a
-# grouping factor on the combination of two columns (`(1|Block:Variety)`) or an interaction
 TERM_COLUMNS = ('grouping_factors', 'interactions')
 
 
@@ -75,6 +74,8 @@ SLOPE_TERM = re.compile(rf'(?P<covariate>{NAME})(?P<bars>\|\|?)(?P<factor>{NAME}
 
 @dataclass(frozen=True)
 class SlopeTerm:
+    """A random slope as the contract reads it (never the `x|g` text)."""
+
     covariate: str
     factor: str  # a term of `grouping_factors`, `a:b` for a composite
     correlated: bool
@@ -92,12 +93,12 @@ def parseTypes(text: str) -> dict[str, str]:
 
 
 # =====================================================================================
-# the row
+# row class
 # =====================================================================================
 @dataclass(frozen=True)
 class Row:
-    """One row of `registry.csv`, its fields the file's columns in file order. A scalar cell
-    stays a string, the empty cell `''`."""
+    """One row of `registry.csv`, its fields are the file's columns.
+    A scalar cell stays a string, the empty cell is `''`."""
 
     # identity; `tier`, `sources`, `reader` and `licence` are filled by the survey's merge
     source: str
@@ -129,13 +130,10 @@ class Row:
 
     @property
     def id(self) -> str:
-        """The id of the problem the row's documented model becomes."""
         return f'{self.source}/{self.object}/{self.model_index}'
 
     @classmethod
     def parse(cls, cells: dict[str, str]) -> Row:
-        """A row of cells as the dialect reads them, typed; a cell the grammar or a vocabulary
-        refuses raises naming the row and the column."""
         refusals = cls.refusals(cells)
         if refusals:
             key = ' '.join(cells[c] for c in ('source', 'object', 'model_index'))
@@ -156,12 +154,12 @@ class Row:
         refusals = []
         if not cells['model_index'].isdigit():
             refusals.append(('model_index', f'not an integer: {cells["model_index"]}'))
-        if cells['response_type'] not in RESPONSE_TYPES:
+        if cells['response_type'] not in get_args(ResponseType):
             refusals.append(('response_type', f'not a response type: {cells["response_type"]}'))
-        if cells['family'] not in ('', *FAMILIES):
+        if cells['family'] not in ('', *get_args(Family)):
             refusals.append(('family', f'not a family: {cells["family"]}'))
         for kind in parseTypes(cells['types']).values():
-            if kind not in COLUMN_TYPES:
+            if kind not in get_args(ColumnType):
                 refusals.append(('types', f'not a column type: {kind}'))
         for column in TERM_COLUMNS:
             for term in splitList(cells[column]):
@@ -172,17 +170,14 @@ class Row:
         covariates = splitList(cells['covariates'])
         for term in splitList(cells['interactions']):
             for part in parts(term):
-                # the contract codes the product from coded columns (agridat harris.wateruse's
-                # cell-means `0 + age:species`)
                 if part != '' and part not in covariates:
                     refusals.append(('interactions', f'{part} is not a covariate'))
-        # a column is a grouping factor or a covariate, never both (SASmixed Cultivation's
-        # `(1|Cult)` next to `Inoc * Cult` reads as the whole-plot term `Block:Cult`); a part of
-        # a composite factor may be a covariate
+        # a column is a grouping factor or a covariate, never both;
+        # but a part of a composite factor may be a covariate
         for factor in splitList(cells['grouping_factors']):
             if factor in covariates:
                 refusals.append(('grouping_factors', f'{factor} is also a covariate'))
-        if cells['verified'] not in VERIFIED:
+        if cells['verified'] not in get_args(Verified):
             refusals.append(('verified', f'not a verification: {cells["verified"]}'))
         return refusals
 
@@ -201,4 +196,5 @@ class Row:
         return refusals
 
 
+# the file's ordered columns; the merge writes them in this order (survey/schema.py)
 COLUMNS: tuple[str, ...] = tuple(f.name for f in fields(Row))
