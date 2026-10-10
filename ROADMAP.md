@@ -18,7 +18,7 @@ release that freezes it.
   suite 1.1's candidate list (membership freezes with the references in 1.1, since admission
   needs a reference that passes the bar, ADR 0002); the weekly fetch CI as the link-rot
   detector before going public
-- [ ] **4 Going public** (ADR 0002, amended 2026-10-10). A deep review of `src/` and `suite/`
+- [x] **4 Going public** (ADR 0002, amended 2026-10-10). A deep review of `src/` and `suite/`
   read together, with `CONTRIBUTING.md`'s layout written first; a demo notebook run in the
   weekly fetch; a short README with badges; `CLAUDE.md` local, the history kept,
   `survey/archive/` behind a tag; Python `>=3.11`; the repository public, then `v1.0.0`, the
