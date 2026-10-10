@@ -25,6 +25,7 @@ cd mixedbench
 uv sync
 uv run pytest               # the offline tests, about ten seconds
 uv run pytest -m network    # the tests that download sources, as CI runs them
+uv run pytest -m brms       # the reference fits, with R, brms and CmdStan at their pins
 ```
 
 ## Find your way
