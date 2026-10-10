@@ -53,10 +53,12 @@ the decision stays inside.
 
 - **`registry/row.py`**: how a `registry.csv` row is written and read. The CSV dialect (every
   cell a quoted string, the empty cell the empty string), the column order (the fields of
-  `Row`), the vocabularies (response types, families, column types, `verified`) and the cell
-  grammars (`;`-lists, `a:b` terms, `x|g` and `x||g` slope terms, `col=kind` types).
-  `Row.parse` types a row; `Row.refusals` is the grammar the survey's merge enforces. The
-  survey's `schema.py` imports it; nothing else parses a cell.
+  `Row`), the vocabularies (response types, families, `verified`; column types are the
+  loader's `ColumnType`) and the cell grammars (`;`-lists, `a:b` terms, `x|g` and `x||g` slope
+  terms, `col=kind` types). `Row.parse` types a row; `Row.refusals` is the grammar the survey's
+  merge enforces. Imported by `registry/__init__.py`, `contract/problem.py`, `suite/admit.py`
+  and the survey's scripts (`schema.py`, `merge.py`, `measure.py`, `pull.py`, …); nothing else
+  parses a cell.
 - **`registry/__init__.py`**: where the registry files are once installed (`path`, through the
   distribution, since the wheel carries them as `mixedbench/registry/files/`) and how
   `sources.yaml` becomes a `Source` per label, `manifest.csv` a `Manifest`, `registry.csv` a
@@ -65,12 +67,15 @@ the decision stays inside.
   which URLs to try, where a download lands, extraction, checksum verification on every load,
   reading one object's manifest file against enumerating a whole source, and the column
   `types` a row declares for a format that carries none. Formats are not its business.
-- **`datasets/readers.py`**: which file formats exist and how each becomes tables: the route
-  (`pyreadr`, `rdata`, `pandas`, `deparse`), what counts as data in a tree against
-  documentation, R fidelity (level order kept, an integer vector with NA as float), a
-  workbook's sheets, a Stan data dict as a table.
-- **`datasets/deparse.py`**: the grammar, the subset of R that base R's seven `data/*.R` files
-  use; a construct outside it raises naming the file and the construct.
+- **`datasets/readers.py`**: which file formats exist and how each becomes tables, a class per
+  format family: `RFile` (.rda, .RData, .rds through pyreadr, else rdata), `DataFolder` (a
+  CRAN package's `data/` folder as `utils::data()` reads it), `PandasFile` (every other format,
+  a workbook's data sheets) and `JsonFile` (records, or a Stan data dict as a table). `isData`
+  decides what in a tree is data against documentation; the R routes agree on pyreadr's types.
+  Imported by `loader.py` and the survey's `help.py`.
+- **`datasets/deparse.py`**: base R's `data/*.R` files read without R: only the functions they
+  call, R's types, and what pyreadr drops dropped too; a construct outside that subset raises
+  naming the file and the construct. Imported by `readers.DataFolder` only.
 - **`contract/problem.py`**: the rules of ADR 0001 in code: the one typing rule (`columnType`,
   shared with the survey's measures), the coding, the family rule, the prior, the seeded
   splits, the per-regime scales and the parameter names. `Builder` is the pipeline, `Problem`
@@ -86,15 +91,15 @@ the decision stays inside.
 
 **Code**
 
-- A module is one lowercase word (`loader.py`, `row.py`). A package's `__init__.py` re-exports
-  its public names in `__all__` (`datasets`, `contract`) or is the module (`registry`).
+- A module is one lowercase word (`loader.py`, `row.py`). A package's `__init__.py` lists its
+  public names in `__all__`: it re-exports them (`datasets`, `contract`) or is the module
+  (`registry`).
 - `PascalCase` classes and `Literal` aliases (`ResponseType`, `Reader`), `camelCase` functions
   and methods, `snake_case` variables and the dataclass fields that mirror a registry column
   or a file field, `UPPER_SNAKE_CASE` constants.
 - One pipeline class per module, its steps as methods in run order under a `# ----` banner
-  that names the pipeline (`url -> archive -> tree -> files -> tables`). The steps carry a
-  leading `_` in `datasets/` (`Loader`, `Deparse`) and none in `contract/` and `suite/`
-  (`Builder`, `Admission`).
+  that names the pipeline (`url -> archive -> tree -> files -> tables`). A step, and any
+  function no other module imports, carries a leading `_`.
 - Tests: `tests/<package>/test_<module>.py`; a test function is a sentence,
   `test_<what_holds>`; fixtures under `tests/<package>/fixtures/`; a test that fetches a
   source is marked `network`.
