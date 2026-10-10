@@ -1,0 +1,54 @@
+# The weekly fetch of ADR 0003: every source a registry object loads from, fetched with checksum
+# verification (survey/fetch.py); one `registry` issue per failing source, left alone while it
+# fails, closed when the source returns. Not part of the pull-request matrix (ci.yml).
+name: Weekly fetch
+
+on:
+  schedule:
+    - cron: '0 4 * * 1'  # Mondays, 04:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.2.0  # setup-uv publishes no major tag
+        with:
+          python-version: '3.14'
+      - run: uv sync
+      - id: fetch
+        continue-on-error: true
+        shell: bash  # named, so that pipefail keeps the script's exit code past tee
+        run: uv run python survey/fetch.py | tee failures.tsv
+      - name: Open and close the issues
+        env:
+          GH_TOKEN: ${{ github.token }}
+          OUTCOME: ${{ steps.fetch.outcome }}
+          PREFIX: 'Weekly fetch fails: '
+          RUN: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          # a failure without a single failing source is a crash, not a verdict on any source
+          if [ "$OUTCOME" = failure ] && [ ! -s failures.tsv ]; then
+            echo 'the fetch crashed before its verdict: issues left as they are'
+            exit 1
+          fi
+          cut -f1 failures.tsv > failing.txt
+          gh issue list --label registry --state open --limit 1000 --json number,title \
+            --jq ".[] | select(.title | startswith(\"$PREFIX\"))
+                      | [.number, (.title | ltrimstr(\"$PREFIX\"))] | @tsv" > open.tsv
+          cut -f2 open.tsv > opened.txt
+          while IFS=$'\t' read -r label error; do
+            grep -qxF "$label" opened.txt && continue
+            body=$(printf 'The weekly fetch fails on the source `%s` of `registry/sources.yaml`:\n\n```\n%s\n```\n\nRun: %s\n\nThe first weekly fetch that loads it again closes this issue (ADR 0003).' "$label" "$error" "$RUN")
+            gh issue create --label registry --title "$PREFIX$label" --body "$body"
+          done < failures.tsv
+          while IFS=$'\t' read -r number label; do
+            grep -qxF "$label" failing.txt && continue
+            gh issue close "$number" --comment "Fetched again with checksum verification: $RUN"
+          done < open.tsv
+          test "$OUTCOME" = success  # the run stays red while a source fails

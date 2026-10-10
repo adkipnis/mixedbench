@@ -5,6 +5,7 @@ import re
 from pathlib import Path
 
 import pytest
+from mixedbench.registry.row import FAMILIES, RESPONSE_TYPES, VERIFIED
 from schema import ALLOWED, CANDIDATE_COLUMNS, SCREENS, TABLES
 
 HERE = Path(__file__).resolve().parents[1]
@@ -23,6 +24,12 @@ def test_readme_documents_every_allowed_value(table):
     for column, values in ALLOWED[table].items():
         for value in values:
             assert f'`{value}`' in README, f'{table}.{column} value {value!r} undocumented'
+
+
+def test_readme_documents_the_row_vocabularies():
+    """The registry's vocabularies are the package's row grammar, not schema.py's (#48)."""
+    for value in (*RESPONSE_TYPES, *FAMILIES, *VERIFIED):
+        assert f'`{value}`' in README, f'registry value {value!r} undocumented'
 
 
 def test_readme_documents_the_candidates_and_the_frame():

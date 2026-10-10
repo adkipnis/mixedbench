@@ -26,7 +26,8 @@ sys.path.insert(0, str(HERE))  # the tests import mergeShard and readRows from h
 
 from merge import Merger
 from mixedbench.datasets import Loader
-from schema import EXCLUDED, REGISTRY, readCsv, writeCsv
+from mixedbench.registry.row import readCsv, writeCsv
+from schema import EXCLUDED, REGISTRY
 from summarise import Summariser
 
 FIXTURES = HERE / 'fixtures'

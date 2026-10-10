@@ -13,7 +13,8 @@ from string import Template
 import pandas as pd
 import yaml
 from measure import observed
-from schema import TIERS, readCsv
+from mixedbench.registry.row import readCsv
+from schema import TIERS
 
 # =====================================================================================
 # globals
