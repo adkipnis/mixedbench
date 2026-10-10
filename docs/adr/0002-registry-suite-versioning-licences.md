@@ -79,7 +79,10 @@ correction a benchmark change.
 - Decision: `requires-python = ">=3.11"`; development stays on 3.14, CI tests 3.11 and 3.14.
 - Why: no code needs a newer Python, and `>=3.14` would turn away most ML users.
 - Decision: the history stays as it is; `CLAUDE.md` leaves the tree and becomes local. Its
-  conventions move to a public `CONTRIBUTING.md`, which `CLAUDE.md` imports.
+  conventions move to a public `docs/conventions.md`, linked from a short `CONTRIBUTING.md`;
+  `CLAUDE.md` imports both.
+- Why: `CONTRIBUTING.md` is read once by a newcomer deciding whether to help; the conventions
+  are read by reviewers and agents, and would bury it.
 - Rejected: rewriting the history (`git filter-repo`) or a fresh squashed repository. Nothing
   in the history is secret, and a rewrite breaks every hash cited in issues, PRs and tags.
 - Decision: the ADRs, survey shards, prompts, `HISTORY.md` and `VERDICTS.md` stay public as
