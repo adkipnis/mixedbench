@@ -27,6 +27,7 @@ import struct
 import warnings
 import zipfile
 from collections import Counter
+from collections.abc import Callable
 from pathlib import Path
 from typing import Literal
 
@@ -54,7 +55,7 @@ Reader = Literal['pyreadr', 'rdata', 'pandas', 'deparse']
 # =====================================================================================
 # helpers
 # =====================================================================================
-# the two calls the loader makes, and the name helpers shared with the survey.
+# the three calls the loader makes, and the name helpers shared with the survey.
 def read(
     file: Path, label: str, *, layout: tuple[str, ...] | None = None, cran: bool = False
 ) -> tuple[dict[str, pd.DataFrame | None], Reader]:
@@ -79,6 +80,25 @@ def isData(file: Path, *, cran: bool = False) -> bool:
     if cran:
         return True
     return not isDoc(file) and not _describesSibling(file)
+
+
+def numbers(values: pd.Series) -> pd.Series:
+    """Text as numbers, typed as pd.to_numeric types them,
+    a float by Python's float(), which rounds correctly on every platform."""
+    typed = pd.to_numeric(values)
+    if typed.dtype != 'float64':
+        return typed
+    # pandas' own conversion is not correctly rounded, and computes in long double,
+    # 80-bit on x86 and 64-bit on ARM: an ulp off, on each platform for other numbers
+    return values.astype('float64')
+
+
+def _readText(read: Callable[..., pd.DataFrame], file: Path, **options) -> pd.DataFrame:
+    """A pandas text reader's table, its float columns read again as text and made numbers."""
+    table = read(file, **options)
+    floats = table.columns[table.dtypes == 'float64']
+    text = read(file, **options, dtype={column: str for column in floats})
+    return table.assign(**{column: numbers(text[column]) for column in floats})
 
 
 def isDoc(file: Path) -> bool:
@@ -241,7 +261,8 @@ class _DataFolder:
         sep = r'\s+'
         if file.suffix.lower() == '.csv':
             sep = ';'
-        table = pd.read_csv(file, sep=sep, quotechar='"', na_values=['NA'], keep_default_na=False)
+        options = {'sep': sep, 'quotechar': '"', 'na_values': ['NA'], 'keep_default_na': False}
+        table = _readText(pd.read_csv, file, **options)
         return {file.stem: table.assign(**_DataFolder._typeConvert(table))}
 
     @staticmethod
@@ -337,8 +358,8 @@ class PandasFile:
                 start, _, end = span.partition('-')
                 spans.append((int(start) - 1, int(end or start)))
         if spans:
-            return pd.read_fwf(file, colspecs=spans, names=names, header=None)
-        return pd.read_csv(file, sep=r'\s+', names=names, header=None)
+            return _readText(pd.read_fwf, file, colspecs=spans, names=names, header=None)
+        return _readText(pd.read_csv, file, sep=r'\s+', names=names, header=None)
 
     @staticmethod
     def _readByExtension(file: Path) -> pd.DataFrame | None:
@@ -392,7 +413,9 @@ class PandasFile:
         if not any(mark in header for mark in ',;\t|'):  # columns aligned with runs of spaces
             sep, engine = r'\s+', 'c'
         try:  # pandas opens a `.gz` itself
-            table = pd.read_csv(file, sep=sep, skiprows=len(lines), engine=engine, **options)
+            table = _readText(
+                pd.read_csv, file, sep=sep, skiprows=len(lines), engine=engine, **options
+            )
         except pd.errors.ParserError:
             return None
         return PandasFile._tidyText(table)
@@ -405,9 +428,9 @@ class PandasFile:
         tidy = {}
         for column in table.columns[table.dtypes.map(pd.api.types.is_string_dtype)]:
             values = table[column].str.strip().replace({'': None, 'NA': None})
-            numbers = pd.to_numeric(values, errors='coerce')
-            if numbers.notna().sum() == values.notna().sum():  # every present value a number
-                values = numbers
+            parsed = pd.to_numeric(values, errors='coerce')
+            if parsed.notna().sum() == values.notna().sum():  # every present value a number
+                values = numbers(values)
             tidy[column] = values
         return table.assign(**tidy)
 
@@ -424,7 +447,7 @@ class JsonFile:
         data = JsonFile.unwrap(file)
         content = json.loads(data)
         if not isinstance(content, dict):
-            return pd.read_json(io.BytesIO(data))
+            return pd.read_json(io.BytesIO(data), precise_float=True)
         return JsonFile._observations(content)
 
     @staticmethod

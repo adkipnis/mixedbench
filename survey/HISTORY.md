@@ -351,3 +351,20 @@ reading's open disagreements, four to eight per tier.
   batch of 25 would give O/low no row.
 - The low formula (0.61) and `published_model` (0.73) agreement, worst in Tier T, is the cost
   of rendering undocumented models; the paper reports it.
+
+## Text floats (#57, 2026-10-10)
+
+- pandas' text-to-float conversion is not correctly rounded: an ulp off on some numbers, more on
+  x86 where it computes in an 80-bit long double, and it drops digits from small numbers with
+  many decimals (`0.000177387096774173` read as `0.0001773870967741`). The loader now converts
+  text floats with Python's `float()`.
+- The rerun moved 17 contract hashes of `suite/1.1/candidates.csv`, in the hash alone. Alex
+  decided it is a patch, 1.0.1: release 1.0 ships a candidate list, and no suite is frozen
+  before release 1.1.
+- The 17: `alda/aldatxt/{alcohol2,firstsex,medication,opposites,tolerance,unemployment}_pp.txt/1`,
+  `stan_arm/ARM/Ch.20/allvar.csv/1`, `pingouin/src/pingouin/datasets/mixed_anova.csv/1`,
+  `laing_2024_osf_7/SiblingsData.csv/1`, `sequestro_2024_osf_2/EXP2_3_pooled.csv/1`,
+  `uci_760/data.csv/1`, `lagisz_2020_osf_3/MA_dataset_with_ES.csv/1`,
+  `sievers_2020_osf_12/convo_df_2022-04-01.csv/1`,
+  `sievers_2020_osf_16/summary_pull_c_pairwise_2019-11-29.csv/1`,
+  `villemereuil_2018_dryad/data.csv/{2,3}`, `shanahan_2019_dryad_3/TNetAndTSLR.csv/2`.
