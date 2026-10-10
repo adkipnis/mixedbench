@@ -66,10 +66,10 @@ def refusal(merger: Merger, shard: Path) -> pd.DataFrame:
         ({'response_type': 'count'}, 'response_type', 'weight is not integer-valued'),
         ({'model_index': '4'}, 'model_index', 'at most 3 models per object'),
         ({'covariates': 'breed;herd'}, 'grouping_factors', 'herd is also a covariate'),
-        ({'family': 'poisson'}, 'family', 'not allowed'),  # a restatement of the family rule
-        ({'verified': 'yes'}, 'verified', 'not allowed'),
-        ({'verified': ''}, 'verified', 'required'),
-        ({'random_slopes': 'breed'}, 'random_slopes', 'not a slope term'),
+        ({'family': 'poisson'}, 'family', 'not a family: poisson'),  # the rule is the empty cell
+        ({'verified': 'yes'}, 'verified', 'not a verification: yes'),
+        ({'verified': ''}, 'verified', 'not a verification: '),
+        ({'random_slopes': 'breed'}, 'random_slopes', 'not a slope term: breed'),
         ({'random_slopes': 'weight|herd'}, 'random_slopes', 'weight is not a covariate'),
         ({'random_slopes': 'breed||farm'}, 'random_slopes', 'farm is not a grouping factor'),
         ({'interactions': 'breed:parity'}, 'interactions', 'parity is not a covariate'),
