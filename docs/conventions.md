@@ -42,13 +42,10 @@ harder to understand or change.
   `try`/`except`, no branch for a case not seen on real inputs.
 - **Design it twice.** For a non-trivial interface, name two designs and why one wins before
   writing code.
-- **Obvious over clever.** The simplest form a reader guesses right on first read. If 200
-  lines could be 50, rewrite them.
+- **Obvious over clever.** The simplest form a reader guesses right on first read.
 
 ## Changing code
 
-- Make the smallest change that solves the problem: no unrequested extras, no speculative
-  generality. Leave neighbouring code, comments and formatting alone.
 - Code taken from elsewhere cites its source and is copied verbatim or imported and wrapped.
   A simplified rewrite comes with a test that it matches the original up to numeric noise.
 - A task that repeats, or is error-prone by hand, gets a script.
@@ -134,7 +131,7 @@ a pinned Source
 
 ## Tests
 
-- Test first: agree the seams, write the failing test, then the minimal code. `hypothesis`
+- Test first: the failing test, then the minimal code. `hypothesis`
   for property tests.
 - A test that downloads a source is marked `network` and runs only in CI.
 - Each test says in a sentence or two why it exists, unless obvious. Bind the object under
@@ -157,7 +154,6 @@ Markdown meets the same bar as code: simple, and read top to bottom.
 
 - A released suite is immutable: its membership, contract hash and references never change.
   A contract change is a new suite version, never a recomputation.
-- Never silently change the contract, a split seed or a pin.
 - Never overwrite raw data. The cache under `registry/cache/` is rebuilt from pins, never
   edited.
 - Stream or lazily load data that would not fit in memory.
