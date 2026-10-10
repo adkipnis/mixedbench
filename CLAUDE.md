@@ -177,4 +177,4 @@ opens its own branch off `main`; its tickets commit there, and the branch is mer
 ### Domain docs
 
 Use the glossary's terms in issue titles, test names and proposals; flag a contradiction with
-an ADR instead of overriding it. The paper's private source: [`ROADMAP.md`](ROADMAP.md) item 7.
+an ADR instead of overriding it. The paper's private source: [`ROADMAP.md`](ROADMAP.md) item 8.

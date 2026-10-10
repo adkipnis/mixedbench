@@ -63,7 +63,7 @@ correction a benchmark change.
   method for all medium and low rows. It is assigned once by script.
 - Why: the suite's `problems.csv` and the paper state per problem why it is in; prose
   summarising it was rejected by the docs rule, and admitting `high` only would discard the
-  hand sample's finding that medium rows agree. A second hand sample during item 4 is open.
+  hand sample's finding that medium rows agree. A second hand sample during item 5 is open.
 - Decision: the share of rows dropped for missing values is recorded on the candidate list,
   `suite/<version>/candidates.csv`, and not capped. A cap is a branch for a case not yet
   observed; the admission script prints the top of the distribution.
