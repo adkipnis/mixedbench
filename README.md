@@ -13,11 +13,13 @@ A benchmark of posterior approximation and prediction for generalized linear mix
 
 ## What and why
 
-- Bayesian methods for GLMMs are each tested on their own few datasets.
+- Bayesian methods for GLMMs are hard to compare: each paper tests them on its own few
+  datasets.
 - mixedbench lists the documented models of 641 public tabular datasets with grouping
-  structure, each fetched from a pinned source.
-- One frozen contract turns each into a problem ready to fit; suites add reference posteriors
-  to score against, from release 1.1.
+  structure, each downloaded at a fixed version.
+- One fixed set of rules, the contract, turns each into a problem ready to fit, so results of
+  different methods are comparable. From release 1.1, suites add reference posteriors to score
+  against.
 
 ## Install
 
@@ -25,7 +27,7 @@ A benchmark of posterior approximation and prediction for generalized linear mix
 pip install mixedbench
 ```
 
-No R is needed: every registry object loads in Python.
+No R needed: every dataset loads in Python.
 
 ## Quickstart
 
@@ -39,7 +41,7 @@ cache = Path('cache')
 [row] = [row for row in registry.rows() if row.id == 'lme4/sleepstudy/1']
 table = registry.Tables(cache).load(row)  # fetched from CRAN at its pin
 materialise(Problem.build(row, table), cache)
-problem = load('lme4/sleepstudy/1', cache)
+problem = load('lme4/sleepstudy/1', cache)  # later, offline
 ```
 
 The [demo](https://github.com/adkipnis/mixedbench/blob/main/examples/demo.ipynb) walks the same path with its outputs.
@@ -49,7 +51,7 @@ The [demo](https://github.com/adkipnis/mixedbench/blob/main/examples/demo.ipynb)
 - The package `mixedbench`: `registry` (the registry files, summarised in
   [`SUMMARY.md`](https://github.com/adkipnis/mixedbench/blob/main/registry/SUMMARY.md)), `datasets` (the loader) and `contract`
   (`Problem`, `materialise`, `load`).
-- [`suite/1.1/candidates.csv`](https://github.com/adkipnis/mixedbench/blob/main/suite/1.1/candidates.csv): the problems admitted to
+- [`suite/1.1/candidates.csv`](https://github.com/adkipnis/mixedbench/blob/main/suite/1.1/candidates.csv): the candidate problems of
   suite 1.1 with their contract hashes;
   [`refused.csv`](https://github.com/adkipnis/mixedbench/blob/main/suite/1.1/refused.csv): the rows left out, each with its reason.
 - [`survey/`](https://github.com/adkipnis/mixedbench/blob/main/survey/README.md): the pipeline that built the registry and its record;
@@ -57,7 +59,7 @@ The [demo](https://github.com/adkipnis/mixedbench/blob/main/examples/demo.ipynb)
 
 ## Contributing
 
-The layout, the conventions and the vocabulary are in
+Broken sources, missing datasets and bug reports are welcome; how to help is in
 [`CONTRIBUTING.md`](https://github.com/adkipnis/mixedbench/blob/main/CONTRIBUTING.md).
 
 ## Citing
