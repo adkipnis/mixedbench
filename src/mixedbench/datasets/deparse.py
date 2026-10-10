@@ -7,6 +7,7 @@ operators and symbols, and the one assigned value is evaluated:
 a vector as a list, a factor as a categorical, a list made a table by structure().
 Anything outside the subset raises, naming the file and the construct.
 The reader is for those files, not for R.
+#TODO: rewrite (simpler, more human-like).
 
 pipeline:
 ---------
@@ -34,6 +35,7 @@ import pandas as pd
 @dataclass(frozen=True)
 class Symbol:
     name: str
+# TODO: this seems useless
 
 
 @dataclass(frozen=True)
@@ -72,9 +74,6 @@ class Deparse:
           | (?P<other>.)""",
         re.VERBOSE,
     )
-    # the attributes structure() sets on a data frame, nlme's groupedData ones among them: a
-    # table keeps none of them, so they are parsed and never evaluated
-    # (`formula = weight ~ Time | Chick`)
     DROPPED = ('row.names', 'class', 'formula', 'outer', 'labels', 'units')
 
     def __init__(self, file: Path):
@@ -86,7 +85,7 @@ class Deparse:
     def tables(self) -> dict[str, pd.DataFrame]:
         """The table the file assigns, under the name it assigns it to.
         The statements after it may only reset a formula attribute's environment,
-        which the table drops anyway."""
+        which the table drops anyway.""" # TODO: this docstring does not help me understand this
         target, value = self.statements[0]
         for later, _ in self.statements[1:]:
             if not (isinstance(later, Call) and later.name == 'environment'):
@@ -273,8 +272,7 @@ class Deparse:
     @staticmethod
     def _vector(values: list) -> np.ndarray | list:
         """R's type of the vector: character, integer (32-bit, as R stores it), else double.
-        An integer vector with NA is double,
-        as pyreadr's tables have it."""
+        An integer vector with NA is double, as pyreadr's tables have it."""
         if any(isinstance(value, str) for value in values):
             return values
         if all(isinstance(value, int) for value in values):  # NA, None, is no int
