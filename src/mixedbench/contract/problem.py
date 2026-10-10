@@ -158,7 +158,7 @@ Coded = dict[str, dict[str, pd.Series]]  # per covariate or interaction, its cod
 class Builder:
     def __init__(self, row: Row, table: pd.DataFrame) -> None:
         self.row = row
-        self.id = f'{row.source}/{row.object}/{row.model_index}'
+        self.id = row.id
         self.refuseUncovered()
         self.table = self.keptRows(withComposites(table, row.grouping_factors))
         if self.table.empty:  # nlme Phenobarb: doses and responses on different rows
