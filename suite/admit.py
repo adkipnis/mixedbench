@@ -1,14 +1,14 @@
 """admit.py defines the admission of suite 1.1: registry rows in, candidates and refusals out.
 
-Every row the family rule covers is built into its problem and materialised under the cache,
-its contract hash going into the candidate list, by five decisions:
+Every row the family rule [#TODO: what's this?] covers is built into its problem and materialised under the cache.
+Its contract hash goes into the candidate list by five decisions:
 - hand decisions first: a row whose documented model does not survive into the contract
-  is refused by id, a row whose random effects were changed carries its fidelity;
-- a refusal is kept with its reason beside the candidates, since the registry keeps every row;
-- a table that fails to load is a failure, not a refusal, and stops the run before writing,
+  is refused by id, a row whose random effects were changed carries its fidelity [#TODO: what's that?];
+- a refusal is kept with its reason beside the candidates;
+- a table that fails to load is a failure and stops the run before writing,
   so the list never misses a row silently;
 - the list and the refusals keep registry order, not sorted by id;
-- no cap bounds the dropped share: the report lists the largest, read before a reference is run.
+- no cap bounds the dropped share: the report lists the largest, read before a reference is run. # TODO: this sentence is unclear
 
 pipeline:
 ---------
@@ -38,12 +38,12 @@ from mixedbench.contract import Problem, Refused, materialise
 from mixedbench.registry.row import Row, writeCsv
 
 # =====================================================================================
-# the hand decisions, by problem id
+# the hand decisions
 # =====================================================================================
 # what the family rule cannot see, read off each row's documented model
 
-# rows the documented model does not survive into the contract, though the family rule covers
-# them: an empty `random_slopes` there is no approved intercept-only model (#27, #45).
+# rows the documented model does not survive into the contract, though the family rule covers them:
+# an empty `random_slopes` there is no approved intercept-only model (#27, #45).
 REFUSED = {
     'nlme/Cefamandole/1': 'nonlinear_parameter_model: random effects on nonlinear parameters (#27)',
     'nlme/IGF/1': 'nonlinear_parameter_model: random effects on nonlinear parameters (#27)',
@@ -91,8 +91,8 @@ REFUSED = {
     ),
 }
 
-# how far the problem's random effects are from the documented model's (VERDICTS.md, "Slope
-# decisions"; #45): the same structure in another basis (not the same prior), or changed.
+# how far the problem's random effects are from the documented model's
+# (VERDICTS.md, "Slope decisions"; #45): the same structure in another basis or changed.
 Fidelity = Literal['structure_equivalent', 'approximate']
 FIDELITY: dict[str, Fidelity] = {
     'agridat/harris.wateruse/1': 'structure_equivalent',
