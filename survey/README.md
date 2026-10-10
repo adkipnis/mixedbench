@@ -22,7 +22,7 @@ by script.
 | `registry/quantiles.yaml`, `SUMMARY.md` | `merge.py` via `summarise.py` | every axis pooled, per tier and without agridat; the summary from the digit-free `SUMMARY.template.md` |
 | `registry/help/`, `cache/` | `pull.py`, the loader | untracked: one help page per kept object; downloads |
 | `candidates.csv`, `duplicates.csv`, `dropped.csv` | `pull.py`, `merge.py` | the survey's bookkeeping (below) |
-| `deposits.csv`, `deposit_files.csv` | `archive/` | Tier D's frame: the drawn papers and every file their deposits list |
+| `deposits.csv`, `deposit_files.csv` | the archived `deposits.py`, `resolve.py` | Tier D's frame: the drawn papers and every file their deposits list |
 | `practice_quantiles.yaml` | copied | the practice survey's `quantiles.yaml` (metabeta-v3), the practice column of `SUMMARY.md` |
 | `shards/<table>_<label>.csv` | agents, `pull.py` | one shard per reading run; `table` ∈ `registry`, `excluded`, `duplicates`, `dropped` |
 | `prompts/read.md` | | the reading agent's brief |
@@ -152,7 +152,7 @@ first); `reader`; `licence`, the `licence:` key or a CRAN DESCRIPTION's `License
 
 `random_slopes` and `verified` came in by the header-only `shards/registry_schema_2.csv`;
 the archived `verified.py` filled `verified` once through `shards/registry_verified.csv`;
-`slopes.py` filled `random_slopes` through `shards/registry_slopes.csv`, Alex's
+the archived `slopes.py` filled `random_slopes` through `shards/registry_slopes.csv`, Alex's
 decisions on the rows it reported through `shards/registry_slopes_decisions.csv`
 (`VERDICTS.md`). A later row fills both in its own shard. The archived `factors.py` regrouped the
 rows that named a nested `a:b` by a `b` whose codes repeat across `a` through
