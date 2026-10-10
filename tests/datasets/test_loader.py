@@ -238,8 +238,8 @@ def test_a_deposit_zips_objects_are_named_by_their_path_inside_it(tmp_path):
     objects = objectsByName(loader, deposit)
     assert set(objects) == {'data/schools.csv'}
     assert census(objects['data/schools.csv']) == ('data/schools.csv', 'pandas', 5, 3)
-    df = loader.load(deposit, 'data/schools.csv')
-    assert list(df['score']) == [10.5, 12.0, 9.5, 15.0, 11.0]
+    table = loader.load(deposit, 'data/schools.csv')
+    assert list(table['score']) == [10.5, 12.0, 9.5, 15.0, 11.0]
     assert (loader.tree(deposit) / 'codebook.txt').is_file()
 
 
@@ -250,11 +250,25 @@ def test_declared_column_types_are_applied(tmp_path):
     deposit = urlSource(DEPOSIT_URL, DEPOSIT)
     loader = Loader(tmp_path, fetch=Server({DEPOSIT_URL: DEPOSIT}))
     declared = {'school': 'categorical', 'score': 'continuous'}
-    df = loader.load(deposit, 'data/schools.csv', types=declared)
-    assert list(df['school'].cat.categories) == ['A', 'B', 'C']
-    assert list(df['school']) == ['A', 'B', 'A', 'C', 'B']
-    assert df['score'].dtype.kind == 'f'
-    assert df['size'].dtype.kind == 'i'
+    table = loader.load(deposit, 'data/schools.csv', types=declared)
+    assert list(table['school'].cat.categories) == ['A', 'B', 'C']
+    assert list(table['school']) == ['A', 'B', 'A', 'C', 'B']
+    assert table['score'].dtype.kind == 'f'
+    assert table['size'].dtype.kind == 'i'
+
+
+def test_decimal_commas_are_read_with_points_and_a_thousands_separator_fails(tmp_path):
+    """A European csv writes 21,5 for 21.5 (kleisner_2026's BMI), so a declared continuous column
+    with commas and no points is read with points; 1,234.5 is refused, never read as 1.234."""
+    bmi = b'id,bmi\n1,"21,5"\n2,"19,0"\n3,"23,25"\n'
+    income = b'id,income\n1,"1,234.5"\n2,"987.0"\n'
+    bmi_url = 'https://example.org/bmi.csv'
+    income_url = 'https://example.org/income.csv'
+    loader = Loader(tmp_path, fetch=Server({bmi_url: bmi, income_url: income}))
+    table = loader.load(urlSource(bmi_url, bmi), 'bmi.csv', types={'bmi': 'continuous'})
+    assert list(table['bmi']) == [21.5, 19.0, 23.25]
+    with pytest.raises(ValueError):
+        loader.load(urlSource(income_url, income), 'income.csv', types={'income': 'continuous'})
 
 
 def test_git_source_is_fetched_as_an_archive_at_its_revision(tmp_path):
@@ -272,8 +286,8 @@ def test_url_without_a_suffix_is_saved_under_the_file_the_frame_names(tmp_path):
     schools = urlSource(SCHOOLS_URL, SCHOOLS, file='schools.csv')
     loader = Loader(tmp_path, fetch=Server({SCHOOLS_URL: SCHOOLS}))
     assert set(objectsByName(loader, schools)) == {'schools.csv'}
-    df = loader.load(schools, 'schools.csv')
-    assert list(df['school']) == ['A', 'B', 'A', 'C', 'B']
+    table = loader.load(schools, 'schools.csv')
+    assert list(table['school']) == ['A', 'B', 'A', 'C', 'B']
 
 
 def test_arrow_files_in_a_tarball_from_a_suffixless_url_load(tmp_path):
@@ -283,8 +297,8 @@ def test_arrow_files_in_a_tarball_from_a_suffixless_url_load(tmp_path):
     loader = Loader(tmp_path, fetch=Server({DATASETS_URL: DATASETS}))
     objects = objectsByName(loader, datasets)
     assert set(objects) == {'kb07.arrow'}
-    df = loader.load(datasets, 'kb07.arrow')
-    assert list(df['subj']) == ['S1', 'S1', 'S2', 'S2']
+    table = loader.load(datasets, 'kb07.arrow')
+    assert list(table['subj']) == ['S1', 'S1', 'S2', 'S2']
 
 
 def test_a_url_its_host_refuses_loads_from_its_mirror_under_the_same_pin(tmp_path):
@@ -293,8 +307,8 @@ def test_a_url_its_host_refuses_loads_from_its_mirror_under_the_same_pin(tmp_pat
     mirror = 'https://github.com/acme/mixedbench/releases/download/mirror-1/schools.csv'
     server = Server({mirror: SCHOOLS})
     schools = urlSource(SCHOOLS_URL, SCHOOLS, file='schools.csv', mirror=mirror)
-    df = Loader(tmp_path, fetch=server).load(schools, 'schools.csv')
-    assert list(df['school']) == ['A', 'B', 'A', 'C', 'B']
+    table = Loader(tmp_path, fetch=server).load(schools, 'schools.csv')
+    assert list(table['school']) == ['A', 'B', 'A', 'C', 'B']
     assert server.asked == [SCHOOLS_URL, mirror]
 
 
@@ -308,8 +322,8 @@ def test_a_git_object_is_fetched_alone_from_its_raw_url(tmp_path):
     repository archive (pymc-examples is 1 GB for a few csv); the cache serves it after."""
     server = Server({RADON_URL: RADON, EXAMPLE_ARCHIVE: EXAMPLE})
     manifest = {(EXAMPLE_GIT, 'data/radon.csv'): manifestRow('data/radon.csv', RADON)}
-    df = Loader(tmp_path, fetch=server, manifest=manifest).load(EXAMPLE_GIT, 'data/radon.csv')
-    assert list(df['county']) == ['Anoka', 'Anoka', 'Clay', 'Clay', 'Clay']
+    table = Loader(tmp_path, fetch=server, manifest=manifest).load(EXAMPLE_GIT, 'data/radon.csv')
+    assert list(table['county']) == ['Anoka', 'Anoka', 'Clay', 'Clay', 'Clay']
     Loader(tmp_path, fetch=server, manifest=manifest).load(EXAMPLE_GIT, 'data/radon.csv')
     assert server.asked == [RADON_URL]
 

@@ -266,9 +266,9 @@ class Merger:
         if problems:
             return problems
         loaded = self.loader.load(source, row.object, row.types)
-        df = withComposites(loaded, row.grouping_factors)
-        problems += self.groupingProblems(line, row, df)
-        problems += self.responseProblems(line, row, df)
+        table = withComposites(loaded, row.grouping_factors)
+        problems += self.groupingProblems(line, row, table)
+        problems += self.responseProblems(line, row, table)
         return problems
 
     def objects(self, label: str) -> dict[str, DataObject]:
@@ -289,11 +289,11 @@ class Merger:
             if name != '' and name not in columns
         ]
 
-    def groupingProblems(self, line: int, row: Row, df: pd.DataFrame) -> list[dict]:
+    def groupingProblems(self, line: int, row: Row, table: pd.DataFrame) -> list[dict]:
         """A grouping factor has at least two levels and a level with two or more rows."""
         problems = []
         for factor in row.grouping_factors:
-            sizes = df[factor].value_counts()
+            sizes = table[factor].value_counts()
             if len(sizes) < 2:
                 problems.append(self.problem(line, 'grouping_factors', f'{factor} has one level'))
             elif sizes.max() < 2:
@@ -302,15 +302,15 @@ class Merger:
                 )
         return problems
 
-    def responseProblems(self, line: int, row: Row, df: pd.DataFrame) -> list[dict]:
+    def responseProblems(self, line: int, row: Row, table: pd.DataFrame) -> list[dict]:
         """The response column shows what its declared type says."""
         response, kind = row.response, row.response_type
-        complaint = self.responseComplaint(kind, df[response].dropna())
+        complaint = self.responseComplaint(kind, table[response].dropna())
         problems = []
         if complaint is not None:
             problems.append(self.problem(line, 'response_type', f'{response} {complaint}'))
         if kind == 'binomial':
-            problems += self.trialsProblems(line, row, df)
+            problems += self.trialsProblems(line, row, table)
         return problems
 
     @staticmethod
@@ -334,14 +334,14 @@ class Merger:
             return False
         return bool(((values >= 0) & (values == values.round())).all())
 
-    def trialsProblems(self, line: int, row: Row, df: pd.DataFrame) -> list[dict]:
+    def trialsProblems(self, line: int, row: Row, table: pd.DataFrame) -> list[dict]:
         """A binomial response names integer trials it never exceeds."""
         response, trials = row.response, row.trials
         if trials == '':
             return [self.problem(line, 'trials', 'binomial names its trials')]
-        if not self.isCount(df[trials].dropna()):
+        if not self.isCount(table[trials].dropna()):
             return [self.problem(line, 'trials', f'{trials} is not integer-valued')]
-        if (df[response] > df[trials]).any():
+        if (table[response] > table[trials]).any():
             return [self.problem(line, 'trials', f'{response} exceeds {trials}')]
         return []
 
@@ -465,8 +465,8 @@ class Merger:
         ]  # fmt: skip
 
     def signature(self, key: Key) -> tuple[int, tuple[int, ...]]:
-        df = self.loader.load(self.frame.sources[key[0]], key[1])
-        return (len(df), tuple(sorted(df.nunique())))
+        table = self.loader.load(self.frame.sources[key[0]], key[1])
+        return (len(table), tuple(sorted(table.nunique())))
 
     # ---------------------------------------------------------------------------------
     # measure: registry rows -> dimensions.csv, columns.csv
@@ -477,8 +477,8 @@ class Merger:
         dimensions, columns = [], []
         for cells in registry.to_dict('records'):
             row = Row.parse(cells)
-            df = self.loader.load(self.frame.sources[row.source], row.object, row.types)
-            measurer = Measurer(df, row)
+            table = self.loader.load(self.frame.sources[row.source], row.object, row.types)
+            measurer = Measurer(table, row)
             dimensions += measurer.dimensions()
             columns += measurer.columns()
         writeCsv(pd.DataFrame(dimensions, columns=DIMENSION_COLUMNS), self.registry / 'dimensions.csv')  # fmt: skip

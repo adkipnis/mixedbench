@@ -104,20 +104,20 @@ class HelpPage:
     def _stanNote(file: Path) -> str:
         """The entries of a Stan data dict that are no column: scalars and group-level arrays;
         and the matrices the table holds as numbered columns."""
-        content = json.loads(readers.unwrap(file))
+        content = json.loads(readers.JsonFile.unwrap(file))
         if not isinstance(content, dict):
             return ''
-        n = readers.observationLength(content)
+        n = readers.JsonFile.observationLength(content)
         others, matrices = [], []
         for name, value in content.items():
             if not isinstance(value, list):
                 others.append(f'{name} (scalar)')
             elif len(value) != n:
                 others.append(f'{name} (length {len(value)})')
-            elif readers.arrayDepth(value) > 2:
-                shape = ' x '.join(map(str, readers.arrayShape(value)))
+            elif readers.JsonFile.arrayDepth(value) > 2:
+                shape = ' x '.join(map(str, readers.JsonFile.arrayShape(value)))
                 others.append(f'{name} ({shape} array)')
-            elif readers.arrayDepth(value) == 2:
+            elif readers.JsonFile.arrayDepth(value) == 2:
                 matrices.append(f'{name} is a {n} x {len(value[0])} matrix')
         return '; '.join([f'# not in the table: {", ".join(others)}', *matrices])
 
@@ -139,10 +139,10 @@ class HelpPage:
         """The sheets named like documentation (`Contents`), cell by cell, tab-separated."""
         sheets = pd.read_excel(file, sheet_name=None, header=None)
         pages = []
-        for name, df in sheets.items():
-            if not readers.isNoteSheet(name):
+        for name, table in sheets.items():
+            if not readers.PandasFile.isNoteSheet(name):
                 continue
-            rows = df.fillna('').astype(str)
+            rows = table.fillna('').astype(str)
             lines = ['\t'.join(row).rstrip() for row in rows.itertuples(index=False)]
             pages.append(f'# sheet {name}\n' + '\n'.join(lines))
         return '\n'.join(pages)
@@ -151,7 +151,7 @@ class HelpPage:
     def _bannerNote(file: Path) -> str:
         """The `#` lines a text file opens with (Diggle's course files describe their columns
         there), which the reader skips."""
-        lines, _ = readers.banner(file)
+        lines, _ = readers.PandasFile.banner(file)
         if not lines:
             return ''
         return '# banner\n' + '\n'.join(lines)

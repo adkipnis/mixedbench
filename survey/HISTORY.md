@@ -1,12 +1,14 @@
 # Survey history
 
+*The registry's build record, kept for provenance.*
+
 What each pass of the dimension survey did and found, as dated bullets. The living method and
 rules are in [`README.md`](README.md), Alex's per-row verdicts in [`VERDICTS.md`](VERDICTS.md),
 the current counts in [`SUMMARY.md`](../registry/SUMMARY.md). `m3#` is an issue of
-metabeta-v3, where the survey ran until 2026-10-08 (spec m3#14, tickets m3#15–m3#27); `#` is an
+metabeta-v3, a private repository where the survey ran until 2026-10-08 (spec m3#14, tickets m3#15–m3#27); `#` is an
 issue of this repository. The finished scripts named here (`deposits.py`, `resolve.py`,
-`net.py`, `verify.py`) and the files only they wrote are in `archive/`, reproducible at tag
-`survey-archive`.
+`net.py`, `verify.py`) and the files only they wrote were in `archive/`, reproducible at tag
+`survey-archive` and kept at tag [`survey-archive-3`](https://github.com/adkipnis/mixedbench/tree/survey-archive-3/survey/archive).
 
 ## Record per tier
 
@@ -24,7 +26,7 @@ reading's open disagreements, four to eight per tier.
 
 ## Discovery (m3#21, 2026-10-07)
 
-- One Opus agent with web search ran `archive/discover.md` over the spec's list and about
+- One Opus agent with web search ran the archived `discover.md` over the spec's list and about
   twenty further queries.
 - A second pass by hand added the collections the agent had missed or dropped: Zuur, Stata
   [XT], MixedModels.jl, rethinking, Fitzmaurice, ROS, WWGbook, Diggle.
@@ -153,7 +155,7 @@ reading's open disagreements, four to eight per tier.
 - metabeta-v3's CI test `packages/glmm/tests/surveys/test_dimension_quantiles.py` loads
   `quantiles.yaml` as data and asserts its axes, quantile keys, tiers, imbalance block, K
   distribution, shares and the tier minimums.
-- At the closing it also asserted that every row of `v05_datasets.csv` (now in `archive/`) is
+- At the closing it also asserted that every row of `v05_datasets.csv` (archived) is
   a registry key, a member of a registry row's `sources` (MEMSS MathAchieve in nlme's row; base
   R's Theoph, Orange and Indometh in MEMSS's) or an exclusion.
 

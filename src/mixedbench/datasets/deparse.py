@@ -1,7 +1,22 @@
-"""The deparse reader: base R's `data/*.R` files (ChickWeight, infert, sleep and four more),
-evaluated to frames without R (ADR 0003). Its one design decision is the grammar, the subset
-of R those seven files use; anything outside it raises with the file and the construct named.
-The reader is for those files, not for R."""
+"""deparse.py defines the deparse reader: base R's data/*.R files read to tables without R.
+
+Base R ships some data sets as R code that rebuilds them, one assignment per file
+(`sleep <- data.frame(...)`, `"ChickWeight" <- structure(list(...), ...)`).
+The reader parses and evaluates that code itself, and mimics R in three ways:
+- it knows only the functions these files call (c, list, data.frame, structure, factor, gl, rep)
+  and raises on anything else, naming the file and the construct;
+- it types values as R does: a number is a double, `a:b` an integer, a factor keeps R's levels;
+- it drops what pyreadr drops from the same data saved by R, attributes and a factor's order,
+  so a table is the same whichever reader made it.
+
+pipeline:
+---------
+a data/*.R file
+-> its tokens, (kind, text)                              _tokenize
+-> its statements, (target, value)                       _statements
+-> the assigned value, evaluated                         _evaluate
+-> the table under the name it is assigned to            tables
+"""
 
 from __future__ import annotations
 
@@ -12,84 +27,89 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-TOKEN = re.compile(
-    r"""(?P<skip>\s+|\#[^\n]*)
-      | (?P<number>(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?)
-      | (?P<string>"[^"\\]*")
-      | (?P<name>[A-Za-z.][A-Za-z0-9._]*)
-      | (?P<op><-|[-~|:=(),])
-      | (?P<other>.)""",
-    re.VERBOSE,
-)
-# the attributes structure() sets on a frame, nlme's groupedData ones among them: a plain frame
-# keeps none of them, so they are parsed and never evaluated (`formula = weight ~ Time | Chick`)
-DROPPED = ('row.names', 'class', 'formula', 'outer', 'labels', 'units')
 
-
+# =====================================================================================
+# the parse tree
+# =====================================================================================
+# the nodes the parser builds from the tokens.
 @dataclass(frozen=True)
-class Symbol:
+class _Symbol:
+    """A bare name: the target of `sleep <-`, else a variable, which the reader refuses."""
+
     name: str
 
 
 @dataclass(frozen=True)
-class Op:
+class _Op:
     op: str
     left: Node | None  # None for a unary operator
     right: Node
 
 
 @dataclass(frozen=True)
-class Call:
+class _Call:
     name: str
     arguments: list[tuple[str | None, Node]]  # (keyword or None, value) in call order
 
 
-Node = Call | Op | Symbol | float | str | None  # None is NA
-Value = list | pd.Categorical | dict | pd.DataFrame  # a vector, a factor, a list, a frame
+Node = _Call | _Op | _Symbol | float | str | None  # None is NA
+Value = list | pd.Categorical | dict | pd.DataFrame  # a vector, a factor, a list, a table
 
 
 class DeparseError(ValueError):
     pass
 
 
-# ==============================================================================================
-# deparse reader
-# ==============================================================================================
-
-
+# =====================================================================================
+# deparse reader class
+# =====================================================================================
 class Deparse:
+    """A recursive-descent parser and evaluator over one data/*.R file."""
+
+    TOKEN = re.compile(
+        r"""(?P<skip>\s+|\#[^\n]*)
+          | (?P<number>(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?)
+          | (?P<string>"[^"\\]*")
+          | (?P<name>[A-Za-z.][A-Za-z0-9._]*)
+          | (?P<op><-|[-~|:=(),])
+          | (?P<other>.)""",
+        re.VERBOSE,
+    )
+    DROPPED = ('row.names', 'class', 'formula', 'outer', 'labels', 'units')
+
     def __init__(self, file: Path):
         self.file = file
         self.tokens = self._tokenize(file.read_text(encoding='utf-8'))
         self.at = 0
+        self.statements = self._statements()
 
-    def frames(self) -> dict[str, pd.DataFrame]:
-        """The frame the file assigns, under the name it assigns it to; the statements after
-        it may only reset a formula attribute's environment, which the frame drops anyway."""
-        statements = self._statements()
-        target, value = statements[0]
-        for later, _ in statements[1:]:
-            if not (isinstance(later, Call) and later.name == 'environment'):
+    def tables(self) -> dict[str, pd.DataFrame]:
+        """{name: table} of the file's first statement, `name <- table`.
+        A later statement may only be `environment(...) <- ...`,
+        with which ChickWeight resets its formula's environment; it is skipped."""
+        target, value = self.statements[0]
+        for later, _ in self.statements[1:]:
+            if not (isinstance(later, _Call) and later.name == 'environment'):
                 raise self._error('a second statement')
-        frame = self._evaluate(value)
-        if not isinstance(frame, pd.DataFrame):
+        table = self._evaluate(value)
+        if not isinstance(table, pd.DataFrame):
             raise self._error('an object that is no data frame')
         name = target  # `"ChickWeight" <-`
-        if isinstance(target, Symbol):  # `sleep <-`
+        if isinstance(target, _Symbol):  # `sleep <-`
             name = target.name
-        return {name: frame}
+        return {name: table}
 
     def _error(self, construct: str) -> DeparseError:
         return DeparseError(f'{self.file}: {construct} is outside the deparse subset')
 
     # ------------------------------------------------------------------------------------------
-    # pipeline: text -> tokens -> statements -> frame
+    # text -> tokens -> statements
     # ------------------------------------------------------------------------------------------
 
     def _tokenize(self, text: str) -> list[tuple[str, str]]:
-        """(kind, text) pairs; whitespace and comments dropped."""
+        """(kind, text) pairs, whitespace and comments dropped."""
         tokens = []
-        for match in TOKEN.finditer(text):
+        for match in Deparse.TOKEN.finditer(text):
             kind = match.lastgroup
             if kind == 'other':
                 raise self._error(f'character {match.group()!r}')
@@ -98,7 +118,7 @@ class Deparse:
         return tokens
 
     def _statements(self) -> list[tuple[Node | None, Node]]:
-        """(target, value) per statement; the target is None where nothing is assigned."""
+        """(target, value) per statement, the target None where nothing is assigned."""
         statements = []
         while self.at < len(self.tokens):
             statements.append(self._statement())
@@ -112,19 +132,20 @@ class Deparse:
         return expression, self._expression()
 
     def _expression(self) -> Node:
-        """Binary operators left to right: only `:` is evaluated; `~` and `|` occur in the
-        formula attributes structure() drops, so their precedence never matters."""
+        """`a:b`, and the `~` and `|` of a formula, read left to right.
+        R binds `~` and `|` differently, which never matters: only the formulas structure() drops
+        use them."""
         node = self._unary()
         while self._peek() in (':', '~', '|'):
             _, op = self._take()
-            node = Op(op, node, self._unary())
+            node = _Op(op, node, self._unary())
         return node
 
     def _unary(self) -> Node:
         """Unary minus binds tighter than `:` in R: `-1:3` runs from -1 to 3."""
         if self._peek() in ('-', '~'):
             _, op = self._take()
-            return Op(op, None, self._unary())
+            return _Op(op, None, self._unary())
         return self._primary()
 
     def _primary(self) -> Node:
@@ -138,10 +159,10 @@ class Deparse:
         if kind == 'name' and self._peek() == '(':
             return self._call(text)
         if kind == 'name':
-            return Symbol(text)
+            return _Symbol(text)
         raise self._error(f'token {text!r}')
 
-    def _call(self, name: str) -> Call:
+    def _call(self, name: str) -> _Call:
         self._take('(')
         arguments = []
         if self._peek() != ')':
@@ -150,7 +171,7 @@ class Deparse:
             self._take(',')
             arguments.append(self._argument())
         self._take(')')
-        return Call(name, arguments)
+        return _Call(name, arguments)
 
     def _argument(self) -> tuple[str | None, Node]:
         is_keyword = self.at + 1 < len(self.tokens) and self.tokens[self.at + 1][1] == '='
@@ -175,25 +196,26 @@ class Deparse:
         return kind, text
 
     # ------------------------------------------------------------------------------------------
-    # evaluation: a vector is a list of floats, ints, strings and None (NA)
+    # node -> value -> table
     # ------------------------------------------------------------------------------------------
+    # a vector is a list of floats, ints, strings and None (NA).
 
     def _evaluate(self, node: Node) -> Value:
-        if isinstance(node, Call):
+        if isinstance(node, _Call):
             return self._apply(node)
-        if isinstance(node, Op):
+        if isinstance(node, _Op):
             return self._operate(node)
-        if isinstance(node, Symbol):
+        if isinstance(node, _Symbol):
             raise self._error(f'variable {node.name}')
         return [node]  # a literal is a vector of length one
 
-    def _apply(self, call: Call) -> Value:
+    def _apply(self, call: _Call) -> Value:
         if call.name == 'c':
             return self._combine(call)
         if call.name == 'list':
             return self._columns(call)
         if call.name == 'data.frame':
-            return self._frame(self._columns(call))
+            return self._table(self._columns(call))
         if call.name == 'structure':
             return self._structure(call)
         if call.name in ('factor', 'ordered'):
@@ -204,7 +226,7 @@ class Deparse:
             return self._repeat(call)
         raise self._error(f'function {call.name}()')
 
-    def _operate(self, node: Op) -> Value:
+    def _operate(self, node: _Op) -> Value:
         right = self._evaluate(node.right)
         if node.op == '-' and node.left is None:
             return [-value for value in right]
@@ -213,7 +235,7 @@ class Deparse:
             return list(range(start, self._whole(right) + 1))
         raise self._error(f'operator {node.op}')
 
-    def _arguments(self, call: Call, keywords: tuple[str, ...] = ()) -> tuple[list, dict]:
+    def _arguments(self, call: _Call, keywords: tuple[str, ...] = ()) -> tuple[list, dict]:
         """The call's positional values and its keyword values, evaluated."""
         positional, named = [], {}
         for keyword, node in call.arguments:
@@ -225,52 +247,57 @@ class Deparse:
                 raise self._error(f'argument {keyword}= of {call.name}()')
         return positional, named
 
-    def _combine(self, call: Call) -> list:
+    def _combine(self, call: _Call) -> list:
         vectors, _ = self._arguments(call)
         return [value for vector in vectors for value in vector]
 
-    def _columns(self, call: Call) -> dict[str, Value]:
+    def _columns(self, call: _Call) -> dict[str, Value]:
         """list() and data.frame(): every argument is a named column."""
         columns = {}
         for keyword, node in call.arguments:
             if keyword is None:
                 raise self._error(f'an unnamed element of {call.name}()')
-            if call.name == 'data.frame' and keyword == 'row.names':  # LifeCycleSavings
+            if call.name == 'data.frame' and keyword == 'row.names':
                 continue  # an argument of data.frame(), not a column
             columns[keyword] = self._evaluate(node)
         return columns
 
-    def _frame(self, columns: dict[str, Value]) -> pd.DataFrame:
-        frame = {}
+    def _table(self, columns: dict[str, Value]) -> pd.DataFrame:
+        typed = {}
         for name, values in columns.items():
-            frame[name] = values
+            typed[name] = values
             if isinstance(values, list):
-                frame[name] = self._vector(values)
-        return pd.DataFrame(frame)
+                typed[name] = self._vector(values)
+        return pd.DataFrame(typed)
 
     @staticmethod
     def _vector(values: list) -> np.ndarray | list:
-        """R's type of the vector: character, integer (32-bit, as R stores it), else double;
-        an integer vector with NA is double, as pyreadr's frames have it (readers.numbersAsFloat)."""
+        """The column R would make: strings if any value is one, int32 if every value is an
+        integer (only `a:b` makes them), else float.
+        An integer column with NA is float, as pyreadr reads it."""
         if any(isinstance(value, str) for value in values):
             return values
         if all(isinstance(value, int) for value in values):  # NA, None, is no int
             return np.array(values, dtype=np.int32)
         return np.array(values, dtype=float)  # None becomes NaN
 
-    def _structure(self, call: Call) -> pd.DataFrame:
-        """A list made a frame by its attributes; the attributes themselves are dropped."""
+    def _structure(self, call: _Call) -> pd.DataFrame:
+        """structure(list(...), ...) is a table.
+        Its attributes are parsed and dropped, since a table keeps none of them:
+        row names and class, and nlme's groupedData formula, outer, labels and units.
+        Any other attribute raises."""
         _, body = call.arguments[0]
         for keyword, _ in call.arguments[1:]:
-            if keyword not in DROPPED:
+            if keyword not in Deparse.DROPPED:
                 raise self._error(f'attribute {keyword}= of structure()')
-        return self._frame(self._evaluate(body))
+        return self._table(self._evaluate(body))
 
-    def _factor(self, call: Call) -> pd.Categorical:
-        """factor() and ordered(): levels sorted (numbers as numbers) unless given, labels as R
-        prints the levels unless given. `ordered` is dropped, as pyreadr drops it from the
-        frames R saves, so that a frame is the same whichever reader made it; the registry's
-        `types` declare an ordered column."""
+    def _factor(self, call: _Call) -> pd.Categorical:
+        """factor(x, levels, labels) as R evaluates it:
+        the levels default to the sorted distinct values, numbers sorted as numbers,
+        the labels to the levels as R prints them.
+        ordered() gives a plain categorical, as pyreadr reads one;
+        a row's `types` restore the order where its model uses it."""
         (values,), options = self._arguments(call, ('levels', 'labels'))
         levels = options.get('levels', sorted(set(values) - {None}))
         labels = options.get('labels', [self._label(level) for level in levels])
@@ -284,14 +311,14 @@ class Deparse:
             return str(int(level))
         return str(level)
 
-    def _levels(self, call: Call) -> pd.Categorical:
+    def _levels(self, call: _Call) -> pd.Categorical:
         """gl(n, k): n levels `1` to `n`, each repeated k times."""
         (n, k), _ = self._arguments(call)
         n, k = self._whole(n), self._whole(k)
         codes = np.repeat(np.arange(n), k)  # (n * k,)
         return pd.Categorical.from_codes(codes, categories=[str(level + 1) for level in range(n)])
 
-    def _repeat(self, call: Call) -> list:
+    def _repeat(self, call: _Call) -> list:
         """rep(x, times) and rep.int(x, times): the whole vector, `times` over."""
         (values, times), _ = self._arguments(call)
         return values * self._whole(times)

@@ -1,0 +1,4 @@
+site field plot flag mark yield
+Ba04 "north A" 1 T T 1.5
+BT06 west 2 F NA NA
+a "south B" 3 T F 2.25

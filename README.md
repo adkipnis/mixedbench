@@ -1,69 +1,69 @@
+[![CI](https://github.com/adkipnis/mixedbench/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/adkipnis/mixedbench/actions/workflows/ci.yml)
+[![Weekly fetch](https://github.com/adkipnis/mixedbench/actions/workflows/weekly-fetch.yml/badge.svg)](https://github.com/adkipnis/mixedbench/actions/workflows/weekly-fetch.yml)
+[![PyPI](https://img.shields.io/pypi/v/mixedbench)](https://pypi.org/project/mixedbench/)
+[![Python](https://img.shields.io/pypi/pyversions/mixedbench)](https://pypi.org/project/mixedbench/)
+[![Licence](https://img.shields.io/badge/licence-MIT%20%C2%B7%20CC%20BY%204.0-blue)](https://github.com/adkipnis/mixedbench#licence)
+[![DOI](https://img.shields.io/badge/DOI-pending-lightgrey)](https://github.com/adkipnis/mixedbench#citing)
+[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/adkipnis/mixedbench/blob/main/examples/demo.ipynb)
+
 # mixedbench
 
-A benchmark of posterior approximation and prediction on real grouped data for generalized
-linear mixed models: a registry of documented problems over public grouped datasets, fetched
-from pinned sources and never redistributed; a frozen, versioned suite with NUTS reference
-posteriors; metrics, tracks and opponent lines.
+A benchmark of posterior approximation and prediction for generalized linear mixed models
+(GLMMs) on real grouped data.
 
-Under construction: see [`ROADMAP.md`](ROADMAP.md), the decisions in `docs/adr/` and the
-vocabulary in [`CONTEXT.md`](CONTEXT.md). The registry comes from the dimension survey in
-[`survey/`](survey/README.md), begun in [metabeta-v3](https://github.com/adkipnis/metabeta-v3).
+## What and why
+
+- Bayesian methods for GLMMs are hard to compare: each paper and released method tests them on its own few datasets. This benchmark aims to fix that.
+- mixedbench lists the documented mixed-effects models of 641 public tabular datasets with grouping structure, each downloaded at a fixed version.
+- A fixed set of rules turns each dataset into an inference problem ready to fit. Results of different methods are comparable.
+- From release 1.1, suites add reference posteriors to score against.
 
 ## Install
 
 ```
-pip install git+https://github.com/adkipnis/mixedbench
+pip install mixedbench
 ```
 
-No R is needed: every registry object loads in Python ([ADR 0003](docs/adr/0003-fetch-only.md)).
+No R needed: every dataset loads in Python.
 
-## Loading one object
+## Quickstart
 
 ```python
 from pathlib import Path
 
-import pandas as pd
 from mixedbench import registry
-from mixedbench.datasets import Loader
-
-rows = pd.read_csv(registry.path('registry.csv'))
-row = rows.set_index('object').loc['sleepstudy']  # its documented model: row['formula']
-
-# downloads land in cache/; only the object's file is fetched and checked against its sha256
-loader = Loader(Path('cache'), manifest=registry.manifest())
-sleepstudy = loader.load(registry.sources()[row['source']], 'sleepstudy')
-```
-
-## Loading one problem
-
-A problem is a registry row's documented model on its table, named
-`<source>/<object>/<model_index>`; materialised once, it loads from its files alone.
-
-```python
 from mixedbench.contract import Problem, load, materialise
 
+cache = Path('cache')
 [row] = [row for row in registry.rows() if row.id == 'lme4/sleepstudy/1']
-table = registry.Tables(Path('cache')).load(row)  # its `types` declared
-materialise(Problem.build(row, table), Path('cache'))  # returns the contract hash
-
-# no loader and no network from here on: the table, the column roles, the prior, the scales
-problem = load(Path('cache'), 'lme4/sleepstudy/1')
+table = registry.Tables(cache).load(row)  # fetched from CRAN at its pin
+materialise(Problem.build(row, table), cache)
+problem = load('lme4/sleepstudy/1', cache)  # later, offline
 ```
 
-## The suite files
+Check out the [demo](https://github.com/adkipnis/mixedbench/blob/main/examples/demo.ipynb) for a friendly introduction.
 
-- [`suite/1.1/candidates.csv`](suite/1.1/candidates.csv): the problems admitted to suite 1.1
-  with their contract hashes, written by `suite/admit.py`.
-- [`suite/1.1/refused.csv`](suite/1.1/refused.csv): the rows left out, each with its reason.
-- The registry keeps every row; the suite records why a row is out
-  ([ADR 0002](docs/adr/0002-registry-suite-versioning-licences.md)).
+## Contents
 
-## The registry files
+- The package `mixedbench`: `registry` (the registry files, summarised in
+  [`SUMMARY.md`](https://github.com/adkipnis/mixedbench/blob/main/registry/SUMMARY.md)), `datasets` (the loader) and `contract`
+  (`Problem`, `materialise`, `load`).
+- [`suite/1.1/candidates.csv`](https://github.com/adkipnis/mixedbench/blob/main/suite/1.1/candidates.csv): the candidate problems of
+  suite 1.1 with their contract hashes;
+  [`refused.csv`](https://github.com/adkipnis/mixedbench/blob/main/suite/1.1/refused.csv): the rows left out, each with its reason.
+- [`survey/`](https://github.com/adkipnis/mixedbench/blob/main/survey/README.md): the pipeline that built the registry and its record;
+  provenance, not needed to use the package.
 
-- The package carries the registry files of the survey's
-  [Files table](survey/README.md#files), without the untracked `help/` and `cache/`.
-- `mixedbench.registry.path(name)` returns the installed path of one, `path()` their
-  directory.
-- `manifest.csv` names the file each object loads from, with its sha256 and size.
-- In this repository they live in [`registry/`](registry/), written by `survey/merge.py`
-  only; start with [`SUMMARY.md`](registry/SUMMARY.md).
+## Contributing
+
+Interested in becoming part of `mixedbench`? Check out [`CONTRIBUTING.md`](https://github.com/adkipnis/mixedbench/blob/main/CONTRIBUTING.md).
+
+## Citing
+
+Please cite the release you used: [`CITATION.cff`](https://github.com/adkipnis/mixedbench/blob/main/CITATION.cff), or click "Cite this repository" on
+GitHub. The Zenodo DOI follows with release 1.0.
+
+## Licence
+
+- Code: [MIT](https://github.com/adkipnis/mixedbench/blob/main/LICENSE). Registry and suite files: [CC BY 4.0](https://github.com/adkipnis/mixedbench/blob/main/LICENSE-CC-BY-4.0).
+- The data keep their sources' terms: they are fetched at first use, not redistributed.

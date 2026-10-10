@@ -77,7 +77,7 @@ def test_the_list_has_one_row_per_admissible_row_in_registry_order_with_its_hash
     ]
     assert list(candidates['dropped_share']) == [0, 0.25, 0]
     for id, hash in zip(candidates['id'], candidates['contract_hash']):
-        assert hash == contractHash(load(tmp_path / 'cache', id))
+        assert hash == contractHash(load(id, tmp_path / 'cache'))
 
 
 def test_a_refused_row_leaves_the_list_and_keeps_its_reason(tmp_path):

@@ -1,5 +1,7 @@
 # Alex's verdicts
 
+*The registry's build record, kept for provenance.*
+
 Alex's per-row verdicts on the survey's readings, copied unchanged from the survey README of
 before the split. The record around them, and what `m3#` means, is in
 [`HISTORY.md`](HISTORY.md); the rules they set are in [`prompts/read.md`](prompts/read.md) and

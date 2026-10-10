@@ -16,8 +16,8 @@ CATEGORICAL = ('region', 'herd', 'breed', 'feed')
 @pytest.fixture
 def herds() -> pd.DataFrame:
     """The table as the loader returns it: the declared columns as pandas categoricals."""
-    df = pd.read_csv(FIXTURES / 'herds.csv')
-    return df.astype({c: 'category' for c in CATEGORICAL})
+    table = pd.read_csv(FIXTURES / 'herds.csv')
+    return table.astype({c: 'category' for c in CATEGORICAL})
 
 
 @pytest.fixture
