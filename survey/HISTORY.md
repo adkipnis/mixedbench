@@ -368,3 +368,13 @@ reading's open disagreements, four to eight per tier.
   `sievers_2020_osf_12/convo_df_2022-04-01.csv/1`,
   `sievers_2020_osf_16/summary_pull_c_pairwise_2019-11-29.csv/1`,
   `villemereuil_2018_dryad/data.csv/{2,3}`, `shanahan_2019_dryad_3/TNetAndTSLR.csv/2`.
+
+## Text integers (#54, 2026-10-10)
+
+- A text file in a CRAN package's `data/` folder read its integer columns as `int64`, where R,
+  and every other R route of the loader, reads `int32`. All 397 cached `data/` text files hold
+  1,181 such columns, none outside the `int32` range; the loader now casts them.
+- The rerun moved 5 contract hashes of `suite/1.1/candidates.csv`, in the hash alone, a patch,
+  1.0.2, as for #57.
+- The 5: `agridat/burgueno.alpha/1`, `agridat/snedecor.asparagus/1`,
+  `agridat/turner.herbicide/1`, `agridat/yates.oats/{1,2}`.
