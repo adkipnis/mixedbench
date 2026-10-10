@@ -99,7 +99,7 @@ the decision stays inside.
   or a file field, `UPPER_SNAKE_CASE` constants.
 - One pipeline class per module, its steps as methods in run order under a `# ----` banner
   that names the pipeline (`url -> archive -> tree -> files -> tables`). A step, and any
-  function no other module imports, carries a leading `_`.
+  function or class no other module imports, carries a leading `_`.
 - Tests: `tests/<package>/test_<module>.py`; a test function is a sentence,
   `test_<what_holds>`; fixtures under `tests/<package>/fixtures/`; a test that fetches a
   source is marked `network`.
