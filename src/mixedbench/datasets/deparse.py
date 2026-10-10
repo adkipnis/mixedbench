@@ -1,7 +1,21 @@
-"""The deparse reader: base R's `data/*.R` files (ChickWeight, infert, sleep and four more),
-evaluated to tables without R (ADR 0003). Its one design decision is the grammar, the subset
-of R those seven files use; anything outside it raises with the file and the construct named.
-The reader is for those files, not for R."""
+"""deparse.py defines the deparse reader: base R's data/*.R files evaluated to tables without R.
+
+Its one design decision is the grammar,
+the subset of R that those seven files use (ChickWeight, infert, sleep and four more).
+One regular expression tokenizes the text, a recursive descent parses it into calls,
+operators and symbols, and the one assigned value is evaluated:
+a vector as a list, a factor as a categorical, a list made a table by structure().
+Anything outside the subset raises, naming the file and the construct.
+The reader is for those files, not for R.
+
+pipeline:
+---------
+a data/*.R file
+-> its tokens, (kind, text)                              _tokenize
+-> its statements, (target, value)                       _statements
+-> the assigned value, evaluated                         _evaluate
+-> the table under the name it is assigned to            tables
+"""
 
 from __future__ import annotations
 
@@ -12,6 +26,10 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+# =====================================================================================
+# tokens and the parse tree
+# =====================================================================================
+# what the tokenizer matches, and the nodes the parser builds from it.
 TOKEN = re.compile(
     r"""(?P<skip>\s+|\#[^\n]*)
       | (?P<number>(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?)
@@ -21,7 +39,7 @@ TOKEN = re.compile(
       | (?P<other>.)""",
     re.VERBOSE,
 )
-# the attributes structure() sets on a frame, nlme's groupedData ones among them: a plain frame
+# the attributes structure() sets on a data frame, nlme's groupedData ones among them: a table
 # keeps none of them, so they are parsed and never evaluated (`formula = weight ~ Time | Chick`)
 DROPPED = ('row.names', 'class', 'formula', 'outer', 'labels', 'units')
 
@@ -45,49 +63,50 @@ class Call:
 
 
 Node = Call | Op | Symbol | float | str | None  # None is NA
-Value = list | pd.Categorical | dict | pd.DataFrame  # a vector, a factor, a list, a frame
+Value = list | pd.Categorical | dict | pd.DataFrame  # a vector, a factor, a list, a table
 
 
 class DeparseError(ValueError):
     pass
 
 
-# ==============================================================================================
-# deparse reader
-# ==============================================================================================
-
-
+# =====================================================================================
+# deparse reader class
+# =====================================================================================
 class Deparse:
+    """A recursive-descent parser and evaluator over one data/*.R file."""
+
     def __init__(self, file: Path):
         self.file = file
         self.tokens = self._tokenize(file.read_text(encoding='utf-8'))
         self.at = 0
 
     def tables(self) -> dict[str, pd.DataFrame]:
-        """The frame the file assigns, under the name it assigns it to; the statements after
-        it may only reset a formula attribute's environment, which the frame drops anyway."""
+        """The table the file assigns, under the name it assigns it to.
+        The statements after it may only reset a formula attribute's environment,
+        which the table drops anyway."""
         statements = self._statements()
         target, value = statements[0]
         for later, _ in statements[1:]:
             if not (isinstance(later, Call) and later.name == 'environment'):
                 raise self._error('a second statement')
-        df = self._evaluate(value)
-        if not isinstance(df, pd.DataFrame):
+        table = self._evaluate(value)
+        if not isinstance(table, pd.DataFrame):
             raise self._error('an object that is no data frame')
         name = target  # `"ChickWeight" <-`
         if isinstance(target, Symbol):  # `sleep <-`
             name = target.name
-        return {name: df}
+        return {name: table}
 
     def _error(self, construct: str) -> DeparseError:
         return DeparseError(f'{self.file}: {construct} is outside the deparse subset')
 
     # ------------------------------------------------------------------------------------------
-    # pipeline: text -> tokens -> statements -> table
+    # text -> tokens -> statements
     # ------------------------------------------------------------------------------------------
 
     def _tokenize(self, text: str) -> list[tuple[str, str]]:
-        """(kind, text) pairs; whitespace and comments dropped."""
+        """(kind, text) pairs, whitespace and comments dropped."""
         tokens = []
         for match in TOKEN.finditer(text):
             kind = match.lastgroup
@@ -98,7 +117,7 @@ class Deparse:
         return tokens
 
     def _statements(self) -> list[tuple[Node | None, Node]]:
-        """(target, value) per statement; the target is None where nothing is assigned."""
+        """(target, value) per statement, the target None where nothing is assigned."""
         statements = []
         while self.at < len(self.tokens):
             statements.append(self._statement())
@@ -112,8 +131,9 @@ class Deparse:
         return expression, self._expression()
 
     def _expression(self) -> Node:
-        """Binary operators left to right: only `:` is evaluated; `~` and `|` occur in the
-        formula attributes structure() drops, so their precedence never matters."""
+        """Binary operators left to right, of which only `:` is evaluated.
+        `~` and `|` occur only in the formula attributes structure() drops,
+        so their precedence never matters."""
         node = self._unary()
         while self._peek() in (':', '~', '|'):
             _, op = self._take()
@@ -175,8 +195,9 @@ class Deparse:
         return kind, text
 
     # ------------------------------------------------------------------------------------------
-    # evaluation: a vector is a list of floats, ints, strings and None (NA)
+    # node -> value -> table
     # ------------------------------------------------------------------------------------------
+    # a vector is a list of floats, ints, strings and None (NA).
 
     def _evaluate(self, node: Node) -> Value:
         if isinstance(node, Call):
@@ -235,7 +256,7 @@ class Deparse:
         for keyword, node in call.arguments:
             if keyword is None:
                 raise self._error(f'an unnamed element of {call.name}()')
-            if call.name == 'data.frame' and keyword == 'row.names':  # LifeCycleSavings
+            if call.name == 'data.frame' and keyword == 'row.names':
                 continue  # an argument of data.frame(), not a column
             columns[keyword] = self._evaluate(node)
         return columns
@@ -250,8 +271,9 @@ class Deparse:
 
     @staticmethod
     def _vector(values: list) -> np.ndarray | list:
-        """R's type of the vector: character, integer (32-bit, as R stores it), else double;
-        an integer vector with NA is double, as pyreadr's tables have it (readers.numbersAsFloat)."""
+        """R's type of the vector: character, integer (32-bit, as R stores it), else double.
+        An integer vector with NA is double,
+        as pyreadr's tables have it (readers._numbersAsFloat)."""
         if any(isinstance(value, str) for value in values):
             return values
         if all(isinstance(value, int) for value in values):  # NA, None, is no int
@@ -267,10 +289,11 @@ class Deparse:
         return self._table(self._evaluate(body))
 
     def _factor(self, call: Call) -> pd.Categorical:
-        """factor() and ordered(): levels sorted (numbers as numbers) unless given, labels as R
-        prints the levels unless given. `ordered` is dropped, as pyreadr drops it from the
-        data frames R saves, so that a table is the same whichever reader made it; the registry's
-        `types` declare an ordered column."""
+        """factor() and ordered(): levels sorted (numbers as numbers) unless given,
+        labels as R prints the levels unless given.
+        `ordered` is dropped, as pyreadr drops it from the data frames R saves,
+        so that a table is the same whichever reader made it.
+        The registry's `types` declare an ordered column."""
         (values,), options = self._arguments(call, ('levels', 'labels'))
         levels = options.get('levels', sorted(set(values) - {None}))
         labels = options.get('labels', [self._label(level) for level in levels])

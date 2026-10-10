@@ -19,6 +19,14 @@ def test_row_names_of_data_frame_are_no_column(tmp_path):
     assert list(savings.columns) == ['sr']
 
 
+def test_unary_minus_binds_tighter_than_a_range(tmp_path):
+    """In R, `-1:3` runs from -1 to 3, not from -1 to -3."""
+    file = tmp_path / 'steps.R'
+    file.write_text('steps <- data.frame(x = -1:3)\n')
+    steps = Deparse(file).tables()['steps']
+    assert list(steps['x']) == [-1, 0, 1, 2, 3]
+
+
 def test_a_construct_outside_the_deparse_subset_raises_naming_file_and_construct(tmp_path):
     """The reader is for base R's seven data files, not for R: a time series fails loudly."""
     file = tmp_path / 'series.R'
