@@ -17,7 +17,6 @@ from typing import Literal
 import pandas as pd
 from mixedbench import registry
 from mixedbench.contract import Problem, Refused, materialise
-from mixedbench.datasets import Loader
 from mixedbench.registry.row import Row, writeCsv
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -202,13 +201,7 @@ class Admission:
 # main
 # =====================================================================================
 if __name__ == '__main__':
-    loader = Loader(CACHE, manifest=registry.manifest())
-    sources = registry.sources()
-
-    def table(row: Row) -> pd.DataFrame:
-        return loader.load(sources[row.source], row.object, row.types)
-
-    admitted = Admission(registry.rows(), table, CACHE).admit()
+    admitted = Admission(registry.rows(), registry.Tables(CACHE).load, CACHE).admit()
     print(admitted.report())
     if admitted.failed:
         sys.exit(1)  # a list missing a row would drop it silently
