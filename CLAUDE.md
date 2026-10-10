@@ -125,6 +125,8 @@ makes code harder to understand or change.
   which cite sources (paper link, equation).
 - A comment explains the code, not its bookkeeping: the case that prompted a rule goes to
   the test that pins it, a definition to `CONTEXT.md`, how it was decided to a history.
+- Code in `src/` cites no ADR: a comment or docstring states the rule itself, the ADR keeps
+  why. A string written into a released suite file stays as released.
 
 ### Changing code
 
