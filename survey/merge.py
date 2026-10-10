@@ -29,7 +29,6 @@ from mixedbench.registry.row import (
     COLUMN_LIST_COLUMNS,
     TERM_COLUMNS,
     Row,
-    parseTypes,
     parts,
     readCsv,
     writeCsv,
@@ -488,10 +487,10 @@ class Merger:
         """Every merge measures the whole registry from the loaded tables; nothing is typed."""
         registry = self.canonical(TABLES['registry'])
         dimensions, columns = [], []
-        for _, row in registry.iterrows():
-            types = parseTypes(row['types'])
-            df = self.loader.load(self.frame.sources[row['source']], row['object'], types)
-            measurer = Measurer(df, row.to_dict())
+        for cells in registry.to_dict('records'):
+            row = Row.parse(cells)
+            df = self.loader.load(self.frame.sources[row.source], row.object, row.types)
+            measurer = Measurer(df, row)
             dimensions += measurer.dimensions()
             columns += measurer.columns()
         writeCsv(pd.DataFrame(dimensions, columns=DIMENSION_COLUMNS), self.registry / 'dimensions.csv')  # fmt: skip
