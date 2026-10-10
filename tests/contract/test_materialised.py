@@ -241,7 +241,7 @@ def test_a_changed_json_value_fails_to_load(data: st.DataObject) -> None:
 
 
 def test_another_contract_version_is_another_hash() -> None:
-    """A contract change is a new suite version, never a recomputation (docs/conventions.md): the same
-    arrays and record under the next major version hash differently."""
+    """A contract change is a new suite version, never a recomputation (docs/conventions.md):
+    the same arrays and record under the next major version hash differently."""
     nextVersion = replace(PROBLEM, contract=PROBLEM.contract + 1)
     assert contractHash(nextVersion) != contractHash(PROBLEM)
