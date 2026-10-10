@@ -1,5 +1,5 @@
 """The deparse reader on base R's `data/*.R` grammar: the tables it evaluates, the constructs it
-refuses, and a property test that any frame R would deparse reads back as itself."""
+refuses, and a property test that any table R would deparse reads back as itself."""
 
 from __future__ import annotations
 
@@ -28,14 +28,32 @@ def test_unary_minus_binds_tighter_than_a_range(tmp_path):
 
 
 def test_a_construct_outside_the_deparse_subset_raises_naming_file_and_construct(tmp_path):
-    """The reader is for base R's seven data files, not for R: a time series fails loudly."""
+    """The reader is for base R's data files, not for R: a time series fails loudly."""
     file = tmp_path / 'series.R'
     file.write_text('series <- ts(c(1, 2, 3), start = 1990)\n')
     with pytest.raises(ValueError, match=r'series\.R: function ts\(\)'):
         Deparse(file).tables()
 
 
-# a frame of numeric and string columns, written as base R's data/*.R files write one
+def test_structure_drops_the_grouped_data_attributes(tmp_path):
+    """ChickWeight's shape: structure() makes a list a table, its groupedData attributes and the
+    statements resetting their environments are dropped, and factor(), gl() and rep() evaluate."""
+    file = tmp_path / 'chicks.R'
+    file.write_text(
+        '"chicks" <- structure(list(weight = c(42, 51, 40, 49), Time = rep(c(0, 2), 2),\n'
+        '  Chick = factor(c(2, 2, 1, 1), levels = c(2, 1)), Diet = gl(2, 2)),\n'
+        '  row.names = 1:4, class = c("groupedData", "data.frame"),\n'
+        '  formula = weight ~ Time | Chick, outer = ~ Diet)\n'
+        'environment(attr(chicks, "formula")) <- emptyenv()\n'
+    )
+    chicks = Deparse(file).tables()['chicks']
+    assert list(chicks.columns) == ['weight', 'Time', 'Chick', 'Diet']
+    assert list(chicks['Time']) == [0, 2, 0, 2]
+    assert list(chicks['Chick'].cat.categories) == ['2', '1']
+    assert list(chicks['Diet']) == ['1', '1', '2', '2']
+
+
+# a table of numeric and string columns, written as base R's data/*.R files write one
 NAMES = st.from_regex(r'[a-z][a-z0-9_.]{0,8}', fullmatch=True)
 NUMBERS = st.floats(allow_nan=False, allow_infinity=False) | st.none()
 # R deparses quotes, backslashes and control characters as escapes, which the subset has none of
@@ -71,7 +89,7 @@ def literal(value: float | str | None) -> str:
 
 
 def deparsed(columns: dict[str, list]) -> str:
-    """`drawn <- data.frame(a = c(...), ...)`, as base R's data/*.R files write a frame."""
+    """`drawn <- data.frame(a = c(...), ...)`, as base R's data/*.R files write a table."""
     parts = []
     for name, values in columns.items():
         literals = ', '.join(literal(value) for value in values)
@@ -82,7 +100,7 @@ def deparsed(columns: dict[str, list]) -> str:
 @given(tables())
 @settings(max_examples=200, deadline=None)
 def test_deparsed_numeric_and_string_vectors_round_trip(tmp_path_factory, columns):
-    """Any frame of numbers, strings and NA that R would deparse reads back as itself."""
+    """Any table of numbers, strings and NA that R would deparse reads back as itself."""
     file = tmp_path_factory.mktemp('deparse') / 'drawn.R'
     file.write_text(deparsed(columns), encoding='utf-8')
     expected = pd.DataFrame(columns)
