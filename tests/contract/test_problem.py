@@ -405,3 +405,91 @@ def test_a_level_present_only_in_held_rows_leaves_an_all_zero_column_in_that_reg
     assert problem.design == ('Intercept', 'x', 'kind[k0]', 'kind[k1]', 'kind[k2]')
     assert problem.table.loc[seen, f'kind[{heldLevel}]'].eq(0).all()
     assert problem.table.loc[~seen, f'kind[{heldLevel}]'].eq(1).any()
+
+
+# ==============================================================================================
+# the standardised table
+# ==============================================================================================
+
+
+@given(sizes=SIZES, source=SOURCES)
+def test_each_continuous_column_of_a_standardised_table_has_mean_0_and_sd_1(
+    sizes: list[int], source: str
+) -> None:
+    """Every reference and score is stated on the standardised scale, so each regime's table
+    z-scores the continuous covariate `x` and the continuous response `y` over its own rows."""
+    problem = Problem.build(groupedRow(source), groupedTable(sizes))
+    for regime in problem.scales:
+        table = problem.standardised(regime)
+        for column in ('x', 'y'):
+            assert table[column].mean() == pytest.approx(0, abs=1e-12)
+            assert table[column].std() == pytest.approx(1)
+
+
+def test_an_interaction_is_the_product_of_its_standardised_parts() -> None:
+    """`x:sex` on the standardised scale is z-scored `x` times the 0/1 `sex`, recomputed from
+    the parts and not rescaled itself: z-scoring the raw product would give another column."""
+    problem = Problem.build(fixtureRow(), fixtureTable())
+    table = problem.standardised()
+    x = (np.array(X) - np.mean(X)) / np.std(X, ddof=1)
+    assert table['x:sex'].to_numpy() == pytest.approx(x * np.array(SEX))
+    assert table['sex'].tolist() == SEX
+
+
+def test_an_interaction_with_a_level_holding_a_colon_finds_its_parts() -> None:
+    """A level may hold a `:` (a composite's joined levels, a time), so `diet[b:c]:x` is read
+    through the coding as `diet[b:c]` times `x`; split on `:`, it would name no column."""
+    table = fixtureTable()
+    table['diet'] = table['diet'].cat.rename_categories({'b': 'b:c'})
+    row = fixtureRow(interactions=('diet:x',))
+    problem = Problem.build(row, table)
+    standardised = problem.standardised()
+    x = (np.array(X) - np.mean(X)) / np.std(X, ddof=1)
+    assert problem.design[-2:] == ('diet[b:c]:x', 'diet[c]:x')
+    assert standardised['diet[b:c]:x'].to_numpy() == pytest.approx(x * np.array([0, 1, 0] * 4))
+
+
+# ==============================================================================================
+# the draw names
+# ==============================================================================================
+SLOPES = (
+    SlopeTerm('x', 'block', correlated=True),
+    SlopeTerm('sex', 'block', correlated=True),
+    SlopeTerm('diet', 'block:plot', correlated=False),
+)
+
+
+def test_the_global_draws_expand_each_cor_block_to_its_pairs_in_brmss_order() -> None:
+    """A draw file has one column per scalar, so `cor[block]` over (Intercept, x, sex) becomes
+    its three pairs, `<a>` before `<b>` in the block's order as brms orders them (#63)."""
+    row = fixtureRow(response='n', response_type='count', random_slopes=SLOPES)
+    problem = Problem.build(row, fixtureTable())
+    assert problem.globalDraws() == (
+        'Intercept', 'x', 'sex', 'diet[b]', 'diet[c]', 'grade[mid]', 'grade[hi]', 'x:sex',
+        'sd[block]', 'sd[x|block]', 'sd[sex|block]',
+        'cor[block][Intercept,x]', 'cor[block][Intercept,sex]', 'cor[block][x,sex]',
+        'sd[block:plot]', 'sd[diet[b]|block:plot]', 'sd[diet[c]|block:plot]',
+    )  # fmt: skip
+
+
+def test_the_local_draws_name_each_group_by_its_code_in_the_table() -> None:
+    """Per factor, the intercept then each slope in `sd` order, groups in code order, named as
+    `sd` is (`r[<factor>]`, `r[<x>|<factor>]`), so a group's draws join its rows through the
+    factor column of the standardised table."""
+    row = fixtureRow(response='n', response_type='count', random_slopes=SLOPES)
+    problem = Problem.build(row, fixtureTable())
+    local = problem.localDraws()
+    assert local['block'] == (
+        'r[block][0]', 'r[block][1]', 'r[block][2]',
+        'r[x|block][0]', 'r[x|block][1]', 'r[x|block][2]',
+        'r[sex|block][0]', 'r[sex|block][1]', 'r[sex|block][2]',
+    )  # fmt: skip
+    assert list(local) == ['block', 'block:plot']
+    assert local['block:plot'][5:8] == (
+        'r[block:plot][5]',
+        'r[diet[b]|block:plot][0]',
+        'r[diet[b]|block:plot][1]',
+    )
+    assert len(local['block:plot']) == 3 * 6
+    codes = problem.standardised()['block:plot']
+    assert {f'r[block:plot][{j}]' for j in codes} == set(local['block:plot'][:6])
