@@ -58,6 +58,10 @@ def verbAggCells() -> dict[str, str]:
         ('random_slopes', 'Anger | id', 'not a slope term: Anger | id'),
         ('verified', 'yes', 'not a verification: yes'),
         ('verified', '', 'not a verification: '),  # required: every row says why it is in
+        # a cell checked against another column of its row
+        ('random_slopes', 'resp|id', 'resp is not a covariate'),
+        ('random_slopes', 'Anger|Gender', 'Gender is not a grouping factor'),
+        ('interactions', 'Anger:resp', 'resp is not a covariate'),
     ],
 )
 def test_a_cell_the_grammar_refuses_raises_naming_the_row_and_the_column(
@@ -76,7 +80,13 @@ def test_a_row_carries_its_slope_terms_structured_and_its_verification() -> None
     """The contract reads a random slope as a covariate, a factor and whether it is correlated
     with the factor's intercept, never the `x|g` text (ADR 0001); `x||g` is uncorrelated and a
     composite factor stays one term."""
-    cells = verbAggCells() | {'random_slopes': 'Anger|id;btype||item;situ|id:item', 'verified': 'hand'}  # fmt: skip
+    slopes = 'Anger|id;btype||item;situ|id:item'
+    factors = 'id;item;id:item'
+    cells = verbAggCells() | {
+        'grouping_factors': factors,
+        'random_slopes': slopes,
+        'verified': 'hand',
+    }
     row = Row.parse(cells)
     assert row.random_slopes == (
         SlopeTerm(covariate='Anger', factor='id', correlated=True),
@@ -89,7 +99,9 @@ def test_a_row_carries_its_slope_terms_structured_and_its_verification() -> None
 def test_a_slope_on_a_column_whose_name_has_spaces_is_one_covariate() -> None:
     """Some loaded tables name a column with spaces (goldstein_msm `activity 1`); the term's
     bars, not whitespace, separate the covariate from the factor."""
-    cells = verbAggCells() | {'random_slopes': 'activity 1|id;Age centered about 13 years||item'}  # fmt: skip
+    covariates = 'activity 1;Age centered about 13 years'
+    slopes = 'activity 1|id;Age centered about 13 years||item'
+    cells = verbAggCells() | {'covariates': covariates, 'random_slopes': slopes, 'interactions': ''}
     row = Row.parse(cells)
     assert row.random_slopes == (
         SlopeTerm(covariate='activity 1', factor='id', correlated=True),

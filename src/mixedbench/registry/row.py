@@ -168,10 +168,30 @@ class Row:
                 if '' in parts(term):
                     refusals.append((column, f'a term with an empty part: {term}'))
         for term in splitList(cells['random_slopes']):
-            if SLOPE_TERM.fullmatch(term) is None:
-                refusals.append(('random_slopes', f'not a slope term: {term}'))
+            refusals += Row.slopeRefusals(cells, term)
+        covariates = splitList(cells['covariates'])
+        for term in splitList(cells['interactions']):
+            for part in parts(term):
+                # the contract codes the product from coded columns (agridat harris.wateruse's
+                # cell-means `0 + age:species`)
+                if part != '' and part not in covariates:
+                    refusals.append(('interactions', f'{part} is not a covariate'))
         if cells['verified'] not in VERIFIED:
             refusals.append(('verified', f'not a verification: {cells["verified"]}'))
+        return refusals
+
+    @staticmethod
+    def slopeRefusals(cells: dict[str, str], term: str) -> list[tuple[str, str]]:
+        """A slope term is `x|g` or `x||g`, `x` a covariate and `g` a grouping factor of its
+        row (ADR 0001)."""
+        if SLOPE_TERM.fullmatch(term) is None:
+            return [('random_slopes', f'not a slope term: {term}')]
+        slope = SlopeTerm.parse(term)
+        refusals = []
+        if slope.covariate not in splitList(cells['covariates']):
+            refusals.append(('random_slopes', f'{slope.covariate} is not a covariate'))
+        if slope.factor not in splitList(cells['grouping_factors']):
+            refusals.append(('random_slopes', f'{slope.factor} is not a grouping factor'))
         return refusals
 
 
