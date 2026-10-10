@@ -1,11 +1,11 @@
 """readers.py defines which file formats exist, how each becomes tables and which files hold data.
 
-An R file goes through pyreadr, which is fast, with R's level order restored,
+An R file goes through pyreadr (with R's level order restored)
 or through the pure-Python rdata where librdata rejects it.
-A file in a CRAN package's data/ folder is read by utils::data()'s rules,
-base R's data/*.R files by the deparse reader.
-Every other format goes through pandas: one table per file, named by its label,
-or one per data sheet of a workbook.
+A file in a CRAN package's data/ folder is read by utils::data()'s rules.
+Base R's data/*.R files are read by the deparse reader.
+Every other format goes through pandas:
+one table per file, named by its label, or one per data sheet of a workbook.
 
 pipeline:
 ---------
@@ -36,9 +36,9 @@ from pyreadr import LibrdataError, PyreadrError
 from pyreadr._pyreadr_parser import PyreadrParser
 
 # =====================================================================================
-# file kinds
+# file kinds and R errors
 # =====================================================================================
-# the suffixes each reader takes, and the names that mark documentation.
+# the suffices each reader takes, and the names that point to documentation.
 R_FILES = {'.rda', '.rdata', '.rds'}  # meant for pyreadr, or rdata
 DATA_FILES = {'.r', '.tab', '.txt', '.csv'}  # meant for utils::data()
 TABLE_FILES = {  # meant for pandas
@@ -48,26 +48,15 @@ TABLE_FILES = {  # meant for pandas
 DOC_STEMS = ('readme', 'codebook', 'description', 'notes', 'metadata', 'variables', 'dictionary')
 NOTE_SHEETS = ('contents', 'readme', 'codebook', 'notes', 'description')  # a workbook's codebook
 Reader = Literal['pyreadr', 'rdata', 'pandas', 'deparse']
-
-
-# =====================================================================================
-# what the R readers cannot parse
-# =====================================================================================
-# a file pyreadr rejects goes to rdata; one rdata rejects too is one object without a table.
-# LibrdataError is not a PyreadrError; the IndexError is pyreadr's value-label handler
-# indexing past the column names of a labelled data frame inside an .RData
 R_ERRORS = (PyreadrError, LibrdataError, IndexError)
-# bytecode, ALTREP or an object type rdata does not know (ValueError), an environment
-# (AssertionError)
 RDATA_ERRORS = (ValueError, AssertionError)
-# a class rdata has no constructor for, read as the data frame it extends
 FRAME_CLASSES = r'Missing constructor for R class "(data\.table|tbl_df|tbl)"'
 
 
 # =====================================================================================
-# the file's tables, and whether it holds data
+# helpers
 # =====================================================================================
-# the two calls the loader makes, and the name helpers the survey shares.
+# the two calls the loader makes, and the name helpers shared with the survey.
 def read(
     file: Path, label: str, *, layout: tuple[str, ...] | None = None, cran: bool = False
 ) -> tuple[dict[str, pd.DataFrame | None], Reader]:
