@@ -1,5 +1,8 @@
 # Survey history
 
+*The registry's build record, kept as written; `m3#` is an issue of metabeta-v3, a private
+repository.*
+
 What each pass of the dimension survey did and found, as dated bullets. The living method and
 rules are in [`README.md`](README.md), Alex's per-row verdicts in [`VERDICTS.md`](VERDICTS.md),
 the current counts in [`SUMMARY.md`](../registry/SUMMARY.md). `m3#` is an issue of
