@@ -45,7 +45,8 @@ suite/
   tests/                run by hand
 tests/                  mirrors src/; fixtures beside the tests; network tests run only in CI
 docs/adr/               the decisions
-.github/workflows/      ci.yml, the matrix; weekly-fetch.yml, the link-rot detector
+examples/               demo.ipynb, committed with its outputs and run weekly; cache/ untracked
+.github/workflows/      ci.yml, the matrix; weekly-fetch.yml, the link-rot detector and the demo run
 ```
 
 Each module owns one design decision that no other module depends on. The interface is small;
