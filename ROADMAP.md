@@ -26,7 +26,7 @@ release that freezes it.
 
 ## Release 1.1 — suite 1.1 with references; the paper
 
-- [ ] **5 Reference runner.** brms/cmdstanr at pinned versions, the ladder and bar (ADR 0004,
+- [ ] **5 Reference runner** (#62). brms/cmdstanr at pinned versions, the ladder and bar (ADR 0004,
   amended 2026-10-10), draw files, diagnostics, one problem per cluster job, the 12-hour cap
   over the whole ladder; full-table fits only, a pilot on CI's 20-problem subset
 - [ ] **6 Cluster run.** Suite 1.1 references on CPU nodes; failures recorded; `suite/1.1/
