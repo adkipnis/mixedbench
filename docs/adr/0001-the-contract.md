@@ -1,5 +1,5 @@
 ---
-status: accepted, amended 2026-10-09
+status: accepted, amended 2026-10-09 and 2026-10-10
 date: 2026-10-08
 ---
 
@@ -129,3 +129,16 @@ any rule is a new suite version, never a recomputation.
 - Why: Gaussian on an uncensored time is a model of a different quantity, and a `cens()`
   term is a contract extension that belongs with suite 1.2's families if ever. The second
   case is what the rule's "by response type" was decided for.
+
+## Amendment 2026-10-10: the grill of roadmap item 5
+
+**The intercept's prior.**
+
+- Decision: the intercept's prior, Normal(0, 2.5), is on the intercept at the mean of every
+  design column over the rows a fit sees (brms's default centring), not at the zero of the
+  binary and contrast columns. The draws report the uncentred intercept, `Intercept`, as
+  brms does.
+- Why: it is brms's default and current practice; on z-scored covariates the two coincide,
+  and only the binary and contrast columns move the intercept. metabeta adopts it separately.
+- The contract hash does not move: the materialised problem's prior is unchanged, and this
+  states its meaning.
