@@ -30,14 +30,13 @@ No R needed: every dataset loads in Python.
 
 ```python
 from pathlib import Path
-
 from mixedbench import suite
 
 # fetched from CRAN at its pin and checked against suite 1.1's list; later calls are offline
 problem = suite.load('lme4/sleepstudy/1', Path('cache'))
 ```
 
-Check out the [demo](https://github.com/adkipnis/mixedbench/blob/main/examples/demo.ipynb) for a friendly introduction.
+Check out the [demo](https://colab.research.google.com/github/adkipnis/mixedbench/blob/main/examples/demo.ipynb) for a friendly introduction.
 
 ## Contents
 
