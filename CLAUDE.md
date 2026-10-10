@@ -63,7 +63,7 @@ Planned ([`ROADMAP.md`](ROADMAP.md)): `contract/`, `suite/`, `references/`, `met
   attribute.
 - Guard `argparse` blocks with `# fmt: off` / `# fmt: on`.
 - Module docstring: one sentence on what the module defines (who imports it is the
-  `CONTRIBUTING.md` map's), optionally a short paragraph on how (its high-level decisions in
+  `docs/conventions.md` map's), optionally a short paragraph on how (its high-level decisions in
   plain words, the details left to the functions' docstrings), then a `pipeline:` section:
   the input on its own line, then one `-> result` line per step with the function that does
   it in a column on the right.
