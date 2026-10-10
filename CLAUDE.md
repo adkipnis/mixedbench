@@ -58,7 +58,8 @@ Planned ([`ROADMAP.md`](ROADMAP.md)): `contract/`, `suite/`, `references/`, `met
   `dict.fromkeys`, `|` merges or comprehensions.
 - A class per concept a reader should hold apart (a format family, a pipeline), its methods
   static where it holds no state; module functions only for what spans the classes.
-  A helper used by one class only is a static method of that class.
+  A helper or constant used by one class only lives on that class: a static method, a class
+  attribute.
 - Guard `argparse` blocks with `# fmt: off` / `# fmt: on`.
 - Module docstring: one sentence on what the module defines (who imports it is the
   `CONTRIBUTING.md` map's), optionally a short paragraph on how, then a `pipeline:` section:
