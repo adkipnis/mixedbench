@@ -257,6 +257,25 @@ def test_declared_column_types_are_applied(tmp_path):
     assert df['size'].dtype.kind == 'i'
 
 
+def test_a_declared_continuous_column_with_decimal_commas_is_read_with_points(tmp_path):
+    """A European csv writes 21,5 for 21.5 (kleisner_2026's BMI); a declared continuous column
+    whose strings hold commas and no points is read with points."""
+    url = 'https://example.org/bmi.csv'
+    data = b'id,bmi\n1,"21,5"\n2,"19,0"\n3,"23,25"\n'
+    loader = Loader(tmp_path, fetch=Server({url: data}))
+    df = loader.load(urlSource(url, data), 'bmi.csv', types={'bmi': 'continuous'})
+    assert list(df['bmi']) == [21.5, 19.0, 23.25]
+
+
+def test_a_thousands_separator_in_a_declared_continuous_column_fails_loudly(tmp_path):
+    """Commas beside points are no decimal commas: 1,234.5 is refused, never read as 1.234."""
+    url = 'https://example.org/income.csv'
+    data = b'id,income\n1,"1,234.5"\n2,"987.0"\n'
+    loader = Loader(tmp_path, fetch=Server({url: data}))
+    with pytest.raises(ValueError):
+        loader.load(urlSource(url, data), 'income.csv', types={'income': 'continuous'})
+
+
 def test_git_source_is_fetched_as_an_archive_at_its_revision(tmp_path):
     """A repository pinned to a revision comes as GitHub's archive tarball of that revision, so
     one fetch serves every file and README; the pinned path narrows the objects to its folder."""

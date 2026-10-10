@@ -1,6 +1,15 @@
-"""Dataset loader: pinned source as input, typed DataFrame as output.
-The pipeline url -> archive -> tree -> files -> frames and the cache live here, without R
-(ADR 0003); the formats are `readers.py`."""
+"""loader.py defines how a pinned source becomes typed tables and where it lies in the cache
+(registry.Tables and the survey load through it; the formats are readers.py's).
+
+pipeline:
+---------
+a pinned Source
+-> the download from the first URL that answers, verified    _urls, _download
+-> the extracted tree                                        tree
+-> the files holding data: the manifest's, else all          _fetchFile | _files
+-> every object of those files as a frame, by name           readers.read
+-> one object as a typed table                               load
+"""
 
 from __future__ import annotations
 
@@ -20,15 +29,40 @@ from urllib.parse import quote, urlparse
 import pandas as pd
 from mixedbench.datasets import readers
 
+# =====================================================================================
+# where sources are fetched
+# =====================================================================================
+# the hosts behind every pin, without R (ADR 0003), and the default fetch.
 CRAN = 'https://cloud.r-project.org/src/contrib'
 R_SOURCES = 'https://cloud.r-project.org/src/base'
 ARCHIVES = ('.zip', '.tar.gz')
-# Intermediate certificates a source's server leaves out of its chain, which OpenSSL, unlike
-# macOS and Windows, does not fetch itself: Harvard's content.sph.harvard.edu (Fitzmaurice et
-# al.) sends InCommon's instead of Sectigo's OV R36, from its leaf's CA Issuers URL
+# intermediate certificates a server leaves out of its chain, which OpenSSL, unlike macOS and
+# Windows, does not fetch itself
 TLS = ssl.create_default_context()
 TLS.load_verify_locations(Path(__file__).parent / 'intermediates.pem')
-ColumnType = Literal['categorical', 'ordered', 'continuous']  # what a registry row may declare
+
+
+def fetch(url: str) -> bytes | None:
+    """The default fetch; None on a 404 or a refusal so the caller can try the next location;
+    a 429 waits the `Retry-After` seconds and tries again."""
+    req = urllib.request.Request(url, headers={'User-Agent': 'mixedbench'})
+    for attempt in range(3):
+        try:
+            with urllib.request.urlopen(req, timeout=120, context=TLS) as r:
+                return r.read()
+        except urllib.error.HTTPError as e:
+            if e.code in (401, 403, 404):
+                return None
+            if e.code != 429 or attempt == 2:
+                raise
+            time.sleep(int(e.headers.get('Retry-After', 10)))
+
+
+# =====================================================================================
+# sources and objects
+# =====================================================================================
+# what the registry pins, what the loader finds in it, and the column types a row declares.
+ColumnType = Literal['categorical', 'ordered', 'continuous']
 
 
 @dataclass(frozen=True)
@@ -61,27 +95,11 @@ class ManifestRow:
 Manifest = Mapping[tuple[Source, str], ManifestRow]  # (source, object name) -> its file
 
 
-def fetch(url: str) -> bytes | None:
-    """The default fetch; None on a 404 or a refusal so the caller can try the next location;
-    a 429 (OSF after a burst of downloads) waits the `Retry-After` seconds and tries again."""
-    req = urllib.request.Request(url, headers={'User-Agent': 'mixedbench'})
-    for attempt in range(3):
-        try:
-            with urllib.request.urlopen(req, timeout=120, context=TLS) as r:
-                return r.read()
-        except urllib.error.HTTPError as e:
-            if e.code in (401, 403, 404):  # Dryad refuses a script with 401
-                return None
-            if e.code != 429 or attempt == 2:
-                raise
-            time.sleep(int(e.headers.get('Retry-After', 10)))
-
-
-# ==============================================================================================
-# loader
-# ==============================================================================================
-
-
+# =====================================================================================
+# loader class
+# =====================================================================================
+# the cache below one folder: a download is fetched once per cache, a source parsed once per
+# loader.
 class Loader:
     def __init__(
         self,
@@ -90,7 +108,7 @@ class Loader:
         manifest: Manifest | None = None,
     ):
         """With a manifest, `load` reads only the object's file, and fetches only that file of
-        a git source (ADR 0003, #4); without one, the whole source, as the survey needs for
+        a git source (ADR 0003); without one, the whole source, as the survey needs for
         objects not yet merged."""
         self.cache = Path(cache)
         self.fetch = fetch
@@ -211,7 +229,7 @@ class Loader:
         cran = source.kind == 'cran'
         if cran:
             candidates = []
-            if (tree / 'data').exists():  # GLMMadaptive ships no data
+            if (tree / 'data').exists():  # a package may ship no data
                 candidates = (tree / 'data').iterdir()
         else:
             root = tree / (source.path or '')
@@ -273,8 +291,8 @@ class Loader:
 
     @staticmethod
     def _decimalPoint(values: pd.Series) -> pd.Series:
-        """A string column with decimal commas and no points (a European csv, kleisner_2026's
-        BMI) read with points; anything else as it is, so a thousands separator fails loudly."""
+        """A string column with decimal commas and no points (a European csv) read with
+        points; anything else as it is, so a thousands separator fails loudly."""
         if not pd.api.types.is_string_dtype(values):
             return values
         if values.str.contains('.', regex=False).any():
