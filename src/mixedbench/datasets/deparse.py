@@ -33,26 +33,26 @@ import pandas as pd
 # =====================================================================================
 # the nodes the parser builds from the tokens.
 @dataclass(frozen=True)
-class Symbol:
+class _Symbol:
     """A bare name: the target of `sleep <-`, else a variable, which the reader refuses."""
 
     name: str
 
 
 @dataclass(frozen=True)
-class Op:
+class _Op:
     op: str
     left: Node | None  # None for a unary operator
     right: Node
 
 
 @dataclass(frozen=True)
-class Call:
+class _Call:
     name: str
     arguments: list[tuple[str | None, Node]]  # (keyword or None, value) in call order
 
 
-Node = Call | Op | Symbol | float | str | None  # None is NA
+Node = _Call | _Op | _Symbol | float | str | None  # None is NA
 Value = list | pd.Categorical | dict | pd.DataFrame  # a vector, a factor, a list, a table
 
 
@@ -89,13 +89,13 @@ class Deparse:
         with which ChickWeight resets its formula's environment; it is skipped."""
         target, value = self.statements[0]
         for later, _ in self.statements[1:]:
-            if not (isinstance(later, Call) and later.name == 'environment'):
+            if not (isinstance(later, _Call) and later.name == 'environment'):
                 raise self._error('a second statement')
         table = self._evaluate(value)
         if not isinstance(table, pd.DataFrame):
             raise self._error('an object that is no data frame')
         name = target  # `"ChickWeight" <-`
-        if isinstance(target, Symbol):  # `sleep <-`
+        if isinstance(target, _Symbol):  # `sleep <-`
             name = target.name
         return {name: table}
 
@@ -138,14 +138,14 @@ class Deparse:
         node = self._unary()
         while self._peek() in (':', '~', '|'):
             _, op = self._take()
-            node = Op(op, node, self._unary())
+            node = _Op(op, node, self._unary())
         return node
 
     def _unary(self) -> Node:
         """Unary minus binds tighter than `:` in R: `-1:3` runs from -1 to 3."""
         if self._peek() in ('-', '~'):
             _, op = self._take()
-            return Op(op, None, self._unary())
+            return _Op(op, None, self._unary())
         return self._primary()
 
     def _primary(self) -> Node:
@@ -159,10 +159,10 @@ class Deparse:
         if kind == 'name' and self._peek() == '(':
             return self._call(text)
         if kind == 'name':
-            return Symbol(text)
+            return _Symbol(text)
         raise self._error(f'token {text!r}')
 
-    def _call(self, name: str) -> Call:
+    def _call(self, name: str) -> _Call:
         self._take('(')
         arguments = []
         if self._peek() != ')':
@@ -171,7 +171,7 @@ class Deparse:
             self._take(',')
             arguments.append(self._argument())
         self._take(')')
-        return Call(name, arguments)
+        return _Call(name, arguments)
 
     def _argument(self) -> tuple[str | None, Node]:
         is_keyword = self.at + 1 < len(self.tokens) and self.tokens[self.at + 1][1] == '='
@@ -201,15 +201,15 @@ class Deparse:
     # a vector is a list of floats, ints, strings and None (NA).
 
     def _evaluate(self, node: Node) -> Value:
-        if isinstance(node, Call):
+        if isinstance(node, _Call):
             return self._apply(node)
-        if isinstance(node, Op):
+        if isinstance(node, _Op):
             return self._operate(node)
-        if isinstance(node, Symbol):
+        if isinstance(node, _Symbol):
             raise self._error(f'variable {node.name}')
         return [node]  # a literal is a vector of length one
 
-    def _apply(self, call: Call) -> Value:
+    def _apply(self, call: _Call) -> Value:
         if call.name == 'c':
             return self._combine(call)
         if call.name == 'list':
@@ -226,7 +226,7 @@ class Deparse:
             return self._repeat(call)
         raise self._error(f'function {call.name}()')
 
-    def _operate(self, node: Op) -> Value:
+    def _operate(self, node: _Op) -> Value:
         right = self._evaluate(node.right)
         if node.op == '-' and node.left is None:
             return [-value for value in right]
@@ -235,7 +235,7 @@ class Deparse:
             return list(range(start, self._whole(right) + 1))
         raise self._error(f'operator {node.op}')
 
-    def _arguments(self, call: Call, keywords: tuple[str, ...] = ()) -> tuple[list, dict]:
+    def _arguments(self, call: _Call, keywords: tuple[str, ...] = ()) -> tuple[list, dict]:
         """The call's positional values and its keyword values, evaluated."""
         positional, named = [], {}
         for keyword, node in call.arguments:
@@ -247,11 +247,11 @@ class Deparse:
                 raise self._error(f'argument {keyword}= of {call.name}()')
         return positional, named
 
-    def _combine(self, call: Call) -> list:
+    def _combine(self, call: _Call) -> list:
         vectors, _ = self._arguments(call)
         return [value for vector in vectors for value in vector]
 
-    def _columns(self, call: Call) -> dict[str, Value]:
+    def _columns(self, call: _Call) -> dict[str, Value]:
         """list() and data.frame(): every argument is a named column."""
         columns = {}
         for keyword, node in call.arguments:
@@ -281,7 +281,7 @@ class Deparse:
             return np.array(values, dtype=np.int32)
         return np.array(values, dtype=float)  # None becomes NaN
 
-    def _structure(self, call: Call) -> pd.DataFrame:
+    def _structure(self, call: _Call) -> pd.DataFrame:
         """structure(list(...), ...) is a table.
         Its attributes are parsed and dropped, since a table keeps none of them:
         row names and class, and nlme's groupedData formula, outer, labels and units.
@@ -292,7 +292,7 @@ class Deparse:
                 raise self._error(f'attribute {keyword}= of structure()')
         return self._table(self._evaluate(body))
 
-    def _factor(self, call: Call) -> pd.Categorical:
+    def _factor(self, call: _Call) -> pd.Categorical:
         """factor(x, levels, labels) as R evaluates it:
         the levels default to the sorted distinct values, numbers sorted as numbers,
         the labels to the levels as R prints them.
@@ -311,14 +311,14 @@ class Deparse:
             return str(int(level))
         return str(level)
 
-    def _levels(self, call: Call) -> pd.Categorical:
+    def _levels(self, call: _Call) -> pd.Categorical:
         """gl(n, k): n levels `1` to `n`, each repeated k times."""
         (n, k), _ = self._arguments(call)
         n, k = self._whole(n), self._whole(k)
         codes = np.repeat(np.arange(n), k)  # (n * k,)
         return pd.Categorical.from_codes(codes, categories=[str(level + 1) for level in range(n)])
 
-    def _repeat(self, call: Call) -> list:
+    def _repeat(self, call: _Call) -> list:
         """rep(x, times) and rep.int(x, times): the whole vector, `times` over."""
         (values, times), _ = self._arguments(call)
         return values * self._whole(times)
