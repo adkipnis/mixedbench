@@ -13,13 +13,10 @@ A benchmark of posterior approximation and prediction for generalized linear mix
 
 ## What and why
 
-- Bayesian methods for GLMMs are hard to compare: each paper tests them on its own few
-  datasets.
-- mixedbench lists the documented models of 641 public tabular datasets with grouping
-  structure, each downloaded at a fixed version.
-- One fixed set of rules, the contract, turns each into a problem ready to fit, so results of
-  different methods are comparable. From release 1.1, suites add reference posteriors to score
-  against.
+- Bayesian methods for GLMMs are hard to compare: each paper and released method tests them on its own few datasets. This benchmark aims to fix that.
+- mixedbench lists the documented mixed-effects models of 641 public tabular datasets with grouping structure, each downloaded at a fixed version.
+- A fixed set of rules turns each dataset into an inference problem ready to fit. Results of different methods are comparable.
+- From release 1.1, suites add reference posteriors to score against.
 
 ## Install
 
@@ -44,7 +41,7 @@ materialise(Problem.build(row, table), cache)
 problem = load('lme4/sleepstudy/1', cache)  # later, offline
 ```
 
-The [demo](https://github.com/adkipnis/mixedbench/blob/main/examples/demo.ipynb) walks the same path with its outputs.
+Check out the [demo](https://github.com/adkipnis/mixedbench/blob/main/examples/demo.ipynb) for a friendly introduction.
 
 ## Contents
 
@@ -59,12 +56,11 @@ The [demo](https://github.com/adkipnis/mixedbench/blob/main/examples/demo.ipynb)
 
 ## Contributing
 
-Broken sources, missing datasets and bug reports are welcome; how to help is in
-[`CONTRIBUTING.md`](https://github.com/adkipnis/mixedbench/blob/main/CONTRIBUTING.md).
+Interested in becoming part of `mixedbench`? Check out [`CONTRIBUTING.md`](https://github.com/adkipnis/mixedbench/blob/main/CONTRIBUTING.md).
 
 ## Citing
 
-Cite the release you used: [`CITATION.cff`](https://github.com/adkipnis/mixedbench/blob/main/CITATION.cff), or "Cite this repository" on
+Please cite the release you used: [`CITATION.cff`](https://github.com/adkipnis/mixedbench/blob/main/CITATION.cff), or click "Cite this repository" on
 GitHub. The Zenodo DOI follows with release 1.0.
 
 ## Licence
