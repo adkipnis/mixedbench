@@ -58,16 +58,16 @@ Planned ([`ROADMAP.md`](ROADMAP.md)): `contract/`, `suite/`, `references/`, `met
   `dict.fromkeys`, `|` merges or comprehensions.
 - A helper used by one class only is a static method of that class.
 - Guard `argparse` blocks with `# fmt: off` / `# fmt: on`.
-- Module docstring: one sentence on what the module defines and who writes or reads it,
-  then a `pipeline:` section: the input on its own line, then one `-> result` line per step
-  with the function that does it in a column on the right.
+- Module docstring: one sentence on what the module defines (who imports it is the
+  `CONTRIBUTING.md` map's), then a `pipeline:` section: the input on its own line, then one
+  `-> result` line per step with the function that does it in a column on the right.
 - File layout: banners split a file (`# ====` for globals / classes / main, `# ----` for
   subsections), each named in words a new reader understands and followed by one comment
   line on why the section exists, unless a class docstring right below says it. Comments
   start in lower case; docstrings are capitalised sentences. One pipeline class per script, steps as methods; a
   recipe-style `__main__` instantiates it and reads as the run's table of contents.
 - Class layout: public methods first, then the private steps in pipeline order under a
-  `# ----` banner naming the pipeline.
+  `# ----` banner naming the pipeline by its arrows alone (`# url -> archive -> tree`).
 
 ### Arrays
 
@@ -114,7 +114,9 @@ makes code harder to understand or change.
 - Obvious over clever, in code you write, review or rewrite: the simplest form a reader
   guesses right on first read. If 200 lines could be 50, rewrite them.
 - Docstrings only for non-obvious functionality or architectural decisions, one or two
-  lines; detail goes into inline why-comments, which cite sources (paper link, equation).
+  lines: none on a method its name and body already explain, otherwise a plain sentence on
+  what is not obvious, never a chain of `;` clauses; detail goes into inline why-comments,
+  which cite sources (paper link, equation).
 - A comment explains the code, not its bookkeeping: the case that prompted a rule goes to
   the test that pins it, a definition to `CONTEXT.md`, how it was decided to a history.
 
