@@ -1,0 +1,4 @@
+site plot flag mark yield
+Ba04 1 T T 1.5
+BT06 2 F NA NA
+a 3 T F 2.25
