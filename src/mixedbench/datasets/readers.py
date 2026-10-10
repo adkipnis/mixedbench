@@ -1,4 +1,4 @@
-"""File to frames, by format, and which files of a tree hold data: R files through pyreadr,
+"""File to tables, by format, and which files of a tree hold data: R files through pyreadr,
 or rdata where librdata rejects one; a CRAN package's data/ folder as utils::data() reads it;
 delimited and fixed-width text, Excel workbooks, JSON records and Stan data dicts, SPSS, Stata
 and Arrow through pandas."""
@@ -38,12 +38,11 @@ RDATA_ERRORS = (ValueError, AssertionError)
 # a class rdata has no constructor for, read as the data frame it extends
 FRAME_CLASSES = r'Missing constructor for R class "(data\.table|tbl_df|tbl)"'
 Reader = Literal['pyreadr', 'rdata', 'pandas', 'deparse']
-Frames = dict[str, pd.DataFrame | None]  # object name -> its table; None when it has no table
 
 
 def read(
     file: Path, label: str, *, layout: tuple[str, ...] | None = None, cran: bool = False
-) -> tuple[Frames, Reader]:
+) -> tuple[dict[str, pd.DataFrame | None], Reader]:
     """The file's objects and its route. An R file through pyreadr, or rdata where librdata
     rejects it (geepack's muscatine, a plain data frame); a file in a CRAN package's data/
     folder by utils::data()'s rules; any other file one object named by its `label`, or one per
@@ -56,7 +55,7 @@ def read(
             return readRdata(file), 'rdata'
     if cran and suffix == '.r':
         try:
-            return Deparse(file).frames(), 'deparse'
+            return Deparse(file).tables(), 'deparse'
         except DeparseError:  # most of base R's data/*.R files: time series, matrices
             return {file.stem: None}, 'deparse'
     if cran:
@@ -116,47 +115,47 @@ def bare(file: Path) -> Path:
 # ==============================================================================================
 
 
-def readR(path: Path) -> Frames:
+def readR(path: Path) -> dict[str, pd.DataFrame | None]:
     """`pyreadr.read_r`, except that factor levels keep R's order and that an object pyreadr
     cannot turn into a DataFrame is None; a file librdata rejects raises."""
     parser = PyreadrParser()
     parser.parse(bytes(path))
-    frames = {}
+    tables = {}
     for table in parser.table_data:
         name = table.name or path.stem  # an .rds carries no object name
         if table.dim_num > 2:  # pyreadr hands these to xarray (base R's Titanic)
-            frames[name] = None
+            tables[name] = None
             continue
         try:
             df = table.convert_to_dataframe()
         except PyreadrError:  # a matrix column (gamlss.data's aep)
-            frames[name] = None
+            tables[name] = None
             continue
         for position, labels in table.value_labels.items():  # {column: {code: label}}
             column = df.columns[position]
             levels = [labels[code] for code in sorted(labels)]  # R orders levels by code
             # pyreadr used astype('category'), which sorts levels and drops unused ones
             df[column] = df[column].cat.set_categories(levels)
-        frames[name] = numbersAsFloat(df)
-    return frames
+        tables[name] = numbersAsFloat(df)
+    return tables
 
 
-def readRdata(path: Path) -> Frames:
+def readRdata(path: Path) -> dict[str, pd.DataFrame | None]:
     """An R file librdata rejects (geepack's muscatine, plonsky_2019_osf's .RData) through the
     pure-Python rdata; a list or a model fit is no table."""
     try:
         objects = rdataObjects(path)
     except RDATA_ERRORS:
         return {path.stem: None}
-    frames = {}
+    tables = {}
     for name, value in objects.items():
         if name.startswith('.'):  # R's hidden objects (`.Random.seed`), left out as ls() does
             continue
-        frames[name] = None
+        tables[name] = None
         if isinstance(value, pd.DataFrame):
             # R's integer row names, 1-based (or a subset's, jing_2020_osf): pyreadr's 0-based range
-            frames[name] = pyreadrTypes(value.reset_index(drop=True))
-    return frames
+            tables[name] = pyreadrTypes(value.reset_index(drop=True))
+    return tables
 
 
 def rdataObjects(path: Path) -> dict:
@@ -197,7 +196,7 @@ def numbersAsFloat(df: pd.DataFrame) -> pd.DataFrame:
 # ==============================================================================================
 
 
-def readData(file: Path) -> Frames:
+def readData(file: Path) -> dict[str, pd.DataFrame | None]:
     """A CRAN package's `data/*.txt`, `.tab` or `.csv` as utils::data() reads it:
     read.table(header = TRUE, as.is = FALSE), with `sep = ';'` for a `.csv`. Strings become
     categoricals with sorted levels, as read.table sorts them: in codepoint order, R's in the
@@ -216,7 +215,7 @@ def readData(file: Path) -> Frames:
 # ==============================================================================================
 
 
-def readWorkbook(file: Path, label: str) -> Frames:
+def readWorkbook(file: Path, label: str) -> dict[str, pd.DataFrame | None]:
     """One object per data sheet, `<label>!<sheet>`, names stripped as in text files; a
     workbook of one data sheet is the file. The sheets named like documentation (`Contents`)
     and the empty ones (Excel's default `Sheet2` and `Sheet3`) are none."""

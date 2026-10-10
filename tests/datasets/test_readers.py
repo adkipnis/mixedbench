@@ -1,4 +1,4 @@
-"""The formats at their two seams: `read` turns a file into frames and names its reader,
+"""The formats at their two seams: `read` turns a file into tables and names its reader,
 `isData` says which files of a tree hold data. The fixtures are the extracted archives
 `make_fixture.R` and `make_fixtures.py` build: a CRAN-shaped package and a GitHub archive of
 the awkward files met in the pull, plus single R files as deposits serve them."""
@@ -34,18 +34,18 @@ def example(tmp_path_factory) -> Path:
     return extracted(tmp_path_factory, 'example-c0ffee1.tar.gz') / 'example-c0ffee1'
 
 
-def readCran(package: Path, file: str) -> tuple[readers.Frames, readers.Reader]:
+def readCran(package: Path, file: str) -> tuple[dict[str, pd.DataFrame | None], readers.Reader]:
     return readers.read(package / file, file, cran=True)
 
 
-def readFixture(name: str) -> tuple[readers.Frames, readers.Reader]:
+def readFixture(name: str) -> tuple[dict[str, pd.DataFrame | None], readers.Reader]:
     return readers.read(FIXTURES / name, name)
 
 
 def readExample(example: Path, file: str, layout: tuple[str, ...] | None = None) -> pd.DataFrame:
     """The one frame of a file that is not a workbook of several sheets."""
-    frames, _ = readers.read(example / file, file, layout=layout)
-    return frames[file]
+    tables, _ = readers.read(example / file, file, layout=layout)
+    return tables[file]
 
 
 # ==============================================================================================
@@ -56,8 +56,8 @@ def readExample(example: Path, file: str, layout: tuple[str, ...] | None = None)
 def test_r_factor_levels_keep_r_order(package):
     """pyreadr's own `read_r` sorts factor levels and drops unused ones; the reader restores
     R's order from parser internals, which this test pins (`bird` is an unused level)."""
-    frames, reader = readCran(package, 'data/pets.rda')
-    pets = frames['pets']
+    tables, reader = readCran(package, 'data/pets.rda')
+    pets = tables['pets']
     assert reader == 'pyreadr'
     assert list(pets['species'].cat.categories) == ['dog', 'cat', 'fish', 'bird']
     assert list(pets['species']) == ['dog', 'cat', 'fish', 'dog', 'cat', 'dog']
@@ -71,8 +71,8 @@ def test_an_integer_column_with_na_reads_as_float_not_object():
     """pyreadr renders an R integer vector with NA as an object column of ints and NaN, which
     no numeric check accepts (mlmRev's `star`); the reader makes it a float column."""
     # R wrote a frame with an integer column holding one NA and a plain string column
-    frames, _ = readFixture('counts.rds')
-    counts = frames['counts']
+    tables, _ = readFixture('counts.rds')
+    counts = tables['counts']
     assert counts['score'].dtype.kind == 'f'
     assert counts['score'].isna().sum() == 1
     assert pd.api.types.is_string_dtype(counts['note'])
@@ -81,15 +81,15 @@ def test_an_integer_column_with_na_reads_as_float_not_object():
 def test_an_object_pyreadr_cannot_frame_has_no_table(package):
     """gamlss.data's aep holds a matrix column; the object stays in the census without a
     table rather than failing the whole source."""
-    frames, reader = readCran(package, 'data/wide.rda')
-    assert (frames, reader) == ({'wide': None}, 'pyreadr')
+    tables, reader = readCran(package, 'data/wide.rda')
+    assert (tables, reader) == ({'wide': None}, 'pyreadr')
 
 
 def test_an_r_file_librdata_rejects_is_read_by_rdata(package):
     """geepack's muscatine is a plain data frame librdata calls an unrecognized object; the
     pure-Python rdata reads it, so no object needs R (ADR 0003, #9)."""
-    frames, reader = readCran(package, 'data/visits.rda')
-    visits = frames['visits']
+    tables, reader = readCran(package, 'data/visits.rda')
+    visits = tables['visits']
     assert reader == 'rdata'
     assert list(visits['clinic'].cat.categories) == ['north', 'south']
     assert list(visits.index) == [0, 1, 2]
@@ -99,10 +99,10 @@ def test_an_r_file_librdata_rejects_is_read_by_rdata(package):
 def test_a_rejected_r_file_keeps_its_frames_and_its_lists_without_a_table():
     """A Tier D `.RData` keeps model fits and lists beside its tables; rdata reads the frame,
     the list has no table, as pyreadr's unframable objects have none."""
-    frames, reader = readFixture('fits.rda')
+    tables, reader = readFixture('fits.rda')
     assert reader == 'rdata'
-    assert frames['fit'] is None
-    roster = frames['roster']
+    assert tables['fit'] is None
+    roster = tables['roster']
     assert roster.shape == (3, 2)
     assert list(roster['ward'].cat.categories) == ['a', 'b']
     assert roster['beds'].isna().sum() == 1  # an integer column with NA is float, as pyreadr's
@@ -112,9 +112,9 @@ def test_a_rejected_rds_is_named_by_its_file_and_one_rdata_cannot_parse_has_no_t
     """An .rds holds one unnamed object, named by its file as pyreadr names it; a model fit's
     bytecode, which rdata cannot parse, leaves the file one object without a table rather
     than failing the source."""
-    frames, reader = readFixture('roster.rds')
+    tables, reader = readFixture('roster.rds')
     assert reader == 'rdata'
-    assert frames['roster'].shape == (3, 2)
+    assert tables['roster'].shape == (3, 2)
     assert readFixture('fit.rds') == ({'fit': None}, 'rdata')
 
 
@@ -127,8 +127,8 @@ def test_a_data_txt_reads_as_read_table_reads_it(package):
     """agridat ships its tables as `data/*.txt`, which utils::data() reads with
     read.table(header = TRUE, as.is = FALSE): quoted strings become factors with sorted
     levels, `NA` is missing. The reader does the same in Python (ADR 0003)."""
-    frames, reader = readCran(package, 'data/plots.txt')
-    plots = frames['plots']
+    tables, reader = readCran(package, 'data/plots.txt')
+    plots = tables['plots']
     assert reader == 'pandas'
     assert list(plots.columns) == ['field', 'variety', 'plants', 'yield']
     assert list(plots['field']) == ['north A', 'south B', 'north A', 'west']
@@ -145,13 +145,13 @@ def test_a_data_csv_is_read_with_semicolons(package):
 
 
 def test_a_data_r_file_reads_to_the_frame_r_makes_of_it(package):
-    """Base R's `data/*.R` files are deparsed frames; the deparse reader evaluates them to the
+    """Base R's `data/*.R` files are deparsed tables; the deparse reader evaluates them to the
     frame R makes (`growth.rda`, saved by make_fixture.R): labels in level order, numeric
     levels sorted as numbers, R's integers, `ordered` dropped as pyreadr drops it."""
-    frames, reader = readCran(package, 'data/growth.R')
+    tables, reader = readCran(package, 'data/growth.R')
     twin, _ = readFixture('growth.rda')
     assert reader == 'deparse'
-    pd.testing.assert_frame_equal(frames['growth'], twin['growth'])
+    pd.testing.assert_frame_equal(tables['growth'], twin['growth'])
 
 
 def test_a_data_r_file_outside_the_deparse_subset_has_no_table(tmp_path):
@@ -197,16 +197,16 @@ def test_a_stan_data_dict_is_the_table_of_its_observation_length_arrays(example)
 
 def test_a_gzipped_tsv_is_read_as_the_tsv_it_wraps():
     """PMLB serves every table as `.tsv.gz`; the wrapper names no format of its own."""
-    frames, _ = readFixture('apnea.tsv.gz')
-    apnea = frames['apnea.tsv.gz']
+    tables, _ = readFixture('apnea.tsv.gz')
+    apnea = tables['apnea.tsv.gz']
     assert list(apnea.columns) == ['Scorer', 'Subject', 'target']
     assert list(apnea['Subject']) == [1, 1, 2, 2]
 
 
 def test_a_parquet_file_reads():
     """OpenML serves every dataset as `dataset_<id>.pq`; the Tier O hits come that way."""
-    frames, _ = readFixture('dataset_42.pq')
-    assert list(frames['dataset_42.pq']['school']) == ['GP', 'GP', 'MS']
+    tables, _ = readFixture('dataset_42.pq')
+    assert list(tables['dataset_42.pq']['school']) == ['GP', 'GP', 'MS']
 
 
 def test_whitespace_aligned_text_and_latin1_text_read(example):
@@ -267,10 +267,10 @@ def test_a_workbook_of_several_sheets_is_one_object_per_data_sheet(example):
     """Snijders & Bosker's companion is one workbook, a sheet per chapter dataset and a
     `Contents` sheet describing them: each data sheet is an object `<file>!<sheet>`, the
     contents sheet none; a single-sheet workbook is the file."""
-    frames, _ = readers.read(example / 'formats/chapters.xlsx', 'formats/chapters.xlsx')
-    assert set(frames) == {'formats/chapters.xlsx!03A', 'formats/chapters.xlsx!03B'}
-    assert list(frames['formats/chapters.xlsx!03B']['score']) == [10, 12, 8]
-    schools = frames['formats/chapters.xlsx!03A']
+    tables, _ = readers.read(example / 'formats/chapters.xlsx', 'formats/chapters.xlsx')
+    assert set(tables) == {'formats/chapters.xlsx!03A', 'formats/chapters.xlsx!03B'}
+    assert list(tables['formats/chapters.xlsx!03B']['score']) == [10, 12, 8]
+    schools = tables['formats/chapters.xlsx!03A']
     assert list(schools.columns) == ['school', 'size']  # padded names stripped, as in text files
     single, _ = readers.read(example / 'formats/trials.xlsx', 'formats/trials.xlsx')
     assert set(single) == {'formats/trials.xlsx'}

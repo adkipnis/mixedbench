@@ -1,4 +1,4 @@
-"""The deparse reader on base R's `data/*.R` grammar: the frames it evaluates, the constructs it
+"""The deparse reader on base R's `data/*.R` grammar: the tables it evaluates, the constructs it
 refuses, and a property test that any frame R would deparse reads back as itself."""
 
 from __future__ import annotations
@@ -15,7 +15,7 @@ def test_row_names_of_data_frame_are_no_column(tmp_path):
     came out with six columns where R has five, found by the census re-pull of #9)."""
     file = tmp_path / 'savings.R'
     file.write_text('savings <- data.frame(sr = c(11.43, 12.07), row.names = c("A", "B"))\n')
-    savings = Deparse(file).frames()['savings']
+    savings = Deparse(file).tables()['savings']
     assert list(savings.columns) == ['sr']
 
 
@@ -24,7 +24,7 @@ def test_a_construct_outside_the_deparse_subset_raises_naming_file_and_construct
     file = tmp_path / 'series.R'
     file.write_text('series <- ts(c(1, 2, 3), start = 1990)\n')
     with pytest.raises(ValueError, match=r'series\.R: function ts\(\)'):
-        Deparse(file).frames()
+        Deparse(file).tables()
 
 
 # a frame of numeric and string columns, written as base R's data/*.R files write one
@@ -43,7 +43,7 @@ def holdsAValue(column: list) -> bool:
 
 
 @st.composite
-def frames(draw) -> dict[str, list]:
+def tables(draw) -> dict[str, list]:
     n = draw(st.integers(1, 5))
     names = draw(st.lists(NAMES, min_size=1, max_size=4, unique=True))
     columns = {}
@@ -71,12 +71,12 @@ def deparsed(columns: dict[str, list]) -> str:
     return f'drawn <- data.frame({", ".join(parts)})\n'
 
 
-@given(frames())
+@given(tables())
 @settings(max_examples=200, deadline=None)
 def test_deparsed_numeric_and_string_vectors_round_trip(tmp_path_factory, columns):
     """Any frame of numbers, strings and NA that R would deparse reads back as itself."""
     file = tmp_path_factory.mktemp('deparse') / 'drawn.R'
     file.write_text(deparsed(columns), encoding='utf-8')
     expected = pd.DataFrame(columns)
-    actual = Deparse(file).frames()['drawn']
+    actual = Deparse(file).tables()['drawn']
     pd.testing.assert_frame_equal(actual, expected, check_dtype=False)

@@ -30,8 +30,8 @@ src/mixedbench/
     __init__.py         the installed files; sources.yaml, manifest.csv and registry.csv as objects
     row.py              the row grammar: dialect, columns, vocabularies, cell grammars
   datasets/             the loader: a pinned source in, a typed DataFrame out, no R
-    loader.py           the pipeline url -> archive -> tree -> files -> frames, and the cache
-    readers.py          file -> frames by format; which files of a tree hold data
+    loader.py           the pipeline url -> archive -> tree -> files -> tables, and the cache
+    readers.py          file -> tables by format; which files of a tree hold data
     deparse.py          base R's data/*.R files evaluated without R
     intermediates.pem   TLS intermediates a source's server leaves out of its chain
   contract/             the contract: a registry row and its table in, a problem out
@@ -61,11 +61,11 @@ the decision stays inside.
   distribution, since the wheel carries them as `mixedbench/registry/files/`) and how
   `sources.yaml` becomes a `Source` per label, `manifest.csv` a `Manifest`, `registry.csv` a
   list of `Row`. `Tables` is the one line from a row to its typed table.
-- **`datasets/loader.py`**: the pipeline from a pinned source to frames and the cache under it:
+- **`datasets/loader.py`**: the pipeline from a pinned source to tables and the cache under it:
   which URLs to try, where a download lands, extraction, checksum verification on every load,
   reading one object's manifest file against enumerating a whole source, and the column
   `types` a row declares for a format that carries none. Formats are not its business.
-- **`datasets/readers.py`**: which file formats exist and how each becomes frames: the route
+- **`datasets/readers.py`**: which file formats exist and how each becomes tables: the route
   (`pyreadr`, `rdata`, `pandas`, `deparse`), what counts as data in a tree against
   documentation, R fidelity (level order kept, an integer vector with NA as float), a
   workbook's sheets, a Stan data dict as a table.
@@ -92,7 +92,7 @@ the decision stays inside.
   and methods, `snake_case` variables and the dataclass fields that mirror a registry column
   or a file field, `UPPER_SNAKE_CASE` constants.
 - One pipeline class per module, its steps as methods in run order under a `# ----` banner
-  that names the pipeline (`url -> archive -> tree -> files -> frames`). The steps carry a
+  that names the pipeline (`url -> archive -> tree -> files -> tables`). The steps carry a
   leading `_` in `datasets/` (`Loader`, `Deparse`) and none in `contract/` and `suite/`
   (`Builder`, `Admission`).
 - Tests: `tests/<package>/test_<module>.py`; a test function is a sentence,
