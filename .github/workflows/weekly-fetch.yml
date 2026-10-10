@@ -56,5 +56,5 @@ jobs:
           done < open.tsv
           test "$OUTCOME" = success  # the run stays red while a source fails
       - name: Run the demo notebook
-        if: always()  # a failing source must not hide a broken notebook
+        if: ${{ !cancelled() }}  # a failing source must not hide a broken notebook
         run: uv run pytest --nbmake examples/demo.ipynb
