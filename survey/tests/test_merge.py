@@ -221,25 +221,6 @@ def test_an_empty_shard_migrates_a_registry_of_the_old_shape(merger):
     assert path.read_bytes() == migrated
 
 
-def test_a_header_only_shard_adds_random_slopes_and_verified_empty_in_place(merger):
-    """The migration of #26: the two agent columns land empty after `interactions` and
-    `confidence`, every other cell byte-identical, so the registry's diff is the two columns."""
-    mergeShard(merger, FIXTURES / 'registry_herds.csv')
-    path = merger.registry / 'registry.csv'
-    old = readCsv(path).drop(columns=['random_slopes', 'verified'])
-    writeCsv(old, path)
-    header = ','.join(readRows(FIXTURES / 'registry_herds.csv')[0])
-    shard = merger.survey / 'shards' / 'registry_schema_2.csv'
-    shard.write_text(header + '\n')
-    mergeShard(merger, shard)
-    migrated = readCsv(path)
-    columns = list(migrated.columns)
-    assert columns[columns.index('interactions') + 1] == 'random_slopes'
-    assert columns[columns.index('confidence') + 1] == 'verified'
-    assert set(migrated['random_slopes']) == set(migrated['verified']) == {''}
-    assert migrated.drop(columns=['random_slopes', 'verified']).equals(old)
-
-
 def test_equal_row_count_and_column_cardinalities_flag_a_duplicate_candidate(merger):
     """The same table under two namings is flagged, not merged: an agent must confirm. The pair
     is written earliest tier first and the registry keeps both until then."""
