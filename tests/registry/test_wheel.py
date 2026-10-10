@@ -83,6 +83,16 @@ def test_both_licence_files_ship_in_the_wheel(installed: tuple[Path, dict]) -> N
     assert licences == {'LICENSE', 'LICENSE-CC-BY-4.0'}
 
 
+def test_the_reference_runners_r_script_and_lock_ship_in_the_wheel(
+    installed: tuple[Path, dict],
+) -> None:
+    """`references.run` calls `run.R` and checks the pins in `renv.lock` from the install."""
+    target, _ = installed
+    references = target / 'mixedbench' / 'references'
+    assert (references / 'run.R').is_file()
+    assert (references / 'renv.lock').is_file()
+
+
 def installedDistribution(target: Path) -> importlib.metadata.Distribution:
     [distribution] = importlib.metadata.distributions(path=[str(target)])
     return distribution
