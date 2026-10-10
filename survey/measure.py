@@ -11,7 +11,7 @@ from itertools import combinations
 import numpy as np
 import pandas as pd
 from mixedbench.contract import columnType, withComposites
-from mixedbench.registry.row import parseTypes, parts, splitList
+from mixedbench.registry.row import Row, parts
 
 # =====================================================================================
 # globals
@@ -47,15 +47,13 @@ def observed(values: pd.Series, q: float) -> int | float:
 # pipeline: registry row -> relation -> group sizes per factor -> covariate columns -> d
 # =====================================================================================
 class Measurer:
-    def __init__(self, df: pd.DataFrame, row: dict) -> None:
+    def __init__(self, df: pd.DataFrame, row: Row) -> None:
         self.row = row
-        self.factors = splitList(row['grouping_factors'])
-        measured = df[df[row['response']].notna()]  # a PK table's dosing rows carry no response
+        self.factors = row.grouping_factors
+        measured = df[df[row.response].notna()]  # a PK table's dosing rows carry no response
         self.df = withComposites(measured, self.factors)
-        self.identity = {k: row[k] for k in IDENTITY}
-        self.declared = parseTypes(row['types'])
-        self.covariates = splitList(row['covariates'])
-        taken = {row['response'], row['trials'], *self.factors, *splitList(row['ignore'])}
+        self.identity = {k: getattr(row, k) for k in IDENTITY}
+        taken = {row.response, row.trials, *self.factors, *row.ignore}
         self.columnNames = [c for c in df.columns if c not in taken]
 
     def columns(self) -> list[dict]:
@@ -113,7 +111,7 @@ class Measurer:
     # ---------------------------------------------------------------------------------
     def describe(self, column: str) -> dict:
         values = self.df[column]
-        kind, levels = columnType(values, self.declared.get(column, ''))
+        kind, levels = columnType(values, self.row.types.get(column, ''))
         constantWithin = [f for f in self.factors if self.constantWithin(column, f)]
         return {
             'type': kind,
@@ -121,7 +119,7 @@ class Measurer:
             'level': 'group' if constantWithin else 'within',
             'constant_within': ';'.join(constantWithin),
             'missing_share': round(float(values.isna().mean()), 4),
-            'in_model': 'yes' if column in self.covariates else 'no',
+            'in_model': 'yes' if column in self.row.covariates else 'no',
         }
 
     def constantWithin(self, column: str, factor: str) -> bool:
@@ -136,9 +134,9 @@ class Measurer:
         interactions, so that d_all is never below d_doc (envelope rule 4): continuous and
         binary count 1, categorical K − 1, an interaction the product."""
         width = {c['column']: self.width(c) for c in self.columns()}
-        interactions = splitList(self.row['interactions'])
+        interactions = self.row.interactions
         dInteractions = sum(np.prod([width[c] for c in parts(term)]) for term in interactions)
-        dDoc = sum(width[c] for c in self.covariates) + dInteractions
+        dDoc = sum(width[c] for c in self.row.covariates) + dInteractions
         dAll = sum(width.values()) + dInteractions
         return {'d_doc': int(dDoc), 'd_all': int(dAll)}
 
