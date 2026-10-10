@@ -267,10 +267,14 @@ class _DataFolder:
 
     @staticmethod
     def _typeConvert(table: pd.DataFrame) -> dict[str, pd.Series]:
-        """R's type.convert on the string columns pandas read: logicals and factors as R types them.
-        Integers stay int64, not R's int32: suite 1.1's contract hashes cover them as read."""
-        strings = table.columns[table.dtypes.map(pd.api.types.is_string_dtype)]
-        return {column: _DataFolder._logicalOrFactor(table[column]) for column in strings}
+        """R's type.convert on the columns pandas read: integers int32 (float where they hold NA),
+        logicals and factors as R types them."""
+        converted = {}
+        for column in table.columns[table.dtypes == 'int64']:
+            converted[column] = table[column].astype('int32')
+        for column in table.columns[table.dtypes.map(pd.api.types.is_string_dtype)]:
+            converted[column] = _DataFolder._logicalOrFactor(table[column])
+        return converted
 
     @staticmethod
     def _logicalOrFactor(values: pd.Series) -> pd.Series:
