@@ -56,7 +56,9 @@ Planned ([`ROADMAP.md`](ROADMAP.md)): `contract/`, `suite/`, `references/`, `met
 - A conditional expression (`a if c else b`) only when the whole line stays short; otherwise
   an `if`/`else` block. Lookup tables are literal dicts or `if` chains, never built from
   `dict.fromkeys`, `|` merges or comprehensions.
-- A helper used by one class only is a static method of that class.
+- A class per concept a reader should hold apart (a format family, a pipeline), its methods
+  static where it holds no state; module functions only for what spans the classes.
+  A helper used by one class only is a static method of that class.
 - Guard `argparse` blocks with `# fmt: off` / `# fmt: on`.
 - Module docstring: one sentence on what the module defines (who imports it is the
   `CONTRIBUTING.md` map's), optionally a short paragraph on how, then a `pipeline:` section:
