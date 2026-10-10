@@ -43,7 +43,8 @@ Planned ([`ROADMAP.md`](ROADMAP.md)): `contract/`, `suite/`, `references/`, `met
 - Absolute internal imports (`from mixedbench.contract import x`).
 - `PascalCase` classes, `camelCase` functions/methods, `snake_case` variables,
   `UPPER_SNAKE_CASE` constants.
-- Modern typing: `X | Y`, built-in generics, `from __future__ import annotations`.
+- Modern typing: `X | Y`, built-in generics, `from __future__ import annotations` (Python
+  3.11 evaluates annotations eagerly, and `-> Row` inside `Row` needs it).
   `Literal[...]` for an argument with a fixed set of options, a type alias when the same
   `Literal` repeats. Config models are Pydantic. f-strings.
 - Bind a long inline expression to a variable with a self-explanatory name on the line
@@ -63,7 +64,7 @@ Planned ([`ROADMAP.md`](ROADMAP.md)): `contract/`, `suite/`, `references/`, `met
 - File layout: banners split a file (`# ====` for globals / classes / main, `# ----` for
   subsections), each named in words a new reader understands and followed by one comment
   line on why the section exists, unless a class docstring right below says it. Comments
-  start in lower case. One pipeline class per script, steps as methods; a
+  start in lower case; docstrings are capitalised sentences. One pipeline class per script, steps as methods; a
   recipe-style `__main__` instantiates it and reads as the run's table of contents.
 - Class layout: public methods first, then the private steps in pipeline order under a
   `# ----` banner naming the pipeline.
