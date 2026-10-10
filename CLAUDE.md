@@ -49,7 +49,7 @@ Planned ([`ROADMAP.md`](ROADMAP.md)): `contract/`, `suite/`, `references/`, `met
   `Literal` repeats. Config models are Pydantic. f-strings.
 - Bind a long inline expression to a variable with a self-explanatory name on the line
   before it. One statement per line. Directory variables are `dir`, not `folder`; a
-  DataFrame is `df`, not `frame`.
+  DataFrame is a `table` (CONTEXT.md's word), several by name `tables`, never `df` or `frame`.
 - Linear code: a method lists its steps in the order a reader would describe them; a step
   with its own `if` ladder or loop becomes its own method. A search is a plain loop with an
   explicit check after it (no `for`/`else`, `while True` with exits, generator-and-`next`).
