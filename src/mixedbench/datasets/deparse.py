@@ -1,13 +1,13 @@
-"""deparse.py defines the deparse reader: base R's data/*.R files evaluated to tables without R.
+"""deparse.py defines the deparse reader: base R's data/*.R files read to tables without R.
 
-Its one design decision is the grammar,
-the subset of R that the registry's base R data files use (ChickWeight, infert, sleep, …).
-One regular expression tokenizes the text, a recursive descent parses it into calls,
-operators and symbols, and the one assigned value is evaluated:
-a vector as a list, a factor as a categorical, a list made a table by structure().
-Anything outside the subset raises, naming the file and the construct.
-The reader is for those files, not for R.
-#TODO: rewrite (simpler, more human-like).
+Base R ships some data sets as R code that rebuilds them, one assignment per file
+(`sleep <- data.frame(...)`, `"ChickWeight" <- structure(list(...), ...)`).
+The reader parses and evaluates that code itself, and mimics R in three ways:
+- it knows only the functions these files call (c, list, data.frame, structure, factor, gl, rep)
+  and raises on anything else, naming the file and the construct;
+- it types values as R does: a number is a double, `a:b` an integer, a factor keeps R's levels;
+- it drops what pyreadr drops from the same data saved by R, attributes and a factor's order,
+  so a table is the same whichever reader made it.
 
 pipeline:
 ---------
@@ -34,8 +34,9 @@ import pandas as pd
 # the nodes the parser builds from the tokens.
 @dataclass(frozen=True)
 class Symbol:
+    """A bare name: the target of `sleep <-`, else a variable, which the reader refuses."""
+
     name: str
-# TODO: this seems useless
 
 
 @dataclass(frozen=True)
@@ -83,9 +84,9 @@ class Deparse:
         self.statements = self._statements()
 
     def tables(self) -> dict[str, pd.DataFrame]:
-        """The table the file assigns, under the name it assigns it to.
-        The statements after it may only reset a formula attribute's environment,
-        which the table drops anyway.""" # TODO: this docstring does not help me understand this
+        """{name: table} of the file's first statement, `name <- table`.
+        A later statement may only be `environment(...) <- ...`,
+        with which ChickWeight resets its formula's environment; it is skipped."""
         target, value = self.statements[0]
         for later, _ in self.statements[1:]:
             if not (isinstance(later, Call) and later.name == 'environment'):
@@ -131,9 +132,9 @@ class Deparse:
         return expression, self._expression()
 
     def _expression(self) -> Node:
-        """Binary operators left to right, of which only `:` is evaluated.
-        `~` and `|` occur only in the formula attributes structure() drops,
-        so their precedence never matters."""
+        """`a:b`, and the `~` and `|` of a formula, read left to right.
+        R binds `~` and `|` differently, which never matters: only the formulas structure() drops
+        use them."""
         node = self._unary()
         while self._peek() in (':', '~', '|'):
             _, op = self._take()
@@ -271,8 +272,9 @@ class Deparse:
 
     @staticmethod
     def _vector(values: list) -> np.ndarray | list:
-        """R's type of the vector: character, integer (32-bit, as R stores it), else double.
-        An integer vector with NA is double, as pyreadr's tables have it."""
+        """The column R would make: strings if any value is one, int32 if every value is an
+        integer (only `a:b` makes them), else float.
+        An integer column with NA is float, as pyreadr reads it."""
         if any(isinstance(value, str) for value in values):
             return values
         if all(isinstance(value, int) for value in values):  # NA, None, is no int
@@ -280,7 +282,10 @@ class Deparse:
         return np.array(values, dtype=float)  # None becomes NaN
 
     def _structure(self, call: Call) -> pd.DataFrame:
-        """A list made a table by its attributes; the attributes themselves are dropped."""
+        """structure(list(...), ...) is a table.
+        Its attributes are parsed and dropped, since a table keeps none of them:
+        row names and class, and nlme's groupedData formula, outer, labels and units.
+        Any other attribute raises."""
         _, body = call.arguments[0]
         for keyword, _ in call.arguments[1:]:
             if keyword not in Deparse.DROPPED:
@@ -288,11 +293,11 @@ class Deparse:
         return self._table(self._evaluate(body))
 
     def _factor(self, call: Call) -> pd.Categorical:
-        """factor() and ordered(): levels sorted (numbers as numbers) unless given,
-        labels as R prints the levels unless given.
-        `ordered` is dropped, as pyreadr drops it from the data frames R saves,
-        so that a table is the same whichever reader made it.
-        A row's `types` restore the order where its model uses it."""
+        """factor(x, levels, labels) as R evaluates it:
+        the levels default to the sorted distinct values, numbers sorted as numbers,
+        the labels to the levels as R prints them.
+        ordered() gives a plain categorical, as pyreadr reads one;
+        a row's `types` restore the order where its model uses it."""
         (values,), options = self._arguments(call, ('levels', 'labels'))
         levels = options.get('levels', sorted(set(values) - {None}))
         labels = options.get('labels', [self._label(level) for level in levels])
