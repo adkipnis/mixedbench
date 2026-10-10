@@ -31,7 +31,8 @@ release that freezes it.
   problems.csv` frozen from the candidates that passed; Hub upload and the Zenodo snapshot
 - [ ] **7 Metrics and opponent lines.** W1, coverage, C2ST and MMD against the chain-split null,
   the lab note choosing the joint metric; posterior lines (NUTS level 0, Pathfinder, Laplace,
-  mean-field ADVI); predictive lines (TabPFN ×2, GPBoost, glmmTMB, GLM) and scores (ADR 0005)
+  mean-field ADVI); predictive lines (TabPFN ×2, GPBoost, glmmTMB, GLM) and scores (ADR 0005);
+  the demo notebook gains a toy fit scored against the reference draws
 - [ ] **8 Paper.** `~/LaTeX/mixedbench`, every number from this repository at a pinned commit:
   frame and method, registry census, contract, suite and diagnostics, opponent lines, usage;
   arXiv, then NeurIPS Datasets & Benchmarks 2027 (deadline about May 2027), *Statistics and
