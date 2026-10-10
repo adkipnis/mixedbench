@@ -1,5 +1,6 @@
-# The package on three operating systems: format check and tests without network or R
-# (ADR 0003). The seeded fetch subset and the weekly fetch come with roadmap items 3 and 4.
+# The package on three operating systems: format check, tests without network or R, then the
+# network tests, among them the seeded 20-problem subset of the candidate list (ADR 0003). The
+# weekly fetch is weekly-fetch.yml.
 name: CI
 
 on:
@@ -22,3 +23,4 @@ jobs:
       - run: uv sync --all-extras
       - run: uv run ruff format --check .
       - run: uv run pytest -rs
+      - run: uv run pytest -rs -m network

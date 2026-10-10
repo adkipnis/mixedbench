@@ -27,7 +27,7 @@ by script.
 | `shards/<table>_<label>.csv` | agents, `pull.py` | one shard per reading run; `table` ∈ `registry`, `excluded`, `duplicates`, `dropped` |
 | `prompts/read.md` | | the reading agent's brief |
 | `schema.py`, `sources.py`, `help.py`, `measure.py`, `summarise.py` | | file contract, frame, help pages, measures, summary |
-| `archive/` | | finished scripts and their outputs, reproducible at tag `survey-archive` ([README](archive/README.md)) |
+| `archive/` | | finished scripts and their outputs, reproducible at tags `survey-archive` and `survey-archive-2` ([README](archive/README.md)) |
 | `tests/` | | `uv run pytest survey/tests`, by hand; the root run never recurses here |
 
 ```
@@ -103,8 +103,10 @@ sites refuse scripts, so ARM data come through `stan_arm` and `ros`.
 
 ## File contracts
 
-`schema.py` holds every column and allowed value; `tests/test_docs.py` asserts that this
-section names each one. Every CSV field is quoted.
+`schema.py` holds every column and allowed value; the registry row's column order, its
+response types, families and column types, the dialect and the list, term and `types` grammars
+are the package's (`src/mixedbench/registry/row.py`), and `schema.py` imports them.
+`tests/test_docs.py` asserts that this section names each one. Every CSV field is quoted.
 
 ### `candidates.csv` and the pre-screen
 
@@ -133,6 +135,7 @@ Key `source`, `object`, `model_index`. Agent columns, in order:
 | `grouping_factors` | `;`-list of columns whose levels index random effects; `Block:Variety` for a term on two columns, built by the merge |
 | `covariates` | `;`-list of the main-effect columns |
 | `interactions` | `;`-list of `a:b` terms |
+| `random_slopes` | `;`-list of `x\|g` (correlated with the intercept of `g`) and `x\|\|g` (uncorrelated) terms, `x` a covariate and `g` a grouping factor of the row; blank for an intercept-only model (ADR 0001) |
 | `ignore` | `;`-list of columns no model should use: ids, weights, alternate responses, coordinates |
 | `types` | `;`-list of `column=categorical` / `ordered` / `continuous` where the file carries no type, and `ordered` for an R ordered factor; covariates only |
 | `formula` | the documented model verbatim, lme4 syntax where given; a nonlinear model in words |
@@ -140,11 +143,21 @@ Key `source`, `object`, `model_index`. Agent columns, in order:
 | `published_model` | `yes` when a published model specification exists; else `no` |
 | `domain` | `ecology_biology` / `psychology_neuroscience` / `biomedicine` / `social_humanities` / `agriculture` / `education` / `economics` / `industry` / `other` |
 | `confidence` | `high` / `medium` / `low` |
+| `verified` | why the row counts as verified (ADR 0002): `hand` (the hand sample or Tier D) / `high` (confidence `high`) / `second-reading` (a blind second reading) |
 | `notes` | what was read; `RULE GAP:` for an unsettled case; `NONLINEAR:` and `RESPONSE INFERRED:` open their rows' notes |
 
 The merge fills `tier`; `sources` (`source:object` of every duplicate folded in, its own
 first); `reader`; `licence`, the `licence:` key or a CRAN DESCRIPTION's `License`, mapped by
 `LICENCES` in `schema.py` and rewritten at every merge (ADR 0003).
+
+`random_slopes` and `verified` came in by the header-only `shards/registry_schema_2.csv`;
+`archive/verified.py` filled `verified` once through `shards/registry_verified.csv`;
+`archive/slopes.py` filled `random_slopes` through `shards/registry_slopes.csv`, Alex's
+decisions on the rows it reported through `shards/registry_slopes_decisions.csv`
+(`VERDICTS.md`). A later row fills both in its own shard. `archive/factors.py` regrouped the
+rows that named a nested `a:b` by a `b` whose codes repeat across `a` through
+`shards/registry_factors.csv`; Wafer's slopes, waiting on that, followed in
+`shards/registry_slopes_wafer.csv`.
 
 ### `excluded.csv`, `duplicates.csv`, `dropped.csv`
 
@@ -199,18 +212,24 @@ first); `reader`; `licence`, the `licence:` key or a CRAN DESCRIPTION's `License
 A failing shard is refused, its offending rows printed, nothing written.
 
 - Header, required fields, allowed values, `model_index` 1 to 3.
+- The package's row grammar (`Row.refusals`), in its words: the vocabularies, the list, term
+  and `types` grammars, a `random_slopes` term `x|g` or `x||g` with `x` a covariate and `g` a
+  grouping factor of the row, every part of an interaction a covariate, no column both a
+  grouping factor and a covariate. A row it refuses is checked against its table only at the
+  next merge.
 - Source in the frame, object in the source, every named column (each part of `a:b`) in the
   table.
 - Each grouping factor has two levels and a level with two rows.
 - The response shows its type: `continuous` numeric, `binary` two values, `count` and
   `binomial` non-negative integers, `ordinal` at most 10 values, `categorical` not float; a
   `binomial` row's integer `trials` never below the response.
-- No column both a grouping factor and a covariate; `documented_prior` only when
-  `published_model` is `yes`; every registry source's licence in the lookup.
+- `documented_prior` only when `published_model` is `yes`; every registry source's licence in
+  the lookup.
 - The object not in the rival file; a dropped object in one of the two.
 
 Upsert on the key: a shard merged twice changes nothing, a corrected shard replaces its rows in
-place. An older file reads with new columns blank, so a header-only shard migrates a schema.
+place. An older file reads with new columns blank, so a header-only shard migrates a schema
+whose new columns the row grammar accepts empty.
 
 ## Reading rules
 

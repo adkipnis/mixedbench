@@ -22,28 +22,25 @@ from itertools import combinations
 from pathlib import Path
 
 import pandas as pd
-from measure import (
-    COLUMN_COLUMNS,
-    DIMENSION_COLUMNS,
-    Measurer,
-    parseTypes,
-    splitList,
-    withComposites,
-)
+from measure import COLUMN_COLUMNS, DIMENSION_COLUMNS, Measurer
+from mixedbench.contract import withComposites
 from mixedbench.datasets import DataObject, Loader
+from mixedbench.registry.row import (
+    COLUMN_LIST_COLUMNS,
+    TERM_COLUMNS,
+    Row,
+    parts,
+    readCsv,
+    writeCsv,
+)
 from schema import (
     ALLOWED,
-    COLUMN_LIST_COLUMNS,
-    COLUMN_TYPES,
     LICENCES,
     MAX_MODELS_PER_OBJECT,
     MAX_ORDINAL_LEVELS,
     REQUIRED,
     TABLES,
-    TERM_COLUMNS,
     Table,
-    readCsv,
-    writeCsv,
 )
 from sources import Key, readFrame
 from summarise import Summariser
@@ -151,19 +148,25 @@ class Merger:
             bad = ~self.shard[col].isin(allowed) & (self.shard[col] != '')
             problems += self.flag(bad, col, 'not allowed')
         if name == 'registry':
+            problems += self.grammarProblems()
             problems += self.modelIndexProblems()
             prior = self.shard['documented_prior'] != ''
             unpublished = self.shard['published_model'] == 'no'
             problems += self.flag(prior & unpublished, 'documented_prior', 'only on a published model')  # fmt: skip
         return problems
 
-    def modelIndexProblems(self) -> list[dict]:
-        index = self.shard['model_index']
-        problems = self.flag(~index.str.fullmatch(r'\d+'), 'model_index', 'not an integer')
-        number = pd.to_numeric(index, errors='coerce')
-        outside = number.notna() & ~number.between(1, MAX_MODELS_PER_OBJECT)
-        problems += self.flag(outside, 'model_index', f'at most {MAX_MODELS_PER_OBJECT} models per object')  # fmt: skip
+    def grammarProblems(self) -> list[dict]:
+        """The package's row grammar, in its words (`Row.refusals`)."""
+        problems = []
+        for line, cells in self.shard.iterrows():
+            refusals = Row.refusals(cells.to_dict())
+            problems += [self.problem(line, column, reason) for column, reason in refusals]
         return problems
+
+    def modelIndexProblems(self) -> list[dict]:
+        number = pd.to_numeric(self.shard['model_index'], errors='coerce')
+        outside = number.notna() & ~number.between(1, MAX_MODELS_PER_OBJECT)
+        return self.flag(outside, 'model_index', f'at most {MAX_MODELS_PER_OBJECT} models per object')  # fmt: skip
 
     def licenceProblems(self) -> list[dict]:
         """Every registry source's licence is in the lookup, the shard's and those merged
@@ -243,58 +246,53 @@ class Merger:
     # ---------------------------------------------------------------------------------
     def validateAgainstTables(self) -> list[dict]:
         """Every reading the data can contradict, row by row: the source and object exist,
-        every named column exists, the grouping factors group, the response is what it says."""
+        every named column exists, the grouping factors group, the response is what it says. A
+        row the grammar refuses is read again at the next merge."""
+        blank = {c: '' for c in self.table.scriptColumns}
         problems = []
-        for line, row in self.shard.iterrows():
-            problems += self.validateRow(line, row)
+        for line, cells in self.shard.iterrows():
+            if not Row.refusals(cells.to_dict()):
+                problems += self.validateRow(line, Row.parse(blank | cells.to_dict()))
         return problems
 
-    def validateRow(self, line: int, row: pd.Series) -> list[dict]:
-        if row['source'] not in self.frame.sources:
+    def validateRow(self, line: int, row: Row) -> list[dict]:
+        if row.source not in self.frame.sources:
             return [self.problem(line, 'source', 'not in sources.yaml')]
-        if row['object'] not in self.objects(row['source']):
-            return [self.problem(line, 'object', f'not an object of {row["source"]}')]
-        source = self.frame.sources[row['source']]
-        types = parseTypes(row['types'])
-        problems = []
-        for kind in types.values():
-            if kind not in COLUMN_TYPES:
-                problems.append(self.problem(line, 'types', f'not a column type: {kind}'))
-        untyped = self.loader.load(source, row['object'])
-        problems += self.missingColumns(line, row, set(untyped.columns), types)
+        if row.object not in self.objects(row.source):
+            return [self.problem(line, 'object', f'not an object of {row.source}')]
+        source = self.frame.sources[row.source]
+        untyped = self.loader.load(source, row.object)
+        problems = self.missingColumns(line, row, set(untyped.columns))
         if problems:
             return problems
-        loaded = self.loader.load(source, row['object'], types)
-        df = withComposites(loaded, splitList(row['grouping_factors']))
+        loaded = self.loader.load(source, row.object, row.types)
+        df = withComposites(loaded, row.grouping_factors)
         problems += self.groupingProblems(line, row, df)
-        problems += self.roleProblems(line, row)
         problems += self.responseProblems(line, row, df)
         return problems
 
     def objects(self, label: str) -> dict[str, DataObject]:
         return {o.name: o for o in self.loader.objects(self.frame.sources[label])}
 
-    def missingColumns(
-        self, line: int, row: pd.Series, columns: set[str], types: dict[str, str]
-    ) -> list[dict]:
+    def missingColumns(self, line: int, row: Row, columns: set[str]) -> list[dict]:
         """Every column a row names, with the shard column it was named in."""
-        named = [('response', row['response']), ('trials', row['trials'])]
+        named = [('response', row.response), ('trials', row.trials)]
         for col in COLUMN_LIST_COLUMNS:
-            named += [(col, name) for name in splitList(row[col])]
+            named += [(col, name) for name in getattr(row, col)]
         for col in TERM_COLUMNS:
-            for term in splitList(row[col]):
-                named += [(col, name) for name in term.split(':')]
-        named += [('types', name) for name in types]
+            for term in getattr(row, col):
+                named += [(col, name) for name in parts(term)]
+        named += [('types', name) for name in row.types]
         return [
             self.problem(line, col, f'no such column: {name}')
             for col, name in named
             if name != '' and name not in columns
         ]
 
-    def groupingProblems(self, line: int, row: pd.Series, df: pd.DataFrame) -> list[dict]:
+    def groupingProblems(self, line: int, row: Row, df: pd.DataFrame) -> list[dict]:
         """A grouping factor has at least two levels and a level with two or more rows."""
         problems = []
-        for factor in splitList(row['grouping_factors']):
+        for factor in row.grouping_factors:
             sizes = df[factor].value_counts()
             if len(sizes) < 2:
                 problems.append(self.problem(line, 'grouping_factors', f'{factor} has one level'))
@@ -304,22 +302,9 @@ class Merger:
                 )
         return problems
 
-    def roleProblems(self, line: int, row: pd.Series) -> list[dict]:
-        """A column is a grouping factor or a covariate, never both (SASmixed Cultivation's
-        `(1|Cult)` next to `Inoc * Cult` reads as the whole-plot term `Block:Cult`); a part of a
-        composite factor may be a covariate."""
-        covariates = set(splitList(row['covariates']))
-        for term in splitList(row['interactions']):
-            covariates |= set(term.split(':'))
-        return [
-            self.problem(line, 'grouping_factors', f'{factor} is also a covariate')
-            for factor in splitList(row['grouping_factors'])
-            if factor in covariates
-        ]
-
-    def responseProblems(self, line: int, row: pd.Series, df: pd.DataFrame) -> list[dict]:
+    def responseProblems(self, line: int, row: Row, df: pd.DataFrame) -> list[dict]:
         """The response column shows what its declared type says."""
-        response, kind = row['response'], row['response_type']
+        response, kind = row.response, row.response_type
         complaint = self.responseComplaint(kind, df[response].dropna())
         problems = []
         if complaint is not None:
@@ -349,9 +334,9 @@ class Merger:
             return False
         return bool(((values >= 0) & (values == values.round())).all())
 
-    def trialsProblems(self, line: int, row: pd.Series, df: pd.DataFrame) -> list[dict]:
+    def trialsProblems(self, line: int, row: Row, df: pd.DataFrame) -> list[dict]:
         """A binomial response names integer trials it never exceeds."""
-        response, trials = row['response'], row['trials']
+        response, trials = row.response, row.trials
         if trials == '':
             return [self.problem(line, 'trials', 'binomial names its trials')]
         if not self.isCount(df[trials].dropna()):
@@ -490,10 +475,10 @@ class Merger:
         """Every merge measures the whole registry from the loaded tables; nothing is typed."""
         registry = self.canonical(TABLES['registry'])
         dimensions, columns = [], []
-        for _, row in registry.iterrows():
-            types = parseTypes(row['types'])
-            df = self.loader.load(self.frame.sources[row['source']], row['object'], types)
-            measurer = Measurer(df, row.to_dict())
+        for cells in registry.to_dict('records'):
+            row = Row.parse(cells)
+            df = self.loader.load(self.frame.sources[row.source], row.object, row.types)
+            measurer = Measurer(df, row)
             dimensions += measurer.dimensions()
             columns += measurer.columns()
         writeCsv(pd.DataFrame(dimensions, columns=DIMENSION_COLUMNS), self.registry / 'dimensions.csv')  # fmt: skip

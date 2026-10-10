@@ -8,7 +8,7 @@ import pytest
 import yaml
 from conftest import FIXTURES, mergeShard, readRows
 from merge import Merger, ShardRefused
-from schema import readCsv, writeCsv
+from mixedbench.registry.row import readCsv, writeCsv
 from sources import readFrame
 
 RENAMED_TYPES = 'area=categorical;farm=categorical;type=categorical;diet=categorical'
@@ -66,7 +66,13 @@ def refusal(merger: Merger, shard: Path) -> pd.DataFrame:
         ({'response_type': 'count'}, 'response_type', 'weight is not integer-valued'),
         ({'model_index': '4'}, 'model_index', 'at most 3 models per object'),
         ({'covariates': 'breed;herd'}, 'grouping_factors', 'herd is also a covariate'),
-        ({'family': 'poisson'}, 'family', 'not allowed'),  # a restatement of the family rule
+        ({'family': 'poisson'}, 'family', 'not a family: poisson'),  # the rule is the empty cell
+        ({'verified': 'yes'}, 'verified', 'not a verification: yes'),
+        ({'verified': ''}, 'verified', 'not a verification: '),
+        ({'random_slopes': 'breed'}, 'random_slopes', 'not a slope term: breed'),
+        ({'random_slopes': 'weight|herd'}, 'random_slopes', 'weight is not a covariate'),
+        ({'random_slopes': 'breed||farm'}, 'random_slopes', 'farm is not a grouping factor'),
+        ({'interactions': 'breed:parity'}, 'interactions', 'parity is not a covariate'),
         (
             {'documented_prior': 'sd ~ student_t(3, 0, 2.5)', 'published_model': 'no'},
             'documented_prior',
@@ -88,6 +94,16 @@ def test_a_reading_the_table_contradicts_is_refused_with_the_row_named(
     assert list(problems['column']) == [column]
     assert problems.iloc[0]['problem'] == problem
     assert readRows(merger.registry / 'registry.csv') == []
+
+
+def test_slope_terms_on_a_covariate_over_a_grouping_factor_merge(merger):
+    """The gate refuses only what ADR 0001 forbids: a correlated and an uncorrelated slope on
+    the row's own covariates and factors pass and land as written."""
+    rows = readRows(FIXTURES / 'registry_herds.csv')
+    rows[0] |= {'random_slopes': 'breed|herd;feed||region'}
+    mergeShard(merger, writeShard(merger.survey / 'shards' / 'registry_slopes.csv', rows))
+    merged = readRows(merger.registry / 'registry.csv')
+    assert [r['random_slopes'] for r in merged] == ['breed|herd;feed||region', '']
 
 
 def test_a_shard_with_another_header_is_refused_naming_each_column(merger):
