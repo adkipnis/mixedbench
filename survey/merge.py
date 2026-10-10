@@ -268,7 +268,6 @@ class Merger:
         loaded = self.loader.load(source, row.object, row.types)
         df = withComposites(loaded, row.grouping_factors)
         problems += self.groupingProblems(line, row, df)
-        problems += self.roleProblems(line, row)
         problems += self.responseProblems(line, row, df)
         return problems
 
@@ -302,17 +301,6 @@ class Merger:
                     self.problem(line, 'grouping_factors', f'{factor} has no level with two rows')
                 )
         return problems
-
-    def roleProblems(self, line: int, row: Row) -> list[dict]:
-        """A column is a grouping factor or a covariate, never both (SASmixed Cultivation's
-        `(1|Cult)` next to `Inoc * Cult` reads as the whole-plot term `Block:Cult`); a part of a
-        composite factor may be a covariate; an interaction's parts are covariates (the
-        grammar)."""
-        return [
-            self.problem(line, 'grouping_factors', f'{factor} is also a covariate')
-            for factor in row.grouping_factors
-            if factor in row.covariates
-        ]
 
     def responseProblems(self, line: int, row: Row, df: pd.DataFrame) -> list[dict]:
         """The response column shows what its declared type says."""
