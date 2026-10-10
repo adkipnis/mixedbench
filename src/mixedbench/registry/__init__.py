@@ -6,8 +6,9 @@ from importlib.metadata import distribution
 from pathlib import Path
 from typing import Literal
 
+import pandas as pd
 import yaml
-from mixedbench.datasets import Manifest, ManifestRow, Source
+from mixedbench.datasets import Loader, Manifest, ManifestRow, Source
 from mixedbench.registry.row import Row, readCsv
 
 RegistryFile = Literal[
@@ -74,3 +75,15 @@ def rows(file: Path | None = None) -> list[Row]:
     one."""
     cells = readCsv(file or path('registry.csv'))
     return [Row.parse(record) for record in cells.to_dict('records')]
+
+
+class Tables:
+    """The typed table of a registry row: the sources and the manifest are read once, and an
+    object loads only its manifest file."""
+
+    def __init__(self, cache: Path) -> None:
+        self.sources = sources()
+        self.loader = Loader(cache, manifest=manifest())
+
+    def load(self, row: Row) -> pd.DataFrame:
+        return self.loader.load(self.sources[row.source], row.object, row.types)
