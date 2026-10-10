@@ -42,8 +42,8 @@ A problem is a registry row's documented model on its table, named
 ```python
 from mixedbench.contract import Problem, load, materialise
 
-[row] = [row for row in registry.rows() if row.source == 'lme4' and row.object == 'sleepstudy']
-table = loader.load(registry.sources()[row.source], row.object, row.types)
+[row] = [row for row in registry.rows() if row.id == 'lme4/sleepstudy/1']
+table = registry.Tables(Path('cache')).load(row)  # its `types` declared
 materialise(Problem.build(row, table), Path('cache'))  # returns the contract hash
 
 # no loader and no network from here on: the table, the column roles, the prior, the scales
