@@ -168,7 +168,7 @@ class Admission:
         refused = {}
         failed = {}
         for row in self.rows:
-            id = f'{row.source}/{row.object}/{row.model_index}'
+            id = row.id
             if id in self.refused:
                 refused[id] = self.refused[id]
                 continue
