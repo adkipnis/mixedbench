@@ -1,6 +1,6 @@
 """materialised.py defines a problem's files on disk and the contract hash over them.
 
-A materialised problem is two files under the loader's cache (ADR 0001, 0003):
+A materialised problem is two files under the loader's cache:
 a parquet holding the table, and a JSON holding the record a table cannot and the contract hash.
 The files are the package's interface to a problem: `load` needs neither the loader nor the network.
 The hash is over values, not file bytes: the record as canonical JSON,
@@ -97,8 +97,7 @@ def _jsonValue(value: Scale | Prior | np.generic) -> dict | int | float:
 
 def contractHash(problem: Problem) -> str:
     """sha256 over the record with sorted keys, then every column in table order as its name,
-    dtype and little-endian bytes, floats as float64 (ADR 0001, amended 2026-10-09); the record
-    carries the contract version."""
+    dtype and little-endian bytes, floats as float64; the record carries the contract version."""
     canonical = json.dumps(_record(problem), sort_keys=True, separators=(',', ':'))
     digest = hashlib.sha256(canonical.encode())
     for name, column in problem.table.items():
