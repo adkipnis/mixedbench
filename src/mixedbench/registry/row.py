@@ -42,8 +42,8 @@ def readCsv(path: Path) -> pd.DataFrame:
     return pd.read_csv(path, dtype=str, keep_default_na=False)
 
 
-def writeCsv(df: pd.DataFrame, path: Path) -> None:
-    df.to_csv(path, index=False, quoting=csv.QUOTE_ALL)
+def writeCsv(table: pd.DataFrame, path: Path) -> None:
+    table.to_csv(path, index=False, quoting=csv.QUOTE_ALL)
 
 
 # =====================================================================================

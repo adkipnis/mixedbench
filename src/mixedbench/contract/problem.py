@@ -39,7 +39,7 @@ def columnType(values: pd.Series, declared: str) -> tuple[str, int | str]:
     return 'continuous', ''
 
 
-def withComposites(df: pd.DataFrame, factors: tuple[str, ...]) -> pd.DataFrame:
+def withComposites(table: pd.DataFrame, factors: tuple[str, ...]) -> pd.DataFrame:
     """A grouping factor `a:b` names no column (lme4's `(1|a:b)`, the whole plots of a
     split-plot): the combination of its parts is added under that name, one level per pair of
     levels present; a row missing a part has no level (the ARM radon survey's rows without a
@@ -48,11 +48,11 @@ def withComposites(df: pd.DataFrame, factors: tuple[str, ...]) -> pd.DataFrame:
     for factor in factors:
         columns = parts(factor)
         if len(columns) > 1:
-            composite = df[columns[0]].astype(str)
+            composite = table[columns[0]].astype(str)
             for part in columns[1:]:
-                composite = composite + ':' + df[part].astype(str)  # missing stays missing
+                composite = composite + ':' + table[part].astype(str)  # missing stays missing
             composites[factor] = composite
-    return df.assign(**composites)
+    return table.assign(**composites)
 
 
 def levelOrder(values: pd.Series) -> tuple:

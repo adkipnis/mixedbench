@@ -139,10 +139,10 @@ class HelpPage:
         """The sheets named like documentation (`Contents`), cell by cell, tab-separated."""
         sheets = pd.read_excel(file, sheet_name=None, header=None)
         pages = []
-        for name, df in sheets.items():
+        for name, table in sheets.items():
             if not readers.isNoteSheet(name):
                 continue
-            rows = df.fillna('').astype(str)
+            rows = table.fillna('').astype(str)
             lines = ['\t'.join(row).rstrip() for row in rows.itertuples(index=False)]
             pages.append(f'# sheet {name}\n' + '\n'.join(lines))
         return '\n'.join(pages)

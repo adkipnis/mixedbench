@@ -14,9 +14,9 @@ from mixedbench.registry.row import Row, SlopeTerm, parts, readCsv, writeCsv
 def test_the_dialect_round_trips_an_empty_cell_and_a_cell_with_a_comma(tmp_path: Path) -> None:
     """Every cell is a quoted string and the empty cell stays `''`, never NaN: a `notes` cell
     may hold commas and quotes, and `Row.parse` reads an empty `family` as the rule."""
-    df = pd.DataFrame({'family': ['', 'student'], 'notes': ['a, "b"', '']})
-    writeCsv(df, tmp_path / 'rows.csv')
-    assert readCsv(tmp_path / 'rows.csv').equals(df)
+    table = pd.DataFrame({'family': ['', 'student'], 'notes': ['a, "b"', '']})
+    writeCsv(table, tmp_path / 'rows.csv')
+    assert readCsv(tmp_path / 'rows.csv').equals(table)
 
 
 def installedRow(source: str, object: str, model_index: int) -> Row:
