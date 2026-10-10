@@ -57,11 +57,13 @@ Planned ([`ROADMAP.md`](ROADMAP.md)): `contract/`, `suite/`, `references/`, `met
   `dict.fromkeys`, `|` merges or comprehensions.
 - A helper used by one class only is a static method of that class.
 - Guard `argparse` blocks with `# fmt: off` / `# fmt: on`.
-- Module docstring: one sentence on why the module exists, then its input -> output in a
-  line or two.
+- Module docstring: one sentence on what the module defines and who writes or reads it,
+  then a `pipeline:` section: the input on its own line, then one `-> result` line per step
+  with the function that does it in a column on the right.
 - File layout: banners split a file (`# ====` for globals / classes / main, `# ----` for
   subsections), each named in words a new reader understands and followed by one comment
-  line on why the section exists. One pipeline class per script, steps as methods; a
+  line on why the section exists, unless a class docstring right below says it. Comments
+  start in lower case. One pipeline class per script, steps as methods; a
   recipe-style `__main__` instantiates it and reads as the run's table of contents.
 - Class layout: public methods first, then the private steps in pipeline order under a
   `# ----` banner naming the pipeline.
