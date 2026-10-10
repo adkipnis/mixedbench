@@ -1,8 +1,8 @@
 """readers.py defines which file formats exist, how each becomes tables and which files hold data.
 
 An R file goes through pyreadr (with R's level order restored)
-or through the pure-Python rdata where librdata rejects it (RFile).
-A file in a CRAN package's data/ folder is read by utils::data()'s rules (DataFolder).
+or through the pure-Python rdata where librdata rejects it (_RFile).
+A file in a CRAN package's data/ folder is read by utils::data()'s rules (_DataFolder).
 Base R's data/*.R files are read by the deparse reader.
 Every other format goes through pandas (PandasFile, JsonFile):
 one table per file, named by its label, or one per data sheet of a workbook.
@@ -15,7 +15,7 @@ pipeline:
 a file in a source's tree
 -> data, not documentation                               isData
 -> its format family, by suffix and folder               read
--> every object of the file as a table (by name)         RFile | DataFolder | PandasFile .read
+-> every object of the file as a table (by name)         _RFile | _DataFolder | PandasFile .read
 """
 
 from __future__ import annotations
@@ -60,9 +60,9 @@ def read(
 ) -> tuple[dict[str, pd.DataFrame | None], Reader]:
     """The file's objects as tables, by name, and the reader that read them."""
     if file.suffix.lower() in R_FILES:
-        return RFile.read(file)
+        return _RFile.read(file)
     if cran:
-        return DataFolder.read(file)
+        return _DataFolder.read(file)
     return PandasFile.read(file, label, layout), 'pandas'
 
 
@@ -110,7 +110,7 @@ def bare(file: Path) -> Path:
 # =====================================================================================
 # R files
 # =====================================================================================
-class RFile:
+class _RFile:
     """An .rda, .RData or .rds file, through pyreadr, or through rdata where librdata refuses."""
 
     R_ERRORS = (PyreadrError, LibrdataError, IndexError)
@@ -120,9 +120,9 @@ class RFile:
     @staticmethod
     def read(path: Path) -> tuple[dict[str, pd.DataFrame | None], Reader]:
         try:
-            return RFile._pyreadr(path), 'pyreadr'
-        except RFile.R_ERRORS:
-            return RFile._rdata(path), 'rdata'
+            return _RFile._pyreadr(path), 'pyreadr'
+        except _RFile.R_ERRORS:
+            return _RFile._rdata(path), 'rdata'
 
     # ------------------------------------------------------------------------------------------
     # file -> pyreadr | rdata -> tables
@@ -150,7 +150,7 @@ class RFile:
                 levels = [labels[code] for code in sorted(labels)]  # R orders levels by code
                 # pyreadr used astype('category'), which sorts levels and drops unused ones
                 table[column] = table[column].cat.set_categories(levels)
-            tables[name] = RFile._numbersAsFloat(table)
+            tables[name] = _RFile._numbersAsFloat(table)
         return tables
 
     @staticmethod
@@ -167,8 +167,8 @@ class RFile:
     def _rdata(path: Path) -> dict[str, pd.DataFrame | None]:
         """Through the pure-Python rdata, where a list or a model fit is no table."""
         try:
-            objects = RFile._rdataObjects(path)
-        except RFile.RDATA_ERRORS:
+            objects = _RFile._rdataObjects(path)
+        except _RFile.RDATA_ERRORS:
             return {path.stem: None}
         tables = {}
         for name, value in objects.items():
@@ -177,14 +177,14 @@ class RFile:
             tables[name] = None
             if isinstance(value, pd.DataFrame):
                 # R's integer row names, 1-based or a subset's, as pyreadr's 0-based range
-                tables[name] = RFile._pyreadrTypes(value.reset_index(drop=True))
+                tables[name] = _RFile._pyreadrTypes(value.reset_index(drop=True))
         return tables
 
     @staticmethod
     def _rdataObjects(path: Path) -> dict:
         """An .rds holds one object, named by the file as `_pyreadr` names it."""
         with warnings.catch_warnings():
-            warnings.filterwarnings('ignore', RFile.FRAME_CLASSES, UserWarning)
+            warnings.filterwarnings('ignore', _RFile.FRAME_CLASSES, UserWarning)
             if path.suffix.lower() == '.rds':
                 return {path.stem: rdata.read_rds(path)}
             return rdata.read_rda(path)
@@ -209,7 +209,7 @@ class RFile:
 # =====================================================================================
 # a CRAN package's data/ folder
 # =====================================================================================
-class DataFolder:
+class _DataFolder:
     """A text or .R file in a CRAN package's data/ folder, read as utils::data() reads it."""
 
     R_LOGICALS = {
@@ -220,8 +220,8 @@ class DataFolder:
     @staticmethod
     def read(file: Path) -> tuple[dict[str, pd.DataFrame | None], Reader]:
         if file.suffix.lower() == '.r':
-            return DataFolder._deparse(file), 'deparse'
-        return DataFolder._readTable(file), 'pandas'
+            return _DataFolder._deparse(file), 'deparse'
+        return _DataFolder._readTable(file), 'pandas'
 
     # ------------------------------------------------------------------------------------------
     # file -> deparse | read.table -> tables
@@ -242,22 +242,22 @@ class DataFolder:
         if file.suffix.lower() == '.csv':
             sep = ';'
         table = pd.read_csv(file, sep=sep, quotechar='"', na_values=['NA'], keep_default_na=False)
-        return {file.stem: table.assign(**DataFolder._typeConvert(table))}
+        return {file.stem: table.assign(**_DataFolder._typeConvert(table))}
 
     @staticmethod
     def _typeConvert(table: pd.DataFrame) -> dict[str, pd.Series]:
         """R's type.convert on the string columns pandas read: logicals and factors as R types them.
         Integers stay int64, not R's int32: suite 1.1's contract hashes cover them as read."""
         strings = table.columns[table.dtypes.map(pd.api.types.is_string_dtype)]
-        return {column: DataFolder._logicalOrFactor(table[column]) for column in strings}
+        return {column: _DataFolder._logicalOrFactor(table[column]) for column in strings}
 
     @staticmethod
     def _logicalOrFactor(values: pd.Series) -> pd.Series:
         """A column of R's logical spellings (`T`, `FALSE`) is bool, or float where it holds NA."""
         present = set(values.dropna())
-        if not present <= set(DataFolder.R_LOGICALS):
+        if not present <= set(_DataFolder.R_LOGICALS):
             return values.astype('category')
-        logical = values.map(DataFolder.R_LOGICALS)
+        logical = values.map(_DataFolder.R_LOGICALS)
         if logical.isna().any():
             return logical.astype('float64')
         return logical.astype('bool')

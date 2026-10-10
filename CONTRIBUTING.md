@@ -68,14 +68,14 @@ the decision stays inside.
   reading one object's manifest file against enumerating a whole source, and the column
   `types` a row declares for a format that carries none. Formats are not its business.
 - **`datasets/readers.py`**: which file formats exist and how each becomes tables, a class per
-  format family: `RFile` (.rda, .RData, .rds through pyreadr, else rdata), `DataFolder` (a
+  format family: `_RFile` (.rda, .RData, .rds through pyreadr, else rdata), `_DataFolder` (a
   CRAN package's `data/` folder as `utils::data()` reads it), `PandasFile` (every other format,
   a workbook's data sheets) and `JsonFile` (records, or a Stan data dict as a table). `isData`
   decides what in a tree is data against documentation; the R routes agree on pyreadr's types.
   Imported by `loader.py` and the survey's `help.py`.
 - **`datasets/deparse.py`**: base R's `data/*.R` files read without R: only the functions they
   call, R's types, and what pyreadr drops dropped too; a construct outside that subset raises
-  naming the file and the construct. Imported by `readers.DataFolder` only.
+  naming the file and the construct. Imported by `readers._DataFolder` only.
 - **`contract/problem.py`**: the rules of ADR 0001 in code: the one typing rule (`columnType`,
   shared with the survey's measures), the coding, the family rule, the prior, the seeded
   splits, the per-regime scales and the parameter names. `_Builder` is the pipeline, `Problem`
