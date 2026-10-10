@@ -3,8 +3,8 @@
 pipeline:
 ---------
 a pinned Source
--> the download from the first URL that answers (verified)    _urls, _download
--> its tree: the source's files on disk, an archive extracted  tree
+-> the download from the first URL that answers (verified)     _urls, _download
+-> its tree (the source's files on disk)                       tree
 -> the files holding data                                      _fetchFile | _files
 -> every object of those files as a frame (by name)            readers.read
 -> one object as a typed table                                 load
@@ -95,8 +95,9 @@ Manifest = Mapping[tuple[Source, str], ManifestRow]  # (source, object name) -> 
 # loader class
 # =====================================================================================
 class Loader:
-    """Typed tables from pinned sources, cached under one folder. With a manifest, only an
-    object's own file is fetched and read; without one, the whole source."""
+    """Typed tables from pinned sources, cached under one folder.
+    With a manifest, only an object's own file is fetched and read.
+    Without one, the whole source."""
 
     def __init__(
         self,
@@ -123,8 +124,8 @@ class Loader:
         return df.assign(**self._declared(df, types or {}))
 
     def tree(self, source: Source) -> Path:
-        """The source's files, extracted once: a CRAN package, a repository at a revision, or
-        what a URL serves (an archive's content, else the file in a folder of its own)."""
+        """The source's files, extracted once:
+        a CRAN package, a repository at a revision, or a URL server."""
         dir = self._dir(source)
         file = self._download(source)
         is_archive = file.name.lower().endswith(ARCHIVES)
@@ -231,8 +232,8 @@ class Loader:
         return row.file, frames[name]
 
     def _fetchFile(self, source: Source, row: ManifestRow) -> Path:
-        """A git source's file comes alone from GitHub's raw URL, under `files/` so it never
-        passes for an extracted `tree/`."""
+        """A git source's file comes alone from GitHub's raw URL,
+        under `files/` so it never passes for an extracted `tree/`."""
         if source.kind != 'git':
             return self.tree(source) / row.file
         file = self._dir(source) / 'files' / row.file
@@ -247,8 +248,8 @@ class Loader:
         return source.name.removeprefix('https://github.com/')
 
     def _read(self, source: Source) -> dict[str, tuple[DataObject, pd.DataFrame | None]]:
-        """Parsed once per source: pyreadr is slow on factors, and a survey merge asks for a
-        table several times."""
+        """Parsed once per source: pyreadr is slow on factors,
+        and a survey merge asks for a table several times."""
         if source not in self._frames:
             self._frames[source] = self._parse(source)
         return self._frames[source]
@@ -269,8 +270,8 @@ class Loader:
 
     @staticmethod
     def _declared(df: pd.DataFrame, types: Mapping[str, ColumnType]) -> dict[str, pd.Series]:
-        """What a format cannot carry: column types for text and Excel, the order pyreadr drops
-        from an R factor."""
+        """What a format cannot carry: column types for text and Excel,
+        the order pyreadr drops from an R factor."""
         declared = {}
         for column, kind in types.items():
             if kind == 'continuous':
@@ -281,8 +282,8 @@ class Loader:
 
     @staticmethod
     def _decimalPoint(values: pd.Series) -> pd.Series:
-        """Commas become points only in a column without points, so a thousands separator
-        fails loudly."""
+        """Commas become points only in a column without points,
+        so a thousands separator fails loudly."""
         if not pd.api.types.is_string_dtype(values):
             return values
         if values.str.contains('.', regex=False).any():
