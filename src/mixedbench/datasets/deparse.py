@@ -1,7 +1,7 @@
 """deparse.py defines the deparse reader: base R's data/*.R files evaluated to tables without R.
 
 Its one design decision is the grammar,
-the subset of R that those seven files use (ChickWeight, infert, sleep and four more).
+the subset of R that the registry's base R data files use (ChickWeight, infert, sleep, …).
 One regular expression tokenizes the text, a recursive descent parses it into calls,
 operators and symbols, and the one assigned value is evaluated:
 a vector as a list, a factor as a categorical, a list made a table by structure().
@@ -81,14 +81,14 @@ class Deparse:
         self.file = file
         self.tokens = self._tokenize(file.read_text(encoding='utf-8'))
         self.at = 0
+        self.statements = self._statements()
 
     def tables(self) -> dict[str, pd.DataFrame]:
         """The table the file assigns, under the name it assigns it to.
         The statements after it may only reset a formula attribute's environment,
         which the table drops anyway."""
-        statements = self._statements()
-        target, value = statements[0]
-        for later, _ in statements[1:]:
+        target, value = self.statements[0]
+        for later, _ in self.statements[1:]:
             if not (isinstance(later, Call) and later.name == 'environment'):
                 raise self._error('a second statement')
         table = self._evaluate(value)
@@ -274,7 +274,7 @@ class Deparse:
     def _vector(values: list) -> np.ndarray | list:
         """R's type of the vector: character, integer (32-bit, as R stores it), else double.
         An integer vector with NA is double,
-        as pyreadr's tables have it (readers.RFile._numbersAsFloat)."""
+        as pyreadr's tables have it."""
         if any(isinstance(value, str) for value in values):
             return values
         if all(isinstance(value, int) for value in values):  # NA, None, is no int
@@ -282,7 +282,7 @@ class Deparse:
         return np.array(values, dtype=float)  # None becomes NaN
 
     def _structure(self, call: Call) -> pd.DataFrame:
-        """A list made a frame by its attributes; the attributes themselves are dropped."""
+        """A list made a table by its attributes; the attributes themselves are dropped."""
         _, body = call.arguments[0]
         for keyword, _ in call.arguments[1:]:
             if keyword not in Deparse.DROPPED:
@@ -294,7 +294,7 @@ class Deparse:
         labels as R prints the levels unless given.
         `ordered` is dropped, as pyreadr drops it from the data frames R saves,
         so that a table is the same whichever reader made it.
-        The registry's `types` declare an ordered column."""
+        A row's `types` restore the order where its model uses it."""
         (values,), options = self._arguments(call, ('levels', 'labels'))
         levels = options.get('levels', sorted(set(values) - {None}))
         labels = options.get('labels', [self._label(level) for level in levels])
