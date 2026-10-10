@@ -47,7 +47,7 @@ table = registry.Tables(Path('cache')).load(row)  # its `types` declared
 materialise(Problem.build(row, table), Path('cache'))  # returns the contract hash
 
 # no loader and no network from here on: the table, the column roles, the prior, the scales
-problem = load(Path('cache'), 'lme4/sleepstudy/1')
+problem = load('lme4/sleepstudy/1', Path('cache'))
 ```
 
 ## The suite files
