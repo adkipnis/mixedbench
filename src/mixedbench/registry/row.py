@@ -127,6 +127,11 @@ class Row:
     verified: Verified
     notes: str
 
+    @property
+    def id(self) -> str:
+        """The id of the problem the row's documented model becomes."""
+        return f'{self.source}/{self.object}/{self.model_index}'
+
     @classmethod
     def parse(cls, cells: dict[str, str]) -> Row:
         """A row of cells as the dialect reads them, typed; a cell the grammar or a vocabulary

@@ -95,3 +95,10 @@ def test_a_slope_on_a_column_whose_name_has_spaces_is_one_covariate() -> None:
         SlopeTerm(covariate='activity 1', factor='id', correlated=True),
         SlopeTerm(covariate='Age centered about 13 years', factor='item', correlated=False),
     )
+
+
+def test_a_row_names_its_problem() -> None:
+    """The problem id is the row's: the contract, the admission and the candidate test key on
+    it, so it is written once."""
+    row = installedRow('lme4', 'VerbAgg', 1)
+    assert row.id == 'lme4/VerbAgg/1'
