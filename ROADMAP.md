@@ -18,6 +18,10 @@ release that freezes it.
   suite 1.1's candidate list (membership freezes with the references in 1.1, since admission
   needs a reference that passes the bar, ADR 0002); the weekly fetch CI as the link-rot
   detector before going public
+- [ ] **3b Going public.** A manual deep review of the repository so far; a demo notebook; the
+  README rewritten after successful benchmarks, with badges; the private files (`CLAUDE.md`
+  and whatever the grill adds) hidden from the public repository, history included or not
+  (grilled when this item starts)
 
 ## Release 1.1 — suite 1.1 with references; the paper
 
