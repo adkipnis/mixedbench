@@ -1,4 +1,14 @@
-"""The registry files (ADR 0002): the only way the package and metabeta read them."""
+"""__init__.py reads mixedbench's registry files;
+the loader's users and the contract read them only through it.
+
+pipeline:
+---------
+the installed files                                   path
+-> sources.yaml as a pinned Source per label          sources
+-> manifest.csv as the file each object loads from    manifest
+-> registry.csv as typed Rows                         rows
+-> a row's typed table                                Tables.load
+"""
 
 from __future__ import annotations
 
@@ -10,6 +20,8 @@ import pandas as pd
 import yaml
 from mixedbench.datasets import Loader, Manifest, ManifestRow, Source
 from mixedbench.registry.row import Row, readCsv
+
+__all__ = ['RegistryFile', 'Tables', 'manifest', 'path', 'rows', 'source', 'sources']
 
 RegistryFile = Literal[
     'sources.yaml',
@@ -24,20 +36,17 @@ RegistryFile = Literal[
 
 
 def path(name: RegistryFile | None = None) -> Path:
-    """A registry file, or their directory without a name. Located through the installed
-    distribution, not importlib.resources: the editable install keeps its copies in
-    site-packages, outside src/ (pyproject's force-include)."""
+    # through the installed distribution, not importlib.resources: the editable install keeps
+    # the files in site-packages, outside src/ (pyproject's force-include)
     dir = Path(distribution('mixedbench').locate_file('mixedbench/registry/files'))
     return dir if name is None else dir / name
 
 
-def sources(file: Path | None = None) -> dict[str, Source]:
-    """Every pinned source by its label; `file` is a `sources.yaml` other than the installed
-    one (the survey's scratch registries)."""
-    frame = yaml.safe_load((file or path('sources.yaml')).read_text())
+def sources() -> dict[str, Source]:
+    tiers = yaml.safe_load(path('sources.yaml').read_text())['tiers']
     pinned = {}
-    for entries in frame['tiers'].values():
-        for label, entry in (entries or {}).items():
+    for entries in tiers.values():
+        for label, entry in entries.items():
             pinned[label] = source(label, entry)
     return pinned
 
@@ -61,7 +70,7 @@ def source(label: str, entry: dict) -> Source:
 
 
 def manifest() -> Manifest:
-    """The file every registry object loads from, for `Loader(cache, manifest=manifest())`."""
+    """The file every registry object loads from."""
     pinned = sources()
     rows = readCsv(path('manifest.csv'))
     entries = {}
@@ -71,16 +80,11 @@ def manifest() -> Manifest:
 
 
 def rows(file: Path | None = None) -> list[Row]:
-    """Every row of `registry.csv`, typed; `file` is a `registry.csv` other than the installed
-    one."""
     cells = readCsv(file or path('registry.csv'))
     return [Row.parse(record) for record in cells.to_dict('records')]
 
 
 class Tables:
-    """The typed table of a registry row: the sources and the manifest are read once, and an
-    object loads only its manifest file."""
-
     def __init__(self, cache: Path) -> None:
         self.sources = sources()
         self.loader = Loader(cache, manifest=manifest())

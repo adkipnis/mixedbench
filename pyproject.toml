@@ -3,19 +3,36 @@ name = "mixedbench"
 version = "1.0.0"
 description = "A benchmark of posterior approximation and prediction on real grouped data for GLMMs"
 readme = "README.md"
-license = "MIT"
+license = "MIT AND CC-BY-4.0"
+license-files = ["LICENSE", "LICENSE-CC-BY-4.0"]
 authors = [{ name = "Alex Kipnis", email = "adkipnis@users.noreply.github.com" }]
-requires-python = ">=3.14"
+requires-python = ">=3.11"
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Operating System :: OS Independent",
+]
 dependencies = [
     "pandas",
     "pyyaml",
-    "pyreadr",
+    "pyreadr>=0.5.7,<0.6",  # readers.RFile parses with its internal PyreadrParser
     "openpyxl",
     "xlrd",
     "pyreadstat",
     "pyarrow",
     "rdata",
 ]
+
+[project.urls]
+Repository = "https://github.com/adkipnis/mixedbench"
+Issues = "https://github.com/adkipnis/mixedbench/issues"
+Demo = "https://github.com/adkipnis/mixedbench/blob/main/examples/demo.ipynb"
+Roadmap = "https://github.com/adkipnis/mixedbench/blob/main/ROADMAP.md"
 
 [project.optional-dependencies]
 # The reference sampler stack (brms and cmdstanr in an R subprocess), roadmap item 5.
@@ -26,10 +43,12 @@ dev = [
     "pytest",
     "hypothesis",
     "ruff",
+    "nbmake",
+    "ipykernel",
 ]
 
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling>=1.27"]  # PEP 639 licence expression and licence files
 build-backend = "hatchling.build"
 
 # The repository keeps one copy of the registry files at registry/; the wheel carries them as
@@ -71,7 +90,6 @@ cache-keys = [
 
 [tool.ruff]
 line-length = 100
-extend-exclude = ["survey/archive"]  # frozen at tag survey-archive, not maintained
 
 [tool.ruff.format]
 quote-style = "single"

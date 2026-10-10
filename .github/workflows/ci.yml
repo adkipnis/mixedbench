@@ -1,6 +1,7 @@
-# The package on three operating systems: format check, tests without network or R, then the
-# network tests, among them the seeded 20-problem subset of the candidate list (ADR 0003). The
-# weekly fetch is weekly-fetch.yml.
+# The package on three operating systems and the oldest and newest Python it supports: format
+# check, tests without network or R, then, on the newest Python only, the network tests, among
+# them the seeded 20-problem subset of the candidate list (ADR 0003). The weekly fetch is
+# weekly-fetch.yml.
 name: CI
 
 on:
@@ -14,13 +15,15 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
+        python: ['3.11', '3.14']
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v10.2.0  # setup-uv publishes no major tag
         with:
-          python-version: '3.14'
+          python-version: ${{ matrix.python }}
       - run: uv sync --all-extras
       - run: uv run ruff format --check .
       - run: uv run pytest -rs
-      - run: uv run pytest -rs -m network
+      - if: matrix.python == '3.14'  # the fetches run once per operating system
+        run: uv run pytest -rs -m network

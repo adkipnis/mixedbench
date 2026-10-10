@@ -14,20 +14,35 @@ A pinned, checksummed upstream location of public data: a CRAN package at a vers
 repository at a revision, or a url with a sha256. A source is fetched, never redistributed.
 _Avoid_: dataset (one source holds many), mirror
 
+**Table**:
+One loaded data object, one DataFrame: the rows of a grouped dataset with its grouping
+factors among the columns. A source holds many tables; a table can carry several documented
+models.
+_Avoid_: dataset, hierarchical dataset (a table with a grouping factor), data frame
+
+**Manifest**:
+The list, per source and object, of the one file inside the source that holds the table, with
+its checksum: a cargo list naming each item on board. The loader fetches and checks that file
+alone.
+_Avoid_: index, file list
+
 **Documented model**:
 The GLMM a source's own documentation fits to a table: its help page, textbook chapter,
 example notebook or paper. A row whose model is the reader's proposal is marked so.
 _Avoid_: ground truth, the true model
 
 **Registry**:
-Every documented model over every grouped table the survey read, one row per table and
-model, with its dimensions measured by script. Grows with every survey pass; never frozen.
+The list of every documented model over every grouped table the survey found, one row per
+table and model, with its dimensions measured by script. Built as a census, every object of a
+stated frame read rather than a sample of it, and never frozen: it grows with every survey
+pass.
 _Avoid_: benchmark, corpus, suite (a subset)
 
 **Contract**:
-The frozen rules that turn a registry row and its loaded table into a problem: row
-dropping, coding, standardisation, the family rule, the prior, the splits. Versioned; a
-change is a new suite.
+The fixed rules that turn a registry row and its table into a problem (rows dropped, coding,
+standardisation, family, prior, splits), so that two results on one problem compare. It binds
+the benchmark, not the user, who may fit any model to a table; a change to a rule is a new
+suite.
 _Avoid_: preprocessing (one part of it), config
 
 **Problem**:
@@ -60,8 +75,9 @@ whose references pass the bar.
 _Avoid_: the suite, shortlist
 
 **Suite**:
-A frozen, versioned set of problems with reference posteriors and diagnostics, admitted by
-verification, the diagnostics bar and the compute cap. Immutable once released.
+A frozen, versioned list of problems with reference posteriors, admitted by verification, the
+diagnostics bar and the compute cap. The contract is the recipe and the suite the menu: suites
+1.1 and 1.2 share contract 1, and a problem keeps its hash across them.
 _Avoid_: benchmark, the registry, test set
 
 ### The survey

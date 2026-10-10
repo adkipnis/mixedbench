@@ -1,7 +1,28 @@
-"""Admit the registry's rows to suite 1.1 (ADR 0002): every row the family rule covers is built
-into its problem and materialised under the cache, and its contract hash goes into the
-candidate list, in registry order; a refused row goes into the refusals with its reason. Run
-from the repo root:
+"""admit.py defines the admission of suite 1.1: registry rows in, candidates and refusals out.
+
+Every row the family rule covers is built into its problem and materialised under the cache.
+Its contract hash goes into the candidate list. Five decisions guide admission:
+- hand decisions first: a row whose documented model does not survive into the contract
+  is refused by id, a row whose random effects were changed carries its fidelity:
+  `structure_equivalent` (the same structure in another basis)
+  or `approximate` (terms changed or dropped);
+- a refusal is kept with its reason beside the candidates;
+- a table that fails to load is a failure and stops the run before writing,
+  so the list never misses a row silently;
+- the list and the refusals keep registry order, not sorted by id;
+- no problem is refused for the rows it loses to missing values: the list records the dropped share,
+  and the report prints the largest, to be read before a reference is run.
+
+pipeline:
+---------
+the registry's rows
+-> refused by hand decision                    REFUSED
+-> the loaded table, or a failure              loadTable
+-> the problem, or refused by the contract     Problem.build
+-> materialised, its candidate                 _candidate
+-> the candidate list and the refusals         Admitted.write
+
+Run from the repo root:
 
     uv run python suite/admit.py
 """
@@ -19,15 +40,13 @@ from mixedbench import registry
 from mixedbench.contract import Problem, Refused, materialise
 from mixedbench.registry.row import Row, writeCsv
 
-ROOT = Path(__file__).resolve().parents[1]
-CACHE = ROOT / 'registry' / 'cache'
-SUITE = ROOT / 'suite' / '1.1'
+# =====================================================================================
+# the hand decisions
+# =====================================================================================
+# what the family rule cannot see, read off each row's documented model
 
-# =====================================================================================
-# the hand decisions, by problem id
-# =====================================================================================
-# Rows the documented model does not survive into the contract, though the family rule covers
-# them: an empty `random_slopes` there is no approved intercept-only model (#27, #45).
+# rows the documented model does not survive into the contract, though the family rule covers them:
+# an empty `random_slopes` there is no approved intercept-only model (#27, #45).
 REFUSED = {
     'nlme/Cefamandole/1': 'nonlinear_parameter_model: random effects on nonlinear parameters (#27)',
     'nlme/IGF/1': 'nonlinear_parameter_model: random effects on nonlinear parameters (#27)',
@@ -75,8 +94,8 @@ REFUSED = {
     ),
 }
 
-# How far the problem's random effects are from the documented model's (VERDICTS.md, "Slope
-# decisions"; #45): the same structure in another basis (not the same prior), or changed.
+# how far the problem's random effects are from the documented model's
+# (VERDICTS.md, "Slope decisions"; #45): the same structure in another basis or changed.
 Fidelity = Literal['structure_equivalent', 'approximate']
 FIDELITY: dict[str, Fidelity] = {
     'agridat/harris.wateruse/1': 'structure_equivalent',
@@ -115,11 +134,12 @@ FIDELITY: dict[str, Fidelity] = {
 
 
 # =====================================================================================
-# pipeline: row -> problem -> materialised files -> candidate
+# row -> problem -> materialised files -> candidate
 # =====================================================================================
+# the result first, then the admission that makes it one row at a time
 @dataclass(frozen=True)
 class Admitted:
-    candidates: pd.DataFrame  # see `Admission.candidate`
+    candidates: pd.DataFrame  # see `Admission._candidate`
     refused: dict[str, str]  # per refused problem id, the reason
     failed: dict[str, str]  # per problem id whose table did not load, the error
 
@@ -131,8 +151,9 @@ class Admitted:
         writeCsv(refused, dir / 'refused.csv')
 
     def report(self, top: int = 10) -> str:
-        """The refusals, the failures, and the `top` candidates by dropped share, largest
-        first: ADR 0002 caps no share, so a large one is read before a reference is run."""
+        """The refusals, the failures, and the `top` candidates by dropped share, largest first:
+        no problem is refused for its dropped share,
+        so the largest are read before a reference is run."""
         lines = [f'refused: {len(self.refused)}']
         lines += [f'  {id}\t{reason}' for id, reason in self.refused.items()]
         lines += [f'failed: {len(self.failed)}']
@@ -149,15 +170,15 @@ class Admission:
     def __init__(
         self,
         rows: list[Row],
-        table: Callable[[Row], pd.DataFrame],
+        loadTable: Callable[[Row], pd.DataFrame],
         cache: Path,
         refused: dict[str, str] = REFUSED,
         fidelity: dict[str, Fidelity] = FIDELITY,
     ) -> None:
-        """`table` gives a row's loaded table, its `types` declared; `refused` and `fidelity`
+        """`loadTable` gives a row's loaded table, its `types` declared; `refused` and `fidelity`
         are the hand decisions by problem id."""
         self.rows = rows
-        self.table = table
+        self.loadTable = loadTable
         self.cache = cache
         self.refused = refused
         self.fidelity = fidelity
@@ -172,7 +193,7 @@ class Admission:
                 refused[id] = self.refused[id]
                 continue
             try:
-                table = self.table(row)
+                table = self.loadTable(row)
             except Exception as error:  # the loader's verdict, as in the weekly fetch
                 failed[id] = f'{type(error).__name__}: {error}'
                 continue
@@ -181,13 +202,14 @@ class Admission:
             except Refused as refusal:  # the family rule, a table with no complete row (#29)
                 refused[id] = refusal.reason
                 continue
-            candidates.append(self.candidate(row, problem))
+            candidates.append(self._candidate(row, problem))
         return Admitted(pd.DataFrame(candidates), refused, failed)
 
     # ---------------------------------------------------------------------------------
-    # pipeline
+    # problem -> materialised files -> candidate
     # ---------------------------------------------------------------------------------
-    def candidate(self, row: Row, problem: Problem) -> dict:
+    # the step that turns a built problem into its row of the list
+    def _candidate(self, row: Row, problem: Problem) -> dict:
         return {
             'id': problem.id,
             'contract_hash': materialise(problem, self.cache),
@@ -200,8 +222,15 @@ class Admission:
 # =====================================================================================
 # main
 # =====================================================================================
+# admits the whole registry and writes suite 1.1 only if every table loaded
+ROOT = Path(__file__).resolve().parents[1]
+CACHE = ROOT / 'registry' / 'cache'
+SUITE = ROOT / 'suite' / '1.1'
+
 if __name__ == '__main__':
-    admitted = Admission(registry.rows(), registry.Tables(CACHE).load, CACHE).admit()
+    tables = registry.Tables(CACHE)
+    admission = Admission(registry.rows(), tables.load, CACHE)
+    admitted = admission.admit()
     print(admitted.report())
     if admitted.failed:
         sys.exit(1)  # a list missing a row would drop it silently

@@ -67,6 +67,22 @@ saveRDS(roster, file.path(dirname(out), 'roster.rds'), ascii = TRUE)
 fit <- list(coef = c(a = 1, b = 2), call = quote(lm(y ~ x)))
 save(fit, roster, file = file.path(dirname(out), 'fits.rda'), ascii = TRUE)
 saveRDS(compiler::cmpfun(function(x) x + 1), file.path(dirname(out), 'fit.rds'), ascii = TRUE)
+# A data/*.txt beside R's reading of it, as R CMD INSTALL reads lazy data, in the C locale
+writeLines(c('site field plot flag mark yield', 'Ba04 "north A" 1 T T 1.5', 'BT06 west 2 F NA NA',
+             'a "south B" 3 T F 2.25'),
+           file.path(dirname(out), 'typed.txt'))
+Sys.setlocale('LC_COLLATE', 'C')
+typed <- read.table(file.path(dirname(out), 'typed.txt'), header = TRUE, as.is = FALSE)
+save(typed, file = file.path(dirname(out), 'typed.rda'), version = 2)
+# The same data frame twice, binary for pyreadr and ASCII for rdata, which must read it alike
+twins <- data.frame(
+  arm = factor(c('b', 'a', 'b', NA), levels = c('b', 'a', 'c')),
+  dose = c(1L, 2L, 3L, 4L), count = c(5L, NA, 7L, 8L), weight = c(1.5, NA, 2.25, 3),
+  note = c('x', 'y', NA, 'z'), flag = c(TRUE, FALSE, NA, TRUE), done = c(TRUE, FALSE, TRUE, TRUE),
+  stringsAsFactors = FALSE
+)
+save(twins, file = file.path(dirname(out), 'twins.rda'), version = 2)
+save(twins, file = file.path(dirname(out), 'twins_ascii.rda'), ascii = TRUE)
 writeLines(c('\\name{pets}', '\\alias{pets}', '\\docType{data}', '\\title{Six pets}',
              '\\description{Species, age in years and weight in kg of six pets.}',
              '\\usage{data(pets)}', '\\format{A data frame with 6 rows and 3 columns.}',

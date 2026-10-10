@@ -34,8 +34,8 @@ File the object in the excluded shard with its reason when:
    (`log(y)`) names the raw column `y`.
 3. **Family.** Blank where ADR 0001's rule covers the model (Gaussian for continuous, Poisson
    for count, logit for binary and binomial, cumulative logit for ordinal). A departure takes
-   its brms name from `FAMILIES` in `schema.py`; one outside that list leaves `family` blank
-   with `RULE GAP:` in `notes`.
+   its brms name from `Family` in `mixedbench/registry/row.py`; one outside that list leaves
+   `family` blank with `RULE GAP:` in `notes`.
 4. **Grouping factors, covariates, interactions** as `;`-lists of column names.
    - Nested factors are two factors; the merge computes the relation.
    - A random term on two columns (`(1|Block:Variety)`) is `Block:Variety`.

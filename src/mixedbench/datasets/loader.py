@@ -1,6 +1,21 @@
-"""Dataset loader: pinned source as input, typed DataFrame as output.
-The pipeline url -> archive -> tree -> files -> frames and the cache live here, without R
-(ADR 0003); the formats are `readers.py`."""
+"""loader.py defines how a pinned source becomes typed tables and where it is cached.
+
+A source is public data at one version:
+a CRAN package, a GitHub repository at a revision, or a file at a URL with its sha256.
+It is downloaded once into the cache and checked against its pin on every load, without R.
+With a manifest, only the file holding an object is fetched and read, against its own sha256;
+without one (the survey), every data file of the source is enumerated.
+The formats are readers.py's; the loader applies the column types a registry row declares.
+
+pipeline:
+---------
+a pinned Source
+-> the download from the first URL that answers (verified)     _urls, _download
+-> its tree (the source's files on disk)                       tree
+-> the files holding data                                      _fetchFile | _files
+-> every object of those files as a table (by name)            readers.read
+-> one object as a typed table                                 load
+"""
 
 from __future__ import annotations
 
@@ -20,15 +35,37 @@ from urllib.parse import quote, urlparse
 import pandas as pd
 from mixedbench.datasets import readers
 
+# =====================================================================================
+# where sources are fetched
+# =====================================================================================
+# the hosts behind every pin and the default fetch.
 CRAN = 'https://cloud.r-project.org/src/contrib'
 R_SOURCES = 'https://cloud.r-project.org/src/base'
 ARCHIVES = ('.zip', '.tar.gz')
-# Intermediate certificates a source's server leaves out of its chain, which OpenSSL, unlike
-# macOS and Windows, does not fetch itself: Harvard's content.sph.harvard.edu (Fitzmaurice et
-# al.) sends InCommon's instead of Sectigo's OV R36, from its leaf's CA Issuers URL
+# intermediate certificates a server leaves out of its chain
 TLS = ssl.create_default_context()
 TLS.load_verify_locations(Path(__file__).parent / 'intermediates.pem')
-ColumnType = Literal['categorical', 'ordered', 'continuous']  # what a registry row may declare
+
+
+def fetch(url: str) -> bytes | None:
+    req = urllib.request.Request(url, headers={'User-Agent': 'mixedbench'})
+    for attempt in range(3):
+        try:
+            with urllib.request.urlopen(req, timeout=120, context=TLS) as r:
+                return r.read()
+        except urllib.error.HTTPError as e:
+            if e.code in (401, 403, 404):
+                return None
+            if e.code != 429 or attempt == 2:
+                raise
+            time.sleep(int(e.headers.get('Retry-After', 10)))
+
+
+# =====================================================================================
+# sources and objects
+# =====================================================================================
+# what the registry pins, what the loader finds in it, and the column types a row declares.
+ColumnType = Literal['categorical', 'ordered', 'continuous']
 
 
 @dataclass(frozen=True)
@@ -40,7 +77,7 @@ class Source:
     path: str | None = None  # git, url: file or folder inside the tree; None -> all of it
     file: str | None = None  # url: the download's file name where the URL's path has none
     layout: tuple[str, ...] | None = None  # url: the columns of a headerless text file
-    mirror: str | None = None  # url: the package's copy where the host refuses (ADR 0003)
+    mirror: str | None = None  # url: the package's copy where the host refuses
 
 
 @dataclass(frozen=True)
@@ -61,41 +98,22 @@ class ManifestRow:
 Manifest = Mapping[tuple[Source, str], ManifestRow]  # (source, object name) -> its file
 
 
-def fetch(url: str) -> bytes | None:
-    """The default fetch; None on a 404 or a refusal so the caller can try the next location;
-    a 429 (OSF after a burst of downloads) waits the `Retry-After` seconds and tries again."""
-    req = urllib.request.Request(url, headers={'User-Agent': 'mixedbench'})
-    for attempt in range(3):
-        try:
-            with urllib.request.urlopen(req, timeout=120, context=TLS) as r:
-                return r.read()
-        except urllib.error.HTTPError as e:
-            if e.code in (401, 403, 404):  # Dryad refuses a script with 401
-                return None
-            if e.code != 429 or attempt == 2:
-                raise
-            time.sleep(int(e.headers.get('Retry-After', 10)))
-
-
-# ==============================================================================================
-# loader
-# ==============================================================================================
-
-
+# =====================================================================================
+# loader class
+# =====================================================================================
 class Loader:
+    """Typed tables from pinned sources, cached under one folder."""
+
     def __init__(
         self,
         cache: Path,
         fetch: Callable[[str], bytes | None] = fetch,
         manifest: Manifest | None = None,
     ):
-        """With a manifest, `load` reads only the object's file, and fetches only that file of
-        a git source (ADR 0003, #4); without one, the whole source, as the survey needs for
-        objects not yet merged."""
         self.cache = Path(cache)
         self.fetch = fetch
         self.manifest = manifest
-        self._frames: dict[Source, dict[str, tuple[DataObject, pd.DataFrame | None]]] = {}
+        self._tables: dict[Source, dict[str, tuple[DataObject, pd.DataFrame | None]]] = {}
         self._verified: set[tuple[Path, str]] = set()  # (file, checksum) pairs that matched
 
     def objects(self, source: Source) -> list[DataObject]:
@@ -105,23 +123,14 @@ class Loader:
     def load(
         self, source: Source, name: str, types: Mapping[str, ColumnType] | None = None
     ) -> pd.DataFrame:
-        """The object as one typed table: `types` declares what a file format without column
-        types (delimited text, Excel) cannot carry, and `ordered` what pyreadr drops from an R
-        factor; a plain column declared categorical or ordered gets sorted levels."""
-        file, df = self._object(source, name)
-        if df is None:
+        file, table = self._object(source, name)
+        if table is None:
             raise ValueError(f'{source.name} {source.pin} {file}: {name!r} is no DataFrame')
-        declared = {}
-        for column, kind in (types or {}).items():
-            if kind == 'continuous':
-                declared[column] = pd.to_numeric(self._decimalPoint(df[column]))
-            else:  # a categorical keeps its levels under a CategoricalDtype without categories
-                declared[column] = df[column].astype(pd.CategoricalDtype(ordered=kind == 'ordered'))
-        return df.assign(**declared)
+        return table.assign(**self._declared(table, types or {}))
 
     def tree(self, source: Source) -> Path:
-        """The source's files, extracted once: a CRAN package, a repository at a revision, or
-        what a URL serves (an archive's content, else the file in a folder of its own)."""
+        """The source's files, extracted once:
+        a CRAN package, a repository at a revision, or what a URL serves."""
         dir = self._dir(source)
         file = self._download(source)
         is_archive = file.name.lower().endswith(ARCHIVES)
@@ -138,12 +147,10 @@ class Loader:
         return tree
 
     # ------------------------------------------------------------------------------------------
-    # pipeline: url -> archive -> tree -> files -> frames
+    # url -> archive -> tree -> files -> tables
     # ------------------------------------------------------------------------------------------
 
     def _dir(self, source: Source) -> Path:
-        """The source's cache folder: the download, its extracted `tree/`, a git source's
-        manifest files under `files/`."""
         if source.kind == 'cran':
             return self.cache / 'cran' / f'{source.name}_{source.pin}'
         if source.kind == 'git':
@@ -153,7 +160,7 @@ class Loader:
 
     @staticmethod
     def _urls(source: Source) -> list[str]:
-        """Where the source's download is, in the order to try."""
+        """The download's URLs, in the order to try."""
         if source.name == 'datasets':  # base R's, in R's sources
             major = source.pin.split('.')[0]
             return [f'{R_SOURCES}/R-{major}/R-{source.pin}.tar.gz']
@@ -167,7 +174,7 @@ class Loader:
         return [source.name]
 
     def _download(self, source: Source) -> Path:
-        """Fetched once from the first URL that answers; the digest is checked on cache hits too."""
+        """The digest is checked on a cache hit too."""
         urls = self._urls(source)
         filename = source.file or Path(urlparse(urls[0]).path).name
         file = self._dir(source) / filename
@@ -178,8 +185,8 @@ class Loader:
         return file
 
     def _verify(self, file: Path, checksum: str | None) -> None:
-        """Once per loader, in chunks, since every manifest load passes through the source's
-        archive; None skips the check: a CRAN tarball without a checksum."""
+        """Once per file and loader: every manifest load passes through its source's download
+        again."""
         if checksum is None or (file, checksum) in self._verified:
             return
         with file.open('rb') as f:
@@ -206,12 +213,10 @@ class Loader:
 
     @staticmethod
     def _files(source: Source, tree: Path) -> list[Path]:
-        """The files holding data objects: in a CRAN package's data/ folder, otherwise in the
-        pinned path, a file or a folder walked."""
         cran = source.kind == 'cran'
         if cran:
             candidates = []
-            if (tree / 'data').exists():  # GLMMadaptive ships no data
+            if (tree / 'data').exists():  # a package may ship no data
                 candidates = (tree / 'data').iterdir()
         else:
             root = tree / (source.path or '')
@@ -222,20 +227,18 @@ class Loader:
         return sorted(files)
 
     def _object(self, source: Source, name: str) -> tuple[str, pd.DataFrame | None]:
-        """The object's file and frame: the manifest's file alone, else the parsed source."""
         if self.manifest is None:
-            obj, df = self._read(source)[name]
-            return obj.file, df
+            obj, table = self._read(source)[name]
+            return obj.file, table
         row = self.manifest[source, name]
         file = self._fetchFile(source, row)
         self._verify(file, row.sha256)
-        frames, _ = readers.read(file, row.file, layout=source.layout, cran=source.kind == 'cran')
-        return row.file, frames[name]
+        tables, _ = readers.read(file, row.file, layout=source.layout, cran=source.kind == 'cran')
+        return row.file, tables[name]
 
     def _fetchFile(self, source: Source, row: ManifestRow) -> Path:
-        """The manifest's file in the extracted tree; a git source's alone from GitHub's raw URL
-        at the pinned revision, kept under `files/` so that it never passes for the `tree/` the
-        enumerate path reads."""
+        """A git source's file comes alone from GitHub's raw URL,
+        under `files/` so it never passes for an extracted `tree/`."""
         if source.kind != 'git':
             return self.tree(source) / row.file
         file = self._dir(source) / 'files' / row.file
@@ -247,15 +250,14 @@ class Loader:
 
     @staticmethod
     def _repo(source: Source) -> str:
-        """A git source's `owner/repo`; every git source is on GitHub."""
         return source.name.removeprefix('https://github.com/')
 
     def _read(self, source: Source) -> dict[str, tuple[DataObject, pd.DataFrame | None]]:
-        """Every data object of the source by name, with its frame; parsed once per source,
-        since one survey merge asks for a table several times and pyreadr is slow on factors."""
-        if source not in self._frames:
-            self._frames[source] = self._parse(source)
-        return self._frames[source]
+        """Parsed once per source: pyreadr is slow on factors,
+        and a survey merge asks for a table several times."""
+        if source not in self._tables:
+            self._tables[source] = self._parse(source)
+        return self._tables[source]
 
     def _parse(self, source: Source) -> dict[str, tuple[DataObject, pd.DataFrame | None]]:
         tree = self.tree(source)
@@ -263,18 +265,31 @@ class Loader:
         objects = {}
         for file in self._files(source, tree):
             label = file.relative_to(tree).as_posix()
-            frames, reader = readers.read(file, label, layout=source.layout, cran=cran)
-            for name, df in frames.items():
+            tables, reader = readers.read(file, label, layout=source.layout, cran=cran)
+            for name, table in tables.items():
                 shape = (None, None)
-                if df is not None:
-                    shape = df.shape
-                objects[name] = DataObject(name, label, *shape, reader), df
+                if table is not None:
+                    shape = table.shape
+                objects[name] = DataObject(name, label, *shape, reader), table
         return objects
 
     @staticmethod
+    def _declared(table: pd.DataFrame, types: Mapping[str, ColumnType]) -> dict[str, pd.Series]:
+        """What a format cannot carry: column types for text and Excel,
+        the order pyreadr drops from an R factor."""
+        declared = {}
+        for column, kind in types.items():
+            if kind == 'continuous':
+                declared[column] = pd.to_numeric(Loader._decimalPoint(table[column]))
+            else:  # a categorical keeps its levels under a CategoricalDtype without categories
+                dtype = pd.CategoricalDtype(ordered=kind == 'ordered')
+                declared[column] = table[column].astype(dtype)
+        return declared
+
+    @staticmethod
     def _decimalPoint(values: pd.Series) -> pd.Series:
-        """A string column with decimal commas and no points (a European csv, kleisner_2026's
-        BMI) read with points; anything else as it is, so a thousands separator fails loudly."""
+        """Commas become points only in a column without points,
+        so a thousands separator fails loudly."""
         if not pd.api.types.is_string_dtype(values):
             return values
         if values.str.contains('.', regex=False).any():

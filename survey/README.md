@@ -22,12 +22,12 @@ by script.
 | `registry/quantiles.yaml`, `SUMMARY.md` | `merge.py` via `summarise.py` | every axis pooled, per tier and without agridat; the summary from the digit-free `SUMMARY.template.md` |
 | `registry/help/`, `cache/` | `pull.py`, the loader | untracked: one help page per kept object; downloads |
 | `candidates.csv`, `duplicates.csv`, `dropped.csv` | `pull.py`, `merge.py` | the survey's bookkeeping (below) |
-| `deposits.csv`, `deposit_files.csv` | `archive/` | Tier D's frame: the drawn papers and every file their deposits list |
+| `deposits.csv`, `deposit_files.csv` | the archived `deposits.py`, `resolve.py` | Tier D's frame: the drawn papers and every file their deposits list |
 | `practice_quantiles.yaml` | copied | the practice survey's `quantiles.yaml` (metabeta-v3), the practice column of `SUMMARY.md` |
 | `shards/<table>_<label>.csv` | agents, `pull.py` | one shard per reading run; `table` ∈ `registry`, `excluded`, `duplicates`, `dropped` |
 | `prompts/read.md` | | the reading agent's brief |
 | `schema.py`, `sources.py`, `help.py`, `measure.py`, `summarise.py` | | file contract, frame, help pages, measures, summary |
-| `archive/` | | finished scripts and their outputs, reproducible at tags `survey-archive` and `survey-archive-2` ([README](archive/README.md)) |
+| [`archive/`](https://github.com/adkipnis/mixedbench/tree/survey-archive-3/survey/archive) | | finished scripts and their outputs, kept at tag `survey-archive-3` and reproducible at tags `survey-archive` and `survey-archive-2` ([README](https://github.com/adkipnis/mixedbench/blob/survey-archive-3/survey/archive/README.md)) |
 | `tests/` | | `uv run pytest survey/tests`, by hand; the root run never recurses here |
 
 ```
@@ -151,10 +151,10 @@ first); `reader`; `licence`, the `licence:` key or a CRAN DESCRIPTION's `License
 `LICENCES` in `schema.py` and rewritten at every merge (ADR 0003).
 
 `random_slopes` and `verified` came in by the header-only `shards/registry_schema_2.csv`;
-`archive/verified.py` filled `verified` once through `shards/registry_verified.csv`;
-`archive/slopes.py` filled `random_slopes` through `shards/registry_slopes.csv`, Alex's
+the archived `verified.py` filled `verified` once through `shards/registry_verified.csv`;
+the archived `slopes.py` filled `random_slopes` through `shards/registry_slopes.csv`, Alex's
 decisions on the rows it reported through `shards/registry_slopes_decisions.csv`
-(`VERDICTS.md`). A later row fills both in its own shard. `archive/factors.py` regrouped the
+(`VERDICTS.md`). A later row fills both in its own shard. The archived `factors.py` regrouped the
 rows that named a nested `a:b` by a `b` whose codes repeat across `a` through
 `shards/registry_factors.csv`; Wafer's slopes, waiting on that, followed in
 `shards/registry_slopes_wafer.csv`.
