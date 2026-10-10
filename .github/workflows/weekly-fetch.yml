@@ -1,6 +1,7 @@
 # The weekly fetch of ADR 0003: every source a registry object loads from, fetched with checksum
 # verification (survey/fetch.py); one `registry` issue per failing source, left alone while it
-# fails, closed when the source returns. Not part of the pull-request matrix (ci.yml).
+# fails, closed when the source returns; then the demo notebook, run as a user runs it. Not part
+# of the pull-request matrix (ci.yml).
 name: Weekly fetch
 
 on:
@@ -52,3 +53,6 @@ jobs:
             gh issue close "$number" --comment "Fetched again with checksum verification: $RUN"
           done < open.tsv
           test "$OUTCOME" = success  # the run stays red while a source fails
+      - name: Run the demo notebook
+        if: always()  # a failing source must not hide a broken notebook
+        run: uv run pytest --nbmake examples/demo.ipynb
