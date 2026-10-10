@@ -78,7 +78,7 @@ the decision stays inside.
   naming the file and the construct. Imported by `readers.DataFolder` only.
 - **`contract/problem.py`**: the rules of ADR 0001 in code: the one typing rule (`columnType`,
   shared with the survey's measures), the coding, the family rule, the prior, the seeded
-  splits, the per-regime scales and the parameter names. `Builder` is the pipeline, `Problem`
+  splits, the per-regime scales and the parameter names. `_Builder` is the pipeline, `Problem`
   the frozen result, `Refused` the rows the contract does not cover.
 - **`contract/materialised.py`**: the layout of a materialised problem on disk and the contract
   hash over it (canonical JSON, then every column's name, dtype and little-endian bytes).

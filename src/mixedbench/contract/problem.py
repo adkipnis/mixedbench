@@ -126,7 +126,7 @@ class Problem:
     @classmethod
     def build(cls, row: Row, table: pd.DataFrame) -> Problem:
         """Raises `Refused` where the contract does not cover the row."""
-        return Builder(row, table).problem()
+        return _Builder(row, table).problem()
 
 
 # =====================================================================================
@@ -136,7 +136,7 @@ class Problem:
 Coded = dict[str, dict[str, pd.Series]]  # per covariate or interaction, its coded columns
 
 
-class Builder:
+class _Builder:
     # the family rule (ADR 0001): by response type, brms's family and link
     FAMILY = {
         'continuous': ('gaussian', 'identity'),
