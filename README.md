@@ -1,9 +1,9 @@
 [![CI](https://github.com/adkipnis/mixedbench/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/adkipnis/mixedbench/actions/workflows/ci.yml)
 [![Weekly fetch](https://github.com/adkipnis/mixedbench/actions/workflows/weekly-fetch.yml/badge.svg)](https://github.com/adkipnis/mixedbench/actions/workflows/weekly-fetch.yml)
 [![PyPI](https://img.shields.io/pypi/v/mixedbench)](https://pypi.org/project/mixedbench/)
-[![Python](https://img.shields.io/pypi/pyversions/mixedbench)](https://pypi.org/project/mixedbench/)
+[![Python](https://img.shields.io/pypi/pyversions/mixedbench)](https://github.com/adkipnis/mixedbench/blob/main/pyproject.toml)
 [![Licence](https://img.shields.io/badge/licence-MIT%20%C2%B7%20CC%20BY%204.0-blue)](https://github.com/adkipnis/mixedbench#licence)
-[![DOI](https://img.shields.io/badge/DOI-pending-lightgrey)](https://github.com/adkipnis/mixedbench#citing)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23285683.svg)](https://doi.org/10.5281/zenodo.23285683)
 [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/adkipnis/mixedbench/blob/main/examples/demo.ipynb)
 
 # mixedbench
@@ -61,7 +61,7 @@ Interested in becoming part of `mixedbench`? Check out [`CONTRIBUTING.md`](https
 ## Citing
 
 Please cite the release you used: [`CITATION.cff`](https://github.com/adkipnis/mixedbench/blob/main/CITATION.cff), or click "Cite this repository" on
-GitHub. The Zenodo DOI follows with release 1.0.
+GitHub. All versions share the DOI [10.5281/zenodo.23285683](https://doi.org/10.5281/zenodo.23285683).
 
 ## Licence
 
