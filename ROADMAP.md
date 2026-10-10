@@ -9,7 +9,7 @@ release that freezes it.
 
 - [x] **1 Repository.** Loader and survey moved from metabeta-v3 with history, package and CI
 - [x] **2 Registry columns and verification.** Family, prior, licence, readers without R, hand sample (#6)
-- [ ] **3 Contract and candidate list** (#23). First, the registry module owns the registry row (CSV
+- [x] **3 Contract and candidate list** (#23). First, the registry module owns the registry row (CSV
   dialect, row grammar, manifest), so `survey/` and the contract share one parser (#16,
   candidate 2). The `random_slopes` and `verified` columns, filled by script. `Problem`
   from a registry row (ADR 0001, amended 2026-10-09): rows, coding, per-regime
