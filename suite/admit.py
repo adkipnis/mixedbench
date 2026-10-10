@@ -1,14 +1,19 @@
 """admit.py defines the admission of suite 1.1: registry rows in, candidates and refusals out.
 
-Every row the family rule [#TODO: what's this?] covers is built into its problem and materialised under the cache.
-Its contract hash goes into the candidate list by five decisions:
+Every row the family rule covers
+(the response type fixes the family; a categorical response or a censored model has none)
+is built into its problem and materialised under the cache.
+Its contract hash goes into the candidate list. Five decisions guide admission:
 - hand decisions first: a row whose documented model does not survive into the contract
-  is refused by id, a row whose random effects were changed carries its fidelity [#TODO: what's that?];
+  is refused by id, a row whose random effects were changed carries its fidelity:
+  `structure_equivalent` (the same structure in another basis)
+  or `approximate` (terms changed or dropped);
 - a refusal is kept with its reason beside the candidates;
 - a table that fails to load is a failure and stops the run before writing,
   so the list never misses a row silently;
 - the list and the refusals keep registry order, not sorted by id;
-- no cap bounds the dropped share: the report lists the largest, read before a reference is run. # TODO: this sentence is unclear
+- no problem is refused for the rows it loses to missing values: the list records the dropped share,
+  and the report prints the largest, to be read before a reference is run.
 
 pipeline:
 ---------
@@ -149,7 +154,8 @@ class Admitted:
 
     def report(self, top: int = 10) -> str:
         """The refusals, the failures, and the `top` candidates by dropped share, largest first:
-        no cap bounds the share, so a large one is read before a reference is run."""
+        no problem is refused for its dropped share,
+        so the largest are read before a reference is run."""
         lines = [f'refused: {len(self.refused)}']
         lines += [f'  {id}\t{reason}' for id, reason in self.refused.items()]
         lines += [f'failed: {len(self.failed)}']
