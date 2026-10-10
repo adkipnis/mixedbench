@@ -6,6 +6,9 @@ A file in a CRAN package's data/ folder is read by utils::data()'s rules (DataFo
 Base R's data/*.R files are read by the deparse reader.
 Every other format goes through pandas (PandasFile, JsonFile):
 one table per file, named by its label, or one per data sheet of a workbook.
+The R routes agree on pyreadr's types, so a table is the same whichever reader made it:
+an integer int32 (float where it holds NA), a logical bool, a factor in R's level order.
+An object that is no table is kept by name as None, so a source still lists it.
 
 pipeline:
 ---------
