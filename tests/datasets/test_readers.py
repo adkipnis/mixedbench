@@ -43,7 +43,7 @@ def readFixture(name: str) -> tuple[dict[str, pd.DataFrame | None], readers.Read
 
 
 def readExample(example: Path, file: str, layout: tuple[str, ...] | None = None) -> pd.DataFrame:
-    """The one frame of a file that is not a workbook of several sheets."""
+    """The one table of a file that is not a workbook of several sheets."""
     tables, _ = readers.read(example / file, file, layout=layout)
     return tables[file]
 
@@ -70,7 +70,7 @@ def test_r_factor_levels_keep_r_order(package):
 def test_an_integer_column_with_na_reads_as_float_not_object():
     """pyreadr renders an R integer vector with NA as an object column of ints and NaN, which
     no numeric check accepts (mlmRev's `star`); the reader makes it a float column."""
-    # R wrote a frame with an integer column holding one NA and a plain string column
+    # R wrote a data frame with an integer column holding one NA and a plain string column
     tables, _ = readFixture('counts.rds')
     counts = tables['counts']
     assert counts['score'].dtype.kind == 'f'
@@ -78,7 +78,7 @@ def test_an_integer_column_with_na_reads_as_float_not_object():
     assert pd.api.types.is_string_dtype(counts['note'])
 
 
-def test_an_object_pyreadr_cannot_frame_has_no_table(package):
+def test_an_object_pyreadr_cannot_make_a_table_has_none(package):
     """gamlss.data's aep holds a matrix column; the object stays in the census without a
     table rather than failing the whole source."""
     tables, reader = readCran(package, 'data/wide.rda')
@@ -96,8 +96,8 @@ def test_an_r_file_librdata_rejects_is_read_by_rdata(package):
     assert visits['count'].dtype == 'int32'  # an R integer, as pyreadr reads one
 
 
-def test_a_rejected_r_file_keeps_its_frames_and_its_lists_without_a_table():
-    """A Tier D `.RData` keeps model fits and lists beside its tables; rdata reads the frame,
+def test_a_rejected_r_file_keeps_its_tables_and_its_lists_without_one():
+    """A Tier D `.RData` keeps model fits and lists beside its tables; rdata reads the table,
     the list has no table, as pyreadr's unframable objects have none."""
     tables, reader = readFixture('fits.rda')
     assert reader == 'rdata'
@@ -108,10 +108,10 @@ def test_a_rejected_r_file_keeps_its_frames_and_its_lists_without_a_table():
     assert roster['beds'].isna().sum() == 1  # an integer column with NA is float, as pyreadr's
 
 
-def test_pyreadr_and_rdata_read_the_same_frame_alike():
-    """R saved one frame twice, binary for pyreadr and ASCII for rdata: whichever reader takes a
-    file, its table is the same, factor order, integers with and without NA, strings and
-    logicals with and without NA included."""
+def test_pyreadr_and_rdata_read_the_same_table_alike():
+    """R saved one data frame twice, binary for pyreadr and ASCII for rdata.
+    Whichever reader takes a file, its table is the same: factor order, integers with and
+    without NA, strings and logicals with and without NA included."""
     binary, pyreadr = readFixture('twins.rda')
     ascii, rdata = readFixture('twins_ascii.rda')
     assert (pyreadr, rdata) == ('pyreadr', 'rdata')
@@ -167,9 +167,9 @@ def test_a_data_csv_is_read_with_semicolons(package):
     assert list(trials['outcome']) == [0, 1, 1, 1, 0]
 
 
-def test_a_data_r_file_reads_to_the_frame_r_makes_of_it(package):
+def test_a_data_r_file_reads_to_the_table_r_makes_of_it(package):
     """Base R's `data/*.R` files are deparsed tables; the deparse reader evaluates them to the
-    frame R makes (`growth.rda`, saved by make_fixture.R): labels in level order, numeric
+    table R makes (`growth.rda`, saved by make_fixture.R): labels in level order, numeric
     levels sorted as numbers, R's integers, `ordered` dropped as pyreadr drops it."""
     tables, reader = readCran(package, 'data/growth.R')
     twin, _ = readFixture('growth.rda')
@@ -179,7 +179,7 @@ def test_a_data_r_file_reads_to_the_frame_r_makes_of_it(package):
 
 def test_a_data_r_file_outside_the_deparse_subset_has_no_table(tmp_path):
     """Most of base R's data/*.R files are time series or matrices; enumerating the source
-    must not fail on them, as it does not on an R object pyreadr cannot frame."""
+    must not fail on them, as it does not on an R object pyreadr cannot make a table of."""
     file = tmp_path / 'lynx.R'
     file.write_text('lynx <- stats::ts(c(269, 321))\n')
     assert readers.read(file, 'data/lynx.R', cran=True) == ({'lynx': None}, 'deparse')
@@ -286,7 +286,7 @@ def test_r_write_table_output_reads_with_its_quotes_and_row_names(example):
 
 def test_a_declared_layout_reads_a_headerless_file(example):
     """The Bristol CMM `.DAT` files are fixed-width with their columns in a prose `.ASC`, and
-    Goldstein's partnership file whitespace-separated with a codes list; the frame declares
+    Goldstein's partnership file whitespace-separated with a codes list; sources.yaml declares
     the columns as `name:start-end` (positions from 1) or as bare names."""
     fixed = ('school:2-3', 'class:4', 'pupil:5', 'score:6-7')
     pupils = readExample(example, 'formats/pupils.dat', layout=fixed)
