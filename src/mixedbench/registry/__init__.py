@@ -21,6 +21,8 @@ import yaml
 from mixedbench.datasets import Loader, Manifest, ManifestRow, Source
 from mixedbench.registry.row import Row, readCsv
 
+__all__ = ['RegistryFile', 'Tables', 'manifest', 'path', 'rows', 'source', 'sources']
+
 RegistryFile = Literal[
     'sources.yaml',
     'registry.csv',
