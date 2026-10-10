@@ -1,12 +1,9 @@
 # Contributing to mixedbench
 
-Thank you for your interest. mixedbench is young, and help is welcome, above all with its data.
+Thank you for your interest. mixedbench is early stage and help is welcome.
 
 ## Ways to help
 
-- **A source no longer downloads.** Open an issue with the source's label (in the error and in
-  [`registry/sources.yaml`](registry/sources.yaml)) and the error message. The weekly fetch
-  finds most of these, so check the open issues first.
 - **A dataset is missing, or a row is wrong.** Open an issue with a link to the dataset and one
   to the documentation that fits its model: a help page, a tutorial or a paper. The registry
   files are written by script, so we add it in the next survey pass.
@@ -20,7 +17,7 @@ the approach first.
 
 ## Set up
 
-You need [uv](https://docs.astral.sh/uv/), and no R.
+You need [uv](https://docs.astral.sh/uv/), R is not required.
 
 ```
 git clone https://github.com/adkipnis/mixedbench
@@ -53,10 +50,9 @@ words (source, table, registry, contract, problem, suite).
 - Branch off `main`, one change per pull request, linked to its issue.
 - Add a test with each change; mark a test that downloads with `@pytest.mark.network`.
 - Run `uv run ruff format .` and `uv run pytest`. CI runs the tests on Linux, macOS and Windows.
-- Follow the [conventions](docs/conventions.md). The one that surprises: functions and methods
-  are `camelCase`.
+- Please follow the style [conventions](docs/conventions.md).
 
-Three rules keep results comparable; a pull request that breaks one is not merged:
+Three rules keep results comparable:
 
 - **The contract does not move.** A change in `src/` leaves every contract hash as it is. CI
   checks a sample of `suite/1.1/candidates.csv`; `uv run python suite/admit.py` checks all of
@@ -64,8 +60,7 @@ Three rules keep results comparable; a pull request that breaks one is not merge
   contract version: discuss it in an issue first.
 - **The registry is written by script.** Nothing in `registry/` or `suite/<version>/` is edited
   by hand.
-- **No R in the loader.** Every table loads in Python alone; R only computes reference
-  posteriors.
+- **No R in the loader.** Every table loads in Python alone; R may only computes reference posteriors.
 
 ## Licence
 
