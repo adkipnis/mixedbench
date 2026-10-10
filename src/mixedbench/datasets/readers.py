@@ -1,7 +1,21 @@
-"""File to tables, by format, and which files of a tree hold data: R files through pyreadr,
-or rdata where librdata rejects one; a CRAN package's data/ folder as utils::data() reads it;
-delimited and fixed-width text, Excel workbooks, JSON records and Stan data dicts, SPSS, Stata
-and Arrow through pandas."""
+"""readers.py defines which file formats exist, how each becomes tables and which files hold data.
+
+An R file goes through pyreadr, which is fast, with R's level order restored,
+or through the pure-Python rdata where librdata rejects it.
+A file in a CRAN package's data/ folder is read by utils::data()'s rules,
+base R's data/*.R files by the deparse reader.
+Every other format goes through pandas: one table per file, named by its label,
+or one per data sheet of a workbook.
+
+pipeline:
+---------
+a file in a source's tree
+-> data, not documentation                               isData
+-> its reader, by suffix and folder                      read
+-> every object of the file as a table (by name)         _readR | _readRdata | Deparse.tables |
+                                                         _readData | _readWorkbook | _readLayout |
+                                                         _readTable
+"""
 
 from __future__ import annotations
 
@@ -21,6 +35,10 @@ from mixedbench.datasets.deparse import Deparse, DeparseError
 from pyreadr import LibrdataError, PyreadrError
 from pyreadr._pyreadr_parser import PyreadrParser
 
+# =====================================================================================
+# file kinds
+# =====================================================================================
+# the suffixes each reader takes, and the names that mark documentation.
 R_FILES = {'.rda', '.rdata', '.rds'}  # meant for pyreadr, or rdata
 DATA_FILES = {'.r', '.tab', '.txt', '.csv'}  # meant for utils::data()
 TABLE_FILES = {  # meant for pandas
@@ -29,48 +47,57 @@ TABLE_FILES = {  # meant for pandas
 }  # fmt: skip
 DOC_STEMS = ('readme', 'codebook', 'description', 'notes', 'metadata', 'variables', 'dictionary')
 NOTE_SHEETS = ('contents', 'readme', 'codebook', 'notes', 'description')  # a workbook's codebook
-# LibrdataError is not a PyreadrError; the IndexError is pyreadr's value-label handler indexing
-# past the column names of a labelled data frame inside an .RData (a Tier D deposit, 2026-10-08)
-R_ERRORS = (PyreadrError, LibrdataError, IndexError)
-# rdata on what it cannot parse: bytecode and ALTREP in the Tier D deposits' model fits, an
-# object type it does not know (ValueError); an environment (boot's cd4.nested, AssertionError)
-RDATA_ERRORS = (ValueError, AssertionError)
-# a class rdata has no constructor for, read as the data frame it extends
-FRAME_CLASSES = r'Missing constructor for R class "(data\.table|tbl_df|tbl)"'
 Reader = Literal['pyreadr', 'rdata', 'pandas', 'deparse']
 
 
+# =====================================================================================
+# what the R readers cannot parse
+# =====================================================================================
+# a file pyreadr rejects goes to rdata; one rdata rejects too is one object without a table.
+# LibrdataError is not a PyreadrError; the IndexError is pyreadr's value-label handler
+# indexing past the column names of a labelled data frame inside an .RData
+R_ERRORS = (PyreadrError, LibrdataError, IndexError)
+# bytecode, ALTREP or an object type rdata does not know (ValueError), an environment
+# (AssertionError)
+RDATA_ERRORS = (ValueError, AssertionError)
+# a class rdata has no constructor for, read as the data frame it extends
+FRAME_CLASSES = r'Missing constructor for R class "(data\.table|tbl_df|tbl)"'
+
+
+# =====================================================================================
+# the file's tables, and whether it holds data
+# =====================================================================================
+# the two calls the loader makes, and the name helpers the survey shares.
 def read(
     file: Path, label: str, *, layout: tuple[str, ...] | None = None, cran: bool = False
 ) -> tuple[dict[str, pd.DataFrame | None], Reader]:
-    """The file's objects and its route. An R file through pyreadr, or rdata where librdata
-    rejects it (geepack's muscatine, a plain data frame); a file in a CRAN package's data/
-    folder by utils::data()'s rules; any other file one object named by its `label`, or one per
-    sheet of a workbook, read by pandas as `layout` declares a headerless text file."""
+    """The file's objects as tables, by name, and the reader that read them.
+    A file other than a workbook is one object, named by its `label`.
+    `layout` declares the columns of a headerless text file."""
     suffix = file.suffix.lower()
     if suffix in R_FILES:
         try:
-            return readR(file), 'pyreadr'
+            return _readR(file), 'pyreadr'
         except R_ERRORS:
-            return readRdata(file), 'rdata'
+            return _readRdata(file), 'rdata'
     if cran and suffix == '.r':
         try:
             return Deparse(file).tables(), 'deparse'
         except DeparseError:  # most of base R's data/*.R files: time series, matrices
             return {file.stem: None}, 'deparse'
     if cran:
-        return readData(file), 'pandas'
+        return _readData(file), 'pandas'
     if bare(file).suffix in ('.xlsx', '.xls'):
-        return readWorkbook(file, label), 'pandas'
+        return _readWorkbook(file, label), 'pandas'
     if layout is not None:
-        return {label: readLayout(file, layout)}, 'pandas'
-    return {label: readTable(file)}, 'pandas'
+        return {label: _readLayout(file, layout)}, 'pandas'
+    return {label: _readTable(file)}, 'pandas'
 
 
 def isData(file: Path, *, cran: bool = False) -> bool:
-    """In a CRAN package's data/ folder, what utils::data() reads; elsewhere what R or pandas
-    read, less the text files that are documentation. Never Stan initial values beside a data
-    dict, nor a zip's resource forks."""
+    """In a CRAN package's data/ folder, what utils::data() reads.
+    Elsewhere what R or pandas read, less the text files that document data,
+    and never Stan initial values beside a data dict or a zip's resource forks."""
     readable = R_FILES | TABLE_FILES
     if cran:
         readable = R_FILES | DATA_FILES
@@ -80,13 +107,12 @@ def isData(file: Path, *, cran: bool = False) -> bool:
         return False
     if cran:
         return True
-    return not isDoc(file) and not describesSibling(file)
+    return not isDoc(file) and not _describesSibling(file)
 
 
 def isDoc(file: Path) -> bool:
-    """Markdown and reST; a `.txt` named like documentation (`codebook.txt`, not a data
-    file such as the PyMC examples' `Guber1999data.txt`); a suffix-less file in capitals
-    (`README`, `LICENSE`), not a dotfile or a suffix-less data file."""
+    """Markdown and reST, a `.txt` named like documentation (`codebook.txt`),
+    and a suffix-less file in capitals (`README`, `LICENSE`), but no dotfile."""
     suffix = file.suffix.lower()
     if suffix in ('.md', '.rst'):
         return True
@@ -95,9 +121,9 @@ def isDoc(file: Path) -> bool:
     return suffix == '' and file.name.isupper()
 
 
-def describesSibling(file: Path) -> bool:
-    """A `.txt` named after a data file of another format beside it (Fitzmaurice's `lead.txt`
-    beside `lead.dta`, ROS's `bypass.txt` beside `bypass.csv`) is its description, no data."""
+def _describesSibling(file: Path) -> bool:
+    """A `.txt` named after a data file of another format beside it
+    (`lead.txt` beside `lead.dta`) describes that file."""
     if file.suffix.lower() != '.txt':
         return False
     siblings = [f for f in file.parent.iterdir() if f.is_file() and f != file]
@@ -105,46 +131,57 @@ def describesSibling(file: Path) -> bool:
 
 
 def bare(file: Path) -> Path:
-    """The file's name without its `.zip` or `.gz` wrapper (posteriordb's `radon.json.zip`,
-    PMLB's `apnea.tsv.gz`): the suffix says how to read it, the stem what documents it."""
+    """The file's name without its `.zip` or `.gz` wrapper (`radon.json.zip`, `apnea.tsv.gz`):
+    the suffix says how to read it, the stem what documents it."""
     return Path(file.name.lower().removesuffix('.zip').removesuffix('.gz'))
 
 
-# ==============================================================================================
+# =====================================================================================
 # R files
-# ==============================================================================================
-
-
-def readR(path: Path) -> dict[str, pd.DataFrame | None]:
-    """`pyreadr.read_r`, except that factor levels keep R's order and that an object pyreadr
-    cannot turn into a DataFrame is None; a file librdata rejects raises."""
+# =====================================================================================
+# pyreadr first, with R's level order restored; the pure-Python rdata where librdata refuses.
+def _readR(path: Path) -> dict[str, pd.DataFrame | None]:
+    """`pyreadr.read_r`, except that factor levels keep R's order
+    and that an object pyreadr cannot turn into a DataFrame is None.
+    A file librdata rejects raises."""
     parser = PyreadrParser()
     parser.parse(bytes(path))
     tables = {}
-    for table in parser.table_data:
-        name = table.name or path.stem  # an .rds carries no object name
-        if table.dim_num > 2:  # pyreadr hands these to xarray (base R's Titanic)
+    for parsed in parser.table_data:
+        name = parsed.name or path.stem  # an .rds carries no object name
+        if parsed.dim_num > 2:  # an array, which pyreadr hands to xarray
             tables[name] = None
             continue
         try:
-            df = table.convert_to_dataframe()
-        except PyreadrError:  # a matrix column (gamlss.data's aep)
+            table = parsed.convert_to_dataframe()
+        except PyreadrError:  # a matrix column
             tables[name] = None
             continue
-        for position, labels in table.value_labels.items():  # {column: {code: label}}
-            column = df.columns[position]
+        for position, labels in parsed.value_labels.items():  # {column: {code: label}}
+            column = table.columns[position]
             levels = [labels[code] for code in sorted(labels)]  # R orders levels by code
             # pyreadr used astype('category'), which sorts levels and drops unused ones
-            df[column] = df[column].cat.set_categories(levels)
-        tables[name] = numbersAsFloat(df)
+            table[column] = table[column].cat.set_categories(levels)
+        tables[name] = _numbersAsFloat(table)
     return tables
 
 
-def readRdata(path: Path) -> dict[str, pd.DataFrame | None]:
-    """An R file librdata rejects (geepack's muscatine, plonsky_2019_osf's .RData) through the
-    pure-Python rdata; a list or a model fit is no table."""
+def _numbersAsFloat(table: pd.DataFrame) -> pd.DataFrame:
+    """pyreadr renders an R integer vector with NA as an object column of ints and NaN.
+    Such a column becomes float, a string column stays as it is."""
+    numbers = {}
+    for column in table.columns[table.dtypes == object]:
+        present = table[column].dropna()
+        if present.map(lambda v: isinstance(v, (int, float))).all():
+            numbers[column] = pd.to_numeric(table[column])
+    return table.assign(**numbers)
+
+
+def _readRdata(path: Path) -> dict[str, pd.DataFrame | None]:
+    """An R file librdata rejects, through the pure-Python rdata.
+    A list or a model fit is no table."""
     try:
-        objects = rdataObjects(path)
+        objects = _rdataObjects(path)
     except RDATA_ERRORS:
         return {path.stem: None}
     tables = {}
@@ -153,13 +190,13 @@ def readRdata(path: Path) -> dict[str, pd.DataFrame | None]:
             continue
         tables[name] = None
         if isinstance(value, pd.DataFrame):
-            # R's integer row names, 1-based (or a subset's, jing_2020_osf): pyreadr's 0-based range
-            tables[name] = pyreadrTypes(value.reset_index(drop=True))
+            # R's integer row names, 1-based or a subset's, as pyreadr's 0-based range
+            tables[name] = _pyreadrTypes(value.reset_index(drop=True))
     return tables
 
 
-def rdataObjects(path: Path) -> dict:
-    """An .rds holds one object, named by the file as `readR` names it."""
+def _rdataObjects(path: Path) -> dict:
+    """An .rds holds one object, named by the file as `_readR` names it."""
     with warnings.catch_warnings():
         warnings.filterwarnings('ignore', FRAME_CLASSES, UserWarning)
         if path.suffix.lower() == '.rds':
@@ -167,60 +204,48 @@ def rdataObjects(path: Path) -> dict:
         return rdata.read_rda(path)
 
 
-def pyreadrTypes(df: pd.DataFrame) -> pd.DataFrame:
-    """rdata's nullable dtypes as pyreadr's: an R integer column int32, float where it holds
-    NA (`numbersAsFloat`), a string column pandas' default string."""
+def _pyreadrTypes(table: pd.DataFrame) -> pd.DataFrame:
+    """rdata's nullable dtypes as pyreadr's: an R integer column int32,
+    float where it holds NA (`_numbersAsFloat`), a string column pandas' default string."""
     types = {}
-    for column in df.columns[df.dtypes == 'Int32']:
+    for column in table.columns[table.dtypes == 'Int32']:
         types[column] = 'int32'
-        if df[column].isna().any():
+        if table[column].isna().any():
             types[column] = 'float64'
-    for column in df.columns[df.dtypes == 'string']:
+    for column in table.columns[table.dtypes == 'string']:
         types[column] = 'str'
-    return df.astype(types)
+    return table.astype(types)
 
 
-def numbersAsFloat(df: pd.DataFrame) -> pd.DataFrame:
-    """pyreadr renders an R integer vector with NA as an object column of ints and NaN
-    (mlmRev's `star`); such a column becomes float, a string column stays as it is."""
-    numbers = {}
-    for column in df.columns[df.dtypes == object]:
-        present = df[column].dropna()
-        if present.map(lambda v: isinstance(v, (int, float))).all():
-            numbers[column] = pd.to_numeric(df[column])
-    return df.assign(**numbers)
-
-
-# ==============================================================================================
+# =====================================================================================
 # utils::data() text files
-# ==============================================================================================
-
-
-def readData(file: Path) -> dict[str, pd.DataFrame | None]:
+# =====================================================================================
+# a CRAN package's data/ text files, read as R reads them, without R.
+def _readData(file: Path) -> dict[str, pd.DataFrame | None]:
     """A CRAN package's `data/*.txt`, `.tab` or `.csv` as utils::data() reads it:
-    read.table(header = TRUE, as.is = FALSE), with `sep = ';'` for a `.csv`. Strings become
-    categoricals with sorted levels, as read.table sorts them: in codepoint order, R's in the
-    C locale, where R's ICU collation sorts agridat's lillemo.wheat `Ba04` before `BT06`."""
+    read.table(header = TRUE, as.is = FALSE), with `sep = ';'` for a `.csv`.
+    Strings become categoricals with levels in code-point order, as read.table sorts them
+    in the C locale, not by the ICU collation of R's default locale."""
     sep = r'\s+'
     if file.suffix.lower() == '.csv':
         sep = ';'
-    df = pd.read_csv(file, sep=sep, quotechar='"', na_values=['NA'], keep_default_na=False)
-    strings = df.columns[df.dtypes.map(pd.api.types.is_string_dtype)]
-    factors = {column: df[column].astype('category') for column in strings}
-    return {file.stem: df.assign(**factors)}
+    table = pd.read_csv(file, sep=sep, quotechar='"', na_values=['NA'], keep_default_na=False)
+    strings = table.columns[table.dtypes.map(pd.api.types.is_string_dtype)]
+    factors = {column: table[column].astype('category') for column in strings}
+    return {file.stem: table.assign(**factors)}
 
 
-# ==============================================================================================
+# =====================================================================================
 # pandas files
-# ==============================================================================================
-
-
-def readWorkbook(file: Path, label: str) -> dict[str, pd.DataFrame | None]:
-    """One object per data sheet, `<label>!<sheet>`, names stripped as in text files; a
-    workbook of one data sheet is the file. The sheets named like documentation (`Contents`)
-    and the empty ones (Excel's default `Sheet2` and `Sheet3`) are none."""
+# =====================================================================================
+# every other format: one object per file, except a workbook's data sheets.
+def _readWorkbook(file: Path, label: str) -> dict[str, pd.DataFrame | None]:
+    """One object per data sheet, `<label>!<sheet>`, names stripped as in text files.
+    A workbook of one data sheet is the file.
+    Sheets named like documentation (`Contents`) and empty ones (Excel's default `Sheet2`)
+    are none."""
     sheets = pd.read_excel(file, sheet_name=None)
-    data = [name for name, df in sheets.items() if not isNoteSheet(name) and len(df)]
+    data = [name for name, table in sheets.items() if not isNoteSheet(name) and len(table)]
     objects = {}
     for name in data:
         key = f'{label}!{name}'
@@ -230,55 +255,14 @@ def readWorkbook(file: Path, label: str) -> dict[str, pd.DataFrame | None]:
     return objects
 
 
-def readTable(file: Path) -> pd.DataFrame | None:
-    """pandas by extension; None where the file holds no table."""
-    suffix = bare(file).suffix
-    if suffix == '.json':
-        return readJson(unwrap(file))
-    if suffix == '.dta':
-        return readStata(file)
-    if suffix == '.sav':
-        return readSpss(file)
-    if suffix == '.arrow':
-        return pd.read_feather(file)
-    if suffix == '.pq':
-        return pd.read_parquet(file)
-    return readDelimited(file)
-
-
-def readStata(file: Path) -> pd.DataFrame:
-    """pandas, except for a file whose value-label section it misparses (Rabe-Hesketh's
-    scotmap), which pyreadstat reads with the labels applied the same way."""
-    try:
-        return pd.read_stata(file)
-    except struct.error:
-        df, _ = pyreadstat.read_dta(str(file), apply_value_formats=True, formats_as_category=True)
-        return df
-
-
-def readSpss(file: Path) -> pd.DataFrame:
-    """A column whose value labels cover every value it holds becomes a categorical in code
-    order; labels on a scale's extremes alone (Hox's `lowest`, `highest` on a numeric score)
-    leave it numeric, where pandas would make every value a category."""
-    df, meta = pyreadstat.read_sav(str(file))
-    labelled = {}
-    for column, labels in meta.variable_value_labels.items():
-        present = set(df[column].dropna())
-        if present <= set(labels):
-            levels = [labels[code] for code in sorted(labels)]
-            labelled[column] = pd.Categorical(df[column].map(labels), categories=levels)
-    return df.assign(**labelled)
-
-
 def isNoteSheet(name: str) -> bool:
     return any(stem in name.lower() for stem in NOTE_SHEETS)
 
 
-def readLayout(file: Path, layout: tuple[str, ...]) -> pd.DataFrame:
-    """A headerless text file read as the frame declares it: `name:start-end` entries are
-    the fixed-width columns of a file with a layout sheet (the Bristol CMM `.DAT`), plain
-    names the whitespace-separated columns of a file with a codes list (Goldstein's
-    partnership data). Character positions count from 1, as the layout sheets do."""
+def _readLayout(file: Path, layout: tuple[str, ...]) -> pd.DataFrame:
+    """A headerless text file read as its source declares it:
+    `name:start-end` entries are fixed-width columns, plain names whitespace-separated ones.
+    Character positions count from 1, as layout sheets do."""
     names, spans = [], []
     for entry in layout:
         name, _, span = entry.partition(':')
@@ -291,25 +275,76 @@ def readLayout(file: Path, layout: tuple[str, ...]) -> pd.DataFrame:
     return pd.read_csv(file, sep=r'\s+', names=names, header=None)
 
 
-def readDelimited(file: Path) -> pd.DataFrame | None:
-    """The separator sniffed, unless the header holds none of the usual ones: columns
-    aligned with runs of spaces (the ARM `.dat` files, Diggle's course files) are then read
-    whitespace-separated, which the sniffer would miscount. A banner of `#` lines above the
-    table is skipped; what does not parse (a banner the PyMC examples' ice-core csv opens
-    with) is no table. Undecodable bytes (a latin-1 degree sign) are replaced, a byte-order
-    mark dropped. pandas opens a `.gz` itself."""
+def _readTable(file: Path) -> pd.DataFrame | None:
+    """pandas by extension, None where the file holds no table."""
+    suffix = bare(file).suffix
+    if suffix == '.json':
+        return _readJson(unwrap(file))
+    if suffix == '.dta':
+        return _readStata(file)
+    if suffix == '.sav':
+        return _readSpss(file)
+    if suffix == '.arrow':
+        return pd.read_feather(file)
+    if suffix == '.pq':
+        return pd.read_parquet(file)
+    return _readDelimited(file)
+
+
+def unwrap(file: Path) -> bytes:
+    """The file's content, out of its `.zip` wrapper where it has one."""
+    if file.suffix.lower() != '.zip':
+        return file.read_bytes()
+    with zipfile.ZipFile(file) as z:
+        member = z.namelist()[0]
+        return z.read(member)
+
+
+def _readStata(file: Path) -> pd.DataFrame:
+    """pandas, except for a file whose value-label section it misparses,
+    which pyreadstat reads with the labels applied the same way."""
+    try:
+        return pd.read_stata(file)
+    except struct.error:
+        table, _ = pyreadstat.read_dta(
+            str(file), apply_value_formats=True, formats_as_category=True
+        )
+        return table
+
+
+def _readSpss(file: Path) -> pd.DataFrame:
+    """A column whose value labels cover every value it holds becomes a categorical in code order.
+    Labels on a scale's extremes alone (`lowest`, `highest` on a numeric score) leave it numeric,
+    where pandas would make every value a category."""
+    table, meta = pyreadstat.read_sav(str(file))
+    labelled = {}
+    for column, labels in meta.variable_value_labels.items():
+        present = set(table[column].dropna())
+        if present <= set(labels):
+            levels = [labels[code] for code in sorted(labels)]
+            labelled[column] = pd.Categorical(table[column].map(labels), categories=levels)
+    return table.assign(**labelled)
+
+
+def _readDelimited(file: Path) -> pd.DataFrame | None:
+    """The separator sniffed, unless the header holds none of the usual ones:
+    columns aligned with runs of spaces are then read whitespace-separated,
+    which the sniffer would miscount.
+    A banner of `#` lines above the table is skipped, and what does not parse is no table.
+    Undecodable bytes (a latin-1 degree sign) are replaced, a byte-order mark dropped.
+    pandas opens a `.gz` itself."""
     options = {'encoding': 'utf-8-sig', 'encoding_errors': 'replace'}
     lines, header = banner(file)
     # the sniffer needs the python engine, which ignores quotes under a regex separator; the C
-    # engine honours them, as read.table does (R's write.table output, ARM's ideo2.dat)
+    # engine honours them, as read.table does (R's write.table output)
     sep, engine = None, 'python'
     if not any(mark in header for mark in ',;\t|'):
         sep, engine = r'\s+', 'c'
     try:
-        df = pd.read_csv(file, sep=sep, skiprows=len(lines), engine=engine, **options)
+        table = pd.read_csv(file, sep=sep, skiprows=len(lines), engine=engine, **options)
     except pd.errors.ParserError:
         return None
-    return tidyText(df)
+    return _tidyText(table)
 
 
 def banner(file: Path) -> tuple[list[str], str]:
@@ -327,40 +362,29 @@ def banner(file: Path) -> tuple[list[str], str]:
     return lines, ''
 
 
-def tidyText(df: pd.DataFrame) -> pd.DataFrame:
-    """Padded fields (the ARM files: `idnum, state, ...`, `NA       `) stripped, so that a
-    name is the name and a column of numbers with `NA` is numeric with missing values."""
-    df = df.rename(columns=lambda name: str(name).strip())
+def _tidyText(table: pd.DataFrame) -> pd.DataFrame:
+    """Padded fields (`idnum, state`, `NA       `) stripped,
+    so that a name is the name and a column of numbers with `NA` is numeric with missing values."""
+    table = table.rename(columns=lambda name: str(name).strip())
     tidy = {}
-    for column in df.columns[df.dtypes.map(pd.api.types.is_string_dtype)]:
-        values = df[column].str.strip().replace({'': None, 'NA': None})
+    for column in table.columns[table.dtypes.map(pd.api.types.is_string_dtype)]:
+        values = table[column].str.strip().replace({'': None, 'NA': None})
         numbers = pd.to_numeric(values, errors='coerce')
         if numbers.notna().sum() == values.notna().sum():  # every present value a number
             values = numbers
         tidy[column] = values
-    return df.assign(**tidy)
+    return table.assign(**tidy)
 
 
-def unwrap(file: Path) -> bytes:
-    """The file's content, out of its `.zip` wrapper where it has one."""
-    if file.suffix.lower() != '.zip':
-        return file.read_bytes()
-    with zipfile.ZipFile(file) as z:
-        member = z.namelist()[0]
-        return z.read(member)
-
-
-# ----------------------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------------
 # JSON: records, or a Stan data dict
-# ----------------------------------------------------------------------------------------------
-
-
-def readJson(data: bytes) -> pd.DataFrame | None:
-    """JSON records as pandas reads them; a Stan data dict (posteriordb, the Stan examples)
-    as the table of its arrays of the modal length, the observations: scalars, the arrays
-    of another length (group-level data) and arrays of three or more dimensions are no
-    columns, an N-row matrix is its numbered columns (`X_1`, `X_2`); a dict without arrays
-    (a descriptor) is no table."""
+# -------------------------------------------------------------------------------------
+def _readJson(data: bytes) -> pd.DataFrame | None:
+    """JSON records as pandas reads them,
+    a Stan data dict as the table of its arrays of the modal length, the observations.
+    Scalars, arrays of another length (group-level data) and arrays of three or more dimensions
+    are no columns, an N-row matrix is its numbered columns (`X_1`, `X_2`).
+    A dict without arrays (a descriptor) is no table."""
     content = json.loads(data)
     if not isinstance(content, dict):
         return pd.read_json(io.BytesIO(data))
@@ -382,12 +406,12 @@ def readJson(data: bytes) -> pd.DataFrame | None:
     return pd.DataFrame(columns)
 
 
-def arrayShape(value: list) -> list[int]:
-    shape = []
-    while isinstance(value, list):
-        shape.append(len(value))
-        value = value[0] if value else None
-    return shape
+def observationLength(content: dict) -> int | None:
+    """The modal length of the dict's arrays, a Stan data dict's number of observations."""
+    lengths = [len(value) for value in content.values() if isinstance(value, list)]
+    if not lengths:
+        return None
+    return max(set(lengths), key=lengths.count)
 
 
 def arrayDepth(value: list) -> int:
@@ -395,8 +419,9 @@ def arrayDepth(value: list) -> int:
     return len(arrayShape(value))
 
 
-def observationLength(content: dict) -> int | None:
-    lengths = [len(value) for value in content.values() if isinstance(value, list)]
-    if not lengths:
-        return None
-    return max(set(lengths), key=lengths.count)
+def arrayShape(value: list) -> list[int]:
+    shape = []
+    while isinstance(value, list):
+        shape.append(len(value))
+        value = value[0] if value else None
+    return shape
