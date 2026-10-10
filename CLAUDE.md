@@ -47,7 +47,8 @@ Planned ([`ROADMAP.md`](ROADMAP.md)): `contract/`, `suite/`, `references/`, `met
   `Literal[...]` for an argument with a fixed set of options, a type alias when the same
   `Literal` repeats. Config models are Pydantic. f-strings.
 - Bind a long inline expression to a variable with a self-explanatory name on the line
-  before it. One statement per line. Directory variables are `dir`, not `folder`.
+  before it. One statement per line. Directory variables are `dir`, not `folder`; a
+  DataFrame is `df`, not `frame`.
 - Linear code: a method lists its steps in the order a reader would describe them; a step
   with its own `if` ladder or loop becomes its own method. A search is a plain loop with an
   explicit check after it (no `for`/`else`, `while True` with exits, generator-and-`next`).
@@ -56,9 +57,12 @@ Planned ([`ROADMAP.md`](ROADMAP.md)): `contract/`, `suite/`, `references/`, `met
   `dict.fromkeys`, `|` merges or comprehensions.
 - A helper used by one class only is a static method of that class.
 - Guard `argparse` blocks with `# fmt: off` / `# fmt: on`.
+- Module docstring: one sentence on why the module exists, then its input -> output in a
+  line or two.
 - File layout: banners split a file (`# ====` for globals / classes / main, `# ----` for
-  subsections). One pipeline class per script, steps as methods; a recipe-style `__main__`
-  instantiates it and reads as the run's table of contents.
+  subsections), each named in words a new reader understands and followed by one comment
+  line on why the section exists. One pipeline class per script, steps as methods; a
+  recipe-style `__main__` instantiates it and reads as the run's table of contents.
 - Class layout: public methods first, then the private steps in pipeline order under a
   `# ----` banner naming the pipeline.
 
@@ -108,6 +112,8 @@ makes code harder to understand or change.
   guesses right on first read. If 200 lines could be 50, rewrite them.
 - Docstrings only for non-obvious functionality or architectural decisions, one or two
   lines; detail goes into inline why-comments, which cite sources (paper link, equation).
+- A comment explains the code, not its bookkeeping: the case that prompted a rule goes to
+  the test that pins it, a definition to `CONTEXT.md`, how it was decided to a history.
 
 ### Changing code
 
