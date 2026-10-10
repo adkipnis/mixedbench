@@ -1,5 +1,12 @@
 """loader.py defines how a pinned source becomes typed tables and where it is cached.
 
+A source is public data at one version:
+a CRAN package, a GitHub repository at a revision, or a file at a URL with its sha256.
+It is downloaded once into the cache and checked against its pin on every load, without R.
+With a manifest, only the file holding an object is fetched and read, against its own sha256;
+without one (the survey), every data file of the source is enumerated.
+The formats are readers.py's; the loader applies the column types a registry row declares.
+
 pipeline:
 ---------
 a pinned Source
@@ -95,9 +102,7 @@ Manifest = Mapping[tuple[Source, str], ManifestRow]  # (source, object name) -> 
 # loader class
 # =====================================================================================
 class Loader:
-    """Typed tables from pinned sources, cached under one folder.
-    With a manifest, only an object's own file is fetched and read.
-    Without one, the whole source."""
+    """Typed tables from pinned sources, cached under one folder."""
 
     def __init__(
         self,
@@ -125,7 +130,7 @@ class Loader:
 
     def tree(self, source: Source) -> Path:
         """The source's files, extracted once:
-        a CRAN package, a repository at a revision, or a URL server."""
+        a CRAN package, a repository at a revision, or what a URL serves."""
         dir = self._dir(source)
         file = self._download(source)
         is_archive = file.name.lower().endswith(ARCHIVES)
