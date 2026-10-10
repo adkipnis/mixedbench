@@ -30,6 +30,8 @@ from __future__ import annotations
 import hashlib
 from dataclasses import dataclass
 from importlib.metadata import version
+from itertools import combinations
+from typing import Literal
 
 import numpy as np
 import pandas as pd
@@ -68,6 +70,98 @@ class Problem:
     def build(cls, row: Row, table: pd.DataFrame) -> Problem:
         """Raises `Refused` where the contract does not cover the row."""
         return _Builder(row, table).problem()
+
+    def standardised(self, regime: Regime = 'full') -> pd.DataFrame:
+        """The design, response, trials and factor codes over the rows a fit in `regime` sees,
+        on the standardised scale: continuous columns z-scored with the regime's scales,
+        each interaction the product of its standardised parts, never rescaled itself."""
+        columns = [
+            *self.design,
+            self.response,
+            *([self.trials] if self.trials else []),
+            *self.factors,
+        ]
+        rows = self.table if regime == 'full' else self.table[self.table[regime] == 'seen']
+        table = rows[columns].copy()
+        for column, scale in self.scales[regime].items():
+            table[column] = (table[column] - scale.mean) / scale.sd
+        for column, parts in self._interactions().items():
+            table[column] = table[list(parts)].prod(axis=1)
+        return table
+
+    # the draw names: one column per scalar the reference samples, so draws, scores and the
+    # standardised table join on names
+
+    def globalDraws(self) -> tuple[str, ...]:
+        """`parameters` in order, each `cor[<factor>]` expanded to its pairs
+        `cor[<factor>][<a>,<b>]`, `<a>` before `<b>` in the block's order (brms's pair order)."""
+        blocks = {f'cor[{factor}]': elements for factor, elements in self.correlations.items()}
+        names = []
+        for name in self.parameters:
+            if name in blocks:
+                names += [f'{name}[{a},{b}]' for a, b in combinations(blocks[name], 2)]
+            else:
+                names.append(name)
+        return tuple(names)
+
+    def localDraws(self) -> dict[str, tuple[str, ...]]:
+        """Per factor, its random effects named as their `sd` is, `r[<factor>][<j>]` and
+        `r[<x>|<factor>][<j>]` in `sd` order, `<j>` each group's code in the table, in order."""
+        local = {}
+        for factor in self.factors:
+            groups = range(len(self.levels[factor]))
+            local[factor] = tuple(
+                f'r[{effect}][{j}]' for effect in self._effects(factor) for j in groups
+            )
+        return local
+
+    def _effects(self, factor: str) -> list[str]:
+        """`<factor>` and each `<x>|<factor>`, read off the factor's `sd` parameters."""
+        effects = []
+        for name in self.parameters:
+            if name == f'sd[{factor}]' or (name.startswith('sd[') and name.endswith(f'|{factor}]')):
+                effects.append(name.removeprefix('sd[').removesuffix(']'))
+        return effects
+
+    def _interactions(self) -> dict[str, tuple[str, ...]]:
+        """Per interaction column, its parts in order: the design columns after `Intercept` that
+        are no covariate's coded column."""
+        coded = self._covariateColumns()
+        interactions = {}
+        for column in self.design[1:]:
+            if column not in coded:
+                interactions[column] = self._parts(column, coded)
+        return interactions
+
+    def _covariateColumns(self) -> list[str]:
+        """The covariates' coded columns, by the coding: a continuous covariate has a scale and
+        keeps its name; a recoded one has levels and is `<c>` if binary (in the design as is),
+        else `<c>[<level>]` per level after the first."""
+        columns = [column for column in self.scales['full'] if column != self.response]
+        for column, levels in self.levels.items():
+            if column == self.response or column in self.factors:
+                continue
+            if column in self.design:
+                columns.append(column)
+            else:
+                columns += [f'{column}[{level}]' for level in levels[1:]]
+        return columns
+
+    @staticmethod
+    def _parts(column: str, coded: list[str]) -> tuple[str, ...]:
+        """Read left to right, each part the longest coded column the rest of the name starts
+        with, followed by `:` or the end: a level may hold a `:`, so the name is not split."""
+        parts = []
+        rest = column
+        while rest:
+            matches = [c for c in coded if rest == c or rest.startswith(f'{c}:')]
+            part = max(matches, key=len)
+            parts.append(part)
+            rest = rest[len(part) + 1 :]
+        return tuple(parts)
+
+
+Regime = Literal['full', 'rows', 'groups']
 
 
 @dataclass(frozen=True)
