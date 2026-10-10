@@ -27,7 +27,7 @@ by script.
 | `shards/<table>_<label>.csv` | agents, `pull.py` | one shard per reading run; `table` ∈ `registry`, `excluded`, `duplicates`, `dropped` |
 | `prompts/read.md` | | the reading agent's brief |
 | `schema.py`, `sources.py`, `help.py`, `measure.py`, `summarise.py` | | file contract, frame, help pages, measures, summary |
-| `archive/` | | finished scripts and their outputs, reproducible at tags `survey-archive` and `survey-archive-2` ([README](archive/README.md)) |
+| [`archive/`](https://github.com/adkipnis/mixedbench/tree/survey-archive-3/survey/archive) | | finished scripts and their outputs, kept at tag `survey-archive-3` and reproducible at tags `survey-archive` and `survey-archive-2` ([README](https://github.com/adkipnis/mixedbench/blob/survey-archive-3/survey/archive/README.md)) |
 | `tests/` | | `uv run pytest survey/tests`, by hand; the root run never recurses here |
 
 ```
@@ -151,10 +151,10 @@ first); `reader`; `licence`, the `licence:` key or a CRAN DESCRIPTION's `License
 `LICENCES` in `schema.py` and rewritten at every merge (ADR 0003).
 
 `random_slopes` and `verified` came in by the header-only `shards/registry_schema_2.csv`;
-`archive/verified.py` filled `verified` once through `shards/registry_verified.csv`;
-`archive/slopes.py` filled `random_slopes` through `shards/registry_slopes.csv`, Alex's
+the archived `verified.py` filled `verified` once through `shards/registry_verified.csv`;
+`slopes.py` filled `random_slopes` through `shards/registry_slopes.csv`, Alex's
 decisions on the rows it reported through `shards/registry_slopes_decisions.csv`
-(`VERDICTS.md`). A later row fills both in its own shard. `archive/factors.py` regrouped the
+(`VERDICTS.md`). A later row fills both in its own shard. The archived `factors.py` regrouped the
 rows that named a nested `a:b` by a `b` whose codes repeat across `a` through
 `shards/registry_factors.csv`; Wafer's slopes, waiting on that, followed in
 `shards/registry_slopes_wafer.csv`.
