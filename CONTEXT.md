@@ -113,9 +113,19 @@ _Avoid_: spot check (the 20 rows per tier read before it), audit
 ### References and results
 
 **Reference posterior**:
-The draws of the suite's sampler on a problem that passed the diagnostics bar; the target
-every approximation is scored against.
+The draws of the suite's sampler on a problem's full table that passed the diagnostics bar;
+the target every approximation is scored against.
 _Avoid_: ground truth, gold standard, MCMC posterior unqualified
+
+**Ladder**:
+The sampler settings a reference run climbs, level 0 to 2, each longer and more careful than
+the last, until the diagnostics bar passes or the compute cap ends the run.
+_Avoid_: retry, escalation schedule
+
+**Diagnostics bar**:
+The convergence a run must reach to become a reference posterior: rank-normalised R-hat,
+bulk and tail effective sample size on every global parameter, and no divergences.
+_Avoid_: threshold, convergence check
 
 **Chain-split null**:
 The score of half the reference chains against the other half: the floor a metric has on
