@@ -23,6 +23,7 @@ import json
 import struct
 import warnings
 import zipfile
+from collections import Counter
 from pathlib import Path
 from typing import Literal
 
@@ -429,11 +430,12 @@ class JsonFile:
 
     @staticmethod
     def observationLength(content: dict) -> int | None:
-        """The modal length of the dict's arrays, a Stan data dict's number of observations."""
-        lengths = [len(value) for value in content.values() if isinstance(value, list)]
+        """The modal length of the dict's arrays, a Stan data dict's number of observations.
+        A tie goes to the longer length, since observations outnumber groups."""
+        lengths = Counter(len(value) for value in content.values() if isinstance(value, list))
         if not lengths:
             return None
-        return max(set(lengths), key=lengths.count)
+        return max(lengths, key=lambda length: (lengths[length], length))
 
     @staticmethod
     def arrayDepth(value: list) -> int:

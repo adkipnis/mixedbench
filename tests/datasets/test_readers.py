@@ -218,6 +218,18 @@ def test_a_stan_data_dict_is_the_table_of_its_observation_length_arrays(example)
     assert readExample(example, 'stan/data/meta.json') is None
 
 
+def test_a_stan_data_dict_with_tied_lengths_takes_the_longer_as_observations(tmp_path):
+    """A third of the Stan examples' data dicts tie on their most common array length (kidney:
+    five arrays of 58, five of 18); observations outnumber groups, so the longer length wins
+    rather than whichever the set happens to list first."""
+    file = tmp_path / 'tied.json'
+    file.write_text(
+        '{"N": 4, "J": 2, "y": [1, 2, 3, 4], "x": [0, 1, 0, 1], "u": [5, 6], "v": [7, 8]}'
+    )
+    tied = readers.read(file, 'tied.json')[0]['tied.json']
+    assert list(tied.columns) == ['y', 'x']
+
+
 def test_a_gzipped_tsv_is_read_as_the_tsv_it_wraps():
     """PMLB serves every table as `.tsv.gz`; the wrapper names no format of its own."""
     tables, _ = readFixture('apnea.tsv.gz')
