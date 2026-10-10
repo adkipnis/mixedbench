@@ -204,7 +204,7 @@ HALF_T = Prior('student_t', (3, 0, 2.5))
 
 
 def test_the_prior_record_states_adr_0001s_prior_per_parameter_group_the_problem_has() -> None:
-    """One prior serves every problem (ADR 0001), keyed by brms's class so item 4's call reads
+    """One prior serves every problem (ADR 0001), keyed by brms's class so item 5's call reads
     it; a group the problem lacks is absent, since brms refuses a prior on an absent class: a
     Poisson intercept-only model has no `b`, `cor` or `sigma`, an ordinal model no `Intercept`
     (its thresholds take brms's default)."""
