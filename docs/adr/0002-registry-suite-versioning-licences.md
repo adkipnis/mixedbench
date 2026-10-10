@@ -89,3 +89,11 @@ correction a benchmark change.
   the registry's provenance; `survey/archive/` leaves the tree, reachable by tag.
 - Why: the shards and prompts rebuild the registry, and the verdicts back the `verified`
   column; the archive is finished and already preserved.
+
+## Amendment 2026-10-10: a suite's list in the wheel (#55)
+
+- Decision: the wheel also carries each suite's list, `suite/<version>/candidates.csv` until
+  1.1 freezes `problems.csv`, so `mixedbench.suite.load` builds a problem by its id on first
+  use and checks its contract hash against the list.
+- Why: the list holds ids and hashes, no data, so ADR 0003 holds; without it a user needs a
+  checkout to fetch a suite, and five calls across three modules for one problem.
