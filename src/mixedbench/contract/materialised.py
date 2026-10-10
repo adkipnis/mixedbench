@@ -36,7 +36,7 @@ from mixedbench.contract.problem import Prior, Problem, Scale
 # the package's interface to a problem: written once, loaded anywhere
 def materialise(problem: Problem, cache: Path) -> str:
     """Write the problem's two files under `cache` and return its contract hash."""
-    dir = _problemDir(cache, problem.id)
+    dir = _problemDir(problem.id, cache)
     dir.mkdir(parents=True, exist_ok=True)
     problem.table.to_parquet(dir / 'table.parquet', index=False)
     written = contractHash(problem)
@@ -45,9 +45,9 @@ def materialise(problem: Problem, cache: Path) -> str:
     return written
 
 
-def load(cache: Path, id: str) -> Problem:
+def load(id: str, cache: Path) -> Problem:
     """Raises where the files no longer give the hash they were written with (edited, or stale)."""
-    dir = _problemDir(cache, id)
+    dir = _problemDir(id, cache)
     stored = json.loads((dir / 'problem.json').read_text())
     problem = Problem(
         id=stored['id'],
@@ -77,7 +77,7 @@ def load(cache: Path, id: str) -> Problem:
     return problem
 
 
-def _problemDir(cache: Path, id: str) -> Path:
+def _problemDir(id: str, cache: Path) -> Path:
     """Named by the id's sha256: an object name may hold `/`, `!`, commas and spaces,
     and the JSON carries the id itself."""
     return Path(cache) / 'problems' / hashlib.sha256(id.encode()).hexdigest()[:16]
