@@ -119,7 +119,7 @@ def test_the_dropped_share_counts_the_rows_missing_a_model_value() -> None:
     problem = Problem.build(fixtureRow(), fixtureTable())
     assert problem.dropped_share == 2 / 14
     assert -1.0 in problem.table['x'].tolist()
-    withoutPlot = fixtureTable().assign(plot=lambda df: df['plot'].mask(df.index == 0))
+    withoutPlot = fixtureTable().assign(plot=lambda table: table['plot'].mask(table.index == 0))
     assert Problem.build(fixtureRow(), withoutPlot).dropped_share == 3 / 14
 
 

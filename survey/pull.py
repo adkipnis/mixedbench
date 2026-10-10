@@ -85,8 +85,8 @@ class Puller:
             if row['source'] in self.depositPages:  # one page per deposit, read once per deposit
                 deposit = self.depositPages[row['source']].relative_to(self.registry.parent)
                 page = f'# deposit page: {deposit}\n\n{page}'
-            df = self.loader.load(source, row['object'])
-            file.write_text(f'{page}\n\n{self._firstRows(df)}\n')
+            table = self.loader.load(source, row['object'])
+            file.write_text(f'{page}\n\n{self._firstRows(table)}\n')
 
     def flush(self) -> None:
         """`candidates.csv` whole, and the screened-out objects as an exclusion shard; the rows
@@ -101,17 +101,17 @@ class Puller:
         writeCsv(pd.DataFrame(excluded, columns=EXCLUDED.agentColumns), shard)
 
     @staticmethod
-    def screen(df: pd.DataFrame | None) -> str:
+    def screen(table: pd.DataFrame | None) -> str:
         """The pre-screen verdict, one of SCREENS: what a grouped table needs before an agent
         reads its documentation."""
-        if df is None:
+        if table is None:
             return 'no frame'
-        if df.shape[0] < MIN_ROWS:
+        if table.shape[0] < MIN_ROWS:
             return 'under 3 rows'
-        if df.shape[1] < MIN_COLS:
+        if table.shape[1] < MIN_COLS:
             return 'one column'
-        for column in df.columns:
-            if Puller._canGroup(df[column]):
+        for column in table.columns:
+            if Puller._canGroup(table[column]):
                 return 'pass'
         return 'no repeated column'
 
@@ -137,11 +137,11 @@ class Puller:
 
     def _row(self, label: str, obj: DataObject) -> dict:
         source = self.frame.sources[label]
-        df = None
+        table = None
         counts = {'n_numeric': '', 'n_categorical': '', 'n_string': '', 'n_other': ''}
         if obj.n_rows is not None:
-            df = self.loader.load(source, obj.name)
-            counts = self._countDtypes(df)
+            table = self.loader.load(source, obj.name)
+            counts = self._countDtypes(table)
         return {
             'tier': self.frame.tiers[label],
             'source': label,
@@ -152,13 +152,13 @@ class Puller:
             'n_cols': '' if obj.n_cols is None else obj.n_cols,
             **counts,
             'reader': obj.reader,
-            'screen': self.screen(df),
+            'screen': self.screen(table),
         }
 
     @staticmethod
-    def _countDtypes(df: pd.DataFrame) -> dict[str, int]:
+    def _countDtypes(table: pd.DataFrame) -> dict[str, int]:
         counts = {'n_numeric': 0, 'n_categorical': 0, 'n_string': 0, 'n_other': 0}
-        for dtype in df.dtypes:
+        for dtype in table.dtypes:
             if isinstance(dtype, pd.CategoricalDtype):
                 counts['n_categorical'] += 1
             elif pd.api.types.is_bool_dtype(dtype):
@@ -183,15 +183,15 @@ class Puller:
         return 2 <= distinct < len(values)
 
     @staticmethod
-    def _firstRows(df: pd.DataFrame) -> str:
+    def _firstRows(table: pd.DataFrame) -> str:
         """What the read prompt promises next to the documentation: the dtypes and the first
         rows, so that an agent sees the columns as loaded and runs nothing."""
-        shown = df.iloc[:, :HEAD_COLUMNS]
+        shown = table.iloc[:, :HEAD_COLUMNS]
         dtypes = '\n'.join(f'{column}: {dtype}' for column, dtype in shown.dtypes.items())
-        if shown.shape[1] < df.shape[1]:
-            dtypes += f'\n... and {df.shape[1] - shown.shape[1]} more columns'
+        if shown.shape[1] < table.shape[1]:
+            dtypes += f'\n... and {table.shape[1] - shown.shape[1]} more columns'
         head = shown.head(HEAD_ROWS).to_string(index=False)
-        return f'# first rows (of {len(df)})\n{dtypes}\n\n{head}'
+        return f'# first rows (of {len(table)})\n{dtypes}\n\n{head}'
 
     def _draw(self, names: list[str], cap: int | None) -> set[str]:
         """The names to read: all of them without a cap or under it, else a seeded sample."""

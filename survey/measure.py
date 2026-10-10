@@ -1,5 +1,5 @@
 """Measure one loaded table against its registry row: the dimension survey's numbers that no
-agent types (spec #14, ticket #18). `Measurer(df, row).dimensions()` gives one row per grouping
+agent types (spec #14, ticket #18). `Measurer(table, row).dimensions()` gives one row per grouping
 factor, `.columns()` one row per covariate column; the merge script writes them to
 `dimensions.csv` and `columns.csv`.
 """
@@ -47,14 +47,14 @@ def observed(values: pd.Series, q: float) -> int | float:
 # pipeline: registry row -> relation -> group sizes per factor -> covariate columns -> d
 # =====================================================================================
 class Measurer:
-    def __init__(self, df: pd.DataFrame, row: Row) -> None:
+    def __init__(self, table: pd.DataFrame, row: Row) -> None:
         self.row = row
         self.factors = row.grouping_factors
-        measured = df[df[row.response].notna()]  # a PK table's dosing rows carry no response
-        self.df = withComposites(measured, self.factors)
+        measured = table[table[row.response].notna()]  # a PK table's dosing rows carry no response
+        self.table = withComposites(measured, self.factors)
         self.identity = {k: getattr(row, k) for k in IDENTITY}
         taken = {row.response, row.trials, *self.factors, *row.ignore}
-        self.columnNames = [c for c in df.columns if c not in taken]
+        self.columnNames = [c for c in table.columns if c not in taken]
 
     def columns(self) -> list[dict]:
         return [self.identity | {'column': c} | self.describe(c) for c in self.columnNames]
@@ -79,7 +79,7 @@ class Measurer:
         return 'mixed'
 
     def nested(self, a: str, b: str) -> bool:
-        levels = self.df[[a, b]].drop_duplicates()
+        levels = self.table[[a, b]].drop_duplicates()
         return self.oneParentEach(levels, a, b) or self.oneParentEach(levels, b, a)
 
     @staticmethod
@@ -91,7 +91,7 @@ class Measurer:
     # group sizes
     # ---------------------------------------------------------------------------------
     def groupSizes(self, factor: str) -> dict:
-        sizes = self.df[factor].value_counts()
+        sizes = self.table[factor].value_counts()
         sizes = sizes[sizes > 0]  # a categorical may carry unused levels
         return {
             'n_obs': int(sizes.sum()),
@@ -110,7 +110,7 @@ class Measurer:
     # covariate columns
     # ---------------------------------------------------------------------------------
     def describe(self, column: str) -> dict:
-        values = self.df[column]
+        values = self.table[column]
         kind, levels = columnType(values, self.row.types.get(column, ''))
         constantWithin = [f for f in self.factors if self.constantWithin(column, f)]
         return {
@@ -123,7 +123,7 @@ class Measurer:
         }
 
     def constantWithin(self, column: str, factor: str) -> bool:
-        distinct = self.df.groupby(factor, observed=True)[column].nunique()
+        distinct = self.table.groupby(factor, observed=True)[column].nunique()
         return bool(distinct.max() <= 1)
 
     # ---------------------------------------------------------------------------------

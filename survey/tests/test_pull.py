@@ -150,7 +150,7 @@ def test_candidates_follow_frame_order_not_the_alphabet(tmp_path):
 
 
 @pytest.mark.parametrize(
-    'table, verdict',
+    'columns, verdict',
     [
         ({'y': [1.0, 2.0, 3.0], 'g': ['a', 'a', 'b']}, 'pass'),
         ({'y': [1.0, 2.0, 3.0], 'g': [1.0, 1.0, 2.0]}, 'pass'),  # R codes arrive as doubles
@@ -162,11 +162,11 @@ def test_candidates_follow_frame_order_not_the_alphabet(tmp_path):
         (None, 'no frame'),
     ],
 )
-def test_screen_keeps_every_table_that_could_hold_groups(table, verdict):
+def test_screen_keeps_every_table_that_could_hold_groups(columns, verdict):
     """Conservative by design: anything with a column that could index groups passes; only
     what cannot be a grouped table at all is discarded."""
-    df = None if table is None else pd.DataFrame(table)
-    assert Puller.screen(df) == verdict
+    table = None if columns is None else pd.DataFrame(columns)
+    assert Puller.screen(table) == verdict
 
 
 def test_the_prescreen_shard_merges_into_the_exclusions(root):
