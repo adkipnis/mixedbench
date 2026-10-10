@@ -49,6 +49,10 @@ Reader = Literal['pyreadr', 'rdata', 'pandas', 'deparse']
 R_ERRORS = (PyreadrError, LibrdataError, IndexError)
 RDATA_ERRORS = (ValueError, AssertionError)
 FRAME_CLASSES = r'Missing constructor for R class "(data\.table|tbl_df|tbl)"'
+R_LOGICALS = {
+    'T': True, 'TRUE': True, 'true': True, 'True': True,
+    'F': False, 'FALSE': False, 'false': False, 'False': False,
+}  # fmt: skip
 
 
 # =====================================================================================
@@ -233,9 +237,25 @@ class DataFolder:
         if file.suffix.lower() == '.csv':
             sep = ';'
         table = pd.read_csv(file, sep=sep, quotechar='"', na_values=['NA'], keep_default_na=False)
+        return {file.stem: table.assign(**DataFolder._typeConvert(table))}
+
+    @staticmethod
+    def _typeConvert(table: pd.DataFrame) -> dict[str, pd.Series]:
+        """R's type.convert on the string columns pandas read: logicals and factors as R types them.
+        Integers stay int64, not R's int32: suite 1.1's contract hashes cover them as read."""
         strings = table.columns[table.dtypes.map(pd.api.types.is_string_dtype)]
-        factors = {column: table[column].astype('category') for column in strings}
-        return {file.stem: table.assign(**factors)}
+        return {column: DataFolder._logicalOrFactor(table[column]) for column in strings}
+
+    @staticmethod
+    def _logicalOrFactor(values: pd.Series) -> pd.Series:
+        """A column of R's logical spellings (`T`, `FALSE`) is bool, or float where it holds NA."""
+        present = set(values.dropna())
+        if not present <= set(R_LOGICALS):
+            return values.astype('category')
+        logical = values.map(R_LOGICALS)
+        if logical.isna().any():
+            return logical.astype('float64')
+        return logical.astype('bool')
 
 
 # =====================================================================================

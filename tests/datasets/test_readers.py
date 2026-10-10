@@ -147,13 +147,17 @@ def test_a_data_txt_reads_as_read_table_reads_it(package):
     assert list(plots['yield'].dropna()) == [1.5, 2.0, 3.25]
 
 
-def test_a_data_txt_sorts_levels_in_code_point_order(tmp_path):
-    """read.table sorts levels as R does in the C locale, by code point: agridat's lillemo.wheat
-    has `BT06` before `Ba04`, where the ICU collation of R's default locale puts `Ba04` first."""
-    file = tmp_path / 'lillemo.txt'
-    file.write_text('"site"\n"Ba04"\n"BT06"\n')
-    tables, _ = readers.read(file, 'data/lillemo.txt', cran=True)
-    assert list(tables['lillemo']['site'].cat.categories) == ['BT06', 'Ba04']
+def test_a_data_txt_reads_as_r_reads_it_in_the_c_locale():
+    """R CMD INSTALL reads lazy data in the C locale, so levels sort by code point (agridat's
+    lillemo.wheat has `BT06` before `Ba04`, where ICU collation puts `Ba04` first); `T` and `F`
+    are logicals, float where NA. `typed.rda` is R's own reading of `typed.txt`, saved by
+    make_fixture.R. The one known gap: integers stay int64 where R's are int32, since suite 1.1's
+    contract hashes cover the agridat tables as read; closing it is a contract change."""
+    tables, reader = readers.read(FIXTURES / 'typed.txt', 'data/typed.txt', cran=True)
+    twin, _ = readFixture('typed.rda')
+    expected = twin['typed'].astype({'plot': 'int64'})
+    assert reader == 'pandas'
+    pd.testing.assert_frame_equal(tables['typed'], expected)
 
 
 def test_a_data_csv_is_read_with_semicolons(package):
