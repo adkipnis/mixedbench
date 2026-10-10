@@ -14,8 +14,8 @@ A benchmark of posterior approximation and prediction for generalized linear mix
 ## What and why
 
 - Bayesian methods for GLMMs are each tested on their own few datasets.
-- mixedbench lists the documented models of public grouped datasets, each fetched from a
-  pinned source.
+- mixedbench lists the documented models of 641 public tabular datasets with grouping
+  structure, each fetched from a pinned source.
 - One frozen contract turns each into a problem ready to fit; suites add reference posteriors
   to score against, from release 1.1.
 
@@ -68,5 +68,4 @@ GitHub. The Zenodo DOI follows with release 1.0.
 ## Licence
 
 - Code: [MIT](https://github.com/adkipnis/mixedbench/blob/main/LICENSE). Registry and suite files: [CC BY 4.0](https://github.com/adkipnis/mixedbench/blob/main/LICENSE-CC-BY-4.0).
-- The data keep their sources' terms: they are fetched at first use and never redistributed,
-  except CC0 files whose host refuses scripts, mirrored with the same checksum.
+- The data keep their sources' terms: they are fetched at first use, not redistributed.
