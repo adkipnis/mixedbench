@@ -26,10 +26,12 @@ release that freezes it.
 
 ## Release 1.1 — suite 1.1 with references; the paper
 
-- [ ] **5 Reference runner.** brms/cmdstanr at pinned versions, the ladder and bar (ADR 0004),
-  draw files, diagnostics, one problem per cluster job, the 12-hour cap
+- [ ] **5 Reference runner.** brms/cmdstanr at pinned versions, the ladder and bar (ADR 0004,
+  amended 2026-10-10), draw files, diagnostics, one problem per cluster job, the 12-hour cap
+  over the whole ladder; full-table fits only, a pilot on CI's 20-problem subset
 - [ ] **6 Cluster run.** Suite 1.1 references on CPU nodes; failures recorded; `suite/1.1/
-  problems.csv` frozen from the candidates that passed; Hub upload and the Zenodo snapshot
+  problems.csv` frozen from the candidates that passed, once the second hand sample (ADR 0002)
+  and the lab note on #47 (ADR 0005) are done; Hub upload and the Zenodo snapshot
 - [ ] **7 Metrics and opponent lines.** W1, coverage, C2ST and MMD against the chain-split null,
   the lab note choosing the joint metric; posterior lines (NUTS level 0, Pathfinder, Laplace,
   mean-field ADVI); predictive lines (TabPFN ×2, GPBoost, glmmTMB, GLM) and scores (ADR 0005);
@@ -41,7 +43,8 @@ release that freezes it.
 
 ## Release 1.2 — suite 1.2 and the extensions; the last planned release
 
-- [ ] **9 Suite 1.2.** Oracle-track references; negative binomial and probit from the `family`
+- [ ] **9 Suite 1.2.** Oracle-track references; predictive references, the fits to each
+  regime's seen rows (ADR 0005); negative binomial and probit from the `family`
   column; retirements from the weekly fetch log; random-effect blocks as the source writes
   them (#46, grilled when this item starts). The oracle generator, moved here from item 3
   (#31) and grilled when this item starts: metabeta's simulator draws the parameters and
