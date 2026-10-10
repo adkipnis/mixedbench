@@ -183,7 +183,7 @@ class Row:
     @staticmethod
     def slopeRefusals(cells: dict[str, str], term: str) -> list[tuple[str, str]]:
         """A slope term is `x|g` or `x||g`, `x` a covariate and `g` a grouping factor of its
-        row (ADR 0001)."""
+        row."""
         if SLOPE_TERM.fullmatch(term) is None:
             return [('random_slopes', f'not a slope term: {term}')]
         slope = SlopeTerm.parse(term)

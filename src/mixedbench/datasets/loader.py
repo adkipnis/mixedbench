@@ -77,7 +77,7 @@ class Source:
     path: str | None = None  # git, url: file or folder inside the tree; None -> all of it
     file: str | None = None  # url: the download's file name where the URL's path has none
     layout: tuple[str, ...] | None = None  # url: the columns of a headerless text file
-    mirror: str | None = None  # url: the package's copy where the host refuses (ADR 0003)
+    mirror: str | None = None  # url: the package's copy where the host refuses
 
 
 @dataclass(frozen=True)
