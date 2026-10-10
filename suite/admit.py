@@ -1,8 +1,6 @@
 """admit.py defines the admission of suite 1.1: registry rows in, candidates and refusals out.
 
-Every row the family rule covers
-(the response type fixes the family; a categorical response or a censored model has none)
-is built into its problem and materialised under the cache.
+Every row the family rule covers is built into its problem and materialised under the cache.
 Its contract hash goes into the candidate list. Five decisions guide admission:
 - hand decisions first: a row whose documented model does not survive into the contract
   is refused by id, a row whose random effects were changed carries its fidelity:
