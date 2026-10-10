@@ -133,26 +133,12 @@ def test_a_rejected_rds_is_named_by_its_file_and_one_rdata_cannot_parse_has_no_t
 # ==============================================================================================
 
 
-def test_a_data_txt_reads_as_read_table_reads_it(package):
-    """agridat ships its tables as `data/*.txt`, which utils::data() reads with
-    read.table(header = TRUE, as.is = FALSE): quoted strings become factors with sorted
-    levels, `NA` is missing. The reader does the same in Python (ADR 0003)."""
-    tables, reader = readCran(package, 'data/plots.txt')
-    plots = tables['plots']
-    assert reader == 'pandas'
-    assert list(plots.columns) == ['field', 'variety', 'plants', 'yield']
-    assert list(plots['field']) == ['north A', 'south B', 'north A', 'west']
-    assert list(plots['variety'].cat.categories) == ['a', 'b', 'c']
-    assert plots['plants'].isna().sum() == 1
-    assert list(plots['yield'].dropna()) == [1.5, 2.0, 3.25]
-
-
 def test_a_data_txt_reads_as_r_reads_it_in_the_c_locale():
-    """R CMD INSTALL reads lazy data in the C locale, so levels sort by code point (agridat's
-    lillemo.wheat has `BT06` before `Ba04`, where ICU collation puts `Ba04` first); `T` and `F`
-    are logicals, float where NA. `typed.rda` is R's own reading of `typed.txt`, saved by
-    make_fixture.R. The one known gap: integers stay int64 where R's are int32, since suite 1.1's
-    contract hashes cover the agridat tables as read; closing it is a contract change."""
+    """utils::data() reads agridat's `data/*.txt` with read.table(header = TRUE, as.is = FALSE),
+    in the C locale as R CMD INSTALL does: `typed.rda` is R's own reading of `typed.txt`.
+    It pins a quoted field with a space, `T`/`F` as logicals and levels by code point
+    (`BT06` before `Ba04`, as in agridat's lillemo.wheat).
+    The one known gap, integers int64 where R's are int32, waits for a contract change (#54)."""
     tables, reader = readers.read(FIXTURES / 'typed.txt', 'data/typed.txt', cran=True)
     twin, _ = readFixture('typed.rda')
     expected = twin['typed'].astype({'plot': 'int64'})
