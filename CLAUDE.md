@@ -69,8 +69,8 @@ Planned ([`ROADMAP.md`](ROADMAP.md)): `contract/`, `suite/`, `references/`, `met
 - File layout: banners split a file (`# ====` for globals / classes / main, `# ----` for
   subsections), each named in words a new reader understands and followed by one comment
   line on why the section exists, unless a class docstring right below says it. Comments
-  start in lower case; docstrings are capitalised sentences, their lines broken at sentence
-  or clause boundaries, not at the column limit. One pipeline class per script, steps as
+  start in lower case; docstrings are capitalised sentences; the lines of both are broken at
+  sentence or clause boundaries, not at the column limit. One pipeline class per script, steps as
   methods; a recipe-style `__main__` instantiates it and reads as the run's table of contents.
 - Class layout: public methods first, then the private steps in pipeline order under a
   `# ----` banner naming the pipeline by its arrows alone (`# url -> archive -> tree`).
