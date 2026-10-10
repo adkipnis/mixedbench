@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from mixedbench.registry.row import COLUMNS, FAMILIES, RESPONSE_TYPES, VERIFIED
+from mixedbench.registry.row import COLUMNS
 
 
 # =====================================================================================
@@ -97,13 +97,10 @@ EXCLUSION_REASONS = (
 )  # fmt: skip
 
 ALLOWED: dict[str, dict[str, tuple[str, ...]]] = {
-    'registry': {
-        'response_type': RESPONSE_TYPES,
-        'family': FAMILIES,
+    'registry': {  # the package's vocabularies are its row grammar (`Row.refusals`)
         'published_model': YES_NO,
         'domain': DOMAINS,
         'confidence': ('high', 'medium', 'low'),
-        'verified': VERIFIED,
     },
     'excluded': {'reason': EXCLUSION_REASONS},
     'duplicates': {'verdict': ('same', 'different')},
@@ -111,9 +108,9 @@ ALLOWED: dict[str, dict[str, tuple[str, ...]]] = {
 }
 
 REQUIRED = {
-    'registry': (
-        'source', 'object', 'model_index', 'response', 'response_type', 'grouping_factors',
-        'formula', 'published_model', 'domain', 'confidence', 'verified',
+    'registry': (  # an empty `model_index`, `response_type` or `verified` the grammar refuses
+        'source', 'object', 'response', 'grouping_factors', 'formula', 'published_model',
+        'domain', 'confidence',
     ),
     'excluded': ('source', 'object', 'reason'),
     'duplicates': ('source_a', 'object_a', 'source_b', 'object_b', 'verdict'),
