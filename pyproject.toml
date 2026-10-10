@@ -73,7 +73,6 @@ cache-keys = [
 
 [tool.ruff]
 line-length = 100
-extend-exclude = ["survey/archive"]  # frozen at tag survey-archive, not maintained
 
 [tool.ruff.format]
 quote-style = "single"
