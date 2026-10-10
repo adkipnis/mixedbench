@@ -35,7 +35,7 @@ from pyreadr import LibrdataError, PyreadrError
 from pyreadr._pyreadr_parser import PyreadrParser
 
 # =====================================================================================
-# file kinds and R errors
+# file kinds
 # =====================================================================================
 # the suffixes each reader takes, and the names that point to documentation.
 R_FILES = {'.rda', '.rdata', '.rds'}  # meant for pyreadr, or rdata
@@ -45,15 +45,7 @@ TABLE_FILES = {  # meant for pandas
     '.arrow', '.pq',
 }  # fmt: skip
 DOC_STEMS = ('readme', 'codebook', 'description', 'notes', 'metadata', 'variables', 'dictionary')
-NOTE_SHEETS = ('contents', 'readme', 'codebook', 'notes', 'description')  # a workbook's codebook
 Reader = Literal['pyreadr', 'rdata', 'pandas', 'deparse']
-R_ERRORS = (PyreadrError, LibrdataError, IndexError)
-RDATA_ERRORS = (ValueError, AssertionError)
-FRAME_CLASSES = r'Missing constructor for R class "(data\.table|tbl_df|tbl)"'
-R_LOGICALS = {
-    'T': True, 'TRUE': True, 'true': True, 'True': True,
-    'F': False, 'FALSE': False, 'false': False, 'False': False,
-}  # fmt: skip
 
 
 # =====================================================================================
@@ -118,11 +110,15 @@ def bare(file: Path) -> Path:
 class RFile:
     """An .rda, .RData or .rds file, through pyreadr, or through rdata where librdata refuses."""
 
+    R_ERRORS = (PyreadrError, LibrdataError, IndexError)
+    RDATA_ERRORS = (ValueError, AssertionError)
+    FRAME_CLASSES = r'Missing constructor for R class "(data\.table|tbl_df|tbl)"'
+
     @staticmethod
     def read(path: Path) -> tuple[dict[str, pd.DataFrame | None], Reader]:
         try:
             return RFile._pyreadr(path), 'pyreadr'
-        except R_ERRORS:
+        except RFile.R_ERRORS:
             return RFile._rdata(path), 'rdata'
 
     # ------------------------------------------------------------------------------------------
@@ -169,7 +165,7 @@ class RFile:
         """Through the pure-Python rdata, where a list or a model fit is no table."""
         try:
             objects = RFile._rdataObjects(path)
-        except RDATA_ERRORS:
+        except RFile.RDATA_ERRORS:
             return {path.stem: None}
         tables = {}
         for name, value in objects.items():
@@ -185,7 +181,7 @@ class RFile:
     def _rdataObjects(path: Path) -> dict:
         """An .rds holds one object, named by the file as `_pyreadr` names it."""
         with warnings.catch_warnings():
-            warnings.filterwarnings('ignore', FRAME_CLASSES, UserWarning)
+            warnings.filterwarnings('ignore', RFile.FRAME_CLASSES, UserWarning)
             if path.suffix.lower() == '.rds':
                 return {path.stem: rdata.read_rds(path)}
             return rdata.read_rda(path)
@@ -212,6 +208,11 @@ class RFile:
 # =====================================================================================
 class DataFolder:
     """A text or .R file in a CRAN package's data/ folder, read as utils::data() reads it."""
+
+    R_LOGICALS = {
+        'T': True, 'TRUE': True, 'true': True, 'True': True,
+        'F': False, 'FALSE': False, 'false': False, 'False': False,
+    }  # fmt: skip
 
     @staticmethod
     def read(file: Path) -> tuple[dict[str, pd.DataFrame | None], Reader]:
@@ -251,9 +252,9 @@ class DataFolder:
     def _logicalOrFactor(values: pd.Series) -> pd.Series:
         """A column of R's logical spellings (`T`, `FALSE`) is bool, or float where it holds NA."""
         present = set(values.dropna())
-        if not present <= set(R_LOGICALS):
+        if not present <= set(DataFolder.R_LOGICALS):
             return values.astype('category')
-        logical = values.map(R_LOGICALS)
+        logical = values.map(DataFolder.R_LOGICALS)
         if logical.isna().any():
             return logical.astype('float64')
         return logical.astype('bool')
@@ -265,6 +266,9 @@ class DataFolder:
 class PandasFile:
     """Any other file, through pandas: one table named by its label,
     or one per data sheet of a workbook."""
+
+    # the names of a workbook's codebook sheets
+    NOTE_SHEETS = ('contents', 'readme', 'codebook', 'notes', 'description')
 
     @staticmethod
     def read(
@@ -279,7 +283,7 @@ class PandasFile:
 
     @staticmethod
     def isNoteSheet(name: str) -> bool:
-        return any(stem in name.lower() for stem in NOTE_SHEETS)
+        return any(stem in name.lower() for stem in PandasFile.NOTE_SHEETS)
 
     @staticmethod
     def banner(file: Path) -> tuple[list[str], str]:
