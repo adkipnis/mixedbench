@@ -67,3 +67,22 @@ correction a benchmark change.
 - Decision: the share of rows dropped for missing values is recorded on the candidate list,
   `suite/<version>/candidates.csv`, and not capped. A cap is a branch for a case not yet
   observed; the admission script prints the top of the distribution.
+
+## Amendment 2026-10-10: going public (roadmap item 4)
+
+- Decision: release 1.0 makes the repository public, tags `v1.0.0`, takes a Zenodo DOI and
+  publishes to PyPI by trusted publishing from a GitHub release.
+- Why: Zenodo archives only public repositories, and `pip install mixedbench` is what users of
+  a benchmark expect; the wheel carries code and registry files only, so ADR 0003 holds.
+- Decision: the wheel is licensed `MIT AND CC-BY-4.0`, with both licence files, since it
+  bundles the registry files.
+- Decision: `requires-python = ">=3.11"`; development stays on 3.14, CI tests 3.11 and 3.14.
+- Why: no code needs a newer Python, and `>=3.14` would turn away most ML users.
+- Decision: the history stays as it is; `CLAUDE.md` leaves the tree and becomes local. Its
+  conventions move to a public `CONTRIBUTING.md`, which `CLAUDE.md` imports.
+- Rejected: rewriting the history (`git filter-repo`) or a fresh squashed repository. Nothing
+  in the history is secret, and a rewrite breaks every hash cited in issues, PRs and tags.
+- Decision: the ADRs, survey shards, prompts, `HISTORY.md` and `VERDICTS.md` stay public as
+  the registry's provenance; `survey/archive/` leaves the tree, reachable by tag.
+- Why: the shards and prompts rebuild the registry, and the verdicts back the `verified`
+  column; the archive is finished and already preserved.
