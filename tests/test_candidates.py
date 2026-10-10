@@ -6,7 +6,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pandas as pd
 import pytest
 from mixedbench import registry
 from mixedbench.contract import Problem, materialise
@@ -21,18 +20,10 @@ def rowsById() -> dict[str, Row]:
     return {row.id: row for row in registry.rows()}
 
 
-def unmirrored(candidates: pd.DataFrame, rows: dict[str, Row]) -> pd.DataFrame:
-    """The candidates whose source has no mirror: the mirror's release assets answer only once
-    the repository is public (#34-#44); drop this filter then."""
-    sources = registry.sources()
-    keep = [sources[rows[id].source].mirror is None for id in candidates['id']]
-    return candidates[keep]
-
-
 @pytest.mark.network
 def test_a_seeded_subset_of_the_candidates_rebuilds_to_its_hashes(tmp_path: Path) -> None:
     rows = rowsById()
-    subset = unmirrored(readCsv(CANDIDATES), rows).sample(SUBSET, random_state=SEED)
+    subset = readCsv(CANDIDATES).sample(SUBSET, random_state=SEED)
     tables = registry.Tables(tmp_path)
     rebuilt = {}
     for id in subset['id']:
