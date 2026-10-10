@@ -2,13 +2,11 @@
 `quantiles.yaml` from `dimensions.csv`, `columns.csv` and `registry.csv`, every axis pooled,
 per tier and with agridat removed; `SUMMARY.md` from the digit-free template, the practice
 survey's p90 read at merge time from `practice_quantiles.yaml`, a snapshot of the practice
-survey's `quantiles.yaml`, which stays in metabeta-v3. The README's counts block is the
-summary's Corpus paragraph verbatim.
+survey's `quantiles.yaml`, which stays in metabeta-v3.
 """
 
 from __future__ import annotations
 
-import re
 from pathlib import Path
 from string import Template
 
@@ -50,18 +48,14 @@ ROW_AXES = {'n_obs': 'n_obs', 'n_grouping_factors': 'n_factors', 'd_doc': 'd_doc
 CATEGORICAL_TYPES = ('categorical', 'ordered')
 TERMS = (9, 14)  # the practice survey's p90 and p95 of fixed-effect terms (envelope rule 4)
 K_TAIL = 10  # the summary's K table pools the levels above this (the columns rule's integer cap)
-CORPUS = re.compile(r'^\*\*Corpus\.\*\*.*?(?=\n\n)', re.MULTILINE | re.DOTALL)
-README_START = '<!-- corpus: written by survey/merge.py from registry/SUMMARY.md -->'
-README_END = '<!-- /corpus -->'
 
 
 # =====================================================================================
-# pipeline: measured files -> axes -> shares -> K -> implied columns -> summary -> README
+# pipeline: measured files -> axes -> shares -> K -> implied columns -> summary
 # =====================================================================================
 class Summariser:
-    def __init__(self, root: Path, survey: Path, readme: Path) -> None:
+    def __init__(self, root: Path, survey: Path) -> None:
         self.root, self.survey = Path(root), Path(survey)  # the registry folder, the survey's
-        self.readme = Path(readme)
         self.registry = readCsv(self.root / 'registry.csv')
         self.excluded = readCsv(self.root / 'excluded.csv')
         measured = FACTOR_AXES + tuple(ROW_AXES.values())
@@ -73,10 +67,8 @@ class Summariser:
 
     def flush(self) -> None:
         quantiles = self.quantiles()
-        summary = self.summary(quantiles)
         (self.root / 'quantiles.yaml').write_text(yaml.safe_dump(quantiles, sort_keys=False))
-        (self.root / 'SUMMARY.md').write_text(summary)
-        self.readme.write_text(self.withCorpus(self.readme.read_text(), summary))
+        (self.root / 'SUMMARY.md').write_text(self.summary(quantiles))
 
     @staticmethod
     def numeric(frame: pd.DataFrame, columns: tuple[str, ...]) -> pd.DataFrame:
@@ -256,14 +248,3 @@ class Summariser:
     @staticmethod
     def cell(value: float | None) -> str:
         return '–' if value is None else str(value)
-
-    # ---------------------------------------------------------------------------------
-    # README
-    # ---------------------------------------------------------------------------------
-    @staticmethod
-    def withCorpus(readme: str, summary: str) -> str:
-        """The README with its counts block replaced by the summary's Corpus paragraph."""
-        corpus = CORPUS.search(summary).group(0)
-        head, rest = readme.split(README_START)  # exactly one block, or a ValueError
-        _, tail = rest.split(README_END)
-        return f'{head}{README_START}\n{corpus}\n{README_END}{tail}'

@@ -5,8 +5,7 @@ A shard is `shards/<table>_<label>.csv` with exactly the agent columns of its ta
 validates the shard against the table it returns, refuses a failing shard printing the
 offending rows, and otherwise upserts on the table's row key, so merging the same shard twice
 changes nothing and a corrected shard replaces its earlier rows. Every merge then folds
-confirmed duplicates, measures the whole registry and rewrites the manifest, the summary and
-the README's counts block.
+confirmed duplicates, measures the whole registry and rewrites the manifest and the summary.
 The census tables land in `registry/`, the survey's bookkeeping tables (duplicates, dropped)
 in `survey/`. Run from the repo root:
 
@@ -518,7 +517,6 @@ if __name__ == '__main__':
     parser.add_argument('shard', type=Path, help='survey/shards/<table>_<label>.csv')
     parser.add_argument('--registry', type=Path, default=HERE.parent / 'registry', help='folder holding sources.yaml and the census tables')
     parser.add_argument('--survey', type=Path, default=HERE, help='folder holding the duplicates and dropped tables')
-    parser.add_argument('--readme', type=Path, default=HERE.parent / 'README.md', help='README whose counts block is rewritten')
     args = parser.parse_args()
     # fmt: on
     merger = Merger(args.registry, args.survey)
@@ -532,5 +530,5 @@ if __name__ == '__main__':
     merger.reconcile()
     merger.measure()
     merger.writeManifest()
-    Summariser(args.registry, args.survey, args.readme).flush()
+    Summariser(args.registry, args.survey).flush()
     merger.report()

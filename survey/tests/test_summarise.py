@@ -72,18 +72,3 @@ def test_summary_tables_end_with_the_practice_p90_read_from_the_practice_file(me
     assert rows('d_doc')[0][-1] == f'{max(p90("n_fixed_effects"))} |'
     assert rows('alpha')[0][-1] == '– |'
     assert 'Excluded: 1 objects' in summary and 'derived or duplicated table 1' in summary
-
-
-def test_merge_rewrites_the_readme_counts_block_and_nothing_else(merger):
-    """The README's counts block is the summary's Corpus paragraph verbatim, rewritten on every
-    merge so that the README never goes stale; every byte around the block stays as it was."""
-    readme = merger.survey / 'README.md'
-    mergeShard(merger, FIXTURES / 'registry_herds.csv')
-    expected = (
-        '# pens\n\nA pitch.\n\n'
-        '<!-- corpus: written by survey/merge.py from registry/SUMMARY.md -->\n'
-        '**Corpus.** 2 registry rows over 1 datasets and 3 grouping\n'
-        'factors; per tier D 2. Excluded: 0 objects (none).\n'
-        '<!-- /corpus -->\n\n## Install\n'
-    )
-    assert readme.read_text() == expected
