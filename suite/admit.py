@@ -14,7 +14,7 @@ pipeline:
 ---------
 the registry's rows
 -> refused by hand decision                    REFUSED
--> the loaded table, or a failure              table
+-> the loaded table, or a failure              loadTable
 -> the problem, or refused by the contract     Problem.build
 -> materialised, its candidate                 _candidate
 -> the candidate list and the refusals         Admitted.write
@@ -166,15 +166,15 @@ class Admission:
     def __init__(
         self,
         rows: list[Row],
-        table: Callable[[Row], pd.DataFrame],
+        loadTable: Callable[[Row], pd.DataFrame],
         cache: Path,
         refused: dict[str, str] = REFUSED,
         fidelity: dict[str, Fidelity] = FIDELITY,
     ) -> None:
-        """`table` gives a row's loaded table, its `types` declared; `refused` and `fidelity`
+        """`loadTable` gives a row's loaded table, its `types` declared; `refused` and `fidelity`
         are the hand decisions by problem id."""
         self.rows = rows
-        self.table = table
+        self.loadTable = loadTable
         self.cache = cache
         self.refused = refused
         self.fidelity = fidelity
@@ -189,7 +189,7 @@ class Admission:
                 refused[id] = self.refused[id]
                 continue
             try:
-                table = self.table(row)
+                table = self.loadTable(row)
             except Exception as error:  # the loader's verdict, as in the weekly fetch
                 failed[id] = f'{type(error).__name__}: {error}'
                 continue
