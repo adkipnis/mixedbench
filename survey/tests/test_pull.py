@@ -8,7 +8,7 @@ from pathlib import Path
 import pandas as pd
 import pytest
 import yaml
-from conftest import emptyCensus, mergeShard, readRows
+from conftest import README, emptyCensus, mergeShard, readRows
 from merge import Merger
 from mixedbench.datasets import Loader
 from pull import Puller
@@ -174,6 +174,7 @@ def test_the_prescreen_shard_merges_into_the_exclusions(root):
     merge like any agent shard, with the tier filled in."""
     puller = pull(root, root, Server())
     emptyCensus(root)
+    (root / 'README.md').write_text(README)
     merger = Merger(root, root, loader=puller.loader)
     mergeShard(merger, root / 'shards' / 'excluded_prescreen.csv')
     rows = readRows(root / 'excluded.csv')
