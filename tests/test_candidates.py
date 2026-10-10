@@ -19,7 +19,7 @@ SUBSET = 20
 
 
 def rowsById() -> dict[str, Row]:
-    return {f'{row.source}/{row.object}/{row.model_index}': row for row in registry.rows()}
+    return {row.id: row for row in registry.rows()}
 
 
 def unmirrored(candidates: pd.DataFrame, rows: dict[str, Row]) -> pd.DataFrame:
