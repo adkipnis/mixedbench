@@ -1,5 +1,5 @@
 ---
-status: accepted, amended 2026-10-09
+status: accepted, amended 2026-10-09 and 2026-10-10
 date: 2026-10-08
 ---
 
@@ -97,3 +97,17 @@ correction a benchmark change.
   use and checks its contract hash against the list.
 - Why: the list holds ids and hashes, no data, so ADR 0003 holds; without it a user needs a
   checkout to fetch a suite, and five calls across three modules for one problem.
+
+## Amendment 2026-10-10: the grill of roadmap item 5
+
+- Decision: the compute cap counts the whole ladder. One cluster job per problem runs levels
+  0 to 2 in sequence within 12 hours; a job stopped at the cap fails as `cap`.
+- Why: admission asks that a reference pass the bar within the cap, and one time limit per
+  job is what a scheduler takes.
+- Decision: a second hand sample is drawn before suite 1.1 freezes: 100 of the candidates
+  not yet hand-checked, seed 1, stratified by tier × `verified` with largest-remainder
+  allocation, read in four batches of 25. It compares the first sample's fields and
+  `random_slopes`, against the same bar; corrections move hashes as a patch.
+- Why: the first sample was drawn from the registry, and it corrected `covariates` in 13 of
+  100 rows; the contract reads `covariates`, `interactions` and `random_slopes`, so such
+  errors change problems. The suite rests on the candidates.
