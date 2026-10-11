@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from dataclasses import asdict, fields
 from pathlib import Path
 
 import numpy as np
@@ -53,6 +54,13 @@ def test_a_run_records_its_problem_seed_and_aliases(ran) -> None:
     assert record['aliases'] == {'y': 'y', 'x1': 'x', 'x2': 'sex', 'g1': 'block'}
     assert record['outcome'] == 'passed'
     assert record['versions'] == {'brms': '2.23.0', 'cmdstanr': '0.9.0', 'cmdstan': '2.40.0'}
+
+
+def test_a_run_records_its_outcome_row(ran) -> None:
+    """The driver's collect step reads `references.csv`'s row back from the record."""
+    _, outcome, dir = ran
+    record = json.loads((dir / 'run.json').read_text())
+    assert {field.name: record[field.name] for field in fields(outcome)} == asdict(outcome)
 
 
 def test_a_run_records_each_level_with_its_settings_time_and_diagnostics(ran) -> None:
