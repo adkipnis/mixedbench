@@ -55,6 +55,39 @@ def test_a_run_records_its_problem_seed_and_aliases(ran) -> None:
     assert record['versions'] == {'brms': '2.23.0', 'cmdstanr': '0.9.0', 'cmdstan': '2.40.0'}
 
 
+def test_a_run_records_each_level_with_its_settings_time_and_diagnostics(ran) -> None:
+    """The bar gates on R-hat, ESS and divergences, so a passing level shows them within it;
+    tree depth, E-BFMI per chain and the random effects' R-hat are recorded for a reviewer."""
+    _, _, dir = ran
+    [level] = json.loads((dir / 'run.json').read_text())['levels']
+    assert (level['level'], level['settings']) == (0, Handoff.LEVELS[0])
+    assert level['seconds'] > 0
+    assert level['rhat'] < 1.01
+    assert min(level['ess_bulk'], level['ess_tail']) >= 400
+    assert level['divergences'] == 0
+    assert level['treedepth_hits'] == 0
+    assert len(level['ebfmi']) == 4
+    assert min(level['ebfmi']) > 0.3  # a healthy fit, above the usual warning threshold
+    assert 1 <= level['rhat_locals'] < 1.05
+
+
+def test_the_outcome_is_the_references_row_of_the_last_level(ran) -> None:
+    problem, outcome, dir = ran
+    [level] = json.loads((dir / 'run.json').read_text())['levels']
+    assert outcome == references.Outcome(
+        id='fixture/trial/1',
+        contract_hash=contractHash(problem),
+        level=0,
+        outcome='passed',
+        rhat=level['rhat'],
+        ess_bulk=level['ess_bulk'],
+        ess_tail=level['ess_tail'],
+        divergences=0,
+        brms='2.23.0',
+        cmdstan='2.40.0',
+    )
+
+
 def test_the_intercept_is_the_uncentred_one(ran) -> None:
     """brms samples a centred intercept and reports the uncentred `b_Intercept`. Every group of
     the fixture holds the same design rows, so least squares gives the mixed model's fixed
@@ -82,6 +115,97 @@ def test_a_pin_mismatch_raises_before_any_level(
 
 
 # ==============================================================================================
+# the ladder and the ends of a run
+# ==============================================================================================
+
+
+def tinyLevels() -> dict[int, dict]:
+    """The ladder at 10 draws per chain: 40 draws hold no bulk ESS of 400, so every level
+    fails the bar, quickly."""
+    levels = {}
+    for level, settings in Handoff.LEVELS.items():
+        levels[level] = {**settings, 'warmup': 20, 'draws': 10 * settings['thin']}
+    return levels
+
+
+def test_a_failed_bar_climbs_the_ladder_and_ends_as_bar_at_level_2(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Every level gets its chance; what failed keeps its record and R's log, and no draws."""
+    monkeypatch.setattr(Handoff, 'LEVELS', tinyLevels())
+    problem = fixtureProblem()
+    outcome = references.run(problem, tmp_path)
+    dir = problemDir(tmp_path, problem)
+    record = json.loads((dir / 'run.json').read_text())
+    assert (outcome.outcome, outcome.level) == ('bar', 2)
+    assert record['outcome'] == 'bar'
+    assert [level['level'] for level in record['levels']] == [0, 1, 2]
+    assert sorted(path.name for path in dir.iterdir()) == ['R.log', 'run.json']
+
+
+def test_thinning_hides_no_divergence_from_the_bar(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The nested problem at 6 blocks diverges at level 0's settings. Thinned by 2 or not, the
+    same seed samples the same chains, so the bar counts the same divergences: it sees every
+    iteration, not only the stored ones."""
+    problem = nestedProblem()
+    divergences = {}
+    for thin in (1, 2):
+        settings = {**Handoff.LEVELS[0], 'draws': 2000, 'thin': thin}
+        monkeypatch.setattr(Handoff, 'LEVELS', {0: settings})
+        divergences[thin] = references.run(problem, tmp_path / str(thin)).divergences
+    assert divergences[1] > 1
+    assert divergences[2] == divergences[1]
+
+
+def test_a_thinned_level_stores_4000_draws_numbered_within_their_chain(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Level 2 samples 2,000 draws per chain and keeps every second; the fixture passes at
+    level 0's settings, so level 0 thinned the same way stands in for it."""
+    settings = {**Handoff.LEVELS[0], 'draws': 2000, 'thin': 2}
+    monkeypatch.setattr(Handoff, 'LEVELS', {0: settings})
+    problem = fixtureProblem()
+    assert references.run(problem, tmp_path).outcome == 'passed'
+    draws = pd.read_parquet(problemDir(tmp_path, problem) / 'globals.parquet')
+    assert draws.groupby('chain')['draw'].apply(list).to_dict() == {
+        chain: list(range(1000)) for chain in range(4)
+    }
+
+
+def test_a_run_out_of_time_ends_as_cap_with_its_record(tmp_path: Path) -> None:
+    """Three seconds do not cover loading brms, so level 0 times out; the record is written
+    before the scheduler's limit would kill the job."""
+    problem = fixtureProblem()
+    outcome = references.run(problem, tmp_path, cap=3)
+    dir = problemDir(tmp_path, problem)
+    record = json.loads((dir / 'run.json').read_text())
+    assert (outcome.outcome, outcome.level) == ('cap', 0)
+    assert record['outcome'] == 'cap'
+    assert [level['level'] for level in record['levels']] == [0]
+    assert sorted(path.name for path in dir.iterdir()) == ['R.log', 'run.json']
+
+
+def test_an_r_error_ends_the_run_as_error_and_keeps_r_log(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """An adapt_delta above 1 makes cmdstanr stop, as a broken model would: the ladder stops at
+    the level that failed, since the next would fail the same way and burn the cap."""
+    levels = {level: {**settings, 'adapt_delta': 2} for level, settings in Handoff.LEVELS.items()}
+    monkeypatch.setattr(Handoff, 'LEVELS', levels)
+    problem = fixtureProblem()
+    outcome = references.run(problem, tmp_path)
+    dir = problemDir(tmp_path, problem)
+    record = json.loads((dir / 'run.json').read_text())
+    assert (outcome.outcome, outcome.level) == ('error', 0)
+    assert record['outcome'] == 'error'
+    assert [level['level'] for level in record['levels']] == [0]
+    assert sorted(path.name for path in dir.iterdir()) == ['R.log', 'run.json']
+    assert 'adapt_delta' in (dir / 'R.log').read_text()
+
+
+# ==============================================================================================
 # every model shape
 # ==============================================================================================
 
@@ -95,6 +219,7 @@ def test_each_model_shape_writes_its_draws_stan_program_and_data(shape, tmp_path
     dir = problemDir(tmp_path, problem)
     assert outcome.outcome == 'passed'
     assert sorted(path.name for path in dir.iterdir()) == [
+        'R.log',
         'globals.parquet',
         'locals.parquet',
         'model.stan',
