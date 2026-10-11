@@ -23,7 +23,7 @@ import signal
 import subprocess
 import tempfile
 import time
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Literal, TextIO
 
@@ -114,12 +114,9 @@ class _Run:
             brms=versions['brms'],
             cmdstan=versions['cmdstan'],
         )
-        record = {
-            'id': outcome.id,
-            'contract_hash': outcome.contract_hash,
+        record = asdict(outcome) | {
             'seed': self.handoff.seed,
             'aliases': self.handoff.aliases,
-            'outcome': outcome.outcome,
             'levels': levels,
             'versions': versions,
             'session': session,
