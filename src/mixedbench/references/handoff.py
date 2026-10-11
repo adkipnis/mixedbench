@@ -42,6 +42,26 @@ class Handoff:
             'adapt_delta': 0.8,
             'max_treedepth': 10,
         },
+        1: {
+            'chains': 4,
+            'cores': 4,
+            'warmup': 2000,
+            'draws': 1000,
+            'thin': 1,
+            'adapt_delta': 0.9,
+            'max_treedepth': 10,
+        },
+        # 2,000 draws per chain, thinned by 2 after the sampler's checks: 4,000 stored, as at
+        # the other levels
+        2: {
+            'chains': 4,
+            'cores': 4,
+            'warmup': 4000,
+            'draws': 2000,
+            'thin': 2,
+            'adapt_delta': 0.99,
+            'max_treedepth': 12,
+        },
     }
 
     # a factor of more groups keeps per-effect summaries of its random effects, not their draws
