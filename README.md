@@ -6,7 +6,7 @@
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23285683.svg)](https://doi.org/10.5281/zenodo.23285683)
 [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/adkipnis/mixedbench/blob/main/examples/demo.ipynb)
 
-# MixedBench
+# mixedbench
 
 A benchmark of posterior approximation and prediction for generalized linear mixed models
 (GLMMs) on real grouped data.
