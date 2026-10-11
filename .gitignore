@@ -13,5 +13,7 @@ registry/cache/
 registry/help/
 # the demo notebook's cache, fetched where it runs
 examples/cache/
+# the reference runs' draws, published apart (suite/drive.py); anchored, so the package keeps its own
+/references/
 # local agent instructions (docs/conventions.md is the public part)
 CLAUDE.md
