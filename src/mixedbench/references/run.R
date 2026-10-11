@@ -2,12 +2,17 @@
 #
 # Usage: Rscript run.R <dir>
 # <dir> holds the handoff from Python: table.csv (the aliased standardised table) and input.json
-# (formula, family, link, prior per class, the level's settings, seed). The script writes back,
-# one data frame per file since pyreadr reads no R lists:
-#   draws.rds    chain, iteration and the global variables brms keeps
-#   sampler.rds  chain, iteration and the sampler parameters per iteration
-#   summary.rds  per global variable its mean, sd, rank-normalised R-hat, bulk and tail ESS
-#   meta.rds     the brms, cmdstanr and CmdStan versions, the bar's verdict, sessionInfo()
+# (formula, family, link, prior per class, the level's settings, seed, the factors to
+# summarise). The script writes back, one data frame per file since pyreadr reads no R lists:
+#   draws.rds           chain, iteration, the global variables brms keeps and the random
+#                       effects of every factor not summarised
+#   locals_summary.rds  per random effect of a summarised factor its mean, sd and 5/25/50/75/95%
+#                       quantiles, where a factor is summarised
+#   sampler.rds         chain, iteration and the sampler parameters per iteration
+#   summary.rds         per global variable its mean, sd, rank-normalised R-hat, bulk and tail ESS
+#   meta.rds            the brms, cmdstanr and CmdStan versions, the bar's verdict, sessionInfo()
+#   model.stan          brms's Stan program
+#   standata.json       its Stan data, as CmdStan reads it
 
 suppressPackageStartupMessages({
   library(brms)
@@ -35,7 +40,11 @@ model <- brm(
   seed = input$seed, refresh = 0, silent = 2
 )
 
-keep <- grep(GLOBAL, variables(model), value = TRUE)
+global <- grep(GLOBAL, variables(model), value = TRUE)
+local <- grep("^r_", variables(model), value = TRUE)
+# a random effect r_<factor>[<group>,<effect>] of a factor to summarise
+summarised <- local[sub("^r_([^[]+)\\[.*$", "\\1", local) %in% unlist(input$summarised)]
+keep <- c(global, setdiff(local, summarised))
 draws <- as_draws_df(model, variable = keep)
 saveRDS(
   data.frame(
@@ -44,6 +53,11 @@ saveRDS(
   ),
   file.path(dir, "draws.rds")
 )
+if (length(summarised) > 0) {
+  quantiles <- function(x) quantile2(x, probs = c(0.05, 0.25, 0.5, 0.75, 0.95))
+  effects <- summarise_draws(as_draws_df(model, variable = summarised), "mean", "sd", quantiles)
+  saveRDS(as.data.frame(effects), file.path(dir, "locals_summary.rds"))
+}
 
 nuts <- nuts_params(model)
 sampler <- reshape(nuts, idvar = c("Chain", "Iteration"), timevar = "Parameter", direction = "wide")
@@ -52,7 +66,10 @@ names(sampler)[1:2] <- c("chain", "iteration")
 rownames(sampler) <- NULL
 saveRDS(sampler, file.path(dir, "sampler.rds"))
 
-summary <- as.data.frame(summarise_draws(draws, "mean", "sd", "rhat", "ess_bulk", "ess_tail"))
+summary <- summarise_draws(
+  subset_draws(draws, variable = global), "mean", "sd", "rhat", "ess_bulk", "ess_tail"
+)
+summary <- as.data.frame(summary)
 saveRDS(summary, file.path(dir, "summary.rds"))
 
 passed <- all(summary$rhat < RHAT) && all(summary$ess_bulk >= ESS) &&
@@ -67,3 +84,6 @@ saveRDS(
   ),
   file.path(dir, "meta.rds")
 )
+
+writeLines(stancode(model), file.path(dir, "model.stan"))
+cmdstanr::write_stan_json(unclass(standata(model)), file.path(dir, "standata.json"))
