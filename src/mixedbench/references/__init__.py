@@ -8,10 +8,10 @@ pins them, CmdStan at `CMDSTAN`.
 pipeline:
 ---------
 a Problem and a directory
--> the R stack, checked against the pins                  _Run._versions
--> the handoff fitted by run.R at level 0                 _Run._fit
--> the global draws as parquet, the record as JSON        _Run.outcome
--> the outcome                                            run
+-> the R stack, checked against the pins                        _Run._versions
+-> the handoff fitted by run.R at level 0                       _Run._fit
+-> the draws as parquet, Stan's program and data, the record    _Run.outcome
+-> the outcome                                                  run
 """
 
 from __future__ import annotations
@@ -45,8 +45,10 @@ class Outcome:
 
 
 def run(problem: Problem, dir: Path) -> Outcome:
-    """Writes into `dir/<the first 16 hex characters of sha256 of the id>`: `globals.parquet`
-    where the bar passed, and `run.json` always. Raises before any level on an unpinned R stack."""
+    """Writes into `dir/<the first 16 hex characters of sha256 of the id>`: where the bar passed,
+    `globals.parquet`, `locals.parquet` and `locals_summary.parquet` as `Handoff.read` gives
+    them, `model.stan` and `standata.json`; and `run.json` always.
+    Raises before any level on an unpinned R stack."""
     return _Run(problem, Path(dir)).outcome()
 
 
@@ -69,8 +71,10 @@ class _Run:
             meta = self._fit(Path(work), level=0)
             passed = bool(meta['passed'][0])
             if passed:
-                draws = self.handoff.read(Path(work))
-                draws.to_parquet(self.dir / 'globals.parquet', index=False)
+                for name, draws in self.handoff.read(Path(work)).items():
+                    draws.to_parquet(self.dir / f'{name}.parquet', index=False)
+                for name in ('model.stan', 'standata.json'):  # brms's Stan program and data
+                    shutil.copy(Path(work) / name, self.dir / name)
         outcome = Outcome(
             id=self.problem.id,
             contract_hash=contractHash(self.problem),
