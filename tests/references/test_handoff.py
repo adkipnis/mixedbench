@@ -69,6 +69,42 @@ def test_the_model_reaches_r_as_formula_family_prior_settings_and_seed(
     }
 
 
+def test_each_level_reaches_r_with_its_settings_and_the_same_seed(
+    problem: Problem, tmp_path: Path
+) -> None:
+    """ADR 0004's ladder: level 1 warms up longer at a higher adapt_delta, and level 2 also
+    deepens the trees and samples 2,000 draws per chain thinned by 2, so every level stores
+    4,000 draws."""
+    settings = {}
+    seeds = set()
+    for level in (1, 2):
+        Handoff(problem).write(tmp_path, level=level)
+        model = json.loads((tmp_path / 'input.json').read_text())
+        settings[level] = model['settings']
+        seeds.add(model['seed'])
+    assert settings == {
+        1: {
+            'chains': 4,
+            'cores': 4,
+            'warmup': 2000,
+            'draws': 1000,
+            'thin': 1,
+            'adapt_delta': 0.9,
+            'max_treedepth': 10,
+        },
+        2: {
+            'chains': 4,
+            'cores': 4,
+            'warmup': 4000,
+            'draws': 2000,
+            'thin': 2,
+            'adapt_delta': 0.99,
+            'max_treedepth': 12,
+        },
+    }
+    assert seeds == {75704431}
+
+
 def test_a_binomial_response_reaches_r_with_its_trials(tmp_path: Path) -> None:
     """brms reads a binomial's trials from the formula, `y | trials(n)`, with `n` aliased."""
     handoff = Handoff(binomialTrials())
