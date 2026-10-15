@@ -32,10 +32,10 @@ dependencies = [
 Repository = "https://github.com/adkipnis/mixedbench"
 Issues = "https://github.com/adkipnis/mixedbench/issues"
 Demo = "https://github.com/adkipnis/mixedbench/blob/main/examples/demo.ipynb"
-Roadmap = "https://github.com/adkipnis/mixedbench/blob/main/ROADMAP.md"
+Planned = "https://github.com/adkipnis/mixedbench#planned"
 
 [project.optional-dependencies]
-# The reference sampler stack (brms and cmdstanr in an R subprocess), roadmap item 5.
+# The reference sampler stack (#62): brms and cmdstanr in an R subprocess.
 references = []
 
 [dependency-groups]

@@ -57,7 +57,7 @@ class Tables:
 # the candidate list
 # =====================================================================================
 def test_the_list_has_one_row_per_admissible_row_in_registry_order_with_its_hash(tmp_path):
-    """The list item 5 runs references on: registry order, not sorted by id, and each hash the
+    """The list the runner (#62) reads: registry order, not sorted by id, and each hash the
     one the materialised files verify against, so the list and the cache agree."""
     objects = ['zeta', 'alpha', 'mid']
     rows = scratchRegistry(tmp_path, objects)
