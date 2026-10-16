@@ -1,16 +1,17 @@
 """__init__.py defines a problem's reference run: a problem and a directory in, its outcome out.
 
-The run hands the problem to `run.R`, which fits it with brms through cmdstanr and checks the
-bar, and keeps what passed under the contract's names, in a directory per problem.
-It refuses to start on an R stack other than the pinned one: brms and cmdstanr as `renv.lock`
-pins them, CmdStan at `CMDSTAN`.
+The run hands the problem to `run.R`, which fits it with brms through cmdstanr, level by level
+up the ladder until the bar passes, and keeps what passed under the contract's names, in a
+directory per problem.
+It refuses to start on an R stack other than the pinned one: brms, cmdstanr and posterior as
+`renv.lock` pins them, CmdStan at `CMDSTAN`.
 
 pipeline:
 ---------
 a Problem and a directory
 -> the R stack, checked against the pins                        _Run._versions
--> the handoff fitted by run.R, level by level within the cap   _Run._fit
--> the draws as parquet, Stan's program and data, the record    _Run.outcome
+-> each level fitted by run.R and judged by the bar             _Run._ladder, _level, _fit
+-> the draws as parquet, Stan's program and data, the record    _Run._keep, outcome
 -> the outcome                                                  run
 """
 
@@ -27,15 +28,52 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Literal, TextIO
 
-import pyreadr
 from mixedbench.contract import Problem, contractHash
 from mixedbench.references.handoff import Handoff
 
-__all__ = ['CAP', 'CMDSTAN', 'Outcome', 'run']
+__all__ = ['CAP', 'CMDSTAN', 'ESS', 'LEVELS', 'RHAT', 'Outcome', 'run']
 
+# the ladder: per level, the settings of `brm()`; four chains in parallel, no threading
+LEVELS = {
+    0: {
+        'chains': 4,
+        'cores': 4,
+        'warmup': 1000,
+        'draws': 1000,
+        'thin': 1,
+        'adapt_delta': 0.8,
+        'max_treedepth': 10,
+    },
+    1: {
+        'chains': 4,
+        'cores': 4,
+        'warmup': 2000,
+        'draws': 1000,
+        'thin': 1,
+        'adapt_delta': 0.9,
+        'max_treedepth': 10,
+    },
+    # 2,000 draws per chain, thinned by 2 after the sampler's checks: 4,000 stored, as at
+    # the other levels
+    2: {
+        'chains': 4,
+        'cores': 4,
+        'warmup': 4000,
+        'draws': 2000,
+        'thin': 2,
+        'adapt_delta': 0.99,
+        'max_treedepth': 12,
+    },
+}
 CAP = 12 * 60 * 60  # seconds over the whole ladder
+# the bar: R-hat and both ESS on the stored draws of the global parameters, and no divergence
+# over every iteration
+RHAT = 1.01
+ESS = 400
 CMDSTAN = '2.40.0'
 _HERE = Path(__file__).parent
+
+Ending = Literal['passed', 'bar', 'cap', 'error']
 
 
 @dataclass(frozen=True)
@@ -46,7 +84,7 @@ class Outcome:
     id: str
     contract_hash: str
     level: int  # the last level attempted
-    outcome: Literal['passed', 'bar', 'cap', 'error']
+    outcome: Ending
     rhat: float | None  # the largest over the global parameters
     ess_bulk: float | None  # the smallest
     ess_tail: float | None  # the smallest
@@ -56,12 +94,13 @@ class Outcome:
 
 
 def run(problem: Problem, dir: Path, cap: float = CAP) -> Outcome:
-    """Writes into `dir/<the first 16 hex characters of sha256 of the id>`: where the bar passed,
-    `globals.parquet`, `locals.parquet` and `locals_summary.parquet` as `Handoff.read` gives
-    them, `model.stan` and `standata.json`; and `run.json` and R's output, `R.log`, always.
+    """Writes into `dir/<the first 16 hex characters of sha256 of the id>`, replacing an earlier
+    run there: where the bar passed, `globals.parquet`, `locals.parquet` and
+    `locals_summary.parquet` as `Handoff.read` gives them, `model.stan` and `standata.json`;
+    and `run.json` and R's output, `R.log`, always.
     The ladder stops at the first level that passes, at an R error, or when `cap` seconds
     are spent. Raises before any level on an unpinned R stack."""
-    return _Run(problem, Path(dir), cap).outcome()
+    return _Run(problem, dir, cap).outcome()
 
 
 # =====================================================================================
@@ -74,43 +113,29 @@ class _Run:
         self.problem = problem
         self.cap = cap
         self.handoff = Handoff(problem)
-        # named as the cache names a problem's directory: an id may hold `/`, `!` and spaces
+        # an id may hold `/`, `!` and spaces, and the record carries the id itself
         self.dir = dir / hashlib.sha256(problem.id.encode()).hexdigest()[:16]
 
     def outcome(self) -> Outcome:
         versions = self._versions()
-        self.dir.mkdir(parents=True, exist_ok=True)
-        levels = []
-        start = time.monotonic()
+        if self.dir.exists():  # no file of an earlier run outlives it, beside this record
+            shutil.rmtree(self.dir)
+        self.dir.mkdir(parents=True)
         with tempfile.TemporaryDirectory() as tmp, open(self.dir / 'R.log', 'w') as log:
             work = Path(tmp)
-            for level in Handoff.LEVELS:
-                began = time.monotonic()
-                end = self._fit(work, level, log, timeout=self.cap - (began - start))
-                attempt = {
-                    'level': level,
-                    'settings': Handoff.LEVELS[level],
-                    'seconds': time.monotonic() - began,
-                }
-                if end in ('passed', 'bar'):
-                    attempt.update(self._diagnostics(work))
-                levels.append(attempt)
-                if end != 'bar':
-                    break
-            if end == 'passed':
+            levels = self._ladder(work, log)
+            last = levels[-1]
+            if last['outcome'] == 'passed':
                 self._keep(work)
-            session = None
-            if end in ('passed', 'bar'):
-                session = pyreadr.read_r(work / 'meta.rds')[None]['session'][0]
         outcome = Outcome(
             id=self.problem.id,
             contract_hash=contractHash(self.problem),
-            level=level,
-            outcome=end,
-            rhat=attempt.get('rhat'),
-            ess_bulk=attempt.get('ess_bulk'),
-            ess_tail=attempt.get('ess_tail'),
-            divergences=attempt.get('divergences'),
+            level=last['level'],
+            outcome=last['outcome'],
+            rhat=last.get('rhat'),
+            ess_bulk=last.get('ess_bulk'),
+            ess_tail=last.get('ess_tail'),
+            divergences=last.get('divergences'),
             brms=versions['brms'],
             cmdstan=versions['cmdstan'],
         )
@@ -119,45 +144,72 @@ class _Run:
             'aliases': self.handoff.aliases,
             'levels': levels,
             'versions': versions,
-            'session': session,
         }
         (self.dir / 'run.json').write_text(json.dumps(record, indent=2))
         return outcome
 
     # ---------------------------------------------------------------------------------
-    # pins -> handoff -> fit
+    # pins -> ladder -> level -> fit -> draws kept
     # ---------------------------------------------------------------------------------
 
     @staticmethod
     def _versions() -> dict[str, str]:
-        """Raises where the installed brms, cmdstanr or CmdStan differs from its pin."""
+        """Raises where the installed brms, cmdstanr, posterior or CmdStan differs from its pin."""
         lock = json.loads((_HERE / 'renv.lock').read_text())['Packages']
         pins = {
             'brms': lock['brms']['Version'],
             'cmdstanr': lock['cmdstanr']['Version'],
+            'posterior': lock['posterior']['Version'],
             'cmdstan': CMDSTAN,
         }
         report = (
-            'cat(as.character(packageVersion("brms")), '
-            'as.character(packageVersion("cmdstanr")), cmdstanr::cmdstan_version())'
+            'cat(as.character(packageVersion("brms")), as.character(packageVersion("cmdstanr")), '
+            'as.character(packageVersion("posterior")), cmdstanr::cmdstan_version())'
         )
         found = subprocess.run(
-            [shutil.which('Rscript'), '-e', report], capture_output=True, text=True, check=True
+            ['Rscript', '-e', report], capture_output=True, text=True, check=True
         )
         installed = dict(zip(pins, found.stdout.split()))
         if installed != pins:
             raise RuntimeError(f'the R stack {installed} differs from the pins {pins}')
         return installed
 
+    def _ladder(self, work: Path, log: TextIO) -> list[dict]:
+        """Each level's attempt, up to the first that does not end at the bar."""
+        levels = []
+        start = time.monotonic()
+        for level in LEVELS:
+            timeout = self.cap - (time.monotonic() - start)
+            levels.append(self._level(work, level, log, timeout))
+            if levels[-1]['outcome'] != 'bar':
+                break
+        return levels
+
+    def _level(self, work: Path, level: int, log: TextIO, timeout: float) -> dict:
+        """The level's settings, seconds and outcome, and what R reported where it ran to its end."""
+        began = time.monotonic()
+        ended = self._fit(work, level, log, timeout)
+        attempt = {
+            'level': level,
+            'settings': LEVELS[level],
+            'seconds': time.monotonic() - began,
+            'outcome': ended,
+        }
+        if ended == 'ran':
+            diagnostics = self.handoff.diagnostics(work)
+            attempt['outcome'] = 'passed' if self._passes(diagnostics) else 'bar'
+            attempt.update(diagnostics)
+        return attempt
+
     def _fit(
         self, work: Path, level: int, log: TextIO, timeout: float
-    ) -> Literal['passed', 'bar', 'cap', 'error']:
-        """How the level ended; R's outputs stay in `work`."""
-        self.handoff.write(work, level)
+    ) -> Literal['ran', 'cap', 'error']:
+        """How R's run of the level ended; its outputs stay in `work`."""
+        self.handoff.write(work, LEVELS[level])
         log.write(f'# level {level}\n')
         log.flush()
         process = subprocess.Popen(
-            [shutil.which('Rscript'), _HERE / 'run.R', work], stdout=log, stderr=subprocess.STDOUT
+            ['Rscript', _HERE / 'run.R', work], stdout=log, stderr=subprocess.STDOUT
         )
         try:
             process.wait(timeout=timeout)
@@ -167,25 +219,17 @@ class _Run:
             process.send_signal(signal.SIGINT)
             process.wait()
             return 'cap'
-        if process.returncode != 0:
-            return 'error'
-        return 'passed' if pyreadr.read_r(work / 'meta.rds')[None]['passed'][0] else 'bar'
+        return 'ran' if process.returncode == 0 else 'error'
 
     @staticmethod
-    def _diagnostics(work: Path) -> dict:
-        """What R reported of a level that ran to its end; only the bar gates."""
-        summary = pyreadr.read_r(work / 'summary.rds')[None]  # the global parameters
-        chains = pyreadr.read_r(work / 'chains.rds')[None]
-        meta = pyreadr.read_r(work / 'meta.rds')[None]
-        return {
-            'rhat': float(summary['rhat'].max()),
-            'ess_bulk': float(summary['ess_bulk'].min()),
-            'ess_tail': float(summary['ess_tail'].min()),
-            'divergences': int(chains['divergences'].sum()),
-            'treedepth_hits': int(chains['treedepth_hits'].sum()),
-            'ebfmi': chains['ebfmi'].tolist(),
-            'rhat_locals': float(meta['rhat_locals'][0]),
-        }
+    def _passes(diagnostics: dict) -> bool:
+        """A NaN fails every comparison, so a diagnostic R could not compute fails the bar."""
+        return (
+            diagnostics['rhat'] < RHAT
+            and diagnostics['ess_bulk'] >= ESS
+            and diagnostics['ess_tail'] >= ESS
+            and diagnostics['divergences'] == 0
+        )
 
     def _keep(self, work: Path) -> None:
         """The passing level's draws as parquet, and brms's Stan program and data."""
