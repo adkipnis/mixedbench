@@ -22,7 +22,6 @@ from __future__ import annotations
 import argparse
 import json
 from dataclasses import fields
-from functools import cached_property
 from pathlib import Path
 
 import pandas as pd
@@ -50,8 +49,9 @@ class Driver:
     def collect(self, file: Path) -> None:
         """`references.csv`: the outcome row of every candidate's record, in list order.
         Refuses while a candidate has no record of its listed contract hash."""
+        records = self._records()
         listed = list(zip(self.candidates['id'], self.candidates['contract_hash']))
-        missing = [id for id, hash in listed if (id, hash) not in self._records]
+        missing = [id for id, hash in listed if (id, hash) not in records]
         if missing:
             first = ', '.join(missing[:5])
             raise ValueError(
@@ -59,14 +59,15 @@ class Driver:
                 f'contract hash, among them {first}'
             )
         columns = [field.name for field in fields(Outcome)]
-        rows = [self._records[candidate] for candidate in listed]
-        writeCsv(pd.DataFrame(rows, columns=columns), file)
+        rows = [records[candidate] for candidate in listed]
+        # integers, though a run that ended at the cap or an error counts no divergences
+        table = pd.DataFrame(rows, columns=columns).astype({'divergences': 'Int64'})
+        writeCsv(table, file)
 
     # ---------------------------------------------------------------------------------
     # id -> record -> row
     # ---------------------------------------------------------------------------------
 
-    @cached_property
     def _records(self) -> dict[tuple[str, str], dict]:
         """Keyed by id and contract hash: a run made before its problem's hash moved is
         no record of the listed problem."""
