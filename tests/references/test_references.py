@@ -19,9 +19,19 @@ from .conftest import binomialTrials, fixtureProblem, gaussianMixed, nestedProbl
 
 pytestmark = [pytest.mark.brms, pytest.mark.usefixtures('rstack')]
 
+FOUR_CHAINS = {chain: list(range(1000)) for chain in range(4)}  # 1,000 draws each, from 0
+
 
 def problemDir(dir: Path, problem: Problem) -> Path:
     return dir / hashlib.sha256(problem.id.encode()).hexdigest()[:16]
+
+
+def record(dir: Path) -> dict:
+    return json.loads((dir / 'run.json').read_text())
+
+
+def drawsPerChain(file: Path) -> dict[int, list[int]]:
+    return pd.read_parquet(file).groupby('chain')['draw'].apply(list).to_dict()
 
 
 @pytest.fixture(scope='module')
@@ -39,36 +49,37 @@ def test_a_passing_run_writes_4000_global_draws_over_4_chains(ran) -> None:
     assert outcome.outcome == 'passed'
     assert list(draws.columns) == ['chain', 'draw', *problem.globalDraws()]
     assert len(draws) == 4000
-    assert draws.groupby('chain')['draw'].apply(list).to_dict() == {
-        chain: list(range(1000)) for chain in range(4)
-    }
+    assert drawsPerChain(dir / 'globals.parquet') == FOUR_CHAINS
     assert (draws.dtypes.iloc[2:] == 'float64').all()
 
 
-def test_a_run_records_its_problem_seed_and_aliases(ran) -> None:
-    problem, outcome, dir = ran
-    record = json.loads((dir / 'run.json').read_text())
-    assert record['id'] == 'fixture/trial/1'
-    assert record['contract_hash'] == contractHash(problem) == outcome.contract_hash
-    assert record['seed'] == 75704431
-    assert record['aliases'] == {'y': 'y', 'x1': 'x', 'x2': 'sex', 'g1': 'block'}
-    assert record['outcome'] == 'passed'
-    assert record['versions'] == {'brms': '2.23.0', 'cmdstanr': '0.9.0', 'cmdstan': '2.40.0'}
+def test_a_run_records_its_seed_aliases_and_r_stack(ran) -> None:
+    _, _, dir = ran
+    written = record(dir)
+    assert written['seed'] == 75704431
+    assert written['aliases'] == {'y': 'y', 'x1': 'x', 'x2': 'sex', 'g1': 'block'}
+    assert written['versions'] == {
+        'brms': '2.23.0',
+        'cmdstanr': '0.9.0',
+        'posterior': '1.7.0',
+        'cmdstan': '2.40.0',
+    }
 
 
 def test_a_run_records_its_outcome_row(ran) -> None:
     """The driver's collect step reads `references.csv`'s row back from the record."""
     _, outcome, dir = ran
-    record = json.loads((dir / 'run.json').read_text())
-    assert {field.name: record[field.name] for field in fields(outcome)} == asdict(outcome)
+    written = record(dir)
+    assert {field.name: written[field.name] for field in fields(outcome)} == asdict(outcome)
 
 
 def test_a_run_records_each_level_with_its_settings_time_and_diagnostics(ran) -> None:
     """The bar gates on R-hat, ESS and divergences, so a passing level shows them within it;
     tree depth, E-BFMI per chain and the random effects' R-hat are recorded for a reviewer."""
     _, _, dir = ran
-    [level] = json.loads((dir / 'run.json').read_text())['levels']
-    assert (level['level'], level['settings']) == (0, Handoff.LEVELS[0])
+    [level] = record(dir)['levels']
+    assert (level['level'], level['outcome']) == (0, 'passed')
+    assert level['settings'] == references.LEVELS[0]
     assert level['seconds'] > 0
     assert level['rhat'] < 1.01
     assert min(level['ess_bulk'], level['ess_tail']) >= 400
@@ -81,7 +92,7 @@ def test_a_run_records_each_level_with_its_settings_time_and_diagnostics(ran) ->
 
 def test_the_outcome_is_the_references_row_of_the_last_level(ran) -> None:
     problem, outcome, dir = ran
-    [level] = json.loads((dir / 'run.json').read_text())['levels']
+    [level] = record(dir)['levels']
     assert outcome == references.Outcome(
         id='fixture/trial/1',
         contract_hash=contractHash(problem),
@@ -131,7 +142,7 @@ def tinyLevels() -> dict[int, dict]:
     """The ladder at 10 draws per chain: 40 draws hold no bulk ESS of 400, so every level
     fails the bar, quickly."""
     levels = {}
-    for level, settings in Handoff.LEVELS.items():
+    for level, settings in references.LEVELS.items():
         levels[level] = {**settings, 'warmup': 20, 'draws': 10 * settings['thin']}
     return levels
 
@@ -140,14 +151,12 @@ def test_a_failed_bar_climbs_the_ladder_and_ends_as_bar_at_level_2(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Every level gets its chance; what failed keeps its record and R's log, and no draws."""
-    monkeypatch.setattr(Handoff, 'LEVELS', tinyLevels())
+    monkeypatch.setattr(references, 'LEVELS', tinyLevels())
     problem = fixtureProblem()
     outcome = references.run(problem, tmp_path)
     dir = problemDir(tmp_path, problem)
-    record = json.loads((dir / 'run.json').read_text())
     assert (outcome.outcome, outcome.level) == ('bar', 2)
-    assert record['outcome'] == 'bar'
-    assert [level['level'] for level in record['levels']] == [0, 1, 2]
+    assert [level['outcome'] for level in record(dir)['levels']] == ['bar', 'bar', 'bar']
     assert sorted(path.name for path in dir.iterdir()) == ['R.log', 'run.json']
 
 
@@ -160,8 +169,8 @@ def test_thinning_hides_no_divergence_from_the_bar(
     problem = nestedProblem()
     divergences = {}
     for thin in (1, 2):
-        settings = {**Handoff.LEVELS[0], 'draws': 2000, 'thin': thin}
-        monkeypatch.setattr(Handoff, 'LEVELS', {0: settings})
+        settings = {**references.LEVELS[0], 'draws': 2000, 'thin': thin}
+        monkeypatch.setattr(references, 'LEVELS', {0: settings})
         divergences[thin] = references.run(problem, tmp_path / str(thin)).divergences
     assert divergences[1] > 1
     assert divergences[2] == divergences[1]
@@ -172,14 +181,11 @@ def test_a_thinned_level_stores_4000_draws_numbered_within_their_chain(
 ) -> None:
     """Level 2 samples 2,000 draws per chain and keeps every second; the fixture passes at
     level 0's settings, so level 0 thinned the same way stands in for it."""
-    settings = {**Handoff.LEVELS[0], 'draws': 2000, 'thin': 2}
-    monkeypatch.setattr(Handoff, 'LEVELS', {0: settings})
+    settings = {**references.LEVELS[0], 'draws': 2000, 'thin': 2}
+    monkeypatch.setattr(references, 'LEVELS', {0: settings})
     problem = fixtureProblem()
     assert references.run(problem, tmp_path).outcome == 'passed'
-    draws = pd.read_parquet(problemDir(tmp_path, problem) / 'globals.parquet')
-    assert draws.groupby('chain')['draw'].apply(list).to_dict() == {
-        chain: list(range(1000)) for chain in range(4)
-    }
+    assert drawsPerChain(problemDir(tmp_path, problem) / 'globals.parquet') == FOUR_CHAINS
 
 
 def test_a_run_out_of_time_ends_as_cap_with_its_record(tmp_path: Path) -> None:
@@ -188,10 +194,19 @@ def test_a_run_out_of_time_ends_as_cap_with_its_record(tmp_path: Path) -> None:
     problem = fixtureProblem()
     outcome = references.run(problem, tmp_path, cap=3)
     dir = problemDir(tmp_path, problem)
-    record = json.loads((dir / 'run.json').read_text())
     assert (outcome.outcome, outcome.level) == ('cap', 0)
-    assert record['outcome'] == 'cap'
-    assert [level['level'] for level in record['levels']] == [0]
+    assert [level['outcome'] for level in record(dir)['levels']] == ['cap']
+    assert sorted(path.name for path in dir.iterdir()) == ['R.log', 'run.json']
+
+
+def test_a_rerun_leaves_no_file_of_the_earlier_run(tmp_path: Path) -> None:
+    """A run whose contract hash moved may have passed: its draws must not sit beside the
+    record of a rerun that ends otherwise, here at the cap."""
+    problem = fixtureProblem()
+    dir = problemDir(tmp_path, problem)
+    dir.mkdir()
+    (dir / 'globals.parquet').write_text('an earlier run')
+    references.run(problem, tmp_path, cap=3)
     assert sorted(path.name for path in dir.iterdir()) == ['R.log', 'run.json']
 
 
@@ -200,15 +215,15 @@ def test_an_r_error_ends_the_run_as_error_and_keeps_r_log(
 ) -> None:
     """An adapt_delta above 1 makes cmdstanr stop, as a broken model would: the ladder stops at
     the level that failed, since the next would fail the same way and burn the cap."""
-    levels = {level: {**settings, 'adapt_delta': 2} for level, settings in Handoff.LEVELS.items()}
-    monkeypatch.setattr(Handoff, 'LEVELS', levels)
+    levels = {
+        level: {**settings, 'adapt_delta': 2} for level, settings in references.LEVELS.items()
+    }
+    monkeypatch.setattr(references, 'LEVELS', levels)
     problem = fixtureProblem()
     outcome = references.run(problem, tmp_path)
     dir = problemDir(tmp_path, problem)
-    record = json.loads((dir / 'run.json').read_text())
     assert (outcome.outcome, outcome.level) == ('error', 0)
-    assert record['outcome'] == 'error'
-    assert [level['level'] for level in record['levels']] == [0]
+    assert [level['outcome'] for level in record(dir)['levels']] == ['error']
     assert sorted(path.name for path in dir.iterdir()) == ['R.log', 'run.json']
     assert 'adapt_delta' in (dir / 'R.log').read_text()
 
