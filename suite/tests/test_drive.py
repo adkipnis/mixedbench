@@ -80,7 +80,8 @@ def test_collect_writes_one_row_per_candidate_in_candidate_order(tmp_path):
     ]
     assert list(written['id']) == ['zeta/a/1', 'alpha/b/1', 'mid/c/1']
     assert list(written['outcome']) == ['passed', 'passed', 'cap']
-    assert list(written['level'].astype(int)) == [0, 1, 2]
+    assert list(written['level']) == ['0', '1', '2']
+    assert list(written['divergences']) == ['0', '0', '']  # counts, not floats beside a cap
 
 
 def test_collect_refuses_while_a_candidate_has_no_record(tmp_path):
