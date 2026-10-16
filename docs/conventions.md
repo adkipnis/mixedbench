@@ -25,8 +25,8 @@ Each module owns one design decision that no other module depends on.
 | `contract/materialised.py` | a problem's files on disk and the contract hash over them | `contract`, through it `suite` and `suite/admit.py` |
 | `suite/__init__.py` | a suite's problems by id: built and materialised on first use, checked against the suite's list in the wheel | the user |
 | `suite/admit.py` | the admission of suite 1.1 and its hand decisions; writes `suite/1.1/` | run as a script |
-| `references/handoff.py` | what passes between a problem and `run.R`: the aliased table and model out, the draws back under the contract's names | `references` |
-| `references/__init__.py` | a problem's reference run: the pinned R stack, the ladder within the cap, the draw files and the record | `suite/drive.py` |
+| `references/handoff.py` | what passes between a problem and `run.R`: the aliased table, the model and a level's settings out; the draws under the contract's names and the diagnostics back | `references` |
+| `references/__init__.py` | a problem's reference run: the pinned R stack, the ladder, the bar and the cap, the run's directory and its record | `suite/drive.py` |
 | `suite/drive.py` | suite 1.1's reference runs: one candidate by id or index, every record collected into `references.csv` | run as a script, by `suite/drive.sbatch` |
 
 ## Design
@@ -69,7 +69,7 @@ harder to understand or change.
 - Other names have one home each: registry columns in the
   [file contracts](../survey/README.md#file-contracts); problem ids in `CONTEXT.md`; table
   columns and parameter names in `contract/problem.py`; the cache layout in `loader.py` and
-  `materialised.py`; the draw files' directory and names in `references/__init__.py`, their
+  `materialised.py`; the draw files' directory in `references/__init__.py`, their names and
   columns in `references/handoff.py`; versions and suite folders in
   [ADR 0002](adr/0002-registry-suite-versioning-licences.md); mirror and archive tags in the
   [survey README](../survey/README.md).
