@@ -410,6 +410,7 @@ def test_a_level_present_only_in_held_rows_leaves_an_all_zero_column_in_that_reg
 # ==============================================================================================
 # the standardised table
 # ==============================================================================================
+Z = (np.array(X) - np.mean(X)) / np.std(X, ddof=1)  # (12,) `x` z-scored over every row
 
 
 @given(sizes=SIZES, source=SOURCES)
@@ -431,8 +432,7 @@ def test_an_interaction_is_the_product_of_its_standardised_parts() -> None:
     the parts and not rescaled itself: z-scoring the raw product would give another column."""
     problem = Problem.build(fixtureRow(), fixtureTable())
     table = problem.standardised()
-    x = (np.array(X) - np.mean(X)) / np.std(X, ddof=1)
-    assert table['x:sex'].to_numpy() == pytest.approx(x * np.array(SEX))
+    assert table['x:sex'].to_numpy() == pytest.approx(Z * np.array(SEX))
     assert table['sex'].tolist() == SEX
 
 
@@ -444,9 +444,8 @@ def test_an_interaction_with_a_level_holding_a_colon_finds_its_parts() -> None:
     row = fixtureRow(interactions=('diet:x',))
     problem = Problem.build(row, table)
     standardised = problem.standardised()
-    x = (np.array(X) - np.mean(X)) / np.std(X, ddof=1)
     assert problem.design[-2:] == ('diet[b:c]:x', 'diet[c]:x')
-    assert standardised['diet[b:c]:x'].to_numpy() == pytest.approx(x * np.array([0, 1, 0] * 4))
+    assert standardised['diet[b:c]:x'].to_numpy() == pytest.approx(Z * np.array([0, 1, 0] * 4))
 
 
 # ==============================================================================================
@@ -493,3 +492,18 @@ def test_the_local_draws_name_each_group_by_its_code_in_the_table() -> None:
     assert len(local['block:plot']) == 3 * 6
     codes = problem.standardised()['block:plot']
     assert {f'r[block:plot][{j}]' for j in codes} == set(local['block:plot'][:6])
+
+
+def test_a_factors_slopes_follow_its_sd_parameters_not_the_design() -> None:
+    """The handoff builds a factor's random terms and reads its effects back from `slopes`, so the
+    formula lists them as the contract's `sd` does: `sex` before `x` where the row says so.
+    A categorical slope is its contrast columns; a slope on `block:plot` is none of `block`'s."""
+    slopes = (
+        SlopeTerm('sex', 'block', correlated=False),
+        SlopeTerm('x', 'block', correlated=False),
+        SlopeTerm('diet', 'block:plot', correlated=False),
+    )
+    row = fixtureRow(response='n', response_type='count', random_slopes=slopes)
+    problem = Problem.build(row, fixtureTable())
+    assert problem.slopes('block') == ('sex', 'x')
+    assert problem.slopes('block:plot') == ('diet[b]', 'diet[c]')
