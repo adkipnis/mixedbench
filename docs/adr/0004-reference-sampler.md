@@ -1,5 +1,5 @@
 ---
-status: accepted, amended 2026-10-10
+status: accepted, amended 2026-10-10 and 2026-10-16
 date: 2026-10-08
 ---
 
@@ -75,3 +75,27 @@ date: 2026-10-08
 
 - Decision: suite 1.1's references are fits to the full table (the posterior track). The
   fits to the seen rows of the predictive regimes come with suite 1.2.
+
+## Amendment 2026-10-16: the runner's review (#70)
+
+**The bar in Python.**
+
+- Decision: the R script fits a level and reports its diagnostics; Python checks the bar on
+  them, beside the ladder and the cap. An R-hat or ESS that posterior could not compute
+  (constant or non-finite draws) fails the bar. This replaces "checks the bar" in the runner
+  decision above.
+- Why: the bar is tested without R, and the gate sits with the ladder it stops. In R, a missing
+  diagnostic made the verdict NA, which Python read as a pass.
+
+**The R stack and the session.**
+
+- Decision: the pins check covers posterior beside brms, cmdstanr and CmdStan, since posterior
+  computes the bar's R-hat and ESS.
+- Decision: each level prints `sessionInfo()` into the run's `R.log` before it fits, however it
+  ends. This replaces "each draw file records `sessionInfo()`" above.
+
+**The run's directory.**
+
+- Decision: `references/<suite>/<the first 16 hex characters of sha256 of the id>/`, since an id
+  holds `/`; `run.json` inside carries the id. A rerun replaces the directory, so no file of an
+  earlier run sits beside a later record.
