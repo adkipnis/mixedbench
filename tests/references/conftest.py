@@ -26,11 +26,6 @@ ROW = Row(
 )  # fmt: skip
 
 
-@pytest.fixture
-def problem() -> Problem:
-    return fixtureProblem()
-
-
 def fixtureProblem() -> Problem:
     rng = np.random.default_rng(1)
     block = np.repeat([f'b{j:02d}' for j in range(GROUPS)], len(X))
