@@ -3,7 +3,8 @@
 Python writes the standardised table under aliases brms never rewrites (`y`, `x1`…, `g1`…)
 and the model as JSON: the formula, family and link, the prior per class, a level's settings
 and the seed.
-It reads the draws R wrote back by the aliases in brms's labels, never by position.
+It reads back the draws R wrote by the aliases in brms's labels, never by position,
+and the diagnostics of the fit.
 
 pipeline:
 ---------
@@ -11,6 +12,7 @@ a Problem
 -> the aliases of its response, design columns and factors     aliases
 -> the aliased table as CSV, the model as JSON                 write
 -> brms's draws and summaries under the contract's names       read, _contractNames
+-> the diagnostics R reported                                  diagnostics
 """
 
 from __future__ import annotations
@@ -31,39 +33,6 @@ from mixedbench.contract import Prior, Problem
 
 
 class Handoff:
-    # the ladder: per level, the settings of `brm()`; four chains in parallel, no threading
-    LEVELS = {
-        0: {
-            'chains': 4,
-            'cores': 4,
-            'warmup': 1000,
-            'draws': 1000,
-            'thin': 1,
-            'adapt_delta': 0.8,
-            'max_treedepth': 10,
-        },
-        1: {
-            'chains': 4,
-            'cores': 4,
-            'warmup': 2000,
-            'draws': 1000,
-            'thin': 1,
-            'adapt_delta': 0.9,
-            'max_treedepth': 10,
-        },
-        # 2,000 draws per chain, thinned by 2 after the sampler's checks: 4,000 stored, as at
-        # the other levels
-        2: {
-            'chains': 4,
-            'cores': 4,
-            'warmup': 4000,
-            'draws': 2000,
-            'thin': 2,
-            'adapt_delta': 0.99,
-            'max_treedepth': 12,
-        },
-    }
-
     # a factor of more groups keeps per-effect summaries of its random effects, not their draws
     FULL_GROUPS = 1000
 
@@ -88,8 +57,8 @@ class Handoff:
         digest = hashlib.sha256(self.problem.id.encode()).digest()
         return int.from_bytes(digest[:4], 'big') % 2**31
 
-    def write(self, dir: Path, level: int) -> None:
-        """`table.csv` and `input.json` for the R script, into `dir`."""
+    def write(self, dir: Path, settings: dict) -> None:
+        """`table.csv` and `input.json` for the R script, into `dir`, with `brm()`'s `settings`."""
         table = self.problem.standardised('full')[list(self.aliases.values())]
         table.columns = list(self.aliases)
         table.to_csv(dir / 'table.csv', index=False)
@@ -98,7 +67,7 @@ class Handoff:
             'family': self.problem.family,
             'link': self.problem.link,
             'prior': {name: self._brmsPrior(prior) for name, prior in self.problem.prior.items()},
-            'settings': self.LEVELS[level],
+            'settings': settings,
             'seed': self.seed,
             'summarised': [self._aliasOf[factor] for factor in self._summarised()],
         }
@@ -121,8 +90,27 @@ class Handoff:
         if full:
             files['locals'] = draws[['chain', 'draw', *self._effectsOf(full)]]
         if summarised:
-            files['locals_summary'] = self._localsSummary(dir, names)
+            files['locals_summary'] = self._localsSummary(dir, names, summarised)
         return files
+
+    @staticmethod
+    def diagnostics(dir: Path) -> dict:
+        """What R reported of a level it ran to its end: over the global parameters the largest
+        R-hat and the smallest bulk and tail ESS, each NaN where R could not compute one (constant
+        or non-finite draws), so that the bar fails on it; over every iteration the divergences
+        and tree-depth hits, the E-BFMI per chain; the largest R-hat over the random effects."""
+        summary = pyreadr.read_r(dir / 'summary.rds')[None]  # per global parameter
+        chains = pyreadr.read_r(dir / 'chains.rds')[None]
+        meta = pyreadr.read_r(dir / 'meta.rds')[None]
+        return {
+            'rhat': float(summary['rhat'].max(skipna=False)),
+            'ess_bulk': float(summary['ess_bulk'].min(skipna=False)),
+            'ess_tail': float(summary['ess_tail'].min(skipna=False)),
+            'divergences': int(chains['divergences'].sum()),
+            'treedepth_hits': int(chains['treedepth_hits'].sum()),
+            'ebfmi': chains['ebfmi'].tolist(),
+            'rhat_locals': float(meta['rhat_locals'].iloc[0]),
+        }
 
     # ---------------------------------------------------------------------------------
     # problem -> formula, prior; brms's names -> the contract's
@@ -130,7 +118,7 @@ class Handoff:
 
     def _formula(self) -> str:
         response = 'y | trials(n)' if self.problem.trials else 'y'
-        terms = ['1', *[alias for alias in self.aliases if alias.startswith('x')]]
+        terms = ['1', *[self._aliasOf[column] for column in self.problem.design[1:]]]
         for factor in self.problem.factors:
             terms += self._randomTerms(factor)
         return f'{response} ~ {" + ".join(terms)}'
@@ -140,7 +128,9 @@ class Handoff:
         uncorrelated slopes, `(0 + xb + … || g)`: independent of the intercept and of each other."""
         alias = self._aliasOf
         correlated = self.problem.correlations.get(factor, ('Intercept',))[1:]
-        uncorrelated = [column for column in self._slopes(factor) if column not in correlated]
+        uncorrelated = [
+            column for column in self.problem.slopes(factor) if column not in correlated
+        ]
         effects = ['1', *[alias[column] for column in correlated]]
         terms = [f'({" + ".join(effects)} | {alias[factor]})']
         if uncorrelated:
@@ -148,19 +138,16 @@ class Handoff:
             terms.append(f'(0 + {slopes} || {alias[factor]})')
         return terms
 
-    def _slopes(self, factor: str) -> list[str]:
-        """The design columns with a slope on `factor`, correlated or not, in design order."""
-        sds = self.problem.parameters
-        return [column for column in self.problem.design[1:] if f'sd[{column}|{factor}]' in sds]
-
     def _effectsOf(self, factors: list[str]) -> list[str]:
         local = self.problem.localDraws()
         return [name for factor in factors for name in local[factor]]
 
-    def _localsSummary(self, dir: Path, names: dict[str, str]) -> pd.DataFrame:
+    def _localsSummary(
+        self, dir: Path, names: dict[str, str], summarised: list[str]
+    ) -> pd.DataFrame:
         summary = pyreadr.read_r(dir / 'locals_summary.rds')[None]
         summary.insert(0, 'name', summary.pop('variable').map(names))
-        return summary.set_index('name').loc[self._effectsOf(self._summarised())].reset_index()
+        return summary.set_index('name').loc[self._effectsOf(summarised)].reset_index()
 
     def _summarised(self) -> list[str]:
         """The factors above `FULL_GROUPS` groups, in factor order."""
@@ -183,12 +170,13 @@ class Handoff:
             names[f'b_{alias[column]}'] = column
         for factor in self.problem.factors:
             g = alias[factor]
+            slopes = self.problem.slopes(factor)
             names[f'sd_{g}__Intercept'] = f'sd[{factor}]'
-            for column in self._slopes(factor):
+            for column in slopes:
                 names[f'sd_{g}__{alias[column]}'] = f'sd[{column}|{factor}]'
             for j in range(len(self.problem.levels[factor])):  # brms labels a group by its code
                 names[f'r_{g}[{j},Intercept]'] = f'r[{factor}][{j}]'
-                for column in self._slopes(factor):
+                for column in slopes:
                     names[f'r_{g}[{j},{alias[column]}]'] = f'r[{column}|{factor}][{j}]'
             for a, b in combinations(self.problem.correlations.get(factor, ()), 2):
                 names[f'cor_{g}__{alias[a]}__{alias[b]}'] = f'cor[{factor}][{a},{b}]'
@@ -197,7 +185,7 @@ class Handoff:
     @cached_property
     def _aliasOf(self) -> dict[str, str]:
         """Per column, its alias; `Intercept` is brms's own name in its labels."""
-        aliasOf = {'Intercept': 'Intercept'}
+        alias_of = {'Intercept': 'Intercept'}
         for alias, column in self.aliases.items():
-            aliasOf[column] = alias
-        return aliasOf
+            alias_of[column] = alias
+        return alias_of
