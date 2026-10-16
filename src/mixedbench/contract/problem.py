@@ -75,12 +75,10 @@ class Problem:
         """The design, response, trials and factor codes over the rows a fit in `regime` sees,
         on the standardised scale: continuous columns z-scored with the regime's scales,
         each interaction the product of its standardised parts, never rescaled itself."""
-        columns = [
-            *self.design,
-            self.response,
-            *([self.trials] if self.trials else []),
-            *self.factors,
-        ]
+        columns = [*self.design, self.response]
+        if self.trials:
+            columns.append(self.trials)
+        columns += self.factors
         rows = self.table if regime == 'full' else self.table[self.table[regime] == 'seen']
         table = rows[columns].copy()
         for column, scale in self.scales[regime].items():
@@ -95,7 +93,9 @@ class Problem:
     def globalDraws(self) -> tuple[str, ...]:
         """`parameters` in order, each `cor[<factor>]` expanded to its pairs
         `cor[<factor>][<a>,<b>]`, `<a>` before `<b>` in the block's order (brms's pair order)."""
-        blocks = {f'cor[{factor}]': elements for factor, elements in self.correlations.items()}
+        blocks = {}
+        for factor, elements in self.correlations.items():
+            blocks[f'cor[{factor}]'] = elements
         names = []
         for name in self.parameters:
             if name in blocks:
@@ -109,43 +109,36 @@ class Problem:
         `r[<x>|<factor>][<j>]` in `sd` order, `<j>` each group's code in the table, in order."""
         local = {}
         for factor in self.factors:
+            effects = [factor, *[f'{slope}|{factor}' for slope in self.slopes(factor)]]
             groups = range(len(self.levels[factor]))
-            local[factor] = tuple(
-                f'r[{effect}][{j}]' for effect in self._effects(factor) for j in groups
-            )
+            local[factor] = tuple(f'r[{effect}][{j}]' for effect in effects for j in groups)
         return local
 
-    def _effects(self, factor: str) -> list[str]:
-        """`<factor>` and each `<x>|<factor>`, read off the factor's `sd` parameters."""
-        effects = []
+    def slopes(self, factor: str) -> tuple[str, ...]:
+        """The coded columns with a random slope on `factor`, read off its `sd[<x>|<factor>]`
+        parameters in their order."""
+        slopes = []
         for name in self.parameters:
-            if name == f'sd[{factor}]' or (name.startswith('sd[') and name.endswith(f'|{factor}]')):
-                effects.append(name.removeprefix('sd[').removesuffix(']'))
-        return effects
+            if name.startswith('sd[') and name.endswith(f'|{factor}]'):
+                slopes.append(name.removeprefix('sd[').removesuffix(f'|{factor}]'))
+        return tuple(slopes)
 
     def _interactions(self) -> dict[str, tuple[str, ...]]:
         """Per interaction column, its parts in order: the design columns after `Intercept` that
-        are no covariate's coded column."""
-        coded = self._covariateColumns()
+        are no covariate's coded column. By the coding, a continuous covariate has a scale and a
+        binary one levels, both keep their name; any other is `<c>[<level>]` per level after the
+        first."""
+        contrasts = [f'{c}[{level}]' for c, levels in self.levels.items() for level in levels[1:]]
+        coded = [
+            column
+            for column in self.design[1:]
+            if column in self.scales['full'] or column in self.levels or column in contrasts
+        ]
         interactions = {}
         for column in self.design[1:]:
             if column not in coded:
                 interactions[column] = self._parts(column, coded)
         return interactions
-
-    def _covariateColumns(self) -> list[str]:
-        """The covariates' coded columns, by the coding: a continuous covariate has a scale and
-        keeps its name; a recoded one has levels and is `<c>` if binary (in the design as is),
-        else `<c>[<level>]` per level after the first."""
-        columns = [column for column in self.scales['full'] if column != self.response]
-        for column, levels in self.levels.items():
-            if column == self.response or column in self.factors:
-                continue
-            if column in self.design:
-                columns.append(column)
-            else:
-                columns += [f'{column}[{level}]' for level in levels[1:]]
-        return columns
 
     @staticmethod
     def _parts(column: str, coded: list[str]) -> tuple[str, ...]:
