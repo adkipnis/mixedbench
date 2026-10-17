@@ -1,4 +1,4 @@
-"""`references.run` with real R (#65): a problem and a directory in, the problem's reference run
+"""`runner.run` with real R (#65): a problem and a directory in, the problem's reference run
 out, its global draws under the contract's names. Most tests fit a model, about ten seconds each."""
 
 from __future__ import annotations
@@ -13,8 +13,8 @@ import numpy as np
 import pandas as pd
 import pyreadr
 import pytest
-from mixedbench import references
 from mixedbench.contract import Problem, contractHash
+from mixedbench.references import runner
 from mixedbench.references.handoff import Handoff
 
 from .conftest import binomialTrials, fixtureProblem, gaussianMixed, nestedProblem, ordinalProblem
@@ -37,11 +37,11 @@ def drawsPerChain(file: Path) -> dict[int, list[int]]:
 
 
 @pytest.fixture(scope='module')
-def ran(tmp_path_factory: pytest.TempPathFactory) -> tuple[Problem, references.Outcome, Path]:
+def ran(tmp_path_factory: pytest.TempPathFactory) -> tuple[Problem, runner.Outcome, Path]:
     """One fit shared by the tests that read a passing run."""
     problem = fixtureProblem()
     dir = tmp_path_factory.mktemp('references')
-    outcome = references.run(problem, dir)
+    outcome = runner.run(problem, dir)
     return problem, outcome, problemDir(dir, problem)
 
 
@@ -80,7 +80,7 @@ def test_a_run_records_each_level_with_its_settings_time_and_diagnostics(ran) ->
     _, _, dir = ran
     [level] = record(dir)['levels']
     assert (level['level'], level['outcome']) == (0, 'passed')
-    assert level['settings'] == references.LEVELS[0]
+    assert level['settings'] == runner.LEVELS[0]
     assert level['seconds'] > 0
     assert level['rhat'] < 1.01
     assert min(level['ess_bulk'], level['ess_tail']) >= 400
@@ -94,7 +94,7 @@ def test_a_run_records_each_level_with_its_settings_time_and_diagnostics(ran) ->
 def test_the_outcome_is_the_references_row_of_the_last_level(ran) -> None:
     problem, outcome, dir = ran
     [level] = record(dir)['levels']
-    assert outcome == references.Outcome(
+    assert outcome == runner.Outcome(
         id='fixture/trial/1',
         contract_hash=contractHash(problem),
         level=0,
@@ -128,9 +128,9 @@ def test_a_pin_mismatch_raises_before_any_level(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """No reference is made on an unpinned stack, and the refusal records nothing."""
-    monkeypatch.setattr(references, 'CMDSTAN', '2.39.0')
+    monkeypatch.setattr(runner, 'CMDSTAN', '2.39.0')
     with pytest.raises(RuntimeError, match="'cmdstan': '2.39.0'"):
-        references.run(fixtureProblem(), tmp_path)
+        runner.run(fixtureProblem(), tmp_path)
     assert list(tmp_path.iterdir()) == []
 
 
@@ -143,7 +143,7 @@ def tinyLevels() -> dict[int, dict]:
     """The ladder at 10 draws per chain: 40 draws hold no bulk ESS of 400, so every level
     fails the bar, quickly."""
     levels = {}
-    for level, settings in references.LEVELS.items():
+    for level, settings in runner.LEVELS.items():
         levels[level] = {**settings, 'warmup': 20, 'draws': 10 * settings['thin']}
     return levels
 
@@ -152,9 +152,9 @@ def test_a_failed_bar_climbs_the_ladder_and_ends_as_bar_at_level_2(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Every level gets its chance; what failed keeps its record and R's log, and no draws."""
-    monkeypatch.setattr(references, 'LEVELS', tinyLevels())
+    monkeypatch.setattr(runner, 'LEVELS', tinyLevels())
     problem = fixtureProblem()
-    outcome = references.run(problem, tmp_path)
+    outcome = runner.run(problem, tmp_path)
     dir = problemDir(tmp_path, problem)
     assert (outcome.outcome, outcome.level) == ('bar', 2)
     assert [level['outcome'] for level in record(dir)['levels']] == ['bar', 'bar', 'bar']
@@ -170,9 +170,9 @@ def test_thinning_hides_no_divergence_from_the_bar(
     problem = nestedProblem()
     divergences = {}
     for thin in (1, 2):
-        settings = {**references.LEVELS[0], 'draws': 2000, 'thin': thin}
-        monkeypatch.setattr(references, 'LEVELS', {0: settings})
-        divergences[thin] = references.run(problem, tmp_path / str(thin)).divergences
+        settings = {**runner.LEVELS[0], 'draws': 2000, 'thin': thin}
+        monkeypatch.setattr(runner, 'LEVELS', {0: settings})
+        divergences[thin] = runner.run(problem, tmp_path / str(thin)).divergences
     assert divergences[1] > 1
     assert divergences[2] == divergences[1]
 
@@ -182,10 +182,10 @@ def test_a_thinned_level_stores_4000_draws_numbered_within_their_chain(
 ) -> None:
     """Level 2 samples 2,000 draws per chain and keeps every second; the fixture passes at
     level 0's settings, so level 0 thinned the same way stands in for it."""
-    settings = {**references.LEVELS[0], 'draws': 2000, 'thin': 2}
-    monkeypatch.setattr(references, 'LEVELS', {0: settings})
+    settings = {**runner.LEVELS[0], 'draws': 2000, 'thin': 2}
+    monkeypatch.setattr(runner, 'LEVELS', {0: settings})
     problem = fixtureProblem()
-    assert references.run(problem, tmp_path).outcome == 'passed'
+    assert runner.run(problem, tmp_path).outcome == 'passed'
     assert drawsPerChain(problemDir(tmp_path, problem) / 'globals.parquet') == FOUR_CHAINS
 
 
@@ -194,9 +194,9 @@ def test_a_run_out_of_time_ends_as_cap_with_its_record(
 ) -> None:
     """Three seconds do not cover loading brms, so level 0 times out; the record is written
     before the scheduler's limit would kill the job."""
-    monkeypatch.setattr(references, 'CAP', 3)
+    monkeypatch.setattr(runner, 'CAP', 3)
     problem = fixtureProblem()
-    outcome = references.run(problem, tmp_path)
+    outcome = runner.run(problem, tmp_path)
     dir = problemDir(tmp_path, problem)
     assert (outcome.outcome, outcome.level) == ('cap', 0)
     assert [level['outcome'] for level in record(dir)['levels']] == ['cap']
@@ -208,12 +208,12 @@ def test_a_rerun_leaves_no_file_of_the_earlier_run(
 ) -> None:
     """A run whose contract hash moved may have passed: its draws must not sit beside the
     record of a rerun that ends otherwise, here at the cap."""
-    monkeypatch.setattr(references, 'CAP', 3)
+    monkeypatch.setattr(runner, 'CAP', 3)
     problem = fixtureProblem()
     dir = problemDir(tmp_path, problem)
     dir.mkdir()
     (dir / 'globals.parquet').write_text('an earlier run')
-    references.run(problem, tmp_path)
+    runner.run(problem, tmp_path)
     assert sorted(path.name for path in dir.iterdir()) == ['R.log', 'run.json']
 
 
@@ -223,12 +223,10 @@ def test_an_r_error_ends_the_run_as_error_and_keeps_r_log(
     """An adapt_delta above 1 makes cmdstanr stop, as a broken model would: the ladder stops at
     the level that failed, since the next would fail the same way and burn the cap.
     R.log still names the R session, which run.R prints before it fits."""
-    levels = {
-        level: {**settings, 'adapt_delta': 2} for level, settings in references.LEVELS.items()
-    }
-    monkeypatch.setattr(references, 'LEVELS', levels)
+    levels = {level: {**settings, 'adapt_delta': 2} for level, settings in runner.LEVELS.items()}
+    monkeypatch.setattr(runner, 'LEVELS', levels)
     problem = fixtureProblem()
-    outcome = references.run(problem, tmp_path)
+    outcome = runner.run(problem, tmp_path)
     dir = problemDir(tmp_path, problem)
     assert (outcome.outcome, outcome.level) == ('error', 0)
     assert [level['outcome'] for level in record(dir)['levels']] == ['error']
@@ -248,7 +246,7 @@ def test_each_model_shape_writes_its_draws_stan_program_and_data(shape, tmp_path
     """Mixed `|` and `||` slopes, a binomial with trials and an ordinal model: every factor has
     at most 1,000 groups, so the random effects are kept in full and no summary is written."""
     problem = shape()
-    outcome = references.run(problem, tmp_path)
+    outcome = runner.run(problem, tmp_path)
     dir = problemDir(tmp_path, problem)
     assert outcome.outcome == 'passed'
     assert sorted(path.name for path in dir.iterdir()) == [
@@ -278,7 +276,7 @@ def test_a_summarized_factor_reaches_locals_summary_and_stays_out_of_draws_rds(
     monkeypatch.setattr(Handoff, 'FULL_GROUPS', 10)
     handoff = Handoff(nestedProblem())
     handoff.write(tmp_path, tinyLevels()[0])
-    run_r = Path(references.__file__).with_name('run.R')
+    run_r = Path(runner.__file__).with_name('run.R')
     fitted = subprocess.run(['Rscript', run_r, tmp_path], capture_output=True, text=True)
     assert fitted.returncode == 0, fitted.stderr
     raw = pyreadr.read_r(tmp_path / 'draws.rds')[None]
