@@ -28,7 +28,7 @@ from merge import Merger
 from mixedbench.datasets import Loader
 from mixedbench.registry.row import readCsv, writeCsv
 from schema import EXCLUDED, REGISTRY
-from summarise import Summariser
+from summarize import Summarizer
 
 FIXTURES = HERE / 'fixtures'
 HERDS_URL = 'https://example.org/herds.zip'
@@ -72,7 +72,7 @@ def mergeShard(merger: Merger, shard: Path) -> Merger:
     merger.reconcile()
     merger.measure()
     merger.writeManifest()
-    Summariser(merger.registry, merger.survey).flush()
+    Summarizer(merger.registry, merger.survey).flush()
     merger.report()
     return merger
 

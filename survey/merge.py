@@ -43,7 +43,7 @@ from schema import (
     Table,
 )
 from sources import Key, readFrame
-from summarise import Summariser
+from summarize import Summarizer
 
 # =====================================================================================
 # globals
@@ -530,5 +530,5 @@ if __name__ == '__main__':
     merger.reconcile()
     merger.measure()
     merger.writeManifest()
-    Summariser(args.registry, args.survey).flush()
+    Summarizer(args.registry, args.survey).flush()
     merger.report()

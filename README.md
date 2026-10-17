@@ -40,7 +40,7 @@ Check out the [demo](https://colab.research.google.com/github/adkipnis/mixedbenc
 
 ## Contents
 
-- The package `mixedbench`: `suite` (a problem by its id, in one call), `registry` (the registry files, summarised in
+- The package `mixedbench`: `suite` (a problem by its id, in one call), `registry` (the registry files, summarized in
   [`SUMMARY.md`](https://github.com/adkipnis/mixedbench/blob/main/registry/SUMMARY.md)), `datasets` (the loader) and `contract`
   (`Problem`, `materialize`, `load`).
 - [`suite/1.1/candidates.csv`](https://github.com/adkipnis/mixedbench/blob/main/suite/1.1/candidates.csv): the candidate problems of

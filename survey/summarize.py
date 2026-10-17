@@ -53,7 +53,7 @@ K_TAIL = 10  # the summary's K table pools the levels above this (the columns ru
 # =====================================================================================
 # pipeline: measured files -> axes -> shares -> K -> implied columns -> summary
 # =====================================================================================
-class Summariser:
+class Summarizer:
     def __init__(self, root: Path, survey: Path) -> None:
         self.root, self.survey = Path(root), Path(survey)  # the registry folder, the survey's
         self.registry = readCsv(self.root / 'registry.csv')
@@ -106,19 +106,19 @@ class Summariser:
         tiers = [t for t in TIERS if (frame['tier'] == t).any()]
         without_agridat = frame.loc[frame['source'] != HEAVY_SOURCE, column]
         return {
-            'pooled': Summariser.quantilesOf(frame[column]),
+            'pooled': Summarizer.quantilesOf(frame[column]),
             'tiers': {
-                t: Summariser.quantilesOf(frame.loc[frame['tier'] == t, column]) for t in tiers
+                t: Summarizer.quantilesOf(frame.loc[frame['tier'] == t, column]) for t in tiers
             },
-            'without_agridat': Summariser.quantilesOf(without_agridat),
+            'without_agridat': Summarizer.quantilesOf(without_agridat),
         }
 
     @staticmethod
     def quantilesOf(values: pd.Series) -> dict:
         values = pd.Series(values).dropna()
-        out = {'n': len(values), 'min': Summariser.quantile(values, 0)}
-        out |= {k: Summariser.quantile(values, q) for k, q in LEVELS.items()}
-        out['max'] = Summariser.quantile(values, 1)
+        out = {'n': len(values), 'min': Summarizer.quantile(values, 0)}
+        out |= {k: Summarizer.quantile(values, q) for k, q in LEVELS.items()}
+        out['max'] = Summarizer.quantile(values, 1)
         return out
 
     @staticmethod
@@ -215,10 +215,10 @@ class Summariser:
         rows = {'pooled': block['pooled']}
         rows |= {f'tier {t}': q for t, q in block['tiers'].items()}
         rows['without agridat'] = block['without_agridat']
-        last = {'pooled': Summariser.cell(Summariser.practiceP90(axis, practice))}
+        last = {'pooled': Summarizer.cell(Summarizer.practiceP90(axis, practice))}
         lines = [
             f'| {name} | '
-            + ' | '.join(Summariser.cell(q[k]) for k in QUANTILE_KEYS)
+            + ' | '.join(Summarizer.cell(q[k]) for k in QUANTILE_KEYS)
             + f' | {last.get(name, "")} |'
             for name, q in rows.items()
         ]
