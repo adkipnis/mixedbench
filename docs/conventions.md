@@ -56,6 +56,8 @@ harder to understand or change.
 
 ## Names
 
+- British spelling (`standardised`, `licence`), except where an outside standard fixes a
+  name: `LICENSE`, `license` in `pyproject.toml`, R's and pandas's own names.
 - A module is one lowercase word. A package's `__init__.py` lists its public names in
   `__all__`.
 - `PascalCase` for classes and `Literal` aliases, `camelCase` for functions and methods,
@@ -126,6 +128,8 @@ a pinned Source
 
 - Comments start in lower case; docstrings are capitalised sentences. Break the lines of both
   at sentence or clause boundaries, not at the column limit.
+- Short, plain sentences, one idea each, with a subject and a verb. A docstring starts with
+  what the function does or returns.
 - A docstring only where the behaviour or design is not obvious: one or two plain sentences.
   Detail goes into inline comments that say why and cite sources (a paper, an equation).
 - A comment explains the code, not its history: the case behind a rule goes to the test that
