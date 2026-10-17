@@ -1,11 +1,10 @@
 """handoff.py defines what passes between a problem and the R script that fits its reference.
 
 Python writes the standardised table and the model for R.
-The table's columns take aliases brms never rewrites (`y`, `x1`…, `g1`…).
-The model is JSON: the formula, family and link, the prior per class, a level's settings,
-the seed and the factors R summarises.
-Python reads back the draws by the aliases in brms's labels, never by position,
-and the diagnostics of the fit.
+The table's columns take aliases brms never rewrites (`y`, `x1`, `g1`, ...).
+The model is written in JSON format: the formula, family and link, the prior per class,
+a level's settings, the seed and the factors R summarises.
+Python reads back the draws by the aliases in brms's labels and the diagnostics of the fit.
 
 pipeline:
 ---------
@@ -34,16 +33,31 @@ from mixedbench.contract import Prior, Problem
 
 
 class Handoff:
-    # a factor of more groups keeps per-effect summaries of its random effects, not their draws
+    """A problem's handoff to the R script and back.
+
+    brms rewrites column names such as `x[level]` or `a:b`, so R sees aliases instead:
+    `y` for the response, `n` for a binomial model's trials,
+    `x1`, `x2`, ... for the design columns after `Intercept`,
+    `g1`, `g2`, ... for the grouping factors.
+    Each grouping factor takes its intercept with the correlated slopes, `(1 + x1 | g1)`.
+    Uncorrelated slopes go in a term of their own, `(0 + x2 || g1)`.
+    brms labels a variable by its class and aliases, such as `sd_g1__x1` or `r_g1[j,x1]`,
+    where `j` is a group's code. The draws are renamed by these labels.
+    Random effects for more than `FULL_GROUPS` groups are summarised instead of saving the draws.
+    """
+
     FULL_GROUPS = 1000
 
     def __init__(self, problem: Problem) -> None:
         self.problem = problem
 
+    # ---------------------------------------------------------------------------------
+    # problem -> aliases
+    # ---------------------------------------------------------------------------------
+
     @cached_property
     def aliases(self) -> dict[str, str]:
-        """Returns each alias's column in the problem.
-        `Intercept` has no alias: brms names it itself."""
+        """Returns each alias's column."""
         aliases = {'y': self.problem.response}
         if self.problem.trials:
             aliases['n'] = self.problem.trials
@@ -53,11 +67,17 @@ class Handoff:
             aliases[f'g{i}'] = factor
         return aliases
 
-    @property
-    def seed(self) -> int:
-        """Returns the first 4 bytes of the id's sha256, modulo 2³¹ (R's integer range)."""
-        digest = hashlib.sha256(self.problem.id.encode()).digest()
-        return int.from_bytes(digest[:4], 'big') % 2**31
+    @cached_property
+    def _aliasOf(self) -> dict[str, str]:
+        """Returns each column's alias."""
+        alias_of = {'Intercept': 'Intercept'}
+        for alias, column in self.aliases.items():
+            alias_of[column] = alias
+        return alias_of
+
+    # ---------------------------------------------------------------------------------
+    # aliases -> table.csv, input.json
+    # ---------------------------------------------------------------------------------
 
     def write(self, dir: Path, settings: dict) -> None:
         """Writes `table.csv` and `input.json` for the R script into `dir`.
@@ -79,60 +99,6 @@ class Handoff:
         }
         (dir / 'input.json').write_text(json.dumps(model, indent=2))
 
-    def read(self, dir: Path) -> dict[str, pd.DataFrame]:
-        """Returns the draws R left in `dir` under the contract's names, per file they go to.
-        `globals` holds the global draws.
-        `locals` holds the random effects of each factor of at most `FULL_GROUPS` groups.
-        `locals_summary` holds a row per random effect of each larger factor.
-        A file is absent where no factor qualifies.
-        The draws come after `chain` and `draw`; `draw` counts within its chain."""
-        raw = pyreadr.read_r(dir / 'draws.rds')[None]  # as brms named them
-        names = self._contractNames()
-        draws = raw.rename(columns=names)
-        draws['chain'] = draws['chain'] - 1
-        draws['draw'] = draws.pop('iteration') - 1
-        files = {'globals': draws[['chain', 'draw', *self.problem.globalDraws()]]}
-        summarised = self._summarised()
-        full = [factor for factor in self.problem.factors if factor not in summarised]
-        if full:
-            files['locals'] = draws[['chain', 'draw', *self._effectsOf(full)]]
-        if summarised:
-            files['locals_summary'] = self._localsSummary(dir, names, summarised)
-        return files
-
-    @staticmethod
-    def diagnostics(dir: Path) -> dict:
-        """Returns what R reported of a level it ran to its end.
-        R-hat and ESS are the worst over the global parameters,
-        `rhat_locals` the largest R-hat over the random effects.
-        A global one R could not compute stays NaN, so the bar fails on it.
-        Divergences and tree-depth hits count every iteration."""
-        summary = pyreadr.read_r(dir / 'summary.rds')[None]  # per global parameter
-        chains = pyreadr.read_r(dir / 'chains.rds')[None]
-        meta = pyreadr.read_r(dir / 'meta.rds')[None]
-        return {
-            'rhat': float(summary['rhat'].max(skipna=False)),
-            'ess_bulk': float(summary['ess_bulk'].min(skipna=False)),
-            'ess_tail': float(summary['ess_tail'].min(skipna=False)),
-            'divergences': int(chains['divergences'].sum()),
-            'treedepth_hits': int(chains['treedepth_hits'].sum()),
-            'ebfmi': chains['ebfmi'].tolist(),
-            'rhat_locals': float(meta['rhat_locals'].iloc[0]),
-        }
-
-    # ---------------------------------------------------------------------------------
-    # problem -> formula, prior, summarised factors
-    # ---------------------------------------------------------------------------------
-
-    @cached_property
-    def _aliasOf(self) -> dict[str, str]:
-        """Returns each column's alias.
-        `Intercept` keeps its name, as brms's labels do."""
-        alias_of = {'Intercept': 'Intercept'}
-        for alias, column in self.aliases.items():
-            alias_of[column] = alias
-        return alias_of
-
     def _formula(self) -> str:
         response = 'y | trials(n)' if self.problem.trials else 'y'
         covariates = [self._aliasOf[column] for column in self.problem.design[1:]]
@@ -143,9 +109,6 @@ class Handoff:
         return f'{response} ~ {predictors}'
 
     def _randomTerms(self, factor: str) -> list[str]:
-        """Returns the intercept with its correlated slopes, `(1 + xa + … | g)`.
-        Uncorrelated slopes take a term of their own, `(0 + xb + … || g)`:
-        independent of the intercept and of each other."""
         alias = self._aliasOf
         g = alias[factor]
         correlated = self.problem.correlations.get(factor, ())[1:]  # after `Intercept`
@@ -165,6 +128,12 @@ class Handoff:
         parameters = ', '.join(f'{p:g}' for p in prior.parameters)
         return f'{prior.distribution}({parameters})'
 
+    @property
+    def seed(self) -> int:
+        """Returns the first 4 bytes of the id's sha256, modulo 2³¹ (R's integer range)."""
+        digest = hashlib.sha256(self.problem.id.encode()).digest()
+        return int.from_bytes(digest[:4], 'big') % 2**31
+
     def _summarised(self) -> list[str]:
         summarised = []
         for factor in self.problem.factors:
@@ -173,8 +142,25 @@ class Handoff:
         return summarised
 
     # ---------------------------------------------------------------------------------
-    # brms's labels -> the contract's names
+    # draws.rds, locals_summary.rds -> the contract's names
     # ---------------------------------------------------------------------------------
+
+    def read(self, dir: Path) -> dict[str, pd.DataFrame]:
+        """Returns the draws R left in `dir` under the contract's names, per file they go to:
+        `globals`, `locals` for the factors kept in full, `locals_summary` for the summarised."""
+        raw = pyreadr.read_r(dir / 'draws.rds')[None]  # as brms named them
+        names = self._contractNames()
+        draws = raw.rename(columns=names)
+        draws['chain'] = draws['chain'] - 1
+        draws['draw'] = draws.pop('iteration') - 1  # within its chain
+        files = {'globals': draws[['chain', 'draw', *self.problem.globalDraws()]]}
+        summarised = self._summarised()
+        full = [factor for factor in self.problem.factors if factor not in summarised]
+        if full:
+            files['locals'] = draws[['chain', 'draw', *self._effectsOf(full)]]
+        if summarised:
+            files['locals_summary'] = self._localsSummary(dir, names, summarised)
+        return files
 
     def _contractNames(self) -> dict[str, str]:
         """Returns each brms variable's contract name, by the aliases in its label."""
@@ -198,7 +184,7 @@ class Handoff:
             names[f'sd_{g}__{alias[column]}'] = f'sd[{column}|{factor}]'
         for a, b in combinations(self.problem.correlations.get(factor, ()), 2):
             names[f'cor_{g}__{alias[a]}__{alias[b]}'] = f'cor[{factor}][{a},{b}]'
-        for j in range(len(self.problem.levels[factor])):  # brms labels a group by its code
+        for j in range(len(self.problem.levels[factor])):
             names[f'r_{g}[{j},Intercept]'] = f'r[{factor}][{j}]'
             for column in slopes:
                 names[f'r_{g}[{j},{alias[column]}]'] = f'r[{column}|{factor}][{j}]'
@@ -219,3 +205,24 @@ class Handoff:
         summary = summary.rename(columns={'variable': 'name'})
         order = self._effectsOf(summarised)
         return summary.set_index('name').loc[order].reset_index()
+
+    # ---------------------------------------------------------------------------------
+    # summary.rds, chains.rds, meta.rds -> diagnostics
+    # ---------------------------------------------------------------------------------
+
+    @staticmethod
+    def diagnostics(dir: Path) -> dict:
+        """Returns what R reported of a level it ran to its end.
+        An R-hat or ESS that R could not compute stays NaN, so the bar fails on it."""
+        summary = pyreadr.read_r(dir / 'summary.rds')[None]  # per global parameter
+        chains = pyreadr.read_r(dir / 'chains.rds')[None]  # per chain, over every iteration
+        meta = pyreadr.read_r(dir / 'meta.rds')[None]  # the largest R-hat over the random effects
+        return {
+            'rhat': float(summary['rhat'].max(skipna=False)),
+            'ess_bulk': float(summary['ess_bulk'].min(skipna=False)),
+            'ess_tail': float(summary['ess_tail'].min(skipna=False)),
+            'divergences': int(chains['divergences'].sum()),
+            'treedepth_hits': int(chains['treedepth_hits'].sum()),
+            'ebfmi': chains['ebfmi'].tolist(),
+            'rhat_locals': float(meta['rhat_locals'].iloc[0]),
+        }
