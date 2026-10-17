@@ -19,7 +19,7 @@ pipeline:
 a typed registry row and its loaded table
 -> refused if outside the contract             _refuseUncovered
 -> composites added, incomplete rows dropped   withComposites, _keptRows
--> the coded design, response and factors      _kinds, _coded, _design, _codeFactor, _response
+-> the coded design, response and factors      _kinds, _coded, _design, _codes, _response
 -> the regimes `rows` and `groups`             _splits
 -> each regime's scales                        _scales
 -> the family, prior and parameter names       _prior, _parameters
@@ -43,6 +43,7 @@ from mixedbench.registry.row import Row, parts
 # =====================================================================================
 # what `build` returns or raises, and the records a problem holds
 CONTRACT = int(version('mixedbench').partition('.')[0])  # the package's major version
+Regime = Literal['full', 'rows', 'groups']
 
 
 @dataclass(frozen=True)
@@ -55,7 +56,7 @@ class Problem:
     factors: tuple[str, ...]
     levels: dict[str, tuple]  # each recoded column's levels, in code order
     # per regime, the mean and SD of each continuous column over the rows its fit sees
-    scales: dict[str, dict[str, Scale]]
+    scales: dict[Regime, dict[str, Scale]]
     dropped_share: float  # the share of loaded rows dropped for a missing model value
     trials: str | None  # the trials column of a binomial response
     family: str  # brms's name, set by the family rule
@@ -70,15 +71,16 @@ class Problem:
         """Raises `Refused` if the contract does not cover the row."""
         return _Builder(row, table).problem()
 
-    def standardised(self, regime: Literal['full', 'rows', 'groups'] = 'full') -> pd.DataFrame:
+    def standardised(self, regime: Regime = 'full') -> pd.DataFrame:
         """Returns the standardised model columns of the rows a fit in `regime` sees.
         Continuous columns are z-scored with the regime's scales.
-        An interaction is the product of its standardised parts."""
+        An interaction is the product of its standardised parts,
+        see Aiken & West (1991) and Gelman (2008)."""
         columns = [*self.design, self.response]
         if self.trials:
             columns.append(self.trials)
         columns += self.factors
-        rows = self.table if regime == 'full' else self.table[self.table[regime] == 'seen']
+        rows = _seenRows(self.table, regime)
         table = rows[columns].copy()
         for column, scale in self.scales[regime].items():
             table[column] = (table[column] - scale.mean) / scale.sd
@@ -95,43 +97,50 @@ class Problem:
         names = []
         for name in self.parameters:
             if name in blocks:
-                names += [f'{name}[{a},{b}]' for a, b in combinations(blocks[name], 2)]
+                pairs = combinations(blocks[name], 2)
+                names += [f'{name}[{a},{b}]' for a, b in pairs]
             else:
                 names.append(name)
         return tuple(names)
 
     def localDraws(self) -> dict[str, tuple[str, ...]]:
-        """Returns each factor's random-effect names: `r[<factor>][<j>]` and `r[<x>|<factor>][<j>]`.
+        """Returns the names of each factor's random effects.
+        The intercept's are `r[<factor>][<j>]`, a slope's are `r[<x>|<factor>][<j>]`.
         `<j>` is a group's code in the table."""
         local = {}
         for factor in self.factors:
-            # the intercept first, then the slopes
-            effects = [factor, *[f'{slope}|{factor}' for slope in self.slopes(factor)]]
+            slopes = [f'{slope}|{factor}' for slope in self.slopes(factor)]
+            effects = [factor, *slopes]  # the intercept first
             groups = range(len(self.levels[factor]))
-            local[factor] = tuple(f'r[{effect}][{j}]' for effect in effects for j in groups)
+            names = []
+            for effect in effects:
+                names += [f'r[{effect}][{j}]' for j in groups]
+            local[factor] = tuple(names)
         return local
 
     def slopes(self, factor: str) -> tuple[str, ...]:
         """Returns the coded columns with a random slope on `factor`, in `sd` order."""
+        suffix = f'|{factor}]'
         slopes = []
         for name in self.parameters:
-            if name.startswith('sd[') and name.endswith(f'|{factor}]'):
-                slopes.append(name.removeprefix('sd[').removesuffix(f'|{factor}]'))
+            if name.startswith('sd[') and name.endswith(suffix):
+                slope = name.removeprefix('sd[').removesuffix(suffix)
+                slopes.append(slope)
         return tuple(slopes)
 
     def _interactions(self) -> dict[str, tuple[str, ...]]:
         """Returns each interaction column with its parts, in order."""
         # a covariate's coded columns: a continuous one has a scale, a binary one has levels,
         # any other is a contrast
-        contrasts = [f'{c}[{level}]' for c, levels in self.levels.items() for level in levels[1:]]
-        coded = [
-            column
-            for column in self.design[1:]
-            if column in self.scales['full'] or column in self.levels or column in contrasts
-        ]
+        contrasts = []
+        for column, levels in self.levels.items():
+            contrasts += [f'{column}[{level}]' for level in levels[1:]]
+        covariate_columns = [*self.scales['full'], *self.levels, *contrasts]
+        design = self.design[1:]  # without `Intercept`
+        coded = [column for column in design if column in covariate_columns]
         # every other design column is an interaction
         interactions = {}
-        for column in self.design[1:]:
+        for column in design:
             if column not in coded:
                 interactions[column] = self._parts(column, coded)
         return interactions
@@ -146,7 +155,7 @@ class Problem:
             matches = [c for c in coded if rest == c or rest.startswith(f'{c}:')]
             part = max(matches, key=len)
             parts.append(part)
-            rest = rest[len(part) + 1 :]
+            rest = rest[len(part) + 1 :]  # past the part and its `:`
         return tuple(parts)
 
 
@@ -168,6 +177,13 @@ class Refused(Exception):
     def __init__(self, id: str, reason: str) -> None:
         super().__init__(f'{id}: {reason}')
         self.reason = reason
+
+
+def _seenRows(table: pd.DataFrame, regime: Regime) -> pd.DataFrame:
+    """Returns the rows a fit in `regime` sees: all in `full`, the `seen` ones in a split."""
+    if regime == 'full':
+        return table
+    return table[table[regime] == 'seen']
 
 
 # =====================================================================================
@@ -202,7 +218,8 @@ class _Builder:
         self.row = row
         self.id = row.id
         self._refuseUncovered()
-        self.table = self._keptRows(withComposites(table, row.grouping_factors))
+        composed = withComposites(table, row.grouping_factors)
+        self.table = self._keptRows(composed)
         if self.table.empty:  # nlme Phenobarb: doses and responses on different rows
             raise Refused(self.id, 'no row has every model value')
         self.dropped_share = (len(table) - len(self.table)) / len(table)
@@ -211,9 +228,10 @@ class _Builder:
         kinds = self._kinds()
         coded = self._coded(kinds)
         design = self._design(coded)
-        factors = {factor: self._codeFactor(factor) for factor in self.row.grouping_factors}
+        factors = {factor: self._codes(factor) for factor in self.row.grouping_factors}
         regimes = self._splits(factors)
-        table = pd.DataFrame(design | self._response() | factors | regimes).reset_index(drop=True)
+        columns = design | self._response() | factors | regimes
+        table = pd.DataFrame(columns).reset_index(drop=True)
         correlations = self._correlations(coded)
         family, link = self.FAMILY[self.row.response_type]
         return Problem(
@@ -259,7 +277,8 @@ class _Builder:
         """Returns each covariate's kind, by the typing rule."""
         kinds = {}
         for column in self.row.covariates:
-            kinds[column], _ = columnType(self.table[column], self.row.types.get(column, ''))
+            declared = self.row.types.get(column, '')
+            kinds[column], _ = columnType(self.table[column], declared)
         return kinds
 
     def _coded(self, kinds: dict[str, str]) -> Coded:
@@ -282,17 +301,21 @@ class _Builder:
         loaded = self._levelOrder(values)
         if kind == 'binary':
             return {column: (values != loaded[0]).astype(float)}
-        return {f'{column}[{level}]': (values == level).astype(float) for level in loaded[1:]}
+        contrasts = {}
+        for level in loaded[1:]:
+            contrasts[f'{column}[{level}]'] = (values == level).astype(float)
+        return contrasts
 
     @staticmethod
     def _codeInteraction(term: str, coded: Coded) -> dict[str, pd.Series]:
         """Returns the products of the parts' coded columns, named `<a>:<b>`."""
-        columns = {'': 1.0}
-        for part in parts(term):
+        first, *rest = parts(term)
+        columns = coded[first]
+        for part in rest:
             products = {}
             for name, column in columns.items():
-                for partName, partColumn in coded[part].items():
-                    products[f'{name}:{partName}'.removeprefix(':')] = column * partColumn
+                for part_name, part_column in coded[part].items():
+                    products[f'{name}:{part_name}'] = column * part_column
             columns = products
         return columns
 
@@ -303,19 +326,21 @@ class _Builder:
             design.update(columns)
         return design
 
-    def _codeFactor(self, factor: str) -> pd.Series:
-        values = self.table[factor]
-        codes = pd.Categorical(values, categories=self._levelOrder(values)).codes
+    def _codes(self, column: str) -> pd.Series:
+        """Returns the column's 0-based codes, in the loaded level order."""
+        values = self.table[column]
+        levels = self._levelOrder(values)
+        codes = pd.Categorical(values, categories=levels).codes
         return pd.Series(codes, index=self.table.index)
 
     def _response(self) -> dict[str, pd.Series]:
         """Codes the response by its type. A binomial response comes with its trials."""
         values = self.table[self.row.response]  # continuous, count and binomial: as loaded
         if self.row.response_type == 'binary':  # 0/1, with the first loaded level as 0
-            values = (values != self._levelOrder(values)[0]).astype(int)
+            first = self._levelOrder(values)[0]
+            values = (values != first).astype(int)
         if self.row.response_type == 'ordinal':  # 1-based, in the loaded level order
-            codes = pd.Categorical(values, categories=self._levelOrder(values)).codes
-            values = pd.Series(codes + 1, index=self.table.index)
+            values = self._codes(self.row.response) + 1
         response = {self.row.response: values}
         if self.row.trials:
             response[self.row.trials] = self.table[self.row.trials]
@@ -331,12 +356,16 @@ class _Builder:
 
     def _splits(self, factors: dict[str, pd.Series]) -> dict[str, pd.Series]:
         """Draws the regimes `rows` and `groups`, seeded by the problem id."""
-        seed = int.from_bytes(hashlib.sha256(self.id.encode()).digest()[:8], 'big')
+        digest = hashlib.sha256(self.id.encode()).digest()
+        seed = int.from_bytes(digest[:8], 'big')
         rng = np.random.default_rng(seed)
-        regimes = {'rows': self._regime(self._heldRows(rng, factors))}
+        held = self._heldRows(rng, factors)
+        regimes = {'rows': self._regime(held)}
         first = factors[self.row.grouping_factors[0]]
-        if first.max() + 1 > 2:  # holding out one of two groups would leave just one
-            regimes['groups'] = self._regime(self._heldGroups(rng, first))
+        groups = first.max() + 1
+        if groups > 2:  # holding out one of two groups would leave just one
+            held = self._heldGroups(rng, first)
+            regimes['groups'] = self._regime(held)
         return regimes
 
     def _heldRows(self, rng: np.random.Generator, factors: dict[str, pd.Series]) -> np.ndarray:
@@ -346,16 +375,20 @@ class _Builder:
         order = self._seededOrder(rng, n)  # (n,) row positions
         spare = np.ones(n, dtype=bool)  # (n,) in seeded order
         for codes in factors.values():
-            spare &= pd.Series(codes.to_numpy()[order]).duplicated().to_numpy()
+            ordered = pd.Series(codes.to_numpy()[order])  # (n,) in seeded order
+            spare &= ordered.duplicated().to_numpy()  # not the group's first row
+        count = (n + 5) // 10  # the nearest whole number to 10%
+        held_rows = order[spare][:count]
         held = np.zeros(n, dtype=bool)  # (n,)
-        held[order[spare][: (n + 5) // 10]] = True
+        held[held_rows] = True
         return held
 
     def _heldGroups(self, rng: np.random.Generator, codes: pd.Series) -> np.ndarray:
         """Holds out 10% of the groups, rounded.
         It holds at least one and leaves at least two."""
         groups = codes.max() + 1
-        count = min(max(1, (groups + 5) // 10), groups - 2)
+        tenth = (groups + 5) // 10  # the nearest whole number to 10%
+        count = min(max(1, tenth), groups - 2)
         held = self._seededOrder(rng, groups)[:count]
         return np.isin(codes.to_numpy(), held)  # (n,)
 
@@ -369,25 +402,29 @@ class _Builder:
         regime = pd.Categorical.from_codes(held.astype(int), dtype=self.REGIME)
         return pd.Series(regime, index=self.table.index)
 
-    def _scales(self, table: pd.DataFrame, kinds: dict[str, str]) -> dict[str, dict[str, Scale]]:
+    def _scales(
+        self,
+        table: pd.DataFrame,
+        kinds: dict[str, str],
+    ) -> dict[Regime, dict[str, Scale]]:
         """Returns each regime's scales over the rows its fit sees."""
         columns = [column for column, kind in kinds.items() if kind == 'continuous']
         if self.row.response_type == 'continuous':
             columns.append(self.row.response)
-        seen = {'full': pd.Series(True, index=table.index)}
-        for regime in ('rows', 'groups'):
-            if regime in table:
-                seen[regime] = table[regime] == 'seen'
+        splits = [regime for regime in ('rows', 'groups') if regime in table]
         scales = {}
-        for regime, rows in seen.items():
-            values = table.loc[rows, columns]
-            scales[regime] = {
-                c: Scale(float(values[c].mean()), float(values[c].std())) for c in columns
-            }
+        for regime in ['full', *splits]:
+            values = _seenRows(table, regime)[columns]
+            scales[regime] = {}
+            for column in columns:
+                mean = float(values[column].mean())
+                sd = float(values[column].std())
+                scales[regime][column] = Scale(mean, sd)
         return scales
 
     def _correlations(self, coded: Coded) -> dict[str, tuple[str, ...]]:
-        """Returns the elements of each `cor[<factor>]`: `Intercept`, then the correlated slopes."""
+        """Returns the elements of each `cor[<factor>]`.
+        They are `Intercept`, then the correlated slopes."""
         correlations = {}
         for term in self.row.random_slopes:
             if term.correlated:
@@ -400,7 +437,8 @@ class _Builder:
     ) -> dict[str, Prior]:
         """Returns the prior of each class the problem has."""
         classes = []  # brms refuses a prior on a class the model lacks
-        if self.row.response_type != 'ordinal':  # ordinal thresholds keep brms's default prior
+        # an ordinal model has thresholds instead, on brms's default prior
+        if self.row.response_type != 'ordinal':
             classes.append('Intercept')
         if len(design) > 1:
             classes.append('b')
@@ -420,8 +458,9 @@ class _Builder:
         """Returns the global parameter names in brms's block order."""
         names = list(design)
         if self.row.response_type == 'ordinal':  # the thresholds replace `Intercept`
-            thresholds = len(self._levelOrder(self.table[self.row.response])) - 1
-            names = [f'Intercept[{k}]' for k in range(1, thresholds + 1)] + names[1:]
+            levels = self._levelOrder(self.table[self.row.response])
+            thresholds = [f'Intercept[{k}]' for k in range(1, len(levels))]
+            names = thresholds + names[1:]
         for factor in self.row.grouping_factors:
             names += self._randomEffects(factor, coded)
             if factor in correlations:
@@ -458,13 +497,14 @@ def columnType(values: pd.Series, declared: str) -> tuple[str, int | str]:
     The first rule that matches wins."""
     distinct = values.dropna().nunique()
     dtype = values.dtype
-    if isinstance(dtype, pd.CategoricalDtype) and dtype.ordered:
+    categorical = isinstance(dtype, pd.CategoricalDtype)
+    if categorical and dtype.ordered:
         return 'ordered', distinct
     if distinct == 2:
         return 'binary', 2
     if declared == 'continuous':
         return 'continuous', ''
-    if isinstance(dtype, pd.CategoricalDtype) or pd.api.types.is_string_dtype(dtype):
+    if categorical or pd.api.types.is_string_dtype(dtype):
         return 'categorical', distinct
     if pd.api.types.is_integer_dtype(dtype) and distinct <= MAX_INTEGER_LEVELS:
         return 'categorical', distinct
