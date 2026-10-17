@@ -25,7 +25,7 @@ from mixedbench.registry.row import Row, SlopeTerm
 
 ROW = Row(
     source='fixture', tier='R', sources=('fixture:trial',), object='data/trial, 1.csv!a',
-    reader='pandas', licence='MIT', model_index=2, response='y', response_type='continuous',
+    reader='pandas', license='MIT', model_index=2, response='y', response_type='continuous',
     trials='', family='', grouping_factors=('g', 'h'), covariates=('x', 'diet', 'dose'),
     interactions=(), random_slopes=(SlopeTerm('x', 'g', correlated=True),), ignore=(),
     types={'diet': 'categorical'}, formula='y ~ x + diet + dose + (x | g) + (1 | h)',

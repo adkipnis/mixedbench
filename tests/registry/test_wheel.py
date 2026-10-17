@@ -69,18 +69,18 @@ def test_the_suites_list_resolves_inside_the_install(installed: tuple[Path, dict
     assert Path(report['suite']).is_relative_to(target)
 
 
-def test_the_metadata_names_both_licences(installed: tuple[Path, dict]) -> None:
+def test_the_metadata_names_both_licenses(installed: tuple[Path, dict]) -> None:
     """The wheel bundles code under MIT and registry files under CC BY 4.0."""
     target, _ = installed
     distribution = installedDistribution(target)
     assert distribution.metadata['License-Expression'] == 'MIT AND CC-BY-4.0'
 
 
-def test_both_licence_files_ship_in_the_wheel(installed: tuple[Path, dict]) -> None:
+def test_both_license_files_ship_in_the_wheel(installed: tuple[Path, dict]) -> None:
     target, _ = installed
     distribution = installedDistribution(target)
-    licences = {file.name for file in distribution.files if 'licenses' in file.parts}
-    assert licences == {'LICENSE', 'LICENSE-CC-BY-4.0'}
+    licenses = {file.name for file in distribution.files if 'licenses' in file.parts}
+    assert licenses == {'LICENSE', 'LICENSE-CC-BY-4.0'}
 
 
 def test_the_reference_runners_r_script_and_lock_ship_in_the_wheel(

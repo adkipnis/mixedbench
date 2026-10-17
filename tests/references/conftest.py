@@ -19,7 +19,7 @@ X = [-1.5, -1.0, -0.5, 0.0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0]
 SEX = [0, 0, 1, 0, 1, 0, 0, 1, 0, 1]  # f = 0, m = 1, a share of 0.4
 ROW = Row(
     source='fixture', tier='R', sources=('fixture:trial',), object='trial', reader='pandas',
-    licence='MIT', model_index=1, response='y', response_type='continuous', trials='', family='',
+    license='MIT', model_index=1, response='y', response_type='continuous', trials='', family='',
     grouping_factors=('block',), covariates=('x', 'sex'), interactions=(), random_slopes=(),
     ignore=(), types={}, formula='y ~ x + sex + (1 | block)', documented_prior='',
     published_model='yes', domain='test', confidence='high', verified='hand', notes='',

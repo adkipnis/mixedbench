@@ -125,7 +125,7 @@ reading's open disagreements, four to eight per tier.
   - Dryad refuses scripts on every route (401 and 403), so its 11 deposits came through Alex's
     browser into `cache/dryad_raw/`, matched file by file against the API's md5. Since #4 a
     user's loader gets them from the release mirror (ADR 0003).
-  - One help page per deposit under `help/deposits/`: title, licence, the paper's text around
+  - One help page per deposit under `help/deposits/`: title, license, the paper's text around
     the link, its models as the practice survey filed them, the listing, README, codebook,
     scripts.
 - **Reading:** 226 objects had no frame (fitted brms and lme4 models saved as `.rds`), 320 of
@@ -161,11 +161,11 @@ reading's open disagreements, four to eight per tier.
 
 ## Registry columns and verification (#6, 2026-10-09)
 
-### Licences (#7)
+### Licenses (#7)
 
-- `GPL-3.0-or-later` and `AGPL-3.0` joined `LICENCES` for CRAN DESCRIPTIONs.
-- A string that states access or attribution but no licence (OpenML's `Public`) is `other` or
-  `not stated`, never a licence it does not name.
+- `GPL-3.0-or-later` and `AGPL-3.0` joined `LICENSES` for CRAN DESCRIPTIONs.
+- A string that states access or attribution but no license (OpenML's `Public`) is `other` or
+  `not stated`, never a license it does not name.
 - The schema change was migrated by merging a shard with the new header and no rows
   (`shards/registry_schema.csv`).
 

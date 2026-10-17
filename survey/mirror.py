@@ -1,7 +1,7 @@
 """Mirror the CC0 files of the registry's Dryad sources as assets of a GitHub release.
 
 Dryad answers a scripted download with 401, so a user's loader could not fetch them; their
-CC0 licence permits a copy (ADR 0003). Each file is taken from the survey's cache, checked
+CC0 license permits a copy (ADR 0003). Each file is taken from the survey's cache, checked
 against its pin, uploaded as `<label>__<file>`, and its URL written into the entry's
 `mirror:` in `sources.yaml`; the Dryad URL stays the source and is asked first. Run from the
 repo root:
@@ -64,7 +64,7 @@ class Mirror:
         labels = sorted({label for label in rows['source'] if HOST in sources[label].name})
         unmirrored = [label for label in labels if sources[label].mirror is None]
         for label in unmirrored:
-            if self.frame.licences[label] != CC0:
+            if self.frame.licenses[label] != CC0:
                 raise ValueError(f'{label} is not CC0: no mirror')
         return unmirrored
 

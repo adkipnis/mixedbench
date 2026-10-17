@@ -58,7 +58,7 @@ One pass per tier:
    to Alex.
 7. **Spot check.** 20 rows drawn with seed 0, stratified by shard, read by Alex at the source.
 8. **Verification** (once after all tiers). A seeded hand sample of Tiers R, E, T and O
-   against [ADR 0002](../docs/adr/0002-registry-suite-versioning-licences.md)'s bar
+   against [ADR 0002](../docs/adr/0002-registry-suite-versioning-licenses.md)'s bar
    ([HISTORY](HISTORY.md#hand-sample-11-12)).
 
 ## Frame: `sources.yaml`
@@ -73,7 +73,7 @@ tiers:
   R:
     agridat: {kind: cran, pin: '1.26', cap: 50}
   E:
-    pingouin: {kind: git, name: https://github.com/raphaelvallat/pingouin, pin: b1c2d3e, path: src/pingouin/datasets, licence: GPL-3.0}
+    pingouin: {kind: git, name: https://github.com/raphaelvallat/pingouin, pin: b1c2d3e, path: src/pingouin/datasets, license: GPL-3.0}
   D:
     smith_2019_dryad: {kind: url, name: https://datadryad.org/.../data.zip, pin: <sha256>}
 dropped:
@@ -92,7 +92,7 @@ dropped:
   the host under the same pin (ADR 0003).
 - `layout`: the columns of a headerless text file, `name` (whitespace-separated) or
   `name:start-end` (fixed-width, from 1).
-- `licence`: as the collection states it, or `not stated` once read. An absent key means nobody
+- `license`: as the collection states it, or `not stated` once read. An absent key means nobody
   looked, and the merge refuses a git or url source without one; a CRAN entry needs none.
 - `dropped`: every candidate left out, with the reason. `nets`: the Tier O keyword net, a
   record the frame reader skips.
@@ -147,8 +147,8 @@ Key `source`, `object`, `model_index`. Agent columns, in order:
 | `notes` | what was read; `RULE GAP:` for an unsettled case; `NONLINEAR:` and `RESPONSE INFERRED:` open their rows' notes |
 
 The merge fills `tier`; `sources` (`source:object` of every duplicate folded in, its own
-first); `reader`; `licence`, the `licence:` key or a CRAN DESCRIPTION's `License`, mapped by
-`LICENCES` in `schema.py` and rewritten at every merge (ADR 0003).
+first); `reader`; `license`, the `license:` key or a CRAN DESCRIPTION's `License`, mapped by
+`LICENSES` in `schema.py` and rewritten at every merge (ADR 0003).
 
 `random_slopes` and `verified` came in by the header-only `shards/registry_schema_2.csv`;
 the archived `verified.py` filled `verified` once through `shards/registry_verified.csv`;
@@ -165,7 +165,7 @@ rows that named a nested `a:b` by a `b` whose codes repeat across `a` through
   `detail`; the merge adds `tier`. `reason` ∈ `no grouping structure`,
   `time series without replication`, `fewer than two groups`,
   `response missing or undocumented`, `derived or duplicated table`, `simulated data`,
-  `unreadable format`, `licence forbids redistribution`, `too large`, `not the paper's data`
+  `unreadable format`, `license forbids redistribution`, `too large`, `not the paper's data`
   (Tier D).
 - An object is in the registry or the exclusions, never both; to re-file one, drop it first.
 - `duplicates.csv`: key `source_a`, `object_a`, `source_b`, `object_b` in frame order, with
@@ -223,7 +223,7 @@ A failing shard is refused, its offending rows printed, nothing written.
 - The response shows its type: `continuous` numeric, `binary` two values, `count` and
   `binomial` non-negative integers, `ordinal` at most 10 values, `categorical` not float; a
   `binomial` row's integer `trials` never below the response.
-- `documented_prior` only when `published_model` is `yes`; every registry source's licence in
+- `documented_prior` only when `published_model` is `yes`; every registry source's license in
   the lookup.
 - The object not in the rival file; a dropped object in one of the two.
 

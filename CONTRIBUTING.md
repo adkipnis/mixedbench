@@ -64,7 +64,7 @@ Three rules keep results comparable:
   by hand.
 - **No R in the loader.** Every table loads in Python alone; R may only computes reference posteriors.
 
-## Licence
+## License
 
 By contributing, you agree that your code is released under [MIT](LICENSE) and your changes to
 the registry and suite files under [CC BY 4.0](docs/LICENSE-CC-BY-4.0).

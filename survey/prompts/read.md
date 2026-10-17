@@ -22,8 +22,8 @@ File the object in the excluded shard with its reason when:
 - it is derived from another object of the source (summary, aggregate table, subset):
   `derived or duplicated table`; an aggregate response on a real grouping stays, at `low`;
 - the documentation calls it simulated, fictional or synthetic: `simulated data`;
-- the loader refuses its format (`unreadable format`), its licence forbids redistribution
-  (`licence forbids redistribution`), or it is `too large`.
+- the loader refuses its format (`unreadable format`), its license forbids redistribution
+  (`license forbids redistribution`), or it is `too large`.
 
 ## Record the model
 

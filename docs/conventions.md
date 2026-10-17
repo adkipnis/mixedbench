@@ -259,7 +259,7 @@ The words are [`CONTEXT.md`](../CONTEXT.md)'s.
   columns and parameter names in `contract/problem.py`; the cache layout in `loader.py` and
   `materialized.py`; the draw files' directory in `references/__init__.py`, their names and
   columns in `references/handoff.py`; versions and suite folders in
-  [ADR 0002](adr/0002-registry-suite-versioning-licences.md); mirror and archive tags in the
+  [ADR 0002](adr/0002-registry-suite-versioning-licenses.md); mirror and archive tags in the
   [survey README](../survey/README.md).
 
 ### Code

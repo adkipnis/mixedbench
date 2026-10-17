@@ -99,13 +99,13 @@ class Row:
     """One row of `registry.csv`, its fields are the file's columns.
     A scalar cell stays a string, the empty cell is `''`."""
 
-    # identity; `tier`, `sources`, `reader` and `licence` are filled by the survey's merge
+    # identity; `tier`, `sources`, `reader` and `license` are filled by the survey's merge
     source: str
     tier: str
     sources: tuple[str, ...]  # `source:object` of every duplicate folded in, the row's own first
     object: str
     reader: str
-    licence: str
+    license: str
     model_index: int
     # the documented model, every name a column of the loaded table or a term of them
     response: str

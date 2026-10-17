@@ -48,7 +48,7 @@ dev = [
 ]
 
 [build-system]
-requires = ["hatchling>=1.27"]  # PEP 639 licence expression and licence files
+requires = ["hatchling>=1.27"]  # PEP 639 license expression and license files
 build-backend = "hatchling.build"
 
 # The repository keeps one copy of the registry files at registry/; the wheel carries them as
