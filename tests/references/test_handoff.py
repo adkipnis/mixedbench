@@ -1,5 +1,6 @@
-"""The handoff between Python and R (#65), offline: what `Handoff.write` gives the R script for a
-level, and what `Handoff.read` makes of the RDS files brms's run left, recorded by #63."""
+"""The handoff between Python and R, offline (#65).
+`Handoff.write` gives the R script a level's table and model.
+`Handoff.read` and `Handoff.diagnostics` read what R left, from RDS files of recorded runs (#63)."""
 
 from __future__ import annotations
 
@@ -32,15 +33,22 @@ def writtenModel(problem: Problem, dir: Path, settings: dict = LEVELS[0]) -> dic
     return json.loads((dir / 'input.json').read_text())
 
 
+# ==============================================================================================
+# write
+# ==============================================================================================
+
+
 def test_the_table_reaches_r_standardised_under_aliases_without_the_intercept(
     tmp_path: Path,
 ) -> None:
-    """brms rewrites names such as `x[level]` or `a:b`, so R sees only safe aliases; group
-    values are the codes, so a brms label names its code. The CSV round-trips every float."""
-    problem = fixtureProblem()
+    """brms would read the interaction `x:sex` as its own term, so R sees aliases.
+    A group's value is its code, so brms's label names the code.
+    The CSV round-trips every float."""
+    row = replace(ROW, interactions=('x:sex',), formula='y ~ x * sex + (1 | block)')
+    problem = fixtureProblem(row)
     Handoff(problem).write(tmp_path, LEVELS[0])
     table = pd.read_csv(tmp_path / 'table.csv')
-    aliases = {'y': 'y', 'x1': 'x', 'x2': 'sex', 'g1': 'block'}
+    aliases = {'y': 'y', 'x1': 'x', 'x2': 'sex', 'x3': 'x:sex', 'g1': 'block'}
     expected = problem.standardised('full')[list(aliases.values())]
     expected.columns = list(aliases)
     pd.testing.assert_frame_equal(table, expected.reset_index(drop=True), check_dtype=False)
@@ -68,9 +76,10 @@ def test_the_model_reaches_r_as_formula_family_prior_settings_and_seed(tmp_path:
 def test_each_level_of_the_ladder_reaches_r_with_its_settings_and_the_same_seed(
     tmp_path: Path,
 ) -> None:
-    """ADR 0004's ladder, four chains in parallel at every level: level 1 warms up longer at a
-    higher adapt_delta, and level 2 also deepens the trees and samples 2,000 draws per chain
-    thinned by 2, so every level stores 4,000 draws."""
+    """ADR 0004's ladder runs four chains in parallel at every level.
+    Level 1 warms up longer at a higher adapt_delta.
+    Level 2 also deepens the trees and samples 2,000 draws per chain, thinned by 2.
+    So every level stores 4,000 draws."""
     settings = {}
     seeds = set()
     for level, ladder in LEVELS.items():
@@ -123,8 +132,8 @@ def test_a_binomial_response_reaches_r_with_its_trials(tmp_path: Path) -> None:
 def test_uncorrelated_slopes_take_their_own_term_beside_the_correlated_ones(
     tmp_path: Path,
 ) -> None:
-    """`||` keeps `age`'s slope independent of the intercept and of the other slopes on
-    `school`; the correlated ones share the intercept's term."""
+    """`||` keeps `age`'s slope independent of the intercept and of the other slopes on `school`.
+    The correlated ones share the intercept's term."""
     model = writtenModel(gaussianMixed(), tmp_path)
     assert model['formula'] == 'y ~ 1 + x1 + x2 + x3 + (1 + x1 + x2 | g1) + (0 + x3 || g1)'
 
@@ -156,8 +165,9 @@ def test_an_ordinal_models_thresholds_take_brms_default_prior(tmp_path: Path) ->
 
 
 def test_r_summarises_the_random_effects_of_a_factor_above_1000_groups(tmp_path: Path) -> None:
-    """Full draws of 20,000 groups would be a file of gigabytes, so R keeps per-effect
-    summaries of such a factor instead; 1,000 groups still keep their draws."""
+    """Full draws of 20,000 groups would be a file of gigabytes.
+    So R keeps per-effect summaries of such a factor instead.
+    1,000 groups still keep their draws."""
     for groups, summarised in ((1000, []), (1001, ['g1'])):
         model = writtenModel(manyGroups(groups), tmp_path)
         assert model['summarised'] == summarised
@@ -223,8 +233,9 @@ def test_slopes_and_correlation_pairs_read_back_by_brms_label() -> None:
 
 
 def test_ordinal_thresholds_read_back_as_intercept_k() -> None:
-    """brms names a threshold `b_Intercept[k]`; the contract drops the `b_` as for every fixed
-    effect, so the thresholds lead the global draws in `k`'s order."""
+    """brms names a threshold `b_Intercept[k]`.
+    The contract drops the `b_`, as for every fixed effect.
+    The thresholds lead the global draws in `k`'s order."""
     draws = Handoff(ordinalProblem()).read(FIXTURES / 'ordinal')['globals']
     assert list(draws.columns) == [
         'chain',
@@ -239,8 +250,9 @@ def test_ordinal_thresholds_read_back_as_intercept_k() -> None:
 
 
 def test_random_effects_read_back_by_brms_label_in_factor_slope_and_group_order() -> None:
-    """`r_g1[7,x3]` is the seventh school's `age` slope; a factor of at most 1,000 groups keeps
-    its full draws, so `locals` holds every factor and no summary is written."""
+    """`r_g1[7,x3]` is the `age` slope of school 7.
+    A factor of at most 1,000 groups keeps its full draws.
+    So `locals` holds every factor, and no summary is written."""
     files = Handoff(gaussianMixed()).read(FIXTURES / 'gaussian_mixed')
     effects = ['school', 'dose|school', 'sex|school', 'age|school']
     assert list(files) == ['globals', 'locals']
@@ -267,8 +279,9 @@ def test_the_random_effects_of_nested_factors_follow_factor_order() -> None:
 
 
 def test_a_factor_above_1000_groups_reads_back_as_summaries_without_draws() -> None:
-    """Recorded by `run.R` from `Handoff.write` of `manyGroups()`, at 100 warmup and 10 draws
-    per chain: `subject`'s 1,001 groups reach Python as summaries only, so no `locals` file."""
+    """Recorded by `run.R` from `Handoff.write` of `manyGroups()`,
+    at 100 warmup and 10 draws per chain.
+    `subject`'s 1,001 groups reach Python as summaries only, so there is no `locals` file."""
     files = Handoff(manyGroups()).read(FIXTURES / 'many_groups')
     raw = pyreadr.read_r(FIXTURES / 'many_groups' / 'locals_summary.rds')[None]
     summary = files['locals_summary']
@@ -279,22 +292,29 @@ def test_a_factor_above_1000_groups_reads_back_as_summaries_without_draws() -> N
     assert summary.iloc[1000, 1:].tolist() == row.tolist()
 
 
-def test_a_diagnostic_r_could_not_compute_reads_back_as_nan(tmp_path: Path) -> None:
+def test_diagnostics_read_back_as_the_worst_over_parameters_with_nan_kept(tmp_path: Path) -> None:
     """posterior gives NA for the R-hat and ESS of constant draws, and for the tail ESS of
-    non-finite ones; skipped by the largest or smallest, it would let the bar pass."""
+    non-finite ones.
+    Skipped by the largest or smallest, an NA would let the bar pass.
+    Divergences and tree-depth hits add up over the chains."""
     nan = float('nan')
     summary = pd.DataFrame({
         'variable': ['b_Intercept', 'b_x1', 'sd_g1__Intercept'], 'rhat': [1.001, nan, 1.002],
         'ess_bulk': [900.0, 500.0, 700.0], 'ess_tail': [800.0, 600.0, nan],
     })  # fmt: skip
     chains = pd.DataFrame({
-        'chain': [1, 2], 'divergences': [0, 0], 'treedepth_hits': [0, 0], 'ebfmi': [0.9, 1.1],
+        'chain': [1, 2], 'divergences': [0, 3], 'treedepth_hits': [2, 0], 'ebfmi': [0.9, 1.1],
     })  # fmt: skip
     pyreadr.write_rds(tmp_path / 'summary.rds', summary)
     pyreadr.write_rds(tmp_path / 'chains.rds', chains)
     pyreadr.write_rds(tmp_path / 'meta.rds', pd.DataFrame({'rhat_locals': [1.003]}))
     diagnostics = Handoff.diagnostics(tmp_path)
-    assert np.isnan(diagnostics['rhat'])
-    assert np.isnan(diagnostics['ess_tail'])
-    assert diagnostics['ess_bulk'] == 500
-    assert (diagnostics['divergences'], diagnostics['ebfmi']) == (0, [0.9, 1.1])
+    assert np.isnan(diagnostics.pop('rhat'))
+    assert np.isnan(diagnostics.pop('ess_tail'))
+    assert diagnostics == {
+        'ess_bulk': 500.0,
+        'divergences': 3,
+        'treedepth_hits': 2,
+        'ebfmi': [0.9, 1.1],
+        'rhat_locals': 1.003,
+    }
