@@ -35,7 +35,7 @@ from mixedbench.registry.row import (
 )
 from schema import (
     ALLOWED,
-    LICENCES,
+    LICENSES,
     MAX_MODELS_PER_OBJECT,
     MAX_ORDINAL_LEVELS,
     REQUIRED,
@@ -115,7 +115,7 @@ class Merger:
         problems = self.validateValues()
         if self.table.name == 'registry':
             problems += self.validateAgainstTables()
-            problems += self.licenceProblems()
+            problems += self.licenseProblems()
         if self.table.name in RIVALS:
             problems += self.rivalProblems()
         if self.table.name == 'dropped':
@@ -168,30 +168,30 @@ class Merger:
         outside = number.notna() & ~number.between(1, MAX_MODELS_PER_OBJECT)
         return self.flag(outside, 'model_index', f'at most {MAX_MODELS_PER_OBJECT} models per object')  # fmt: skip
 
-    def licenceProblems(self) -> list[dict]:
-        """Every registry source's licence is in the lookup, the shard's and those merged
-        earlier, since the merge rewrites every row's licence."""
+    def licenseProblems(self) -> list[dict]:
+        """Every registry source's license is in the lookup, the shard's and those merged
+        earlier, since the merge rewrites every row's license."""
         merged = set(self.canonical(TABLES['registry'])['source'])
         named = merged | set(self.shard['source'])
         # a label not in sources.yaml is flagged by its row
         labels = named & set(self.frame.sources)
         problems = []
         for label in sorted(labels):
-            verbatim = self.verbatimLicence(label)
-            problem = {'line': '', 'key': label, 'column': 'licence', 'value': verbatim or ''}
+            verbatim = self.verbatimLicense(label)
+            problem = {'line': '', 'key': label, 'column': 'license', 'value': verbatim or ''}
             if verbatim is None:
-                problems.append(problem | {'problem': 'no licence: key in sources.yaml'})
-            elif verbatim not in LICENCES:
-                problems.append(problem | {'problem': 'not in the licence lookup'})
+                problems.append(problem | {'problem': 'no license: key in sources.yaml'})
+            elif verbatim not in LICENSES:
+                problems.append(problem | {'problem': 'not in the license lookup'})
         return problems
 
-    def verbatimLicence(self, label: str) -> str | None:
-        """The source's `licence:` key, else the `License` field of its CRAN package's
+    def verbatimLicense(self, label: str) -> str | None:
+        """The source's `license:` key, else the `License` field of its CRAN package's
         DESCRIPTION, verbatim (base R's has none, so `datasets` carries a key); None for a git
         or url source nobody has looked at."""
         source = self.frame.sources[label]
-        if label in self.frame.licences:
-            return self.frame.licences[label]
+        if label in self.frame.licenses:
+            return self.frame.licenses[label]
         if source.kind == 'cran':
             description = (self.loader.tree(source) / 'DESCRIPTION').read_text()
             return re.search(r'^License:\s*(.+)$', description, re.MULTILINE).group(1)
@@ -360,7 +360,7 @@ class Merger:
         # groups in order of first appearance: a replaced key keeps its place
         merged = pd.concat([old, new]).groupby(key, sort=False).last().reset_index()[old.columns]
         if self.table.name == 'registry':
-            merged = self.withLicences(merged)
+            merged = self.withLicenses(merged)
         self.replaced = len(old) + len(new) - len(merged)
         self.added = len(new) - self.replaced
         self.merged = merged.reset_index(drop=True)
@@ -380,13 +380,13 @@ class Merger:
         present = [o in self.objects(s) for s, o in self.keysOf(self.shard)]
         return pd.Series(present, index=self.shard.index)
 
-    def withLicences(self, registry: pd.DataFrame) -> pd.DataFrame:
-        """Every row's licence, rows merged earlier too: a licence is its source's, so a
+    def withLicenses(self, registry: pd.DataFrame) -> pd.DataFrame:
+        """Every row's license, rows merged earlier too: a license is its source's, so a
         corrected key reaches every row of the source at the next merge."""
-        licences = {
-            label: LICENCES[self.verbatimLicence(label)] for label in set(registry['source'])
+        licenses = {
+            label: LICENSES[self.verbatimLicense(label)] for label in set(registry['source'])
         }
-        return registry.assign(licence=registry['source'].map(licences))
+        return registry.assign(license=registry['source'].map(licenses))
 
     def supersede(self) -> None:
         """The shard's objects leave the files this merge wins over."""

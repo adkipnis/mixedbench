@@ -1,7 +1,7 @@
 """A scratch survey root: `sources.yaml` pins two url sources served from memory by an injected
 fetch, `herds` (Tier D) and `cattle` (Tier R), the same hand-made grouped table under two
 column namings, so that duplicate flagging has a real pair to find, and a CRAN package `pens`
-(Tier R) holding the herds table as `herds.rds`, whose DESCRIPTION states its licence. The
+(Tier R) holding the herds table as `herds.rds`, whose DESCRIPTION states its license. The
 table: region > herd nested, herd `h4` a singleton, `breed` a four-level categorical, `feed`
 herd-level, `weight` continuous, `sick` binary, `cases` out of `trials` binomial, `id` a column
 to ignore. Also the one recipe that merges a shard and the one reader of a written CSV.
@@ -34,7 +34,7 @@ FIXTURES = HERE / 'fixtures'
 HERDS_URL = 'https://example.org/herds.zip'
 CATTLE_URL = 'https://example.org/cattle.zip'
 PENS_URL = 'https://cloud.r-project.org/src/contrib/pens_1.0.tar.gz'
-PENS_LICENCE = 'GPL (>= 2)'
+PENS_LICENSE = 'GPL (>= 2)'
 RENAMED = 'row,area,farm,type,diet,calving,kg,ill,positives,tested'
 
 
@@ -45,9 +45,9 @@ def zipped(folder: str, filename: str, text: str) -> bytes:
     return buffer.getvalue()
 
 
-def cranTarball(package: str, licence: str, table: pd.DataFrame, name: str) -> bytes:
+def cranTarball(package: str, license: str, table: pd.DataFrame, name: str) -> bytes:
     """A CRAN source tarball: a DESCRIPTION and the table as `data/<name>.rds`."""
-    description = f'Package: {package}\nVersion: 1.0\nLicense: {licence}\n'
+    description = f'Package: {package}\nVersion: 1.0\nLicense: {license}\n'
     with tempfile.TemporaryDirectory() as dir:
         root = Path(dir) / package
         (root / 'data').mkdir(parents=True)
@@ -95,7 +95,7 @@ def scratchMerger(registry: Path, survey: Path) -> Merger:
     archives = {
         HERDS_URL: zipped('herds', 'herds.csv', herdsText),
         CATTLE_URL: zipped('cattle', 'cattle.csv', cattleText),
-        PENS_URL: cranTarball('pens', PENS_LICENCE, pd.read_csv(FIXTURES / 'herds.csv'), 'herds'),
+        PENS_URL: cranTarball('pens', PENS_LICENSE, pd.read_csv(FIXTURES / 'herds.csv'), 'herds'),
     }
     sources = {
         'seed': 0,
@@ -105,7 +105,7 @@ def scratchMerger(registry: Path, survey: Path) -> Merger:
                     'kind': 'url',
                     'name': HERDS_URL,
                     'pin': sha(archives[HERDS_URL]),
-                    'licence': 'CC0 1.0 Universal',
+                    'license': 'CC0 1.0 Universal',
                 }
             },
             'R': {
@@ -113,7 +113,7 @@ def scratchMerger(registry: Path, survey: Path) -> Merger:
                     'kind': 'url',
                     'name': CATTLE_URL,
                     'pin': sha(archives[CATTLE_URL]),
-                    'licence': 'not stated',
+                    'license': 'not stated',
                 },
                 'pens': {'kind': 'cran', 'pin': '1.0'},
             },

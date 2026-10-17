@@ -30,7 +30,7 @@ GAMES = [4, 5, 3, 4, 6, 5, 5, 3, 2, 8, 4, 6]
 RATING = [1, 5, 3, 1, 5, 3, 5, 1, 3, 5, 3, 5]  # three levels, not 1..3
 ROW = Row(
     source='fixture', tier='R', sources=('fixture:trial',), object='trial', reader='pandas',
-    licence='MIT', model_index=1, response='y', response_type='continuous', trials='', family='',
+    license='MIT', model_index=1, response='y', response_type='continuous', trials='', family='',
     grouping_factors=('block', 'block:plot'), covariates=('x', 'sex', 'diet', 'grade'),
     interactions=('x:sex',), random_slopes=(SlopeTerm('x', 'block', correlated=True),),
     ignore=(), types={'diet': 'categorical', 'grade': 'ordered'},

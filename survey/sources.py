@@ -20,7 +20,7 @@ class Frame:
     tiers: dict[str, str]  # label -> tier
     sources: dict[str, Source]  # label -> pinned source
     caps: dict[str, int | None]  # label -> most objects read from it, None for all of them
-    licences: dict[str, str]  # label -> its `licence:` key, verbatim, where it has one
+    licenses: dict[str, str]  # label -> its `license:` key, verbatim, where it has one
     seed: int  # of the per-source draw where a source exceeds its cap
     labels: list[str]  # frame order: tier, then the order of `sources.yaml`
 
@@ -31,13 +31,13 @@ class Frame:
 
 def readFrame(root: Path) -> Frame:
     file = yaml.safe_load((root / 'sources.yaml').read_text())
-    tiers, sources, caps, licences = {}, {}, {}, {}
+    tiers, sources, caps, licenses = {}, {}, {}, {}
     for tier, entries in file['tiers'].items():
         for label, entry in (entries or {}).items():
             tiers[label] = tier
             sources[label] = registry.source(label, entry)
             caps[label] = entry.get('cap')
-            if 'licence' in entry:
-                licences[label] = entry['licence']
+            if 'license' in entry:
+                licenses[label] = entry['license']
     labels = sorted(tiers, key=lambda label: TIERS.index(tiers[label]))
-    return Frame(tiers, sources, caps, licences, file['seed'], labels)
+    return Frame(tiers, sources, caps, licenses, file['seed'], labels)

@@ -21,7 +21,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # the suite's scri
 from admit import Admission
 
 CELLS = {column: '' for column in COLUMNS} | {
-    'source': 'fixture', 'tier': 'R', 'reader': 'pandas', 'licence': 'MIT', 'model_index': '1',
+    'source': 'fixture', 'tier': 'R', 'reader': 'pandas', 'license': 'MIT', 'model_index': '1',
     'response': 'y', 'response_type': 'continuous', 'grouping_factors': 'g', 'covariates': 'x',
     'formula': 'y ~ x + (1 | g)', 'published_model': 'yes', 'domain': 'test',
     'confidence': 'high', 'verified': 'high',

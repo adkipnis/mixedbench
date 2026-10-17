@@ -3,7 +3,7 @@ status: accepted, amended 2026-10-09 and 2026-10-10
 date: 2026-10-08
 ---
 
-# 0002 — Registry and suite are two things; versioning, admission, citation and licences
+# 0002 — Registry and suite are two things; versioning, admission, citation and licenses
 
 The registry is a growing census of documented problems over public grouped data; the suite
 is a frozen subset with reference posteriors. Conflating them would make every registry
@@ -48,12 +48,12 @@ correction a benchmark change.
 - Decision: `CITATION.cff`; a Zenodo DOI per release; draws on the Hugging Face Hub for lazy
   access, the Zenodo snapshot for the citation.
 
-**Licences.**
+**Licenses.**
 
 - Decision: code MIT; registry files, suite files and reference posteriors CC BY 4.0. The data
   themselves keep their sources' terms (ADR 0003).
-- Rejected: inheriting metabeta's CC-BY-NC-SA licence, since a benchmark under a
-  non-commercial licence bars companies and most ML groups.
+- Rejected: inheriting metabeta's CC-BY-NC-SA license, since a benchmark under a
+  non-commercial license bars companies and most ML groups.
 
 ## Amendment 2026-10-09: the grill of roadmap item 3
 
@@ -74,7 +74,7 @@ correction a benchmark change.
   publishes to PyPI by trusted publishing from a GitHub release.
 - Why: Zenodo archives only public repositories, and `pip install mixedbench` is what users of
   a benchmark expect; the wheel carries code and registry files only, so ADR 0003 holds.
-- Decision: the wheel is licensed `MIT AND CC-BY-4.0`, with both licence files, since it
+- Decision: the wheel is licensed `MIT AND CC-BY-4.0`, with both license files, since it
   bundles the registry files.
 - Decision: `requires-python = ">=3.11"`; development stays on 3.14, CI tests 3.11 and 3.14.
 - Why: no code needs a newer Python, and `>=3.14` would turn away most ML users.

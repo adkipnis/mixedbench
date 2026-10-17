@@ -20,13 +20,13 @@ first use fetches each source and verifies its digest. Nothing is mirrored.
 - Every mirrored file is a derivative-work question, and the package would weigh gigabytes (a
   full fetch is 4.5 GB).
 - Rejected: OpenClustered's way. It bundled all 19 of its datasets, lme4's and MASS's
-  included, and its paper never mentions a licence; we do not follow it.
+  included, and its paper never mentions a license; we do not follow it.
 - The permanent loss is link rot. Each release records a fetch status per problem from the
   weekly CI fetch; a rotted source retires its problems from the next suite (ADR 0002).
 
 ## Consequences
 
-- A per-row `licence` column, filled by script (CRAN from the package DESCRIPTION, git and
+- A per-row `license` column, filled by script (CRAN from the package DESCRIPTION, git and
   url sources from `sources.yaml`, companion sites `not stated`), so that a permitted-mirror
   fallback for rotted links can be added in a later version without re-reading.
 - No R in the loader. The 36 objects that the survey read through an Rscript dump (27 agridat
@@ -48,7 +48,7 @@ could not be fetched by a user's loader. Their data are CC0, which permits a cop
 package mirrors exactly those files as assets of the release `mirror-1` of this repository
 (`survey/mirror.py`), recorded as `mirror:` in their `sources.yaml` entries. The host stays
 the source and is asked first; the mirror is asked on a 404 or a refusal (401, 403), and its
-file must carry the same pinned sha256. Nothing under another licence is mirrored; a rotted
+file must carry the same pinned sha256. Nothing under another license is mirrored; a rotted
 non-CC0 source still retires its problems.
 
 ## Amendment 2026-10-09: rdata for the R files librdata rejects (#9)
