@@ -1,6 +1,6 @@
 """admit.py defines the admission of suite 1.1: registry rows in, candidates and refusals out.
 
-Every row the family rule covers is built into its problem and materialised under the cache.
+Every row the family rule covers is built into its problem and materialized under the cache.
 Its contract hash goes into the candidate list. Five decisions guide admission:
 - hand decisions first: a row whose documented model does not survive into the contract
   is refused by id, a row whose random effects were changed carries its fidelity:
@@ -19,7 +19,7 @@ the registry's rows
 -> refused by hand decision                    REFUSED
 -> the loaded table, or a failure              loadTable
 -> the problem, or refused by the contract     Problem.build
--> materialised, its candidate                 _candidate
+-> materialized, its candidate                 _candidate
 -> the candidate list and the refusals         Admitted.write
 
 Run from the repo root:
@@ -37,7 +37,7 @@ from typing import Literal
 
 import pandas as pd
 from mixedbench import registry
-from mixedbench.contract import Problem, Refused, materialise
+from mixedbench.contract import Problem, Refused, materialize
 from mixedbench.registry.row import Row, writeCsv
 
 # =====================================================================================
@@ -134,7 +134,7 @@ FIDELITY: dict[str, Fidelity] = {
 
 
 # =====================================================================================
-# row -> problem -> materialised files -> candidate
+# row -> problem -> materialized files -> candidate
 # =====================================================================================
 # the result first, then the admission that makes it one row at a time
 @dataclass(frozen=True)
@@ -206,13 +206,13 @@ class Admission:
         return Admitted(pd.DataFrame(candidates), refused, failed)
 
     # ---------------------------------------------------------------------------------
-    # problem -> materialised files -> candidate
+    # problem -> materialized files -> candidate
     # ---------------------------------------------------------------------------------
     # the step that turns a built problem into its row of the list
     def _candidate(self, row: Row, problem: Problem) -> dict:
         return {
             'id': problem.id,
-            'contract_hash': materialise(problem, self.cache),
+            'contract_hash': materialize(problem, self.cache),
             'verified': row.verified,
             'dropped_share': problem.dropped_share,
             'fidelity': self.fidelity.get(problem.id, ''),

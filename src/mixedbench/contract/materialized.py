@@ -1,6 +1,6 @@
-"""materialised.py defines a problem's files on disk and the contract hash over them.
+"""materialized.py defines a problem's files on disk and the contract hash over them.
 
-A materialised problem is two files under the loader's cache:
+A materialized problem is two files under the loader's cache:
 `table.parquet` holding the table, `problem.json` the record a table cannot and the contract hash.
 Three decisions guide them:
 - the files are the interface: `load` needs neither the loader nor the network,
@@ -14,7 +14,7 @@ pipeline:
 a built Problem
 -> its record, every field but the table as JSON values     _record
 -> its contract hash                                        contractHash
--> the table as parquet, the record and the hash as JSON    materialise
+-> the table as parquet, the record and the hash as JSON    materialize
 -> the problem read back, refused if its hash moved         load
 -> the hash its files were written with, if any             storedHash
 """
@@ -35,7 +35,7 @@ from mixedbench.contract.problem import Prior, Problem, Scale
 # the files
 # =====================================================================================
 # the package's interface to a problem: written once, loaded anywhere
-def materialise(problem: Problem, cache: Path) -> str:
+def materialize(problem: Problem, cache: Path) -> str:
     """Write the problem's two files under `cache` and return its contract hash."""
     dir = _problemDir(problem.id, cache)
     dir.mkdir(parents=True, exist_ok=True)
