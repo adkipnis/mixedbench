@@ -1,20 +1,23 @@
 # run.R fits one level of a problem's reference with brms through cmdstanr.
 #
 # Usage: Rscript run.R <dir>
-# <dir> holds the handoff from Python: table.csv (the aliased standardized table) and input.json
-# (formula, family, link, prior per class, the level's settings, seed, the factors to
-# summarize). It prints sessionInfo() first, then writes back, one data frame per file since
-# pyreadr reads no R lists, every draw thinned as the level's settings say:
+# <dir> holds what Python hands over:
+#   table.csv           the aliased standardized table
+#   input.json          the formula, family, link, prior per class, the level's settings, the seed
+#                       and the factors to summarize
+# run.R prints sessionInfo() first.
+# Then it writes back into <dir>, one data frame per file, since pyreadr reads no R lists:
 #   draws.rds           chain, iteration, the global variables brms keeps and the random
 #                       effects of every factor not summarized
 #   locals_summary.rds  per random effect of a summarized factor its mean, sd and 5/25/50/75/95%
-#                       quantiles, where a factor is summarized
-#   chains.rds          per chain its divergences, tree-depth hits and E-BFMI, over every iteration
+#                       quantiles, written only where a factor is summarized
 #   summary.rds         per global variable its rank-normalized R-hat, bulk and tail ESS
 #   meta.rds            the largest R-hat over the random effects
+#   chains.rds          per chain its divergences, tree-depth hits and E-BFMI
 #   model.stan          brms's Stan program
 #   standata.json       its Stan data, as CmdStan reads it
-# Python judges the bar on them.
+# The draws are thinned as the level's settings say; chains.rds alone counts every iteration.
+# Python judges the bar on these files.
 
 suppressPackageStartupMessages({
   library(brms)
@@ -31,11 +34,11 @@ dir <- commandArgs(trailingOnly = TRUE)[[1]]
 input <- jsonlite::read_json(file.path(dir, "input.json"))
 table <- read.csv(file.path(dir, "table.csv"))
 settings <- input$settings
-# the compiled program in <dir>, which lives across the levels, so a later level reuses it
+# cmdstanr compiles into <dir>, which lives across the levels, so a later level reuses the program
 options(cmdstanr_write_stan_file_dir = dir)
 
-prior <- do.call(c, lapply(names(input$prior), function(k) set_prior(input$prior[[k]], class = k)))
-family <- get(input$family, mode = "function")(link = input$link)
+prior <- set_prior(unlist(input$prior), class = names(input$prior))
+family <- brmsfamily(input$family, link = input$link)
 model <- brm(
   as.formula(input$formula), data = table, family = family, prior = prior, backend = "cmdstanr",
   chains = settings$chains, cores = settings$cores, warmup = settings$warmup,
@@ -46,39 +49,41 @@ model <- brm(
 
 global <- grep(GLOBAL, variables(model), value = TRUE)
 local <- grep("^r_", variables(model), value = TRUE)
-# a random effect r_<factor>[<group>,<effect>] of a factor to summarize
-summarized <- local[sub("^r_([^[]+)\\[.*$", "\\1", local) %in% unlist(input$summarized)]
+# brms labels a random effect r_<factor>[<group>,<effect>]
+factors <- sub("^r_([^[]+)\\[.*$", "\\1", local)
+summarized <- local[factors %in% unlist(input$summarized)]
 keep <- c(global, setdiff(local, summarized))
-# thinned after sampling, so that the sampler's checks below see every iteration
-draws <- thin_draws(as_draws_df(model, variable = c(global, local)), settings$thin)
+draws <- as_draws_df(model, variable = c(global, local))
+# thinned here, not by brm(), so that chains.rds counts every iteration
+draws <- thin_draws(draws, settings$thin)
+
+kept <- as.data.frame(draws)[keep]
 saveRDS(
-  data.frame(
-    chain = draws$.chain, iteration = draws$.iteration, as.data.frame(draws)[keep],
-    check.names = FALSE
-  ),
+  data.frame(chain = draws$.chain, iteration = draws$.iteration, kept, check.names = FALSE),
   file.path(dir, "draws.rds")
 )
-quantiles <- function(x) quantile2(x, probs = c(0.05, 0.25, 0.5, 0.75, 0.95))
-effects <- summarise_draws(subset_draws(draws, variable = local), "mean", "sd", quantiles, "rhat")
 if (length(summarized) > 0) {
-  rows <- effects$variable %in% summarized
-  saveRDS(as.data.frame(effects[rows, names(effects) != "rhat"]), file.path(dir, "locals_summary.rds"))
+  quantiles <- function(x) quantile2(x, probs = c(0.05, 0.25, 0.5, 0.75, 0.95))
+  effects <- summarise_draws(subset_draws(draws, variable = summarized), "mean", "sd", quantiles)
+  saveRDS(as.data.frame(effects), file.path(dir, "locals_summary.rds"))
 }
 
-nuts <- nuts_params(model)
-divergent <- nuts[nuts$Parameter == "divergent__", ]
-treedepth <- nuts[nuts$Parameter == "treedepth__", ]
+summary <- summarise_draws(subset_draws(draws, variable = global), "rhat", "ess_bulk", "ess_tail")
+saveRDS(as.data.frame(summary), file.path(dir, "summary.rds"))
+locals <- summarise_draws(subset_draws(draws, variable = local), "rhat")
+saveRDS(data.frame(rhat_locals = max(locals$rhat)), file.path(dir, "meta.rds"))
+
+# per chain, the sampler's parameters at every iteration after warmup
+sampler <- rstan::get_sampler_params(model$fit, inc_warmup = FALSE)
+divergences <- function(chain) sum(chain[, "divergent__"])
+treedepth_hits <- function(chain) sum(chain[, "treedepth__"] >= settings$max_treedepth)
 chains <- data.frame(
-  chain = seq_len(settings$chains),
-  divergences = as.vector(tapply(divergent$Value, divergent$Chain, sum)),
-  treedepth_hits = as.vector(tapply(treedepth$Value >= settings$max_treedepth, treedepth$Chain, sum)),
+  chain = seq_along(sampler),
+  divergences = sapply(sampler, divergences),
+  treedepth_hits = sapply(sampler, treedepth_hits),
   ebfmi = rstan::get_bfmi(model$fit)
 )
 saveRDS(chains, file.path(dir, "chains.rds"))
 
-summary <- summarise_draws(subset_draws(draws, variable = global), "rhat", "ess_bulk", "ess_tail")
-saveRDS(as.data.frame(summary), file.path(dir, "summary.rds"))
-saveRDS(data.frame(rhat_locals = max(effects$rhat)), file.path(dir, "meta.rds"))
-
 writeLines(stancode(model), file.path(dir, "model.stan"))
-cmdstanr::write_stan_json(unclass(standata(model)), file.path(dir, "standata.json"))
+cmdstanr::write_stan_json(standata(model), file.path(dir, "standata.json"))
