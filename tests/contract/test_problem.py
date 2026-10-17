@@ -417,8 +417,8 @@ Z = (np.array(X) - np.mean(X)) / np.std(X, ddof=1)  # (12,) `x` z-scored over ev
 def test_each_continuous_column_of_a_standardised_table_has_mean_0_and_sd_1(
     sizes: list[int], source: str
 ) -> None:
-    """Every reference and score is stated on the standardised scale, so each regime's table
-    z-scores the continuous covariate `x` and the continuous response `y` over its own rows."""
+    """References and scores are stated on the standardised scale.
+    Each regime z-scores `x` and `y` over its own rows."""
     problem = Problem.build(groupedRow(source), groupedTable(sizes))
     for regime in problem.scales:
         table = problem.standardised(regime)
@@ -428,8 +428,8 @@ def test_each_continuous_column_of_a_standardised_table_has_mean_0_and_sd_1(
 
 
 def test_an_interaction_is_the_product_of_its_standardised_parts() -> None:
-    """`x:sex` on the standardised scale is z-scored `x` times the 0/1 `sex`, recomputed from
-    the parts and not rescaled itself: z-scoring the raw product would give another column."""
+    """`x:sex` is the z-scored `x` times the 0/1 `sex`.
+    Z-scoring the raw product would give another column."""
     problem = Problem.build(fixtureRow(), fixtureTable())
     table = problem.standardised()
     assert table['x:sex'].to_numpy() == pytest.approx(Z * np.array(SEX))
@@ -437,8 +437,8 @@ def test_an_interaction_is_the_product_of_its_standardised_parts() -> None:
 
 
 def test_an_interaction_with_a_level_holding_a_colon_finds_its_parts() -> None:
-    """A level may hold a `:` (a composite's joined levels, a time), so `diet[b:c]:x` is read
-    through the coding as `diet[b:c]` times `x`; split on `:`, it would name no column."""
+    """A level may contain `:`, as a time does.
+    So `diet[b:c]:x` is `diet[b:c]` times `x`, and a split on `:` would name no column."""
     table = fixtureTable()
     table['diet'] = table['diet'].cat.rename_categories({'b': 'b:c'})
     row = fixtureRow(interactions=('diet:x',))
@@ -446,6 +446,14 @@ def test_an_interaction_with_a_level_holding_a_colon_finds_its_parts() -> None:
     standardised = problem.standardised()
     assert problem.design[-2:] == ('diet[b:c]:x', 'diet[c]:x')
     assert standardised['diet[b:c]:x'].to_numpy() == pytest.approx(Z * np.array([0, 1, 0] * 4))
+
+
+def test_a_three_way_interaction_is_the_product_of_its_three_standardised_parts() -> None:
+    """Some candidates carry a three-way term (`MASS/npk/1`), so a name holds more than two parts."""
+    row = fixtureRow(interactions=('x:sex:diet',))
+    standardised = Problem.build(row, fixtureTable()).standardised()
+    expected = Z * np.array(SEX) * np.array([0, 1, 0] * 4)
+    assert standardised['x:sex:diet[b]'].to_numpy() == pytest.approx(expected)
 
 
 # ==============================================================================================
@@ -459,8 +467,8 @@ SLOPES = (
 
 
 def test_the_global_draws_expand_each_cor_block_to_its_pairs_in_brmss_order() -> None:
-    """A draw file has one column per scalar, so `cor[block]` over (Intercept, x, sex) becomes
-    its three pairs, `<a>` before `<b>` in the block's order as brms orders them (#63)."""
+    """A draw file has one column per scalar.
+    So `cor[block]` over (Intercept, x, sex) becomes three pairs, in brms's order (#63)."""
     row = fixtureRow(response='n', response_type='count', random_slopes=SLOPES)
     problem = Problem.build(row, fixtureTable())
     assert problem.globalDraws() == (
@@ -472,9 +480,8 @@ def test_the_global_draws_expand_each_cor_block_to_its_pairs_in_brmss_order() ->
 
 
 def test_the_local_draws_name_each_group_by_its_code_in_the_table() -> None:
-    """Per factor, the intercept then each slope in `sd` order, groups in code order, named as
-    `sd` is (`r[<factor>]`, `r[<x>|<factor>]`), so a group's draws join its rows through the
-    factor column of the standardised table."""
+    """Random effects are named like their `sd`, with the group's code.
+    So a group's draws join its rows through the factor column of the standardised table."""
     row = fixtureRow(response='n', response_type='count', random_slopes=SLOPES)
     problem = Problem.build(row, fixtureTable())
     local = problem.localDraws()
@@ -495,9 +502,9 @@ def test_the_local_draws_name_each_group_by_its_code_in_the_table() -> None:
 
 
 def test_a_factors_slopes_follow_its_sd_parameters_not_the_design() -> None:
-    """The handoff builds a factor's random terms and reads its effects back from `slopes`, so the
-    formula lists them as the contract's `sd` does: `sex` before `x` where the row says so.
-    A categorical slope is its contrast columns; a slope on `block:plot` is none of `block`'s."""
+    """The handoff writes the formula and reads effects back through `slopes`.
+    So the slopes follow the `sd` order, here `sex` before `x`.
+    A categorical slope gives its contrast columns, and `block:plot` does not take `block`'s."""
     slopes = (
         SlopeTerm('sex', 'block', correlated=False),
         SlopeTerm('x', 'block', correlated=False),
