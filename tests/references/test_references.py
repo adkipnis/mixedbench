@@ -189,25 +189,31 @@ def test_a_thinned_level_stores_4000_draws_numbered_within_their_chain(
     assert drawsPerChain(problemDir(tmp_path, problem) / 'globals.parquet') == FOUR_CHAINS
 
 
-def test_a_run_out_of_time_ends_as_cap_with_its_record(tmp_path: Path) -> None:
+def test_a_run_out_of_time_ends_as_cap_with_its_record(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """Three seconds do not cover loading brms, so level 0 times out; the record is written
     before the scheduler's limit would kill the job."""
+    monkeypatch.setattr(references, 'CAP', 3)
     problem = fixtureProblem()
-    outcome = references.run(problem, tmp_path, cap=3)
+    outcome = references.run(problem, tmp_path)
     dir = problemDir(tmp_path, problem)
     assert (outcome.outcome, outcome.level) == ('cap', 0)
     assert [level['outcome'] for level in record(dir)['levels']] == ['cap']
     assert sorted(path.name for path in dir.iterdir()) == ['R.log', 'run.json']
 
 
-def test_a_rerun_leaves_no_file_of_the_earlier_run(tmp_path: Path) -> None:
+def test_a_rerun_leaves_no_file_of_the_earlier_run(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """A run whose contract hash moved may have passed: its draws must not sit beside the
     record of a rerun that ends otherwise, here at the cap."""
+    monkeypatch.setattr(references, 'CAP', 3)
     problem = fixtureProblem()
     dir = problemDir(tmp_path, problem)
     dir.mkdir()
     (dir / 'globals.parquet').write_text('an earlier run')
-    references.run(problem, tmp_path, cap=3)
+    references.run(problem, tmp_path)
     assert sorted(path.name for path in dir.iterdir()) == ['R.log', 'run.json']
 
 
