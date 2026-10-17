@@ -71,7 +71,7 @@ class Problem:
         """Raises `Refused` where the contract does not cover the row."""
         return _Builder(row, table).problem()
 
-    def standardised(self, regime: Regime = 'full') -> pd.DataFrame:
+    def standardised(self, regime: Literal['full', 'rows', 'groups'] = 'full') -> pd.DataFrame:
         """The design, response, trials and factor codes over the rows a fit in `regime` sees,
         on the standardised scale: continuous columns z-scored with the regime's scales,
         each interaction the product of its standardised parts, never rescaled itself."""
@@ -83,16 +83,17 @@ class Problem:
         table = rows[columns].copy()
         for column, scale in self.scales[regime].items():
             table[column] = (table[column] - scale.mean) / scale.sd
-        for column, parts in self._interactions().items():
-            table[column] = table[list(parts)].prod(axis=1)
+        for column, operands in self._interactions().items():
+            table[column] = table[list(operands)].prod(axis=1)
         return table
 
     # the draw names: one column per scalar the reference samples, so draws, scores and the
     # standardised table join on names
 
     def globalDraws(self) -> tuple[str, ...]:
-        """`parameters` in order, each `cor[<factor>]` expanded to its pairs
-        `cor[<factor>][<a>,<b>]`, `<a>` before `<b>` in the block's order (brms's pair order)."""
+        """`parameters` in order,
+        each `cor[<factor>]` expanded to its pairs `cor[<factor>][<a>,<b>]`,
+        `<a>` before `<b>` in the block's order (brms's pair order)."""
         blocks = {}
         for factor, elements in self.correlations.items():
             blocks[f'cor[{factor}]'] = elements
@@ -105,8 +106,9 @@ class Problem:
         return tuple(names)
 
     def localDraws(self) -> dict[str, tuple[str, ...]]:
-        """Per factor, its random effects named as their `sd` is, `r[<factor>][<j>]` and
-        `r[<x>|<factor>][<j>]` in `sd` order, `<j>` each group's code in the table, in order."""
+        """Per factor, its random effects named as their `sd` is,
+        `r[<factor>][<j>]` and `r[<x>|<factor>][<j>]` in `sd` order,
+        `<j>` each group's code in the table, in order."""
         local = {}
         for factor in self.factors:
             effects = [factor, *[f'{slope}|{factor}' for slope in self.slopes(factor)]]
@@ -115,8 +117,8 @@ class Problem:
         return local
 
     def slopes(self, factor: str) -> tuple[str, ...]:
-        """The coded columns with a random slope on `factor`, read off its `sd[<x>|<factor>]`
-        parameters in their order."""
+        """The coded columns with a random slope on `factor`,
+        read off its `sd[<x>|<factor>]` parameters in their order."""
         slopes = []
         for name in self.parameters:
             if name.startswith('sd[') and name.endswith(f'|{factor}]'):
@@ -124,10 +126,10 @@ class Problem:
         return tuple(slopes)
 
     def _interactions(self) -> dict[str, tuple[str, ...]]:
-        """Per interaction column, its parts in order: the design columns after `Intercept` that
-        are no covariate's coded column. By the coding, a continuous covariate has a scale and a
-        binary one levels, both keep their name; any other is `<c>[<level>]` per level after the
-        first."""
+        """Per interaction column, its parts in order:
+        the design columns after `Intercept` that are no covariate's coded column.
+        By the coding, a continuous covariate has a scale and a binary one levels,
+        both keep their name; any other is `<c>[<level>]` per level after the first."""
         contrasts = [f'{c}[{level}]' for c, levels in self.levels.items() for level in levels[1:]]
         coded = [
             column
@@ -142,8 +144,9 @@ class Problem:
 
     @staticmethod
     def _parts(column: str, coded: list[str]) -> tuple[str, ...]:
-        """Read left to right, each part the longest coded column the rest of the name starts
-        with, followed by `:` or the end: a level may hold a `:`, so the name is not split."""
+        """Read left to right, each part the longest coded column
+        that the rest of the name starts with, followed by `:` or the end:
+        a level may hold a `:`, so the name is not split."""
         parts = []
         rest = column
         while rest:
@@ -152,9 +155,6 @@ class Problem:
             parts.append(part)
             rest = rest[len(part) + 1 :]
         return tuple(parts)
-
-
-Regime = Literal['full', 'rows', 'groups']
 
 
 @dataclass(frozen=True)
