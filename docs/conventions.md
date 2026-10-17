@@ -123,8 +123,9 @@ a pinned Source
 - `# ====` banners separate globals, classes and main, `# ----` banners subsections. Each is
   named in plain words, with one comment line on why the section exists unless a class
   docstring below says it.
-- One pipeline class per module: public methods first, then its steps in run order under a
-  `# ----` banner naming the pipeline (`url -> archive -> tree -> files -> tables`).
+- One pipeline class per module, its methods in the order the pipeline runs: each public method
+  followed by the steps it calls, under a `# ----` banner naming the pipeline or its stage
+  (`url -> archive -> tree -> files -> tables`).
 - A script's `__main__` creates its pipeline class and reads as the run's table of contents.
 
 ## Comments and docstrings
