@@ -83,6 +83,9 @@ harder to understand or change.
   `Literal[...]` for an argument with a fixed set of options, a type alias once it repeats.
   Config models are Pydantic.
 - f-strings, one statement per line, a long expression named on the line before.
+- Readable over compact, unless runtime efficiency pays for it. No line packs several steps:
+  name each meaningful intermediate value on its own line, and write a loop where a
+  comprehension would nest.
 - A method lists its steps in the order you would describe them; a step with its own `if`
   ladder or loop becomes a method. A search is a plain loop with an explicit check after it,
   not `for`/`else`, `while True` or `next()` on a generator.
