@@ -88,6 +88,36 @@ class Problem:
             table[column] = table[list(operands)].prod(axis=1)
         return table
 
+    def _interactions(self) -> dict[str, tuple[str, ...]]:
+        """Returns each interaction column with its parts, in order."""
+        # a covariate's coded columns: a continuous one has a scale, a binary one has levels,
+        # any other is a contrast
+        contrasts = []
+        for column, levels in self.levels.items():
+            contrasts += [f'{column}[{level}]' for level in levels[1:]]
+        covariate_columns = [*self.scales['full'], *self.levels, *contrasts]
+        design = self.design[1:]  # without `Intercept`
+        coded = [column for column in design if column in covariate_columns]
+        # every other design column is an interaction
+        interactions = {}
+        for column in design:
+            if column not in coded:
+                interactions[column] = self._parts(column, coded)
+        return interactions
+
+    @staticmethod
+    def _parts(column: str, coded: list[str]) -> tuple[str, ...]:
+        """Returns the coded parts of an interaction column, read left to right."""
+        # a level may contain `:`, so each part is the longest coded column that matches
+        parts = []
+        rest = column
+        while rest:
+            matches = [c for c in coded if rest == c or rest.startswith(f'{c}:')]
+            part = max(matches, key=len)
+            parts.append(part)
+            rest = rest[len(part) + 1 :]  # past the part and its `:`
+        return tuple(parts)
+
     def globalDraws(self) -> tuple[str, ...]:
         """Returns `parameters` with each `cor[<factor>]` split into its pairs.
         A pair is `cor[<factor>][<a>,<b>]`, in brms's order."""
@@ -127,36 +157,6 @@ class Problem:
                 slope = name.removeprefix('sd[').removesuffix(suffix)
                 slopes.append(slope)
         return tuple(slopes)
-
-    def _interactions(self) -> dict[str, tuple[str, ...]]:
-        """Returns each interaction column with its parts, in order."""
-        # a covariate's coded columns: a continuous one has a scale, a binary one has levels,
-        # any other is a contrast
-        contrasts = []
-        for column, levels in self.levels.items():
-            contrasts += [f'{column}[{level}]' for level in levels[1:]]
-        covariate_columns = [*self.scales['full'], *self.levels, *contrasts]
-        design = self.design[1:]  # without `Intercept`
-        coded = [column for column in design if column in covariate_columns]
-        # every other design column is an interaction
-        interactions = {}
-        for column in design:
-            if column not in coded:
-                interactions[column] = self._parts(column, coded)
-        return interactions
-
-    @staticmethod
-    def _parts(column: str, coded: list[str]) -> tuple[str, ...]:
-        """Returns the coded parts of an interaction column, read left to right."""
-        # a level may contain `:`, so each part is the longest coded column that matches
-        parts = []
-        rest = column
-        while rest:
-            matches = [c for c in coded if rest == c or rest.startswith(f'{c}:')]
-            part = max(matches, key=len)
-            parts.append(part)
-            rest = rest[len(part) + 1 :]  # past the part and its `:`
-        return tuple(parts)
 
 
 @dataclass(frozen=True)
