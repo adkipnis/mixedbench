@@ -10,9 +10,10 @@ The run refuses to start on an R stack other than the pinned one: brms, cmdstanr
 pipeline:
 ---------
 a Problem and a directory
--> the R stack, checked against the pins                        _Run._versions
--> each level fitted by run.R and judged by the bar             _Run._ladder, _level, _fit, _passes
--> the draws as parquet, Stan's program and data, the record    _Run._keep, outcome
+-> the R stack, checked against the pins                        _Runner._checkStack
+-> each level fitted by run.R                                   _climbLadder, _attemptLevel, _fit
+-> its outcome, judged by the bar                               _passes
+-> the draws as parquet, Stan's program and data, the record    _keep, _Runner.run
 -> the outcome                                                  run
 """
 
@@ -105,7 +106,7 @@ def run(problem: Problem, dir: Path) -> Outcome:
     (`globals.parquet`, `locals.parquet`, `locals_summary.parquet`),
     and brms's Stan program and data (`model.stan`, `standata.json`).
     Raises before any level on an unpinned R stack."""
-    return _Run(problem, dir).outcome()
+    return _Runner(problem, dir).run()
 
 
 # =====================================================================================
@@ -113,21 +114,21 @@ def run(problem: Problem, dir: Path) -> Outcome:
 # =====================================================================================
 
 
-class _Run:
+class _Runner:
     def __init__(self, problem: Problem, dir: Path) -> None:
         self.problem = problem
         self.handoff = Handoff(problem)
         # an id may hold `/`, `!` and spaces, and the record carries the id itself
         self.dir = dir / hashlib.sha256(problem.id.encode()).hexdigest()[:16]
 
-    def outcome(self) -> Outcome:
-        versions = self._versions()
+    def run(self) -> Outcome:
+        versions = self._checkStack()
         if self.dir.exists():  # no file of an earlier run stays beside this run's record
             shutil.rmtree(self.dir)
         self.dir.mkdir(parents=True)
         with tempfile.TemporaryDirectory() as tmp, open(self.dir / 'R.log', 'w') as log:
             work = Path(tmp)
-            levels = self._ladder(work, log)
+            levels = self._climbLadder(work, log)
             last = levels[-1]
             if last['outcome'] == 'passed':
                 self._keep(work)
@@ -157,8 +158,9 @@ class _Run:
     # ---------------------------------------------------------------------------------
 
     @staticmethod
-    def _versions() -> dict[str, str]:
-        """Raises where the installed brms, cmdstanr, posterior or CmdStan differs from its pin."""
+    def _checkStack() -> dict[str, str]:
+        """Returns the installed versions of brms, cmdstanr, posterior and CmdStan,
+        and raises where one differs from its pin."""
         lock = json.loads((_HERE / 'renv.lock').read_text())['Packages']
         pins = {
             'brms': lock['brms']['Version'],
@@ -178,18 +180,18 @@ class _Run:
             raise RuntimeError(f'the R stack {installed} differs from the pins {pins}')
         return installed
 
-    def _ladder(self, work: Path, log: TextIO) -> list[dict]:
+    def _climbLadder(self, work: Path, log: TextIO) -> list[dict]:
         """Each level's attempt, up to the first that does not end at the bar."""
         levels = []
         start = time.monotonic()
         for level in LEVELS:
             timeout = CAP - (time.monotonic() - start)
-            levels.append(self._level(work, level, log, timeout))
+            levels.append(self._attemptLevel(work, level, log, timeout))
             if levels[-1]['outcome'] != 'bar':
                 break
         return levels
 
-    def _level(self, work: Path, level: int, log: TextIO, timeout: float) -> dict:
+    def _attemptLevel(self, work: Path, level: int, log: TextIO, timeout: float) -> dict:
         """The level's settings, seconds and outcome, and its diagnostics where R ran to the end."""
         began = time.monotonic()
         ended = self._fit(work, level, log, timeout)
