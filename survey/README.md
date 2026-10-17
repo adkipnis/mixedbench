@@ -19,14 +19,14 @@ by script.
 | `registry/sources.yaml` | hand, `mirror.py` | the frame (below) |
 | `registry/registry.csv`, `excluded.csv`, `dimensions.csv`, `columns.csv` | `merge.py` | the census tables (below) |
 | `registry/manifest.csv` | `merge.py` | per registry object the file it loads from, with sha256 and size |
-| `registry/quantiles.yaml`, `SUMMARY.md` | `merge.py` via `summarise.py` | every axis pooled, per tier and without agridat; the summary from the digit-free `SUMMARY.template.md` |
+| `registry/quantiles.yaml`, `SUMMARY.md` | `merge.py` via `summarize.py` | every axis pooled, per tier and without agridat; the summary from the digit-free `SUMMARY.template.md` |
 | `registry/help/`, `cache/` | `pull.py`, the loader | untracked: one help page per kept object; downloads |
 | `candidates.csv`, `duplicates.csv`, `dropped.csv` | `pull.py`, `merge.py` | the survey's bookkeeping (below) |
 | `deposits.csv`, `deposit_files.csv` | the archived `deposits.py`, `resolve.py` | Tier D's frame: the drawn papers and every file their deposits list |
 | `practice_quantiles.yaml` | copied | the practice survey's `quantiles.yaml` (metabeta-v3), the practice column of `SUMMARY.md` |
 | `shards/<table>_<label>.csv` | agents, `pull.py` | one shard per reading run; `table` ∈ `registry`, `excluded`, `duplicates`, `dropped` |
 | `prompts/read.md` | | the reading agent's brief |
-| `schema.py`, `sources.py`, `help.py`, `measure.py`, `summarise.py` | | file contract, frame, help pages, measures, summary |
+| `schema.py`, `sources.py`, `help.py`, `measure.py`, `summarize.py` | | file contract, frame, help pages, measures, summary |
 | [`archive/`](https://github.com/adkipnis/mixedbench/tree/survey-archive-3/survey/archive) | | finished scripts and their outputs, kept at tag `survey-archive-3` and reproducible at tags `survey-archive` and `survey-archive-2` ([README](https://github.com/adkipnis/mixedbench/blob/survey-archive-3/survey/archive/README.md)) |
 | `tests/` | | `uv run pytest survey/tests`, by hand; the root run never recurses here |
 
@@ -50,7 +50,7 @@ One pass per tier:
    about 60 objects and file each in a registry or an excluded shard, deciding only what the
    data cannot tell.
 4. **Merge.** `merge.py` loads, validates, upserts, supersedes, reconciles, measures, writes
-   the manifest, summarises and reports.
+   the manifest, summarizes and reports.
 5. **Duplicates.** Flagged pairs are answered by script where the tables are identical, else by
    one agent.
 6. **Blind second reading.** `medium` and `low` rows are re-read by fresh agents and compared

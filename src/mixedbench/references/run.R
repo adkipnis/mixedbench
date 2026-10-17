@@ -3,12 +3,12 @@
 # Usage: Rscript run.R <dir>
 # <dir> holds the handoff from Python: table.csv (the aliased standardized table) and input.json
 # (formula, family, link, prior per class, the level's settings, seed, the factors to
-# summarise). It prints sessionInfo() first, then writes back, one data frame per file since
+# summarize). It prints sessionInfo() first, then writes back, one data frame per file since
 # pyreadr reads no R lists, every draw thinned as the level's settings say:
 #   draws.rds           chain, iteration, the global variables brms keeps and the random
-#                       effects of every factor not summarised
-#   locals_summary.rds  per random effect of a summarised factor its mean, sd and 5/25/50/75/95%
-#                       quantiles, where a factor is summarised
+#                       effects of every factor not summarized
+#   locals_summary.rds  per random effect of a summarized factor its mean, sd and 5/25/50/75/95%
+#                       quantiles, where a factor is summarized
 #   chains.rds          per chain its divergences, tree-depth hits and E-BFMI, over every iteration
 #   summary.rds         per global variable its rank-normalised R-hat, bulk and tail ESS
 #   meta.rds            the largest R-hat over the random effects
@@ -46,9 +46,9 @@ model <- brm(
 
 global <- grep(GLOBAL, variables(model), value = TRUE)
 local <- grep("^r_", variables(model), value = TRUE)
-# a random effect r_<factor>[<group>,<effect>] of a factor to summarise
-summarised <- local[sub("^r_([^[]+)\\[.*$", "\\1", local) %in% unlist(input$summarised)]
-keep <- c(global, setdiff(local, summarised))
+# a random effect r_<factor>[<group>,<effect>] of a factor to summarize
+summarized <- local[sub("^r_([^[]+)\\[.*$", "\\1", local) %in% unlist(input$summarized)]
+keep <- c(global, setdiff(local, summarized))
 # thinned after sampling, so that the sampler's checks below see every iteration
 draws <- thin_draws(as_draws_df(model, variable = c(global, local)), settings$thin)
 saveRDS(
@@ -60,8 +60,8 @@ saveRDS(
 )
 quantiles <- function(x) quantile2(x, probs = c(0.05, 0.25, 0.5, 0.75, 0.95))
 effects <- summarise_draws(subset_draws(draws, variable = local), "mean", "sd", quantiles, "rhat")
-if (length(summarised) > 0) {
-  rows <- effects$variable %in% summarised
+if (length(summarized) > 0) {
+  rows <- effects$variable %in% summarized
   saveRDS(as.data.frame(effects[rows, names(effects) != "rhat"]), file.path(dir, "locals_summary.rds"))
 }
 

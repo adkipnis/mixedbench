@@ -69,7 +69,7 @@ def test_the_model_reaches_r_as_formula_family_prior_settings_and_seed(tmp_path:
         },
         'settings': LEVELS[0],
         'seed': 75704431,
-        'summarised': [],
+        'summarized': [],
     }
 
 
@@ -164,13 +164,13 @@ def test_an_ordinal_models_thresholds_take_brms_default_prior(tmp_path: Path) ->
     assert list(model['prior']) == ['b', 'sd']
 
 
-def test_r_summarises_the_random_effects_of_a_factor_above_1000_groups(tmp_path: Path) -> None:
+def test_r_summarizes_the_random_effects_of_a_factor_above_1000_groups(tmp_path: Path) -> None:
     """Full draws of 20,000 groups would be a file of gigabytes.
     So R keeps per-effect summaries of such a factor instead.
     1,000 groups still keep their draws."""
-    for groups, summarised in ((1000, []), (1001, ['g1'])):
+    for groups, summarized in ((1000, []), (1001, ['g1'])):
         model = writtenModel(manyGroups(groups), tmp_path)
-        assert model['summarised'] == summarised
+        assert model['summarized'] == summarized
 
 
 # ==============================================================================================

@@ -3,7 +3,7 @@
 Python writes the standardized table and the model for R.
 The table's columns take aliases brms never rewrites (`y`, `x1`, `g1`, ...).
 The model is written in JSON format: the formula, family and link, the prior per class,
-a level's settings, the seed and the factors R summarises.
+a level's settings, the seed and the factors R summarizes.
 Python reads back the draws by the aliases in brms's labels and the diagnostics of the fit.
 
 pipeline:
@@ -43,7 +43,7 @@ class Handoff:
     Uncorrelated slopes go in a term of their own, `(0 + x2 || g1)`.
     brms labels a variable by its class and aliases, such as `sd_g1__x1` or `r_g1[j,x1]`,
     where `j` is a group's code. The draws are renamed by these labels.
-    Random effects for more than `FULL_GROUPS` groups are summarised instead of saving the draws.
+    Random effects for more than `FULL_GROUPS` groups are summarized instead of saving the draws.
     """
 
     FULL_GROUPS = 1000
@@ -87,7 +87,7 @@ class Handoff:
         table.columns = list(self.aliases)
         table.to_csv(dir / 'table.csv', index=False)
         priors = {name: self._brmsPrior(prior) for name, prior in self.problem.prior.items()}
-        summarised = [self._aliasOf[factor] for factor in self._summarised()]
+        summarized = [self._aliasOf[factor] for factor in self._summarized()]
         model = {
             'formula': self._formula(),
             'family': self.problem.family,
@@ -95,7 +95,7 @@ class Handoff:
             'prior': priors,
             'settings': settings,
             'seed': self.seed,
-            'summarised': summarised,
+            'summarized': summarized,
         }
         (dir / 'input.json').write_text(json.dumps(model, indent=2))
 
@@ -134,12 +134,12 @@ class Handoff:
         digest = hashlib.sha256(self.problem.id.encode()).digest()
         return int.from_bytes(digest[:4], 'big') % 2**31
 
-    def _summarised(self) -> list[str]:
-        summarised = []
+    def _summarized(self) -> list[str]:
+        summarized = []
         for factor in self.problem.factors:
             if len(self.problem.levels[factor]) > self.FULL_GROUPS:
-                summarised.append(factor)
-        return summarised
+                summarized.append(factor)
+        return summarized
 
     # ---------------------------------------------------------------------------------
     # draws.rds, locals_summary.rds -> the contract's names
@@ -147,19 +147,19 @@ class Handoff:
 
     def read(self, dir: Path) -> dict[str, pd.DataFrame]:
         """Returns the draws R left in `dir` under the contract's names, per file they go to:
-        `globals`, `locals` for the factors kept in full, `locals_summary` for the summarised."""
+        `globals`, `locals` for the factors kept in full, `locals_summary` for the summarized."""
         raw = pyreadr.read_r(dir / 'draws.rds')[None]  # as brms named them
         names = self._contractNames()
         draws = raw.rename(columns=names)
         draws['chain'] = draws['chain'] - 1
         draws['draw'] = draws.pop('iteration') - 1  # within its chain
         files = {'globals': draws[['chain', 'draw', *self.problem.globalDraws()]]}
-        summarised = self._summarised()
-        full = [factor for factor in self.problem.factors if factor not in summarised]
+        summarized = self._summarized()
+        full = [factor for factor in self.problem.factors if factor not in summarized]
         if full:
             files['locals'] = draws[['chain', 'draw', *self._effectsOf(full)]]
-        if summarised:
-            files['locals_summary'] = self._localsSummary(dir, names, summarised)
+        if summarized:
+            files['locals_summary'] = self._localsSummary(dir, names, summarized)
         return files
 
     def _contractNames(self) -> dict[str, str]:
@@ -198,12 +198,12 @@ class Handoff:
         return names
 
     def _localsSummary(
-        self, dir: Path, names: dict[str, str], summarised: list[str]
+        self, dir: Path, names: dict[str, str], summarized: list[str]
     ) -> pd.DataFrame:
         summary = pyreadr.read_r(dir / 'locals_summary.rds')[None]  # a row per random effect
         summary['variable'] = summary['variable'].map(names)
         summary = summary.rename(columns={'variable': 'name'})
-        order = self._effectsOf(summarised)
+        order = self._effectsOf(summarized)
         return summary.set_index('name').loc[order].reset_index()
 
     # ---------------------------------------------------------------------------------
