@@ -2,7 +2,7 @@
 
 Posterior approximation and prediction on real grouped data for generalized linear mixed
 models (GLMMs): what a problem is, what a reference is, and what a result is measured against.
-Statistical terms (family, link, fixed and random effects, grouping factor, standardised
+Statistical terms (family, link, fixed and random effects, grouping factor, standardized
 scale) are those of metabeta's GLMM glossary and are not redefined here.
 
 ## Language
@@ -40,7 +40,7 @@ _Avoid_: benchmark, corpus, suite (a subset)
 
 **Contract**:
 The fixed rules that turn a registry row and its table into a problem (rows dropped, coding,
-standardisation, family, prior, splits), so that two results on one problem compare. It binds
+standardization, family, prior, splits), so that two results on one problem compare. It binds
 the benchmark, not the user, who may fit any model to a table; a change to a rule is a new
 suite.
 _Avoid_: preprocessing (one part of it), config
@@ -59,7 +59,7 @@ _Avoid_: dataset, export, the parquet
 
 **Regime**:
 The rows a fit sees: the full table (posterior track), or the seen rows of a held-out-rows
-or a held-out-groups split (predictive track). Standardisation is computed per regime.
+or a held-out-groups split (predictive track). Standardization is computed per regime.
 _Avoid_: split (the partition), fold
 
 **Verified row**:

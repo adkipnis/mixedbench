@@ -115,7 +115,7 @@ def test_the_intercept_is_the_uncentred_one(ran) -> None:
     since `y` is z-scored, and lies far outside that."""
     problem, _, dir = ran
     draws = pd.read_parquet(dir / 'globals.parquet')
-    table = problem.standardised('full')
+    table = problem.standardized('full')
     design = table[['Intercept', 'x', 'sex']].to_numpy()  # (N, 3)
     leastSquares = np.linalg.lstsq(design, table['y'].to_numpy(), rcond=None)[0][0]
     tolerance = 4 * draws['Intercept'].std() / np.sqrt(400)

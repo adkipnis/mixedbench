@@ -38,7 +38,7 @@ def writtenModel(problem: Problem, dir: Path, settings: dict = LEVELS[0]) -> dic
 # ==============================================================================================
 
 
-def test_the_table_reaches_r_standardised_under_aliases_without_the_intercept(
+def test_the_table_reaches_r_standardized_under_aliases_without_the_intercept(
     tmp_path: Path,
 ) -> None:
     """brms would read the interaction `x:sex` as its own term, so R sees aliases.
@@ -49,7 +49,7 @@ def test_the_table_reaches_r_standardised_under_aliases_without_the_intercept(
     Handoff(problem).write(tmp_path, LEVELS[0])
     table = pd.read_csv(tmp_path / 'table.csv')
     aliases = {'y': 'y', 'x1': 'x', 'x2': 'sex', 'x3': 'x:sex', 'g1': 'block'}
-    expected = problem.standardised('full')[list(aliases.values())]
+    expected = problem.standardized('full')[list(aliases.values())]
     expected.columns = list(aliases)
     pd.testing.assert_frame_equal(table, expected.reset_index(drop=True), check_dtype=False)
     assert table['g1'].dtype == 'int64'

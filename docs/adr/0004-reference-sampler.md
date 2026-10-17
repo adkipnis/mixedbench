@@ -34,7 +34,7 @@ date: 2026-10-08
 
 **Storage.**
 
-- Decision: global draws in full (4,000 × P, parquet, standardised scale); random-effect draws
+- Decision: global draws in full (4,000 × P, parquet, standardized scale); random-effect draws
   in full for factors with at most 1,000 groups, per-group summaries above; diagnostics, ladder
   level and contract hash beside them.
 
@@ -48,7 +48,7 @@ date: 2026-10-08
 
 **The runner.**
 
-- Decision: Python writes the regime's standardised table, the brms formula and the prior;
+- Decision: Python writes the regime's standardized table, the brms formula and the prior;
   a thin R script calls `brm()` with the cmdstanr backend, checks the bar and writes the
   draws under brms's names, which Python renames to the contract's parameter names. The Stan
   code and data brms generated are stored beside the draws.
