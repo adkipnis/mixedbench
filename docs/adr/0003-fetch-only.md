@@ -38,7 +38,7 @@ first use fetches each source and verifies its digest. Nothing is mirrored.
   > load through `rdata`, and none is retired.
 - CI loads every problem: per pull request three operating systems × a seeded 20-problem
   subset, weekly a full fetch with checksum verification, at release a full fetch on three
-  operating systems. A problem materialises to one parquet file per problem for R and Julia
+  operating systems. A problem materializes to one parquet file per problem for R and Julia
   users.
 
 ## Amendment 2026-10-08: a mirror where a CC0 host refuses scripts (#4)
@@ -60,13 +60,13 @@ that, the Rscript route leaves the loader; `reader` is `pyreadr`, `rdata`, `pand
 `deparse`. A file neither pyreadr nor rdata parses (a model fit's bytecode) is one object
 without a table, as an object pyreadr cannot frame is.
 
-## Amendment 2026-10-09: materialised problems are a cache; the weekly fetch opens issues
+## Amendment 2026-10-09: materialized problems are a cache; the weekly fetch opens issues
 
-A materialised problem (one parquet and one JSON, ADR 0001) is derived from a pin, a
+A materialized problem (one parquet and one JSON, ADR 0001) is derived from a pin, a
 registry row and the contract, so it lives under `registry/cache/` like the fetched files:
 never committed, never uploaded, rebuilt from the pins. Committing or hosting the arrays
 would be redistribution with another file extension. The suite commits ids and contract
-hashes only, and a test rebuilds a sample and compares them. The materialised files are the
+hashes only, and a test rebuilds a sample and compares them. The materialized files are the
 package's interface to a problem: `Problem` loads from them, and metabeta never fetches a
 source. The weekly fetch opens one GitHub issue per failing source, labelled `registry`, and
 closes it when the source returns; item 9's retirements read that history. A committed log

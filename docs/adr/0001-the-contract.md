@@ -75,18 +75,18 @@ any rule is a new suite version, never a recomputation.
 **Identity.**
 
 - Decision: a problem is `<source>/<object>/<model_index>`; its contract hash is the sha256
-  over the contract version, the pinned brms and CmdStan versions and the materialised arrays.
+  over the contract version, the pinned brms and CmdStan versions and the materialized arrays.
 - Why: a changed pin or rule is visible as a changed hash.
 
 > Superseded in part by the amendment of 2026-10-09 below: the hash covers the contract
-> version and the materialised problem, not the sampler pins.
+> version and the materialized problem, not the sampler pins.
 
 ## Amendment 2026-10-09: the grill of roadmap item 3
 
 **Hash.**
 
 - Decision: the contract hash is the sha256 over a canonical serialisation of the
-  materialised problem (the JSON with sorted keys, then every column in table order as its
+  materialized problem (the JSON with sorted keys, then every column in table order as its
   name, dtype and little-endian bytes, floats as float64) and the contract version, which
   is the package major version. The brms and CmdStan pins leave the hash: they are part
   of a reference, recorded in the suite (ADR 0002), not of a problem.
@@ -97,7 +97,7 @@ any rule is a new suite version, never a recomputation.
 **Standardisation and the splits.**
 
 - Decision: the standardisation is computed on the rows a fit sees: the full table for the
-  posterior track and the seen rows of each predictive regime. The materialised table holds
+  posterior track and the seen rows of each predictive regime. The materialized table holds
   the coded columns in raw units and the per-regime means and standard deviations beside it.
   Coding (levels, contrasts) is the full table's; a level that survives only in held-out
   rows leaves an all-zero column in the seen rows, which the prior keeps proper.
@@ -140,5 +140,5 @@ any rule is a new suite version, never a recomputation.
   brms does.
 - Why: it is brms's default and current practice; on z-scored covariates the two coincide,
   and only the binary and contrast columns move the intercept. metabeta adopts it separately.
-- The contract hash does not move: the materialised problem's prior is unchanged, and this
+- The contract hash does not move: the materialized problem's prior is unchanged, and this
   states its meaning.

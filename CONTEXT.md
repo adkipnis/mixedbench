@@ -50,7 +50,7 @@ One registry row under the contract: a design, a family, a prior and the splits,
 as `<source>/<object>/<model_index>`. The unit everything is computed and scored on.
 _Avoid_: dataset, task, posterior (posteriordb's word for the same thing)
 
-**Materialised problem**:
+**Materialized problem**:
 A problem written to files: one table of the coded columns in raw units, with the response,
 the trials, the grouping factors and the two split regimes, and beside it the record a table
 cannot hold (family, prior, column roles, the per-regime scales, the contract hash). The

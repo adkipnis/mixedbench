@@ -1,7 +1,7 @@
 """__init__.py defines mixedbench's suites: a problem by its id, from one call.
 
 A suite's list holds the contract hash of each of its problems.
-On first use a problem is built from its pinned source and materialised into the cache,
+On first use a problem is built from its pinned source and materialized into the cache,
 where later calls find it; files written by another contract are rebuilt the same way.
 A problem that builds to a hash off the list raises: its source or the code moved.
 
@@ -23,7 +23,7 @@ from pathlib import Path
 from typing import Literal
 
 from mixedbench import contract, registry
-from mixedbench.contract import Problem, contractHash, materialise, storedHash
+from mixedbench.contract import Problem, contractHash, materialize, storedHash
 from mixedbench.registry.row import Row, readCsv
 
 __all__ = ['Version', 'load', 'path', 'problems']
@@ -87,4 +87,4 @@ class _Suite:
                 f'{id} builds to contract hash {built}, suite {self.version} lists '
                 f'{self.hashes[id]}: its source or the code moved'
             )
-        materialise(problem, self.cache)
+        materialize(problem, self.cache)

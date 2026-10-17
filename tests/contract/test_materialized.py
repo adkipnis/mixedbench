@@ -1,4 +1,4 @@
-"""The materialised problem at its seam (#30): `materialise` writes one parquet and one JSON
+"""The materialized problem at its seam (#30): `materialize` writes one parquet and one JSON
 under the cache and returns the contract hash, `load` reads them back into the `Problem`
 (ADR 0001, 0003). The JSON is the package's interface, so a test may read it.
 
@@ -20,7 +20,7 @@ import pandas as pd
 import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
-from mixedbench.contract import Problem, contractHash, load, materialise
+from mixedbench.contract import Problem, contractHash, load, materialize
 from mixedbench.registry.row import Row, SlopeTerm
 
 ROW = Row(
@@ -89,7 +89,7 @@ def test_a_loaded_problem_equals_the_built_one_and_carries_the_written_hash(
     problem the contract built, numeric levels, trials and ordinal thresholds included, and its
     hash the one the suite lists."""
     built = fixtureProblem(response_type)
-    written = materialise(built, tmp_path)
+    written = materialize(built, tmp_path)
     loaded = load(built.id, tmp_path)
     assertSameProblem(loaded, built)
     assert written == storedHash(tmp_path) == contractHash(loaded)
@@ -103,7 +103,7 @@ def test_loading_needs_only_the_two_files(tmp_path: Path, monkeypatch: pytest.Mo
     """A suite user needs the loader once per machine (ADR 0003): a cache holding nothing but
     the problem's files loads with every socket refused, no source tree and no `Loader`."""
     built = fixtureProblem()
-    materialise(built, tmp_path)
+    materialize(built, tmp_path)
     assert {p.name for p in tmp_path.rglob('*') if p.is_file()} == {'table.parquet', 'problem.json'}
     monkeypatch.setattr(socket, 'socket', refuseNetwork)
     assertSameProblem(load(built.id, tmp_path), built)
@@ -135,7 +135,7 @@ def test_the_hash_ignores_the_json_key_order(rng: random.Random) -> None:
     """The hash is over the record with sorted keys (ADR 0001), so a JSON rewritten by another
     tool, its keys in another order, is the same problem."""
     with tempfile.TemporaryDirectory() as cache:
-        written = materialise(PROBLEM, Path(cache))
+        written = materialize(PROBLEM, Path(cache))
         _, record = problemFiles(Path(cache))
         record.write_text(json.dumps(shuffled(json.loads(record.read_text()), rng)))
         assert contractHash(load(PROBLEM.id, Path(cache))) == written
@@ -159,7 +159,7 @@ def test_the_hash_ignores_the_parquet_writers_options(options: dict) -> None:
     (ADR 0001): the hash reads the arrays, so a table rewritten with other writer options, as a
     newer writer's defaults would, is the same problem."""
     with tempfile.TemporaryDirectory() as cache:
-        written = materialise(PROBLEM, Path(cache))
+        written = materialize(PROBLEM, Path(cache))
         table, _ = problemFiles(Path(cache))
         pd.read_parquet(table).to_parquet(table, index=False, **options)
         assert contractHash(load(PROBLEM.id, Path(cache))) == written
@@ -189,7 +189,7 @@ def test_a_changed_array_fails_to_load(column: str, row: int) -> None:
     including the factor codes and the regimes, fails loudly instead of loading as the problem
     the suite lists."""
     with tempfile.TemporaryDirectory() as cache:
-        materialise(PROBLEM, Path(cache))
+        materialize(PROBLEM, Path(cache))
         table, _ = problemFiles(Path(cache))
         perturbedCell(pd.read_parquet(table), column, row).to_parquet(table, index=False)
         with pytest.raises(ValueError, match=MISMATCH):
@@ -230,7 +230,7 @@ def test_a_changed_json_value_fails_to_load(data: st.DataObject) -> None:
     """Every value of the record is part of the problem: a changed family, prior parameter,
     level, scale or name fails loudly on load."""
     with tempfile.TemporaryDirectory() as cache:
-        materialise(PROBLEM, Path(cache))
+        materialize(PROBLEM, Path(cache))
         _, record = problemFiles(Path(cache))
         stored = json.loads(record.read_text())
         paths = [path for path in leafPaths(stored) if path != ('hash',)]
