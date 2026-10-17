@@ -26,7 +26,7 @@ ROW = Row(
 )  # fmt: skip
 
 
-def fixtureProblem() -> Problem:
+def fixtureProblem(row: Row = ROW) -> Problem:
     rng = np.random.default_rng(1)
     block = np.repeat([f'b{j:02d}' for j in range(GROUPS)], len(X))
     x = np.tile(X, GROUPS)
@@ -34,7 +34,7 @@ def fixtureProblem() -> Problem:
     intercepts = rng.normal(0, 0.5, GROUPS).repeat(len(X))
     y = 1 + 0.5 * x + 2 * sex + intercepts + rng.normal(0, 1, len(x))
     table = pd.DataFrame({'block': block, 'x': x, 'sex': np.array(['f', 'm'])[sex], 'y': y})
-    return Problem.build(ROW, table)
+    return Problem.build(row, table)
 
 
 @pytest.fixture(scope='session')
@@ -51,8 +51,9 @@ def rstack() -> None:
 # ==============================================================================================
 # the shapes of #63's fixtures
 # ==============================================================================================
-# one problem per recorded fixture in `fixtures/`, with its columns, factors and group counts,
-# so brms's labels in the fixture name the problem's aliases; the real-R tests fit them too
+# a problem per model shape, which the real-R tests fit.
+# `fixtures/` holds brms's draws of each but `binomialTrials`.
+# a problem keeps its fixture's columns, factors and group counts, so brms's labels name its aliases
 
 
 def gaussianMixed() -> Problem:
