@@ -1,15 +1,17 @@
 """`references.run` with real R (#65): a problem and a directory in, the problem's reference run
-out, its global draws under the contract's names. Each test fits a model, about a minute."""
+out, its global draws under the contract's names. Most tests fit a model, about ten seconds each."""
 
 from __future__ import annotations
 
 import hashlib
 import json
+import subprocess
 from dataclasses import asdict, fields
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import pyreadr
 import pytest
 from mixedbench import references
 from mixedbench.contract import Problem, contractHash
@@ -48,7 +50,6 @@ def test_a_passing_run_writes_4000_global_draws_over_4_chains(ran) -> None:
     draws = pd.read_parquet(dir / 'globals.parquet')
     assert outcome.outcome == 'passed'
     assert list(draws.columns) == ['chain', 'draw', *problem.globalDraws()]
-    assert len(draws) == 4000
     assert drawsPerChain(dir / 'globals.parquet') == FOUR_CHAINS
     assert (draws.dtypes.iloc[2:] == 'float64').all()
 
@@ -214,7 +215,8 @@ def test_an_r_error_ends_the_run_as_error_and_keeps_r_log(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """An adapt_delta above 1 makes cmdstanr stop, as a broken model would: the ladder stops at
-    the level that failed, since the next would fail the same way and burn the cap."""
+    the level that failed, since the next would fail the same way and burn the cap.
+    R.log still names the R session, which run.R prints before it fits."""
     levels = {
         level: {**settings, 'adapt_delta': 2} for level, settings in references.LEVELS.items()
     }
@@ -225,7 +227,9 @@ def test_an_r_error_ends_the_run_as_error_and_keeps_r_log(
     assert (outcome.outcome, outcome.level) == ('error', 0)
     assert [level['outcome'] for level in record(dir)['levels']] == ['error']
     assert sorted(path.name for path in dir.iterdir()) == ['R.log', 'run.json']
-    assert 'adapt_delta' in (dir / 'R.log').read_text()
+    log = (dir / 'R.log').read_text()
+    assert 'brms_2.23.0' in log
+    assert 'adapt_delta' in log
 
 
 # ==============================================================================================
@@ -258,18 +262,23 @@ def test_each_model_shape_writes_its_draws_stan_program_and_data(shape, tmp_path
     assert json.loads((dir / 'standata.json').read_text())['N'] == len(problem.table)
 
 
-def test_nested_factors_split_between_full_draws_and_summaries_at_the_threshold(
+def test_a_summarized_factor_reaches_locals_summary_and_stays_out_of_draws_rds(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """With the threshold lowered to 20 groups, `block`'s 12 groups keep their draws and
-    `block:plot`'s 36 reach `locals_summary.parquet`, so one small fit covers both files.
-    12 blocks, not the 6 of the offline fixture, so level 0 fits without a divergence."""
-    monkeypatch.setattr(Handoff, 'FULL_GROUPS', 20)
-    problem = nestedProblem(blocks=12)
-    assert references.run(problem, tmp_path).outcome == 'passed'
-    dir = problemDir(tmp_path, problem)
-    effects = pd.read_parquet(dir / 'locals.parquet')
-    summary = pd.read_parquet(dir / 'locals_summary.parquet')
-    assert list(effects.columns) == ['chain', 'draw', *[f'r[block][{j}]' for j in range(12)]]
+    """With the threshold lowered to 10 groups, `block`'s 6 groups keep their draws and
+    `block:plot`'s 18 are summarized. `draws.rds` holds no draw of a summarized factor, which
+    would run to gigabytes at tens of thousands of groups. run.R runs on its own here, so the
+    test reads its raw file."""
+    monkeypatch.setattr(Handoff, 'FULL_GROUPS', 10)
+    handoff = Handoff(nestedProblem())
+    handoff.write(tmp_path, tinyLevels()[0])
+    run_r = Path(references.__file__).with_name('run.R')
+    fitted = subprocess.run(['Rscript', run_r, tmp_path], capture_output=True, text=True)
+    assert fitted.returncode == 0, fitted.stderr
+    raw = pyreadr.read_r(tmp_path / 'draws.rds')[None]
+    files = handoff.read(tmp_path)
+    assert [column for column in raw.columns if column.startswith('r_g2[')] == []
+    assert list(files['locals'].columns) == ['chain', 'draw', *[f'r[block][{j}]' for j in range(6)]]
+    summary = files['locals_summary']
     assert list(summary.columns) == ['name', 'mean', 'sd', 'q5', 'q25', 'q50', 'q75', 'q95']
-    assert summary['name'].tolist() == [f'r[block:plot][{j}]' for j in range(36)]
+    assert summary['name'].tolist() == [f'r[block:plot][{j}]' for j in range(18)]
