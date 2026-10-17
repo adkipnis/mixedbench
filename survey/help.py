@@ -127,7 +127,7 @@ class HelpPage:
         variable's value labels in code order."""
         lines = [meta.file_label or '']
         for variable, label in meta.column_names_to_labels.items():
-            if label is not None:  # pyreadstat lists every variable, labelled or not
+            if label is not None:  # pyreadstat lists every variable, labeled or not
                 lines.append(f'{variable}: {label}')
         for variable, values in meta.variable_value_labels.items():
             ordered = ', '.join(str(values[code]) for code in sorted(values))

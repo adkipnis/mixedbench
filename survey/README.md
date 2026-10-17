@@ -98,7 +98,7 @@ dropped:
   record the frame reader skips.
 
 The sources of each tier are the entries of `sources.yaml`. Tier D has one `url` entry per
-file, labelled `<paper_id>_<repository>` (`_2`, `_3` for further files). Gelman's and West's
+file, labeled `<paper_id>_<repository>` (`_2`, `_3` for further files). Gelman's and West's
 sites refuse scripts, so ARM data come through `stan_arm` and `ros`.
 
 ## File contracts
@@ -244,7 +244,7 @@ object and the deciding issue.
   Sparrows; m3#25); a repeating dyad the book fits (Crofoot; m3#25); a design level the first
   reading missed (lawn's `machine:speed`; m3#23); a genotype-by-environment term fitted as
   random (salmon.bunt; m3#22).
-- Not counted: strata and waves modelled as fixed (CES11; m3#23); field coordinates
+- Not counted: strata and waves modeled as fixed (CES11; m3#23); field coordinates
   (connolly.potato; m3#22), though a Latin square's rows and columns are blocks (OrchardSprays;
   m3#23); a factor that classifies rather than clusters (singer; m3#23); a dyad with one row
   per pair (Monks; m3#25).
@@ -262,7 +262,7 @@ object and the deciding issue.
 - Totals are `count`, 1–5 ratings `ordinal`, non-integer abundances `continuous`, a bounded
   score without trials `count` (eggprod, InstEval; m3#22–m3#26); a float-coded nominal stays
   `ordinal` (antibiotics; #11).
-- A documented normalised score is its own column (jsp_728; m3#25).
+- A documented normalized score is its own column (jsp_728; m3#25).
 - Survival: `continuous`, the event indicator in `ignore` and `Surv(time, event)` in the
   formula (catheter; m3#24). Discrete-time hazard: the indicator is the response, `PERIOD` a
   categorical covariate (cigarette; m3#25).

@@ -107,11 +107,11 @@ def test_the_outcome_is_the_references_row_of_the_last_level(ran) -> None:
     )
 
 
-def test_the_intercept_is_the_uncentred_one(ran) -> None:
-    """brms samples a centred intercept and reports the uncentred `b_Intercept`. Every group of
+def test_the_intercept_is_the_uncentered_one(ran) -> None:
+    """brms samples a centered intercept and reports the uncentered `b_Intercept`. Every group of
     the fixture holds the same design rows, so least squares gives the mixed model's fixed
     effects at any variances, and the posterior mean sits on it within Monte Carlo error
-    (4 standard errors at the bar's smallest bulk ESS, 400). The centred intercept is about 0,
+    (4 standard errors at the bar's smallest bulk ESS, 400). The centered intercept is about 0,
     since `y` is z-scored, and lies far outside that."""
     problem, _, dir = ran
     draws = pd.read_parquet(dir / 'globals.parquet')

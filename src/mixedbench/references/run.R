@@ -10,7 +10,7 @@
 #   locals_summary.rds  per random effect of a summarized factor its mean, sd and 5/25/50/75/95%
 #                       quantiles, where a factor is summarized
 #   chains.rds          per chain its divergences, tree-depth hits and E-BFMI, over every iteration
-#   summary.rds         per global variable its rank-normalised R-hat, bulk and tail ESS
+#   summary.rds         per global variable its rank-normalized R-hat, bulk and tail ESS
 #   meta.rds            the largest R-hat over the random effects
 #   model.stan          brms's Stan program
 #   standata.json       its Stan data, as CmdStan reads it

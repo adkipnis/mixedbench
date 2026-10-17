@@ -62,8 +62,8 @@ class Summarizer:
         self.dimensions = self.numeric(readCsv(self.root / 'dimensions.csv'), measured)
         self.columns = self.numeric(readCsv(self.root / 'columns.csv'), ('K',))
         self.rows = self.dimensions.drop_duplicates(['source', 'object', 'model_index'])
-        self.modelled = self.columns[self.columns['in_model'] == 'yes']
-        self.categoricals = self.modelled[self.modelled['type'].isin(CATEGORICAL_TYPES)]
+        self.modeled = self.columns[self.columns['in_model'] == 'yes']
+        self.categoricals = self.modeled[self.modeled['type'].isin(CATEGORICAL_TYPES)]
 
     def flush(self) -> None:
         quantiles = self.quantiles()
@@ -89,8 +89,8 @@ class Summarizer:
             'axes': axes,
             'imbalance': {'balanced_share': self.balancedShare()},
             'shares': {
-                'covariate_type': self.shares(self.modelled['type']),
-                'level': self.shares(self.modelled['level']),
+                'covariate_type': self.shares(self.modeled['type']),
+                'level': self.shares(self.modeled['level']),
                 'relation': self.shares(self.dimensions['relation']),
                 'response_type': self.shares(self.registry['response_type']),
                 'reader': self.shares(self.registry['reader']),
@@ -138,7 +138,7 @@ class Summarizer:
     def impliedColumns(self) -> dict:
         """Expected design columns of a model with T terms under the observed categorical share c
         and mean K − 1: T (c (K − 1) + (1 − c)), one column per non-categorical term."""
-        share = float(self.modelled['type'].isin(CATEGORICAL_TYPES).mean())
+        share = float(self.modeled['type'].isin(CATEGORICAL_TYPES).mean())
         perCategorical = float((self.categoricals['K'] - 1).mean())
         perTerm = share * perCategorical + (1 - share)
         return {
@@ -170,8 +170,8 @@ class Summarizer:
             fields[f'table_{PLACEHOLDERS.get(axis, axis)}'] = self.axisTable(axis, block, practice)
         fields |= {
             'table_relation': self.shareTable(self.dimensions['relation'], 'relation'),
-            'table_covariate_type': self.shareTable(self.modelled['type'], 'covariate type'),
-            'table_level': self.shareTable(self.modelled['level'], 'level'),
+            'table_covariate_type': self.shareTable(self.modeled['type'], 'covariate type'),
+            'table_level': self.shareTable(self.modeled['level'], 'level'),
             'table_k_distribution': self.shareTable(self.kBucketed(), 'K'),
             'table_response_type': self.shareTable(self.registry['response_type'], 'response type'),
             'table_reader': self.shareTable(self.registry['reader'], 'reader'),

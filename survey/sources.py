@@ -1,4 +1,4 @@
-"""The frame of the dimension survey: `sources.yaml` read into labelled pinned sources with
+"""The frame of the dimension survey: `sources.yaml` read into labeled pinned sources with
 their tier and cap, in frame order. Documented for humans in README.md; the pull and the merge
 both read it."""
 

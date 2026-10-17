@@ -834,7 +834,7 @@ dropped:
 # (REST API, lowest version per name, 10 <= rows <= 1e6, <= 500 columns, the synthetic BNG(...)
 # and seeded resamples left out), every UCI dataset (its `variables` list) and every PMLB
 # dataset at commit 7c1f4bd (its metadata.yaml features). A table is a hit when a column name,
-# tokenised, is a keyword alone or with an id-like token. Hits and the seeded draw of `cap` of
+# tokenized, is a keyword alone or with an id-like token. Hits and the seeded draw of `cap` of
 # them are in net_hits.csv; the kept hits are the `O` entries above. Six OpenML datasets
 # answered 500 to the features call twice and are unchecked (ids in net_hits.csv's run log).
 nets:

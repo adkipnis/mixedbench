@@ -1,6 +1,6 @@
 """The fixture problem of the references tests: gaussian, one random intercept on `block`, a
 continuous `x` and a binary `sex`. Every group holds the same ten design rows, so least squares
-and the mixed model's generalised least squares give the same fixed effects."""
+and the mixed model's generalized least squares give the same fixed effects."""
 
 from __future__ import annotations
 
