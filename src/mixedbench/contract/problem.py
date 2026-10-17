@@ -71,10 +71,10 @@ class Problem:
         """Raises `Refused` if the contract does not cover the row."""
         return _Builder(row, table).problem()
 
-    def standardised(self, regime: Regime = 'full') -> pd.DataFrame:
-        """Returns the standardised model columns of the rows a fit in `regime` sees.
+    def standardized(self, regime: Regime = 'full') -> pd.DataFrame:
+        """Returns the standardized model columns of the rows a fit in `regime` sees.
         Continuous columns are z-scored with the regime's scales.
-        An interaction is the product of its standardised parts,
+        An interaction is the product of its standardized parts,
         see Aiken & West (1991) and Gelman (2008)."""
         columns = [*self.design, self.response]
         if self.trials:
@@ -203,7 +203,7 @@ class _Builder:
         'ordinal': ('cumulative', 'logit'),
     }
     CENSORED = ('cox', 'weibull')
-    # the prior on the standardised scale, one per brms class
+    # the prior on the standardized scale, one per brms class
     PRIOR = {
         'Intercept': Prior('normal', (0, 2.5)),
         'b': Prior('normal', (0, 2.5)),

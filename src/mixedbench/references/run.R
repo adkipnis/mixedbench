@@ -1,7 +1,7 @@
 # run.R fits one level of a problem's reference with brms through cmdstanr.
 #
 # Usage: Rscript run.R <dir>
-# <dir> holds the handoff from Python: table.csv (the aliased standardised table) and input.json
+# <dir> holds the handoff from Python: table.csv (the aliased standardized table) and input.json
 # (formula, family, link, prior per class, the level's settings, seed, the factors to
 # summarise). It prints sessionInfo() first, then writes back, one data frame per file since
 # pyreadr reads no R lists, every draw thinned as the level's settings say:

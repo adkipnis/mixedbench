@@ -1,6 +1,6 @@
 """handoff.py defines what passes between a problem and the R script that fits its reference.
 
-Python writes the standardised table and the model for R.
+Python writes the standardized table and the model for R.
 The table's columns take aliases brms never rewrites (`y`, `x1`, `g1`, ...).
 The model is written in JSON format: the formula, family and link, the prior per class,
 a level's settings, the seed and the factors R summarises.
@@ -82,8 +82,8 @@ class Handoff:
     def write(self, dir: Path, settings: dict) -> None:
         """Writes `table.csv` and `input.json` for the R script into `dir`.
         `settings` are a level's arguments to `brm()`."""
-        standardised = self.problem.standardised('full')
-        table = standardised[list(self.aliases.values())]
+        standardized = self.problem.standardized('full')
+        table = standardized[list(self.aliases.values())]
         table.columns = list(self.aliases)
         table.to_csv(dir / 'table.csv', index=False)
         priors = {name: self._brmsPrior(prior) for name, prior in self.problem.prior.items()}

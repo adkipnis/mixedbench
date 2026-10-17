@@ -408,30 +408,30 @@ def test_a_level_present_only_in_held_rows_leaves_an_all_zero_column_in_that_reg
 
 
 # ==============================================================================================
-# the standardised table
+# the standardized table
 # ==============================================================================================
 Z = (np.array(X) - np.mean(X)) / np.std(X, ddof=1)  # (12,) `x` z-scored over every row
 
 
 @given(sizes=SIZES, source=SOURCES)
-def test_each_continuous_column_of_a_standardised_table_has_mean_0_and_sd_1(
+def test_each_continuous_column_of_a_standardized_table_has_mean_0_and_sd_1(
     sizes: list[int], source: str
 ) -> None:
-    """References and scores are stated on the standardised scale.
+    """References and scores are stated on the standardized scale.
     Each regime z-scores `x` and `y` over its own rows."""
     problem = Problem.build(groupedRow(source), groupedTable(sizes))
     for regime in problem.scales:
-        table = problem.standardised(regime)
+        table = problem.standardized(regime)
         for column in ('x', 'y'):
             assert table[column].mean() == pytest.approx(0, abs=1e-12)
             assert table[column].std() == pytest.approx(1)
 
 
-def test_an_interaction_is_the_product_of_its_standardised_parts() -> None:
+def test_an_interaction_is_the_product_of_its_standardized_parts() -> None:
     """`x:sex` is the z-scored `x` times the 0/1 `sex`.
     Z-scoring the raw product would give another column."""
     problem = Problem.build(fixtureRow(), fixtureTable())
-    table = problem.standardised()
+    table = problem.standardized()
     assert table['x:sex'].to_numpy() == pytest.approx(Z * np.array(SEX))
     assert table['sex'].tolist() == SEX
 
@@ -443,17 +443,17 @@ def test_an_interaction_with_a_level_holding_a_colon_finds_its_parts() -> None:
     table['diet'] = table['diet'].cat.rename_categories({'b': 'b:c'})
     row = fixtureRow(interactions=('diet:x',))
     problem = Problem.build(row, table)
-    standardised = problem.standardised()
+    standardized = problem.standardized()
     assert problem.design[-2:] == ('diet[b:c]:x', 'diet[c]:x')
-    assert standardised['diet[b:c]:x'].to_numpy() == pytest.approx(Z * np.array([0, 1, 0] * 4))
+    assert standardized['diet[b:c]:x'].to_numpy() == pytest.approx(Z * np.array([0, 1, 0] * 4))
 
 
-def test_a_three_way_interaction_is_the_product_of_its_three_standardised_parts() -> None:
+def test_a_three_way_interaction_is_the_product_of_its_three_standardized_parts() -> None:
     """Some candidates carry a three-way term (`MASS/npk/1`), so a name holds more than two parts."""
     row = fixtureRow(interactions=('x:sex:diet',))
-    standardised = Problem.build(row, fixtureTable()).standardised()
+    standardized = Problem.build(row, fixtureTable()).standardized()
     expected = Z * np.array(SEX) * np.array([0, 1, 0] * 4)
-    assert standardised['x:sex:diet[b]'].to_numpy() == pytest.approx(expected)
+    assert standardized['x:sex:diet[b]'].to_numpy() == pytest.approx(expected)
 
 
 # ==============================================================================================
@@ -481,7 +481,7 @@ def test_the_global_draws_expand_each_cor_block_to_its_pairs_in_brmss_order() ->
 
 def test_the_local_draws_name_each_group_by_its_code_in_the_table() -> None:
     """Random effects are named like their `sd`, with the group's code.
-    So a group's draws join its rows through the factor column of the standardised table."""
+    So a group's draws join its rows through the factor column of the standardized table."""
     row = fixtureRow(response='n', response_type='count', random_slopes=SLOPES)
     problem = Problem.build(row, fixtureTable())
     local = problem.localDraws()
@@ -497,7 +497,7 @@ def test_the_local_draws_name_each_group_by_its_code_in_the_table() -> None:
         'r[diet[b]|block:plot][1]',
     )
     assert len(local['block:plot']) == 3 * 6
-    codes = problem.standardised()['block:plot']
+    codes = problem.standardized()['block:plot']
     assert {f'r[block:plot][{j}]' for j in codes} == set(local['block:plot'][:6])
 
 

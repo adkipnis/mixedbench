@@ -35,7 +35,7 @@ Findings of #10's code read, checked at the source; `shards/registry_code_read.c
   phylogeny on `Species_Latin`; `high`.
 - valdebenito_2020_dryad_2 #1–3: corrected; the deposited code's `random = ~site + j_date`,
   `j_date` the day of year (72 levels), `date` to `ignore`; `high`.
-- johannes_2021b_osf_6 #3: corrected in notes; predictors centred, not standardised.
+- johannes_2021b_osf_6 #3: corrected in notes; predictors centred, not standardized.
 - gumundsdottir_2026_osf*: corrected; `(1 | c | NewID)` in location and scale; _6's slope
   variable `time` built from `wave` (0, 1, 2, 3, 6), `wave=continuous`.
 - naranowicz_2024_osf_2 #1–2: stands, the finding was wrong; the deposited script is complete
