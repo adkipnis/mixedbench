@@ -211,7 +211,7 @@ reading's open disagreements, four to eight per tier.
 - The text reader read a whitespace-separated file with pandas' python engine, which ignores
   quotes under a regex separator: R's `write.table` output with a quoted string holding a space
   (stan_arm's `ideo2.dat`: `"NEW HAM"`) did not parse, and quoted names kept their quotes. The
-  C engine honours quotes as read.table does.
+  C engine honors quotes as read.table does.
   - `ideo2.dat` reads again at 10268 × 22 (its exclusion stands); ros's `hibbs.dat` and
     `hdi.dat` read for the first time; quoted column names in 17 ARM, ROS and Diggle files lose
     their quotes; no registry object changed.
@@ -325,7 +325,7 @@ reading's open disagreements, four to eight per tier.
   merged registry on response, response type, trials, grouping factors, covariates,
   interactions, formula and published_model, and writes `agreement.csv`.
   - `;`-lists compare as sets, `a:b` unordered, formulas without whitespace; this
-    normalisation changed no count, so every disagreement is a real change.
+    normalization changed no count, so every disagreement is a real change.
   - hox SocsLong.sav, taken out of the registry, disagrees on every field (the per-batch
     tallies above left it out of response and grouping).
   - rabe_hesketh coursework #1, aligned to `written` by batch 3's siblings before batch 4

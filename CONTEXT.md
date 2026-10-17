@@ -123,7 +123,7 @@ the last, until the diagnostics bar passes or the compute cap ends the run.
 _Avoid_: retry, escalation schedule
 
 **Diagnostics bar**:
-The convergence a run must reach to become a reference posterior: rank-normalised R-hat,
+The convergence a run must reach to become a reference posterior: rank-normalized R-hat,
 bulk and tail effective sample size on every global parameter, and no divergences.
 _Avoid_: threshold, convergence check
 

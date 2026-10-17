@@ -27,7 +27,7 @@ date: 2026-10-08
 
 **Bar.**
 
-- Decision: rank-normalised R-hat < 1.01, bulk and tail ESS ≥ 400 on every global parameter,
+- Decision: rank-normalized R-hat < 1.01, bulk and tail ESS ≥ 400 on every global parameter,
   zero divergences.
 - Why stricter than v0.5's escalation trigger (1.05, 100): these draws are published, not
   consumed once.

@@ -41,7 +41,7 @@ def writeShard(path: Path, rows: list[dict]) -> Path:
 
 def test_a_cran_sources_license_is_read_from_its_description(merger):
     """CRAN entries of sources.yaml carry no `license:` key: the merge reads the package's own
-    DESCRIPTION through the loader and normalises it (ADR 0003)."""
+    DESCRIPTION through the loader and normalizes it (ADR 0003)."""
     rows = readRows(FIXTURES / 'registry_herds.csv')
     rows[0] |= {'source': 'pens', 'object': 'herds'}
     mergeShard(merger, writeShard(merger.survey / 'shards' / 'registry_pens.csv', rows[:1]))

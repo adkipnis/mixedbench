@@ -68,6 +68,6 @@ never committed, never uploaded, rebuilt from the pins. Committing or hosting th
 would be redistribution with another file extension. The suite commits ids and contract
 hashes only, and a test rebuilds a sample and compares them. The materialized files are the
 package's interface to a problem: `Problem` loads from them, and metabeta never fetches a
-source. The weekly fetch opens one GitHub issue per failing source, labelled `registry`, and
+source. The weekly fetch opens one GitHub issue per failing source, labeled `registry`, and
 closes it when the source returns; item 9's retirements read that history. A committed log
 was rejected because it would make a bot the author of registry commits.

@@ -387,8 +387,8 @@ class PandasFile:
         try:
             return pd.read_stata(file)
         except struct.error:
-            labelled = {'apply_value_formats': True, 'formats_as_category': True}
-            table, _ = pyreadstat.read_dta(str(file), **labelled)
+            labeled = {'apply_value_formats': True, 'formats_as_category': True}
+            table, _ = pyreadstat.read_dta(str(file), **labeled)
             return table
 
     @staticmethod
@@ -396,13 +396,13 @@ class PandasFile:
         """Value labels that cover every value of a column make it a categorical in code order.
         Labels on a scale's extremes alone (`lowest`, `highest`) leave it numeric."""
         table, meta = pyreadstat.read_sav(str(file))
-        labelled = {}
+        labeled = {}
         for column, labels in meta.variable_value_labels.items():
             present = set(table[column].dropna())
             if present <= set(labels):  # pandas would make every value a category
                 levels = [labels[code] for code in sorted(labels)]
-                labelled[column] = pd.Categorical(table[column].map(labels), categories=levels)
-        return table.assign(**labelled)
+                labeled[column] = pd.Categorical(table[column].map(labels), categories=levels)
+        return table.assign(**labeled)
 
     @staticmethod
     def _readDelimited(file: Path) -> pd.DataFrame | None:
@@ -412,7 +412,7 @@ class PandasFile:
         options = {'encoding': 'utf-8-sig', 'encoding_errors': 'replace'}
         lines, header = PandasFile.banner(file)
         # the sniffer needs the python engine, which ignores quotes under a regex separator; the C
-        # engine honours them, as read.table does (R's write.table output)
+        # engine honors them, as read.table does (R's write.table output)
         sep, engine = None, 'python'
         if not any(mark in header for mark in ',;\t|'):  # columns aligned with runs of spaces
             sep, engine = r'\s+', 'c'

@@ -85,7 +85,7 @@ any rule is a new suite version, never a recomputation.
 
 **Hash.**
 
-- Decision: the contract hash is the sha256 over a canonical serialisation of the
+- Decision: the contract hash is the sha256 over a canonical serialization of the
   materialized problem (the JSON with sorted keys, then every column in table order as its
   name, dtype and little-endian bytes, floats as float64) and the contract version, which
   is the package major version. The brms and CmdStan pins leave the hash: they are part
@@ -135,8 +135,8 @@ any rule is a new suite version, never a recomputation.
 **The intercept's prior.**
 
 - Decision: the intercept's prior, Normal(0, 2.5), is on the intercept at the mean of every
-  design column over the rows a fit sees (brms's default centring), not at the zero of the
-  binary and contrast columns. The draws report the uncentred intercept, `Intercept`, as
+  design column over the rows a fit sees (brms's default centering), not at the zero of the
+  binary and contrast columns. The draws report the uncentered intercept, `Intercept`, as
   brms does.
 - Why: it is brms's default and current practice; on z-scored covariates the two coincide,
   and only the binary and contrast columns move the intercept. metabeta adopts it separately.
