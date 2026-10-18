@@ -386,3 +386,62 @@ case.
 - **24. cake — stands.** The help’s `fm1` matches exactly. [Source](https://github.com/cran/lme4/blob/2.0-6/man/cake.Rd).
 
 - **25. schiz — retain raw `imps`/continuous under the earlier rule, but set `published_model=no` for that adaptation and record the actual source formula.** Source: `meologit impso c.weeksqrt##i.treatment || id:, or`, where `impso` is the four-category recode and `weeksqrt=sqrt(week)`; the raw-imps/linear-week model is not the source fit. [Chapter 11 do-file](https://www.stata-press.com/data/mlmus4/ch11.do).
+
+## Hand sample 2, batch 4 (#61, 2026-10-18)
+
+`shards/registry_hand_sample_2_4.csv`, `registry_hand_sample_2_4_siblings.csv`. Taken on review:
+SpidersHongKongV2 #3 follows #1 and #2 as a sibling. The refusals go to `suite/admit.py`, each rule
+also for the rows it covers outside the sample: frequency weights for keen.potatodamage, thailand
+(`wt1`) and twin_hay (`freq`); the phylogenetic covariance for Primates301 #2 and #1; the choice
+model for elections; the item-response model for cito. stata_dialyzer's notes already open with the
+nonlinear marker. fat waits for a decision: the contract cannot derive `after`.
+
+- 1. **keen.potatodamage — refuse under the current contract.** The documented ordinal-probit model requires frequency weights `weights=count`; treating each aggregated cell once changes its likelihood. Other listed fields stand. [Source](https://kwstat.github.io/agridat/reference/keen.potatodamage.html).
+
+- 2. **Biodiversity — `published_model=no` for the listed candidate.** Chapter 4 fits GLS with `varIdent`, without a mesocosm random intercept; its initial formula is `Concentration ~ Biomass*fTreatment*fNutrient`, while the listed fixed part appears in intermediate model `M5.Full`. [Author code](https://highstat.com/Books/Book2/ZuurMixedModellingAllRCode.zip).
+
+- 3. **Dissertations — stands as an unpublished candidate.** The source documents dissertation length, program and filing year but supplies no fitted model. [Source](https://github.com/rmcelreath/rethinking/blob/ac1b3b2cda83f3e14096e2d997a6e30ad109eeee/man/Dissertations.Rd).
+
+- 4. **lillemo.wheat — `published_model=no`.** The formula is inferred; the help uses transformations, GGE, median polish and ranks, and raw `score` combines four measurement scales. [Source](https://kwstat.github.io/agridat/reference/lillemo.wheat.html).
+
+- 5. **connolly.potato — stands as an unpublished candidate.** The documented fit is `yield ~ 0 + gen + rep + cov`, with fixed blocks and a derived neighbour covariate. [Source](https://kwstat.github.io/agridat/reference/connolly.potato.html).
+
+- 6. **elections — refuse the current ordinal model.** The documented analysis uses `chosen = (rank==1)` in conditional/mixed choice models, with choice sets indexed by `occ`, party-specific fixed effects and a respondent-level random distance coefficient; it does not fit the listed respondent/constituency intercept model of ranks. [Official solutions, exercise 12.4](https://www.stata-press.com/books/multilevel-longitudinal-modeling-stata/mlmus4-vol2-solutions.pdf#page=22).
+
+- 7. **rugby — stands with its existing joint-model qualification.** The two Poisson responses share centred team attack/defence vectors; defence enters the predictor with a plus sign. [Source code](https://github.com/pymc-devs/pymc-examples/blob/17c8f90dc90691b41587dfdf477698d74cf5c18c/examples/case_studies/rugby_analytics.myst.md#L240-L271).
+
+- 8. **teachers_pp — `published_model=no` for the listed candidate.** The source’s person-period hazard analysis supplies no person random intercept; retain `(1|ID)` only as an inferred extension. [Source](https://stats.oarc.ucla.edu/r/examples/alda/r-applied-longitudinal-data-analysis-ch-10/).
+
+- 9. **stata_dialyzer — refuse as a nonlinear marginal model.** The documented fit has **no random effects**: `dialyzer` indexes exchangeable residual covariance, and the mean is nonlinear in its parameters. [menl, example 19](https://www.stata.com/manuals/memenl.pdf#page=71).
+
+- 10. **penicillin — stands.** Faraway explicitly fits `yield ~ treat + (1|blend)` in his author-hosted example. [Source](https://github.com/julianfaraway/rexamples/blob/main/mixed/penicillin.md).
+
+- 11. **SeaGrassV3 — `published_model=no` for the listed Gaussian candidate.** The documented analysis uses a zero-altered beta model for proportional coverage with nested random effects. [Author’s description](https://www.highstat.com/index.php/books2?catid=18&id=23&view=article).
+
+- 12. **growth — `published_model=yes`.** Exercise 3.3 explicitly fits `measure ~ age + girl + (1|idnr)`, where `girl=sex-1`, equivalent to the listed formula; correct the note because `indiv` repeats across sexes and is not a global duplicate of `idnr`. [Official scripts](https://www.stata-press.com/books/multilevel-longitudinal-modeling-stata/mlmus4-vol1-solutions-dofiles.zip).
+
+- 13. **UCBadmit — stands.** The pinned README’s `m_glmm1` explicitly uses binomial admissions out of applications, a fixed gender effect and department random intercepts. [Source](https://github.com/rmcelreath/rethinking/blob/ac1b3b2cda83f3e14096e2d997a6e30ad109eeee/README.md#L134-L153).
+
+- 14. **cito — refuse the current row: wrong response and required reshape.** `cito` is a binary school-level indicator, not the pupil test score; exercise 16.10 reshapes `y1`–`y18` into binary item responses and fits item/person/school effects. [Official scripts](https://www.stata-press.com/books/multilevel-longitudinal-modeling-stata/mlmus4-vol2-solutions-dofiles.zip).
+
+- 15. **homework — correct `covariates=homework;white;ratio;meanses`, `interactions=homework:meanses`, `random_slopes=homework|schid`, `formula=math ~ homework*meanses + white + ratio + (1+homework|schid)`, `published_model=yes`.** Exercise 4.3 fits this model with an unstructured intercept–slope covariance. [Official scripts](https://www.stata-press.com/books/multilevel-longitudinal-modeling-stata/mlmus4-vol1-solutions-dofiles.zip).
+
+- 16. **Sparrows — fields stand as an unpublished candidate; correct the note.** The author’s code illustrates the weight distribution and normal density, rather than establishing the claimed OLS model. [Author code, chapter 8](https://highstat.com/Books/Book2/ZuurMixedModellingAllRCode.zip).
+
+- 17. **Primates301 #2 — refuse as `covariance_structured_effect`.** The documented model uses phylogenetic covariance over species, with no genus random intercept, and fits standardized log brain/body/group-size measurements on 151 complete cases. [Source code](https://github.com/rmcelreath/rethinking/blob/ac1b3b2cda83f3e14096e2d997a6e30ad109eeee/book_code_boxes.txt#L3941-L4005).
+
+- 18. **fat — derive `after=pmax(time,0)`; correct `covariates=time;after`, `random_slopes=time|id;after|id`, `formula=fat ~ time + after + (1+time+after|id)`, `published_model=yes`.** Exercise 7.6 fits jointly correlated intercept and hinge slopes; the original `time`, `age`, `menarche` predictors are algebraically redundant. [Official scripts](https://www.stata-press.com/books/multilevel-longitudinal-modeling-stata/mlmus4-vol1-solutions-dofiles.zip).
+
+- 19. **SpidersHongKongV2 #1 — `published_model=no` for the listed random-site Poisson candidate.** Chapter 6 documents Poisson GLM comparisons and hurdle/ZAP analysis, which does not establish this particular GLMM; this matches sibling #2’s convention. [Author’s contents](https://www.highstat.com/Books/BGS/ZIM/pdfs/TOCOnly.pdf#page=4).
+
+- 20. **ROS state vote/income — stands as an unpublished candidate.** The pinned HDI notebook loads these data for descriptive work and fits no Democratic-share panel model. [Source](https://github.com/avehtari/ROS-Examples/blob/d35682d03d508e19ab60131e5c123643aac32bc9/HDI/hdi.Rmd).
+
+- 21. **Epilepsy — use the directly documented reduced model: `covariates=treat;lbas`, `formula=seizure ~ treat + lbas + (1|subject)`; `published_model=yes`.** Hox’s reported Poisson model retains treatment and log baseline, with a subject intercept; age and visit are absent from the reported specification. [Author’s chapter, table 7.3](https://www.joophox.net/papers/7Ordinal.pdf#page=10).
+
+- 22. **PolychaetaV3 — `response_type=binary`, `published_model=no` for the random-location candidate.** All responses are 0/1, and the book documents a Bernoulli GLM rather than the claimed Poisson/NB GLMM. [Author’s contents, chapter 3](https://www.highstat.com/Books/BGS/GLMGLMM/GLMGLMM_TOC.pdf#page=2).
+
+- 23. **birthwt — correct `covariates=age`, `formula=birthwt ~ age + (1|mother)`, `published_model=yes`.** Exercise 3.5 explicitly fits the age-only random-intercept model; `birthorder` is absent. [Official scripts](https://www.stata-press.com/books/multilevel-longitudinal-modeling-stata/mlmus4-vol1-solutions-dofiles.zip).
+
+- 24. **Squid — stands as an unpublished candidate under the existing cluster convention.** The documented analysis is GLS with `DML*factor(MONTH)` and month-specific variance functions, rather than a random month intercept. [Author code, chapter 4](https://highstat.com/Books/Book2/ZuurMixedModellingAllRCode.zip).
+
+- 25. **Crofoot — fields stand as an unpublished candidate; remove the book-fit claim.** Chapter 14’s fitted dyadic example uses `KosterLeckie` gifts, which does not establish this Crofoot formula. [Source code](https://github.com/rmcelreath/rethinking/blob/ac1b3b2cda83f3e14096e2d997a6e30ad109eeee/book_code_boxes.txt#L3719-L3756).
