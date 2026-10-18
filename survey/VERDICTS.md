@@ -323,3 +323,63 @@ contrast to the source's two correlated contrasts.
 - **23. Model fields stand; deduplicate with row 25**, including their model-1 counterparts: all 240 records match through `postlet→yt_1`, `regular→yt_2`, `encour→z`, and `siteset=site+5*(setting-1)`, producing the same nine groups. [Source construction](https://github.com/stan-dev/example-models/blob/e5b7d9e2e9ecc375805c7e49e4a4d4c1882b5e3b/ARM/Ch.23/23.4_InstrumentalVariables%26MultilevelModeling.R)
 - **24. Stands.** The documented formula matches; ordinal describes the seven-point response despite the Gaussian fit. [Documentation](https://cran.r-project.org/web/packages/languageR/languageR.pdf)
 - **25. Model fields stand; absorb the DTA aliases for both response models and remove the superseded pretest claim.** The selected `sesame_street1` model omits pretest; the separate pretest extension’s fitting call is commented out. [Source code](https://github.com/stan-dev/example-models/blob/e5b7d9e2e9ecc375805c7e49e4a4d4c1882b5e3b/ARM/Ch.23/23.4_InstrumentalVariables%26MultilevelModeling.R)
+
+## Hand sample 2, batch 3 (#61, 2026-10-18)
+
+`shards/registry_hand_sample_2_3.csv`, `registry_hand_sample_2_3_siblings.csv`. Taken on review:
+cropareas #1 follows #2 and Gcsemv #2 gets the clarified notes, as siblings. ZooData, deferred to
+Claude: the book's table of contents confirms section 7.4.2, a binomial GLMM with a Zoo random
+intercept on standardized covariates; the fixed part becomes model M1 of the source paper, Quirke,
+O'Riordan and Zuur (2012, Table 3), whose 12 covariates leave out Visual and Diet for collinearity.
+Not yet applied: Gcsemv's -1 sentinels. The same 1,905 pupils are also mlmRev Gcsemv, rabe_hesketh
+coursework.dta and cmm_sci SCI.DAT, and their fold is open.
+
+- **1. towerlondon — stands.** The Stata example confirms both nested intercepts and the stated fixed effects. [Manual](https://www.stata.com/manuals18/me.pdf#page=175).
+
+- **2. Gcsemv — treat explicitly documented response sentinels as missing; retain the row.** Convert `-1` before response filtering: 202 written scores become missing, leaving 1,703 observed responses. Other fields stand; clarify that the formula represents one component of the joint written/coursework model, with correlated school effects and pupil residuals. Apply this sentinel rule to the coursework case too. [Goldstein, §2.5](https://www.bristol.ac.uk/media-library/sites/cmm/migrated/documents/reviewwinbugs.pdf#page=11).
+
+- **3. rabbit — `published_model=no` for the random-block rendering; correct the notes.** This is a balanced incomplete-block design; Faraway’s documented fit is `lm(gain ~ block + treat, data=rabbit)`. The claimed ELM mixed fit was not verified. [Author’s book, §16.5](https://julianfaraway.github.io/faraway/PRA/pra.pdf).
+
+- **4. Genetics — stands.** The help example explicitly fits the stated nested model. [Source](https://github.com/cran/SASmixed/blob/1.0-5/man/Genetics.Rd).
+
+- **5. sheet 14 — `response=metasum`; `covariates=grade;female;age;immig;escs;private`; `published_model=yes`.** Source formula: `METASUM ~ grade + sex + AGE + IMMIG + ESCS + public + (1|SCHOOLID)`, where `sex=female`, `public=private`, and `SCHOOLID=school`; other fields stand. The chapter script establishes this response and these predictors. [Source](https://www.stats.ox.ac.uk/~snijders/pisa_b.R).
+
+- **6. Dinosaurs — fields stand as an inferred candidate, with `published_model=no`; correct the notes.** Remove the unsupported attribution to a book fit: the package documentation describes the data but supplies no model supporting the correlated age slope. [Source](https://github.com/rmcelreath/rethinking/blob/ac1b3b2cda83f3e14096e2d997a6e30ad109eeee/man/Dinosaurs.Rd).
+
+- **7. epilepsy — stands.** The first `mepoisson` example matches, including the precomputed `lbas_trt` column. [Manual](https://www.stata.com/manuals18/me.pdf#page=385).
+
+- **8. Soils — `published_model=no`; other fields remain the stated blocked-design adaptation.** The source describes a blocked MANOVA design but does not state or fit this random-Block model. [Source](https://github.com/cran/carData/blob/3.0-6/man/Soils.Rd).
+
+- **9. clippings — stands.** The source confirms categorical nitrogen, thatch and block, with `wpunit=group(nitrogen block)`. [Manual](https://www.stata.com/manuals18/me.pdf#page=25).
+
+- **10. pairwise_tests — fields stand, including `published_model=no`; correct the notes.** For this dataset, the tests exercise within-Drug and between-Gender comparisons separately; the claimed combined mixed-design call is absent, and the random-intercept formula is inferred. [Source](https://github.com/raphaelvallat/pingouin/blob/bb1cb22a3137f5864341c7a06cd030c072a170d4/tests/test_pairwise.py#L419).
+
+- **11. cbpp — stands.** Response, trials and formula match source model `m1`. [Source](https://github.com/cran/lme4/blob/2.0-6/man/cbpp.Rd).
+
+- **12. ElectricCompany — fields stand, including `published_model=no`; correct the notes.** The notebook fits grade-specific main-effect models and interaction models; it does not fit the pooled grade-plus-pair-random-intercept formula recorded here. [Source](https://github.com/avehtari/ROS-Examples/blob/d35682d03d508e19ab60131e5c123643aac32bc9/ElectricCompany/electric.Rmd).
+
+- **13. star1 #2 — stands as an inferred model with `published_model=no`.** The unique class identifiers support the stated school/class grouping. [Download](https://www.stata-press.com/data/mlmus4/mlmus4.zip).
+
+- **14. sheet 16 — stands.** The chapter script confirms both fixed interactions and the stated joint-response covariance structure. [Source](https://www.stats.ox.ac.uk/~snijders/ch16.r).
+
+- **15. dative — stands.** The help’s binomial `glmer` example matches the ten predictors and Verb intercept. [Source](https://github.com/cran/languageR/blob/1.6/man/dative.Rd).
+
+- **16. Dyestuff — fields stand; correct the notes.** The help actually fits `lmer(Yield ~ 1|Batch, Dyestuff)`, equivalent to the recorded formula; remove “fits no model.” [Source](https://github.com/cran/lme4/blob/2.0-6/man/Dyestuff.Rd).
+
+- **17. Moralizing_gods — fields stand; correct the notes.** An Rd file exists, and `population` is already log population; the recorded mixed formula remains unpublished and inferred. [Source](https://github.com/rmcelreath/rethinking/blob/ac1b3b2cda83f3e14096e2d997a6e30ad109eeee/man/Moralizing_gods.Rd).
+
+- **18. vision — stands.** Faraway’s code explicitly fits `acuity ~ power + (1|subject) + (1|subject:eye)`; replace “recalled” with this reference. [Author’s example](https://github.com/julianfaraway/rexamples/blob/main/mixed/visionfreq.md).
+
+- **19. cropareas #2 — `covariates=cornpix;soypix`; `formula=soyhec ~ cornpix + soypix + (1|county)`; `published_model=yes`.** The published 1988 model uses both satellite predictors; apply the corresponding two-predictor correction to cropareas #1 too. [Original publication](https://www.tandfonline.com/doi/abs/10.1080/01621459.1988.10478561), [publisher’s corn example](https://www.stata-press.com/books/multilevel-longitudinal-modeling-stata/mlmus4-vol1-solutions.pdf#page=20).
+
+- **20. piepho.barley.uniformity — `published_model=no` for the displayed reduction; retain the full source specification in formula/notes.** Source: `yield ~ 1`, `random=~x+y+ar1(x):ar1(y)`, `residual=~units`, with `x=factor(col)` and `y=factor(row)`; dropping the spatial term changes the fitted model. [Source](https://github.com/cran/agridat/blob/1.26/man/piepho.barley.uniformity.Rd).
+
+- **21. sheet 03C — `covariates=—`; `formula=langpost ~ 1 + (1|school)` as the language component of the empty joint language/arithmetic model; `published_model=yes`.** Retain correlated school effects and within-pupil residuals in the notes: Example 3.7 concerns within/between correlations and includes no IQ, SES or minority regression. [Source](https://www.stats.ox.ac.uk/~snijders/CH3ex7.obe).
+
+- **22. InstEval — fields stand; remove the obsolete continuous-response sentence.** Keep `response_type=ordinal` under the settled rule; the official vignette confirms the formula. [Source](https://lme4.r-universe.dev/lme4/doc/lmerperf.html).
+
+- **23. ZooData — deferred; Claude should check the chapter 7 formula.** Number/binomial/Scans and Zoo are supported, but the exact fixed effects and `published_model=yes` remain unverified because the author’s code archive requires the unavailable book password. [Source page](https://www.highstat.com/index.php/books2?view=article&id=21&catid=18).
+
+- **24. cake — stands.** The help’s `fm1` matches exactly. [Source](https://github.com/cran/lme4/blob/2.0-6/man/cake.Rd).
+
+- **25. schiz — retain raw `imps`/continuous under the earlier rule, but set `published_model=no` for that adaptation and record the actual source formula.** Source: `meologit impso c.weeksqrt##i.treatment || id:, or`, where `impso` is the four-category recode and `weeksqrt=sqrt(week)`; the raw-imps/linear-week model is not the source fit. [Chapter 11 do-file](https://www.stata-press.com/data/mlmus4/ch11.do).
