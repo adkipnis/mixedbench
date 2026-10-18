@@ -159,15 +159,15 @@ coefficient of variation are readable companions.
 
 | covariate type | n | share |
 |---|---|---|
-| continuous | 898 | 44% |
-| binary | 662 | 33% |
+| continuous | 893 | 44% |
+| binary | 661 | 33% |
 | categorical | 382 | 19% |
 | ordered | 77 | 4% |
 
 | level | n | share |
 |---|---|---|
-| within | 1384 | 69% |
-| group | 635 | 31% |
+| within | 1380 | 69% |
+| group | 633 | 31% |
 
 Levels of the categorical covariates:
 
@@ -196,8 +196,8 @@ Levels of the categorical covariates:
 | 1 | 3 | 1% |
 
 Implied design columns of a model under the observed categorical share
-(0.227) and mean columns per categorical (6.736):
-9 terms 20.74 columns, 14 terms 32.26 columns.
+(0.228) and mean columns per categorical (6.736):
+9 terms 20.77 columns, 14 terms 32.31 columns.
 
 ## Design columns
 
@@ -230,8 +230,8 @@ its levels less one, an interaction the product.
 | response type | n | share |
 |---|---|---|
 | continuous | 445 | 63% |
-| binary | 114 | 16% |
-| count | 75 | 11% |
+| binary | 115 | 16% |
+| count | 74 | 10% |
 | ordinal | 45 | 6% |
 | binomial | 16 | 2% |
 | categorical | 12 | 2% |
@@ -245,8 +245,8 @@ its levels less one, an interaction the product.
 
 | published | n | share |
 |---|---|---|
-| yes | 512 | 72% |
-| no | 195 | 28% |
+| yes | 508 | 72% |
+| no | 199 | 28% |
 
 ## Tier D
 

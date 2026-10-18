@@ -916,13 +916,13 @@ imbalance:
   balanced_share: 0.392
 shares:
   covariate_type:
-    continuous: 0.445
+    continuous: 0.444
     binary: 0.328
-    categorical: 0.189
+    categorical: 0.19
     ordered: 0.038
   level:
-    within: 0.685
-    group: 0.315
+    within: 0.686
+    group: 0.314
   relation:
     single: 0.554
     crossed: 0.2
@@ -930,8 +930,8 @@ shares:
     mixed: 0.087
   response_type:
     continuous: 0.629
-    binary: 0.161
-    count: 0.106
+    binary: 0.163
+    count: 0.105
     ordinal: 0.064
     binomial: 0.023
     categorical: 0.017
@@ -941,8 +941,8 @@ shares:
     deparse: 0.01
     rdata: 0.007
   published_model:
-    'yes': 0.724
-    'no': 0.276
+    'yes': 0.719
+    'no': 0.281
 k_distribution:
   3: 0.349
   4: 0.214
@@ -976,7 +976,7 @@ k_distribution:
   30: 0.002
   47: 0.002
 implied_columns:
-  categorical_share: 0.227
+  categorical_share: 0.228
   mean_columns_per_categorical: 6.736
-  terms_9: 20.74
-  terms_14: 32.26
+  terms_9: 20.77
+  terms_14: 32.31
