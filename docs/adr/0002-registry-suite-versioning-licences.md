@@ -1,5 +1,5 @@
 ---
-status: accepted, amended 2026-10-09 and 2026-10-10
+status: accepted, amended 2026-10-09, 2026-10-10 and 2026-10-18
 date: 2026-10-08
 ---
 
@@ -111,3 +111,12 @@ correction a benchmark change.
 - Why: the first sample was drawn from the registry, and it corrected `covariates` in 13 of
   100 rows; the contract reads `covariates`, `interactions` and `random_slopes`, so such
   errors change problems. The suite rests on the candidates.
+
+## Amendment 2026-10-18: code under Apache-2.0
+
+- Decision: the code is licensed Apache-2.0; registry files, suite files and reference
+  posteriors stay CC BY 4.0, and the wheel is licensed `Apache-2.0 AND CC-BY-4.0`. Releases up
+  to 1.0.3 keep MIT.
+- Why: Apache-2.0 adds an explicit patent grant from every contributor, which company legal
+  teams look for, and licenses contributions under the same terms without a separate
+  agreement.
