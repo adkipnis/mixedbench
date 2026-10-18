@@ -14,7 +14,7 @@ A benchmark of posterior approximation and prediction for generalized linear mix
 ## What and why
 
 - Bayesian methods for GLMMs are hard to compare: each paper and released method tests them on its own few datasets. This benchmark aims to fix that.
-- mixedbench lists the documented mixed-effects models of 641 public tabular datasets with grouping structure, each downloaded at a fixed version.
+- mixedbench lists the documented mixed-effects models of 640 public tabular datasets with grouping structure, each downloaded at a fixed version.
 - A fixed set of rules turns each dataset into an inference problem ready to fit. Results of different methods are comparable.
 - From release 1.1, suites add reference posteriors to score against.
 
