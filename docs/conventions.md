@@ -236,9 +236,9 @@ The words are [`CONTEXT.md`](../CONTEXT.md)'s.
 
 | module | owns | imported by |
 |---|---|---|
-| `registry/row.py` | how a `registry.csv` row is written and read; nothing else parses a cell | `registry`, `contract/problem.py`, `suite`, `suite/admit.py`, `suite/drive.py`, the survey |
-| `registry/__init__.py` | the installed registry files as objects; `Tables` from a row to its typed table | `suite`, `suite/admit.py`, the survey |
-| `datasets/loader.py` | a pinned source to tables: download, checksum on every load, cache, declared column types | `registry`, the survey |
+| `registry/row.py` | how a `registry.csv` row is written and read; nothing else parses a cell | `registry/installed.py`, `contract/problem.py`, `suite`, `suite/admit.py`, `suite/drive.py`, the survey |
+| `registry/installed.py` | the installed registry files as objects; `Tables` from a row to its typed table | `registry`, through it `suite`, `suite/admit.py` and the survey |
+| `datasets/loader.py` | a pinned source to tables: download, checksum on every load, cache, declared column types | `registry/installed.py`, the survey |
 | `datasets/readers.py` | the file formats, a class per format family, and which files are data | `loader.py`, `survey/help.py` |
 | `datasets/deparse.py` | base R's `data/*.R` files, read without R | `readers.py` |
 | `contract/problem.py` | the contract's rules: typing, coding, family, prior, splits, scales, parameter names | `contract`, through it `suite`, `references`, `suite/admit.py` and the survey |
