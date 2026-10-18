@@ -1,9 +1,10 @@
 """drive.py defines suite 1.1's reference runs: one candidate's run, and every record collected.
 
-A cluster job runs one candidate, named by its 0-based index in the list as a scheduler array
-task knows it, or by its id.
-The draws stay under `references/`, never committed.
-`references.csv` is the suite's record of every run, failures included.
+A cluster job runs a single candidate.
+The candidate is named by its id,
+or by its 0-based index in the list as a scheduler array task knows it.
+The draws stay under `references/`.
+`references.csv` is the suite's record of every run (including failed ones).
 
 pipeline:
 ---------
