@@ -28,15 +28,11 @@ def registryRows() -> pd.DataFrame:
     return readCsv(registry.path('registry.csv'))
 
 
-def test_every_registry_file_resolves_to_an_existing_file() -> None:
-    paths = [registry.path(name) for name in FILES]
-    assert all(p.is_file() for p in paths)
-
-
 def test_the_directory_holds_exactly_the_registry_files() -> None:
     """cache/ and help/ beside the files in the repository never reach the package."""
-    dir = registry.path()
-    assert sorted(p.name for p in dir.iterdir()) == sorted(FILES)
+    entries = list(registry.path().iterdir())
+    assert sorted(p.name for p in entries) == sorted(FILES)
+    assert all(p.is_file() for p in entries)
 
 
 def test_quantiles_parse_with_the_keys_metabeta_asserts() -> None:
