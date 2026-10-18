@@ -396,7 +396,9 @@ also for the rows it covers outside the sample: frequency weights for keen.potat
 model for elections; the item-response model for cito. stata_dialyzer's notes already open with the
 nonlinear marker. fat, settled on review: the registry and the contract hold no derived column, so
 `covariates` and `random_slopes` keep `time`, the formula records the hinge `after = pmax(time, 0)`
-(`registry_hand_sample_2_4_fat.csv`), and the row is refused as a non-affine feature, as nlme Ovary.
+(`registry_hand_sample_2_4_fat.csv`). The row stays a candidate with fidelity `approximate`, as the
+polynomial growth models whose higher terms are dropped (nlme Wafer, Dialyzer); its linear part is a
+sub-model, unlike Ovary's periodic one.
 
 - 1. **keen.potatodamage — refuse under the current contract.** The documented ordinal-probit model requires frequency weights `weights=count`; treating each aggregated cell once changes its likelihood. Other listed fields stand. [Source](https://kwstat.github.io/agridat/reference/keen.potatodamage.html).
 
