@@ -916,8 +916,8 @@ imbalance:
   balanced_share: 0.392
 shares:
   covariate_type:
-    continuous: 0.444
-    binary: 0.328
+    continuous: 0.443
+    binary: 0.329
     categorical: 0.19
     ordered: 0.038
   level:
@@ -941,8 +941,8 @@ shares:
     deparse: 0.01
     rdata: 0.007
   published_model:
-    'yes': 0.719
-    'no': 0.281
+    'yes': 0.72
+    'no': 0.28
 k_distribution:
   3: 0.349
   4: 0.214
@@ -978,5 +978,5 @@ k_distribution:
 implied_columns:
   categorical_share: 0.228
   mean_columns_per_categorical: 6.736
-  terms_9: 20.77
-  terms_14: 32.31
+  terms_9: 20.78
+  terms_14: 32.33
