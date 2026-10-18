@@ -1,5 +1,5 @@
 ---
-status: accepted, amended 2026-10-10
+status: accepted, amended 2026-10-10 and 2026-10-16
 date: 2026-10-08
 ---
 
@@ -26,14 +26,14 @@ date: 2026-10-08
 
 **Bar.**
 
-- Decision: rank-normalised R-hat < 1.01, bulk and tail ESS ≥ 400 on every global parameter,
+- Decision: rank-normalized R-hat < 1.01, bulk and tail ESS ≥ 400 on every global parameter,
   zero divergences.
 - Why stricter than v0.5's escalation trigger (1.05, 100): these draws are published, not
   consumed once.
 
 **Storage.**
 
-- Decision: global draws in full (4,000 × P, parquet, standardised scale); random-effect draws
+- Decision: global draws in full (4,000 × P, parquet, standardized scale); random-effect draws
   in full for factors with at most 1,000 groups, per-group summaries above; diagnostics, ladder
   level and contract hash beside them.
 
@@ -47,7 +47,7 @@ date: 2026-10-08
 
 **The runner.**
 
-- Decision: Python writes the regime's standardised table, the brms formula and the prior;
+- Decision: Python writes the regime's standardized table, the brms formula and the prior;
   a thin R script calls `brm()` with the cmdstanr backend, checks the bar and writes the
   draws under brms's names, which Python renames to the contract's parameter names. The Stan
   code and data brms generated are stored beside the draws.
@@ -74,3 +74,30 @@ date: 2026-10-08
 
 - Decision: suite 1.1's references are fits to the full table (the posterior track). The
   fits to the seen rows of the predictive regimes come with suite 1.2.
+
+## Amendment 2026-10-16: the runner's review (#70)
+
+**The bar in Python.**
+
+- Decision: the R script fits a level and reports its diagnostics; Python checks the bar on
+  them, beside the ladder and the cap. An R-hat or ESS that posterior could not compute
+  (constant or non-finite draws) fails the bar. This replaces "checks the bar" in the runner
+  decision above.
+- Why: the bar is tested without R, and the gate sits with the ladder it stops. In R, a missing
+  diagnostic made the verdict NA, which Python read as a pass.
+
+**The R stack and the session.**
+
+- Decision: the pins check covers posterior beside brms, cmdstanr and CmdStan, since posterior
+  computes the bar's R-hat and ESS.
+- Decision: each level prints `sessionInfo()` into the run's `R.log` before it fits, however it
+  ends. This replaces "each draw file records `sessionInfo()`" above.
+- Decision: the runner ships in the base package, with no `references` extra. This replaces
+  "behind the `references` extra" above.
+- Why: its stack is R, brms and CmdStan, which no Python extra installs; the extra was empty.
+
+**The run's directory.**
+
+- Decision: `references/<suite>/<the first 16 hex characters of sha256 of the id>/`, since an id
+  holds `/`; `run.json` inside carries the id. A rerun replaces the directory, so no file of an
+  earlier run sits beside a later record.

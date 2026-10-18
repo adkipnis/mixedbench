@@ -3,7 +3,7 @@ status: accepted, amended 2026-10-09, 2026-10-10 and 2026-10-18
 date: 2026-10-08
 ---
 
-# 0002 — Registry and suite are two things; versioning, admission, citation and licences
+# 0002 — Registry and suite are two things; versioning, admission, citation and licenses
 
 The registry is a growing census of documented problems over public grouped data; the suite
 is a frozen subset with reference posteriors. Conflating them would make every registry
@@ -48,12 +48,12 @@ correction a benchmark change.
 - Decision: `CITATION.cff`; a Zenodo DOI per release; draws on the Hugging Face Hub for lazy
   access, the Zenodo snapshot for the citation.
 
-**Licences.**
+**Licenses.**
 
 - Decision: code MIT; registry files, suite files and reference posteriors CC BY 4.0. The data
   themselves keep their sources' terms (ADR 0003).
-- Rejected: inheriting metabeta's CC-BY-NC-SA licence, since a benchmark under a
-  non-commercial licence bars companies and most ML groups.
+- Rejected: inheriting metabeta's CC-BY-NC-SA license, since a benchmark under a
+  non-commercial license bars companies and most ML groups.
 
 ## Amendment 2026-10-09: the grill of roadmap item 3
 
@@ -62,7 +62,7 @@ correction a benchmark change.
   confidence, `second-reading` for every other row, since the blind second reading was the
   method for all medium and low rows. It is assigned once by script.
 - Why: the suite's `problems.csv` and the paper state per problem why it is in; prose
-  summarising it was rejected by the docs rule, and admitting `high` only would discard the
+  summarizing it was rejected by the docs rule, and admitting `high` only would discard the
   hand sample's finding that medium rows agree. A second hand sample during item 5 is open.
 - Decision: the share of rows dropped for missing values is recorded on the candidate list,
   `suite/<version>/candidates.csv`, and not capped. A cap is a branch for a case not yet
@@ -74,7 +74,7 @@ correction a benchmark change.
   publishes to PyPI by trusted publishing from a GitHub release.
 - Why: Zenodo archives only public repositories, and `pip install mixedbench` is what users of
   a benchmark expect; the wheel carries code and registry files only, so ADR 0003 holds.
-- Decision: the wheel is licensed `MIT AND CC-BY-4.0`, with both licence files, since it
+- Decision: the wheel is licensed `MIT AND CC-BY-4.0`, with both license files, since it
   bundles the registry files.
 - Decision: `requires-python = ">=3.11"`; development stays on 3.14, CI tests 3.11 and 3.14.
 - Why: no code needs a newer Python, and `>=3.14` would turn away most ML users.

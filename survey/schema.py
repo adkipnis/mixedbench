@@ -32,9 +32,9 @@ REGISTRY = Table(
     name='registry',
     columns=COLUMNS,
     # tier from sources.yaml; sources: `source:object` of every confirmed duplicate folded into
-    # this row, the row's own first; reader: the loader's route; licence: the source's, through
-    # LICENCES
-    scriptColumns=('tier', 'sources', 'reader', 'licence'),
+    # this row, the row's own first; reader: the loader's route; license: the source's, through
+    # LICENSES
+    scriptColumns=('tier', 'sources', 'reader', 'license'),
     key=('source', 'object', 'model_index'),
 )
 
@@ -93,7 +93,7 @@ DOMAINS = (
 EXCLUSION_REASONS = (
     'no grouping structure', 'time series without replication', 'fewer than two groups',
     'response missing or undocumented', 'derived or duplicated table', 'simulated data',
-    'unreadable format', 'licence forbids redistribution', 'too large', 'not the paper\'s data',
+    'unreadable format', 'license forbids redistribution', 'too large', 'not the paper\'s data',
 )  # fmt: skip
 
 ALLOWED: dict[str, dict[str, tuple[str, ...]]] = {
@@ -119,10 +119,10 @@ REQUIRED = {
 MAX_MODELS_PER_OBJECT = 3
 MAX_ORDINAL_LEVELS = 10  # an ordinal response with more distinct values is refused
 
-# A source's licence as `sources.yaml` or its CRAN DESCRIPTION states it, verbatim -> the
+# A source's license as `sources.yaml` or its CRAN DESCRIPTION states it, verbatim -> the
 # registry's vocabulary. A string not listed refuses the merge, so a new spelling is classified
 # on sight (ADR 0003).
-LICENCES = {
+LICENSES = {
     'CC0 1.0 Universal': 'CC0-1.0',
     'https://spdx.org/licenses/CC0-1.0.html': 'CC0-1.0',
     'CC0: Public Domain': 'CC0-1.0',
@@ -147,7 +147,7 @@ LICENCES = {
     'MIT + file LICENSE': 'MIT',
     'BSD-3-Clause': 'BSD-3-Clause',
     'Unlimited': 'public-domain',  # R: no restriction beyond the law
-    'Public': 'other',  # OpenML: access, not a licence
+    'Public': 'other',  # OpenML: access, not a license
     'Publicly available': 'other',
     'other-open': 'other',
     'Kaggle and Federal University of Espirito Santo, Brazil': 'not stated',  # an attribution

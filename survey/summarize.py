@@ -53,7 +53,7 @@ K_TAIL = 10  # the summary's K table pools the levels above this (the columns ru
 # =====================================================================================
 # pipeline: measured files -> axes -> shares -> K -> implied columns -> summary
 # =====================================================================================
-class Summariser:
+class Summarizer:
     def __init__(self, root: Path, survey: Path) -> None:
         self.root, self.survey = Path(root), Path(survey)  # the registry folder, the survey's
         self.registry = readCsv(self.root / 'registry.csv')
@@ -62,8 +62,8 @@ class Summariser:
         self.dimensions = self.numeric(readCsv(self.root / 'dimensions.csv'), measured)
         self.columns = self.numeric(readCsv(self.root / 'columns.csv'), ('K',))
         self.rows = self.dimensions.drop_duplicates(['source', 'object', 'model_index'])
-        self.modelled = self.columns[self.columns['in_model'] == 'yes']
-        self.categoricals = self.modelled[self.modelled['type'].isin(CATEGORICAL_TYPES)]
+        self.modeled = self.columns[self.columns['in_model'] == 'yes']
+        self.categoricals = self.modeled[self.modeled['type'].isin(CATEGORICAL_TYPES)]
 
     def flush(self) -> None:
         quantiles = self.quantiles()
@@ -89,8 +89,8 @@ class Summariser:
             'axes': axes,
             'imbalance': {'balanced_share': self.balancedShare()},
             'shares': {
-                'covariate_type': self.shares(self.modelled['type']),
-                'level': self.shares(self.modelled['level']),
+                'covariate_type': self.shares(self.modeled['type']),
+                'level': self.shares(self.modeled['level']),
                 'relation': self.shares(self.dimensions['relation']),
                 'response_type': self.shares(self.registry['response_type']),
                 'reader': self.shares(self.registry['reader']),
@@ -106,19 +106,19 @@ class Summariser:
         tiers = [t for t in TIERS if (frame['tier'] == t).any()]
         without_agridat = frame.loc[frame['source'] != HEAVY_SOURCE, column]
         return {
-            'pooled': Summariser.quantilesOf(frame[column]),
+            'pooled': Summarizer.quantilesOf(frame[column]),
             'tiers': {
-                t: Summariser.quantilesOf(frame.loc[frame['tier'] == t, column]) for t in tiers
+                t: Summarizer.quantilesOf(frame.loc[frame['tier'] == t, column]) for t in tiers
             },
-            'without_agridat': Summariser.quantilesOf(without_agridat),
+            'without_agridat': Summarizer.quantilesOf(without_agridat),
         }
 
     @staticmethod
     def quantilesOf(values: pd.Series) -> dict:
         values = pd.Series(values).dropna()
-        out = {'n': len(values), 'min': Summariser.quantile(values, 0)}
-        out |= {k: Summariser.quantile(values, q) for k, q in LEVELS.items()}
-        out['max'] = Summariser.quantile(values, 1)
+        out = {'n': len(values), 'min': Summarizer.quantile(values, 0)}
+        out |= {k: Summarizer.quantile(values, q) for k, q in LEVELS.items()}
+        out['max'] = Summarizer.quantile(values, 1)
         return out
 
     @staticmethod
@@ -138,7 +138,7 @@ class Summariser:
     def impliedColumns(self) -> dict:
         """Expected design columns of a model with T terms under the observed categorical share c
         and mean K − 1: T (c (K − 1) + (1 − c)), one column per non-categorical term."""
-        share = float(self.modelled['type'].isin(CATEGORICAL_TYPES).mean())
+        share = float(self.modeled['type'].isin(CATEGORICAL_TYPES).mean())
         perCategorical = float((self.categoricals['K'] - 1).mean())
         perTerm = share * perCategorical + (1 - share)
         return {
@@ -170,8 +170,8 @@ class Summariser:
             fields[f'table_{PLACEHOLDERS.get(axis, axis)}'] = self.axisTable(axis, block, practice)
         fields |= {
             'table_relation': self.shareTable(self.dimensions['relation'], 'relation'),
-            'table_covariate_type': self.shareTable(self.modelled['type'], 'covariate type'),
-            'table_level': self.shareTable(self.modelled['level'], 'level'),
+            'table_covariate_type': self.shareTable(self.modeled['type'], 'covariate type'),
+            'table_level': self.shareTable(self.modeled['level'], 'level'),
             'table_k_distribution': self.shareTable(self.kBucketed(), 'K'),
             'table_response_type': self.shareTable(self.registry['response_type'], 'response type'),
             'table_reader': self.shareTable(self.registry['reader'], 'reader'),
@@ -215,10 +215,10 @@ class Summariser:
         rows = {'pooled': block['pooled']}
         rows |= {f'tier {t}': q for t, q in block['tiers'].items()}
         rows['without agridat'] = block['without_agridat']
-        last = {'pooled': Summariser.cell(Summariser.practiceP90(axis, practice))}
+        last = {'pooled': Summarizer.cell(Summarizer.practiceP90(axis, practice))}
         lines = [
             f'| {name} | '
-            + ' | '.join(Summariser.cell(q[k]) for k in QUANTILE_KEYS)
+            + ' | '.join(Summarizer.cell(q[k]) for k in QUANTILE_KEYS)
             + f' | {last.get(name, "")} |'
             for name, q in rows.items()
         ]

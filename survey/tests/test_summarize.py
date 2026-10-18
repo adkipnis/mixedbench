@@ -1,4 +1,4 @@
-"""The summariser at its file seams: the measured registry in, `quantiles.yaml` and `SUMMARY.md`
+"""The summarizer at its file seams: the measured registry in, `quantiles.yaml` and `SUMMARY.md`
 out (#18), over the scratch registry of conftest."""
 
 import re
@@ -6,7 +6,7 @@ import re
 import pytest
 import yaml
 from conftest import FIXTURES, mergeShard
-from summarise import PRACTICE, PRACTICE_FAMILIES, TEMPLATE
+from summarize import PRACTICE, PRACTICE_FAMILIES, TEMPLATE
 
 QUANTILE_KEYS = ('n', 'min', 'p5', 'p10', 'p50', 'p90', 'p95', 'max')
 FACTOR_AXES = ('n_groups', 'group_size_min', 'group_size_p10', 'group_size_p50', 'group_size_p90', 'group_size_max', 'singleton_share', 'cv', 'alpha')  # fmt: skip

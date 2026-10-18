@@ -27,11 +27,11 @@ def test_passing_registry_shard_merges_with_tier_and_reader_filled_in(merger):
     assert {r['reader'] for r in rows} == {'pandas'}
     assert rows[0]['sources'] == 'herds:herds.csv'
     assert rows[1]['formula'] == 'cbind(cases, trials - cases) ~ breed + (1 | herd)'
-    assert {r['licence'] for r in rows} == {'CC0-1.0'}  # sources.yaml: `CC0 1.0 Universal`
+    assert {r['license'] for r in rows} == {'CC0-1.0'}  # sources.yaml: `CC0 1.0 Universal`
     columns = list(rows[0])
     assert columns[columns.index('trials') + 1] == 'family'
     assert columns[columns.index('formula') + 1] == 'documented_prior'
-    assert columns[columns.index('reader') + 1] == 'licence'
+    assert columns[columns.index('reader') + 1] == 'license'
 
 
 def writeShard(path: Path, rows: list[dict]) -> Path:
@@ -39,14 +39,14 @@ def writeShard(path: Path, rows: list[dict]) -> Path:
     return path
 
 
-def test_a_cran_sources_licence_is_read_from_its_description(merger):
-    """CRAN entries of sources.yaml carry no `licence:` key: the merge reads the package's own
-    DESCRIPTION through the loader and normalises it (ADR 0003)."""
+def test_a_cran_sources_license_is_read_from_its_description(merger):
+    """CRAN entries of sources.yaml carry no `license:` key: the merge reads the package's own
+    DESCRIPTION through the loader and normalizes it (ADR 0003)."""
     rows = readRows(FIXTURES / 'registry_herds.csv')
     rows[0] |= {'source': 'pens', 'object': 'herds'}
     mergeShard(merger, writeShard(merger.survey / 'shards' / 'registry_pens.csv', rows[:1]))
     merged = readRows(merger.registry / 'registry.csv')
-    assert [(r['source'], r['licence']) for r in merged] == [('pens', 'GPL-2.0-or-later')]
+    assert [(r['source'], r['license']) for r in merged] == [('pens', 'GPL-2.0-or-later')]
 
 
 def refusal(merger: Merger, shard: Path) -> pd.DataFrame:
@@ -119,32 +119,32 @@ def test_a_shard_with_another_header_is_refused_naming_each_column(merger):
     ]
 
 
-def withLicenceKey(merger: Merger, label: str, licence: str | None) -> Merger:
-    """The scratch merger over a sources.yaml whose `label` has another `licence:` key, or none."""
+def withLicenseKey(merger: Merger, label: str, license: str | None) -> Merger:
+    """The scratch merger over a sources.yaml whose `label` has another `license:` key, or none."""
     path = merger.registry / 'sources.yaml'
     sources = yaml.safe_load(path.read_text())
     entries = {label: entry for tier in sources['tiers'].values() for label, entry in tier.items()}
-    entries[label].pop('licence', None)
-    if licence is not None:
-        entries[label]['licence'] = licence
+    entries[label].pop('license', None)
+    if license is not None:
+        entries[label]['license'] = license
     path.write_text(yaml.safe_dump(sources, sort_keys=False))
     return Merger(merger.registry, merger.survey, loader=merger.loader)
 
 
 @pytest.mark.parametrize(
-    'licence, problem',
+    'license, problem',
     [
-        ('Creative Commons Zero', 'not in the licence lookup'),
-        (None, 'no licence: key in sources.yaml'),  # an absent key means nobody has looked
+        ('Creative Commons Zero', 'not in the license lookup'),
+        (None, 'no license: key in sources.yaml'),  # an absent key means nobody has looked
     ],
 )
-def test_a_licence_the_lookup_cannot_classify_refuses_the_merge(merger, licence, problem):
+def test_a_license_the_lookup_cannot_classify_refuses_the_merge(merger, license, problem):
     """A new spelling is classified on sight, never silently made `other`: the merge names the
     source and the string and writes nothing."""
-    merger = withLicenceKey(merger, 'herds', licence)
+    merger = withLicenseKey(merger, 'herds', license)
     problems = refusal(merger, FIXTURES / 'registry_herds.csv')
     assert list(problems['key']) == ['herds']
-    assert list(problems['value']) == [licence or '']
+    assert list(problems['value']) == [license or '']
     assert list(problems['problem']) == [problem]
     assert readRows(merger.registry / 'registry.csv') == []
 
@@ -204,12 +204,12 @@ def test_a_replaced_row_keeps_its_place(merger, tmp_path):
 
 def test_an_empty_shard_migrates_a_registry_of_the_old_shape(merger):
     """The one-time migration of #7 is a merge of a shard with the new header and no rows: the
-    old rows gain `family` and `documented_prior` empty and `licence` filled, in the new column
+    old rows gain `family` and `documented_prior` empty and `license` filled, in the new column
     order; merging it again changes nothing."""
     mergeShard(merger, FIXTURES / 'registry_herds.csv')
     path = merger.registry / 'registry.csv'
     current = readCsv(path)
-    old = current.drop(columns=['family', 'documented_prior', 'licence'])
+    old = current.drop(columns=['family', 'documented_prior', 'license'])
     writeCsv(old, path)
     header = ','.join(readRows(FIXTURES / 'registry_herds.csv')[0])
     shard = merger.survey / 'shards' / 'registry_schema.csv'

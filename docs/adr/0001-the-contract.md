@@ -16,17 +16,17 @@ any rule is a new suite version, never a recomputation.
 - Why: this is what lme4 and brms do by default; the registry measured missingness but never
   fitted anything.
 
-**Coding and standardisation.**
+**Coding and standardization.**
 
 - Decision: continuous covariates are z-scored, binary ones 0/1, a categorical with K levels
   becomes K − 1 treatment-contrast columns in the loaded table's level order (R's factor order
   where the file carries one) with the first level as reference; ordered factors fold into
   categorical; an interaction is the product of the coded columns; the intercept column is
   always present. A continuous response is z-scored.
-- Why: every problem is stated and stored on this standardised scale (metabeta's ADR 0001 and
+- Why: every problem is stated and stored on this standardized scale (metabeta's ADR 0001 and
   0002), so one prior serves every problem and nothing is data-adapted by hand.
 
-> Amended 2026-10-09 below: the standardisation is computed per regime on the rows a fit
+> Amended 2026-10-09 below: the standardization is computed per regime on the rows a fit
 > sees; the coding stays the full table's.
 
 **Family rule.**
@@ -43,7 +43,7 @@ any rule is a new suite version, never a recomputation.
 
 **Prior.**
 
-- Decision: on the standardised scale, β_j ~ Normal(0, 2.5), intercept ~ Normal(0, 2.5),
+- Decision: on the standardized scale, β_j ~ Normal(0, 2.5), intercept ~ Normal(0, 2.5),
   σ_k ~ half-Student-t(3, 0, 2.5), σ_ε ~ half-Student-t(3, 0, 2.5), Ω_k ~ LKJ(1). Any
   parameter the contract does not name (ordinal thresholds, a shape) takes brms's default at
   the pinned brms version.
@@ -75,18 +75,18 @@ any rule is a new suite version, never a recomputation.
 **Identity.**
 
 - Decision: a problem is `<source>/<object>/<model_index>`; its contract hash is the sha256
-  over the contract version, the pinned brms and CmdStan versions and the materialised arrays.
+  over the contract version, the pinned brms and CmdStan versions and the materialized arrays.
 - Why: a changed pin or rule is visible as a changed hash.
 
 > Superseded in part by the amendment of 2026-10-09 below: the hash covers the contract
-> version and the materialised problem, not the sampler pins.
+> version and the materialized problem, not the sampler pins.
 
 ## Amendment 2026-10-09: the grill of roadmap item 3
 
 **Hash.**
 
-- Decision: the contract hash is the sha256 over a canonical serialisation of the
-  materialised problem (the JSON with sorted keys, then every column in table order as its
+- Decision: the contract hash is the sha256 over a canonical serialization of the
+  materialized problem (the JSON with sorted keys, then every column in table order as its
   name, dtype and little-endian bytes, floats as float64) and the contract version, which
   is the package major version. The brms and CmdStan pins leave the hash: they are part
   of a reference, recorded in the suite (ADR 0002), not of a problem.
@@ -94,10 +94,10 @@ any rule is a new suite version, never a recomputation.
   prior and the splits. Hashing parquet bytes was rejected because a pyarrow bump would
   become a contract change.
 
-**Standardisation and the splits.**
+**Standardization and the splits.**
 
-- Decision: the standardisation is computed on the rows a fit sees: the full table for the
-  posterior track and the seen rows of each predictive regime. The materialised table holds
+- Decision: the standardization is computed on the rows a fit sees: the full table for the
+  posterior track and the seen rows of each predictive regime. The materialized table holds
   the coded columns in raw units and the per-regime means and standard deviations beside it.
   Coding (levels, contrasts) is the full table's; a level that survives only in held-out
   rows leaves an all-zero column in the seen rows, which the prior keeps proper.
@@ -116,7 +116,7 @@ any rule is a new suite version, never a recomputation.
 - Why: 97 of 714 documented models carry a slope, and intercept-only would make 14% of the
   problems not their documented model.
 - Clarified 2026-10-09 (#27, after an outside review): `x||g` is independent of the intercept
-  and of every other slope of `g`. Both kinds of term act on the standardised column, so a
+  and of every other slope of `g`. Both kinds of term act on the standardized column, so a
   zero correlation or a slope without its intercept is set at the sample mean, not at the
   source's zero. This is a benchmark assumption of suite 1.1. A slope that maps the source's structure into another basis is equivalent in structure, not
   in prior. Keeping the source's own blocks is a contract extension (#46).
@@ -135,10 +135,10 @@ any rule is a new suite version, never a recomputation.
 **The intercept's prior.**
 
 - Decision: the intercept's prior, Normal(0, 2.5), is on the intercept at the mean of every
-  design column over the rows a fit sees (brms's default centring), not at the zero of the
-  binary and contrast columns. The draws report the uncentred intercept, `Intercept`, as
+  design column over the rows a fit sees (brms's default centering), not at the zero of the
+  binary and contrast columns. The draws report the uncentered intercept, `Intercept`, as
   brms does.
 - Why: it is brms's default and current practice; on z-scored covariates the two coincide,
   and only the binary and contrast columns move the intercept. metabeta adopts it separately.
-- The contract hash does not move: the materialised problem's prior is unchanged, and this
+- The contract hash does not move: the materialized problem's prior is unchanged, and this
   states its meaning.

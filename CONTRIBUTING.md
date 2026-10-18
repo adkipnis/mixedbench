@@ -17,7 +17,7 @@ the approach first.
 
 ## Set up
 
-You need [uv](https://docs.astral.sh/uv/), R is not required.
+You need [uv](https://docs.astral.sh/uv/); R only for the reference fits.
 
 ```
 git clone https://github.com/adkipnis/mixedbench
@@ -25,6 +25,7 @@ cd mixedbench
 uv sync
 uv run pytest               # the offline tests, about ten seconds
 uv run pytest -m network    # the tests that download sources, as CI runs them
+uv run pytest -m brms       # the reference fits, with R, brms and CmdStan at their pins
 ```
 
 ## Find your way
@@ -35,8 +36,9 @@ src/mixedbench/
   datasets/     the loader: a pinned source in, typed tables out
   contract/     the rules that turn a registry row and its table into a problem
   suite/        a problem by its id, built on first use and checked against its suite
+  references/   a problem's reference posterior, fitted by brms in R
 registry/       the registry files, written by survey/merge.py
-suite/          the admission script and each suite's candidate list
+suite/          the admission and reference-run scripts, each suite's candidate list
 survey/         the pipeline that built the registry
 tests/          mirrors src/
 docs/adr/       the design decisions and why they were taken
@@ -61,9 +63,9 @@ Three rules keep results comparable:
   contract version: discuss it in an issue first.
 - **The registry is written by script.** Nothing in `registry/` or `suite/<version>/` is edited
   by hand.
-- **No R in the loader.** Every table loads in Python alone; R may only computes reference posteriors.
+- **No R in the loader.** Every table loads in Python alone; R may only compute reference posteriors.
 
-## Licence
+## License
 
 By contributing, you agree that your code is released under [Apache-2.0](LICENSE) and your changes to
 the registry and suite files under [CC BY 4.0](docs/LICENSE-CC-BY-4.0).
