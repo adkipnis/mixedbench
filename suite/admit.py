@@ -94,6 +94,27 @@ REFUSED = {
     'kleisner_2026_osf/data.csv/3': (
         'covariance_structured_effect: POPULATION correlated by linguistic similarity (#32)'
     ),
+    'rethinking/data/Primates301.csv/1': (
+        'covariance_structured_effect: species correlated by phylogenetic distance (#61)'
+    ),
+    'rethinking/data/Primates301.csv/2': (
+        'covariance_structured_effect: species correlated by phylogenetic distance (#61)'
+    ),
+    # a row that stands for several observations, which the documented fit weights by count (#61)
+    'agridat/keen.potatodamage/1': 'frequency_weighted: each cell weighted by count (#61)',
+    'rabe_hesketh/thailand.dta/1': (
+        'frequency_weighted: each covariate pattern weighted by wt1 (#61)'
+    ),
+    'rabe_hesketh/twin_hay.dta/1': (
+        'frequency_weighted: each response pattern weighted by freq (#61)'
+    ),
+    # a documented model whose likelihood the filed rows do not hold (#61)
+    'rabe_hesketh/elections.dta/1': (
+        'choice_model: rank == 1 in conditional and mixed logits over choice sets (#61)'
+    ),
+    'rabe_hesketh/cito.dta/1': (
+        'item_response_model: the items y1-y18 reshaped long, cito a school indicator (#61)'
+    ),
     # a censored time filed as a continuous response, whose Gaussian fit ignores the censoring (#61)
     'MASS/gehan/1': 'censored_response: a censored time filed as continuous (#61)',
     'rabe_hesketh/bladder.dta/1': 'censored_response: a censored time filed as continuous (#61)',
