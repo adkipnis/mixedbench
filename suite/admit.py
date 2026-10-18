@@ -63,6 +63,7 @@ REFUSED = {
     'gumundsdottir_2026_osf_6/Questionnaire_data_long/1': (
         'non_affine_feature: time is a non-linear recode of wave (#27)'
     ),
+    'rabe_hesketh/fat.dta/1': 'non_affine_feature: the slope is on the hinge pmax(time, 0) (#61)',
     # a random effect correlated across groups by a known matrix, which no iid factor is (#45)
     'marton_2022_figshare/OS_pigmentation_data.csv/1': (
         'covariance_structured_effect: (1 | phylogeny) (#45)'
