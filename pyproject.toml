@@ -106,5 +106,5 @@ norecursedirs = [".*", "build", "dist", "venv", "*.egg", "survey", "cache"]
 addopts = "-m 'not network and not brms' --import-mode=importlib"
 markers = [
     "network: fetches a source over the network; runs only in the CI fetch matrix",
-    "brms: fits a reference with R, brms and CmdStan; runs by `-m brms`, skipped where they are absent",
+    "brms: fits a reference with R, brms and CmdStan; runs by `-m brms`, skipped where R or CmdStan is absent",
 ]
