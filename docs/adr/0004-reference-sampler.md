@@ -92,6 +92,9 @@ date: 2026-10-08
   computes the bar's R-hat and ESS.
 - Decision: each level prints `sessionInfo()` into the run's `R.log` before it fits, however it
   ends. This replaces "each draw file records `sessionInfo()`" above.
+- Decision: the runner ships in the base package, with no `references` extra. This replaces
+  "behind the `references` extra" above.
+- Why: its stack is R, brms and CmdStan, which no Python extra installs; the extra was empty.
 
 **The run's directory.**
 

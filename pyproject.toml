@@ -34,10 +34,6 @@ Issues = "https://github.com/adkipnis/mixedbench/issues"
 Demo = "https://github.com/adkipnis/mixedbench/blob/main/examples/demo.ipynb"
 Planned = "https://github.com/adkipnis/mixedbench#planned"
 
-[project.optional-dependencies]
-# The reference sampler stack (#62): brms and cmdstanr in an R subprocess.
-references = []
-
 [dependency-groups]
 dev = [
     "pytest",

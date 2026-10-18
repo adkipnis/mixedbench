@@ -13,9 +13,9 @@ a candidate id or its index in the list           _resolveId
 -> the record of each run, by its id and hash     _records
 -> one row per candidate, in list order           collect
 
-Run from the repo root, with the references extra:
+Run from the repo root:
 
-    uv run --extra references python suite/drive.py run 17
+    uv run python suite/drive.py run 17
     uv run python suite/drive.py collect
 """
 
