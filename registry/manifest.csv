@@ -342,7 +342,6 @@
 "pymc_examples","examples/data/employee.csv","examples/data/employee.csv","0deee4443645db9a22ceb45e0ae416d7b359b0e72a13a217351b37458c03e74f","15287"
 "pymc_examples","examples/data/time_to_attrition.csv","examples/data/time_to_attrition.csv","4cf35d0a40bbf88582f12befe74e310d5ec0fc5c0fdff4e364ba6fa5407f70c2","114996"
 "stan_arm","ARM/Ch.23/sesame.data.json","ARM/Ch.23/sesame.data.json","0a7d37bc8ab071ca34223516408b5639a6bf5da1ee46dc765d7c2cada551d248","4617"
-"stan_arm","ARM/Ch.23/sesame.dta","ARM/Ch.23/sesame.dta","83e04ddc2acd3f6a384b929aaa17981394d4770d580c2dfe0c830b653194edca","28842"
 "stan_arm","ARM/Ch.17/multilevel_ordered_categorical_17.6.data.json","ARM/Ch.17/multilevel_ordered_categorical_17.6.data.json","1d0897548565dbec6abbdbbf318063e99d591b8cf8c243f1cb872815a95d91e8","2571"
 "posteriordb","posterior_database/data/data/radon_mn.json.zip","posterior_database/data/data/radon_mn.json.zip","70e5bacffb71955f1fc327f7c491b6bc59b09f40673830da306f1f9f9eb02bc0","4921"
 "fitzmaurice_smoking","smoking.dta","smoking.dta","91fbd32c49e04619bcf963aca6202d05299978a7c4ee6cc7dba0ee69bf934328","13248"

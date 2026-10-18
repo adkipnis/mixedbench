@@ -1,5 +1,5 @@
-n_rows: 714
-n_objects: 641
+n_rows: 712
+n_objects: 640
 n_factor_rows: 941
 axes:
   n_groups:
@@ -23,20 +23,20 @@ axes:
         p95: 316
         max: 10767
       E:
-        n: 144
+        n: 142
         min: 3
         p5: 4
         p10: 5
-        p50: 34
+        p50: 37
         p90: 595
         p95: 4434
         max: 19898
       T:
-        n: 288
+        n: 290
         min: 2
         p5: 4
         p10: 6
-        p50: 60
+        p50: 59
         p90: 546
         p95: 1323
         max: 4856
@@ -88,7 +88,7 @@ axes:
         p95: 62
         max: 567
       E:
-        n: 144
+        n: 142
         min: 1
         p5: 1
         p10: 1
@@ -97,7 +97,7 @@ axes:
         p95: 500
         max: 1872
       T:
-        n: 288
+        n: 290
         min: 1
         p5: 1
         p10: 1
@@ -153,7 +153,7 @@ axes:
         p95: 72
         max: 583
       E:
-        n: 144
+        n: 142
         min: 1
         p5: 1
         p10: 2
@@ -162,7 +162,7 @@ axes:
         p95: 500
         max: 2442
       T:
-        n: 288
+        n: 290
         min: 1
         p5: 1
         p10: 1
@@ -218,7 +218,7 @@ axes:
         p95: 105
         max: 600
       E:
-        n: 144
+        n: 142
         min: 1
         p5: 3
         p10: 3
@@ -227,7 +227,7 @@ axes:
         p95: 660
         max: 4200
       T:
-        n: 288
+        n: 290
         min: 1
         p5: 2
         p10: 2
@@ -283,7 +283,7 @@ axes:
         p95: 171
         max: 1204
       E:
-        n: 144
+        n: 142
         min: 2
         p5: 3
         p10: 4
@@ -292,11 +292,11 @@ axes:
         p95: 1292
         max: 4650
       T:
-        n: 288
+        n: 290
         min: 2
         p5: 2
         p10: 3
-        p50: 15
+        p50: 14
         p90: 139
         p95: 315
         max: 4014
@@ -348,16 +348,16 @@ axes:
         p95: 217
         max: 7500
       E:
-        n: 144
+        n: 142
         min: 2
         p5: 3
         p10: 4
-        p50: 28
+        p50: 27
         p90: 873
         p95: 2314
         max: 4860
       T:
-        n: 288
+        n: 290
         min: 2
         p5: 2
         p10: 3
@@ -388,7 +388,7 @@ axes:
       min: 2
       p5: 3
       p10: 4
-      p50: 18
+      p50: 17
       p90: 326
       p95: 927
       max: 33076
@@ -413,7 +413,7 @@ axes:
         p95: 0.1525
         max: 0.9964
       E:
-        n: 144
+        n: 142
         min: 0
         p5: 0
         p10: 0
@@ -422,7 +422,7 @@ axes:
         p95: 0.1525
         max: 0.5329
       T:
-        n: 288
+        n: 290
         min: 0
         p5: 0
         p10: 0
@@ -463,7 +463,7 @@ axes:
       min: 0
       p5: 0
       p10: 0
-      p50: 0.1329
+      p50: 0.1321
       p90: 0.7307
       p95: 0.9899
       max: 5.899
@@ -478,20 +478,20 @@ axes:
         p95: 0.8761
         max: 5.899
       E:
-        n: 144
+        n: 142
         min: 0
         p5: 0
         p10: 0
-        p50: 0.2474
+        p50: 0.2438
         p90: 1.0108
         p95: 1.5292
         max: 1.9835
       T:
-        n: 288
+        n: 290
         min: 0
         p5: 0
         p10: 0
-        p50: 0.2934
+        p50: 0.2911
         p90: 0.7262
         p95: 0.9096
         max: 3.5667
@@ -518,7 +518,7 @@ axes:
       min: 0
       p5: 0
       p10: 0
-      p50: 0.1619
+      p50: 0.1556
       p90: 0.7478
       p95: 1.0049
       max: 4.9111
@@ -528,7 +528,7 @@ axes:
       min: 0.0251
       p5: 0.9669
       p10: 1.7027
-      p50: 49.9643
+      p50: 51.954
       p90: .inf
       p95: .inf
       max: .inf
@@ -543,20 +543,20 @@ axes:
         p95: .inf
         max: .inf
       E:
-        n: 144
+        n: 142
         min: 0.1733
         p5: 0.3236
         p10: 0.9384
-        p50: 15.3433
+        p50: 18.3212
         p90: .inf
         p95: .inf
         max: .inf
       T:
-        n: 288
+        n: 290
         min: 0.0438
         p5: 1.0843
         p10: 1.6398
-        p50: 11.3563
+        p50: 11.4003
         p90: .inf
         p95: .inf
         max: .inf
@@ -583,13 +583,13 @@ axes:
       min: 0.0296
       p5: 0.9496
       p10: 1.6866
-      p50: 34.5248
+      p50: 37.9216
       p90: .inf
       p95: .inf
       max: .inf
   n_obs:
     pooled:
-      n: 714
+      n: 712
       min: 7
       p5: 29
       p10: 45
@@ -608,12 +608,12 @@ axes:
         p95: 7185
         max: 73421
       E:
-        n: 101
+        n: 99
         min: 20
-        p5: 32
+        p5: 30
         p10: 40
-        p50: 432
-        p90: 16409
+        p50: 528
+        p90: 19200
         p95: 28534
         max: 1000209
       T:
@@ -644,17 +644,17 @@ axes:
         p95: 318438
         max: 318438
     without_agridat:
-      n: 686
+      n: 684
       min: 7
       p5: 29
       p10: 45
-      p50: 494
+      p50: 500
       p90: 8164
       p95: 21729
       max: 1000209
   n_grouping_factors:
     pooled:
-      n: 714
+      n: 712
       min: 1
       p5: 1
       p10: 1
@@ -673,13 +673,13 @@ axes:
         p95: 2
         max: 4
       E:
-        n: 101
+        n: 99
         min: 1
         p5: 1
         p10: 1
         p50: 1
         p90: 2
-        p95: 3
+        p95: 4
         max: 5
       T:
         n: 244
@@ -709,7 +709,7 @@ axes:
         p95: 2
         max: 2
     without_agridat:
-      n: 686
+      n: 684
       min: 1
       p5: 1
       p10: 1
@@ -719,7 +719,7 @@ axes:
       max: 5
   d_doc:
     pooled:
-      n: 714
+      n: 712
       min: 0
       p5: 0
       p10: 1
@@ -738,12 +738,12 @@ axes:
         p95: 19
         max: 55
       E:
-        n: 101
+        n: 99
         min: 0
         p5: 0
         p10: 0
         p50: 3
-        p90: 9
+        p90: 11
         p95: 12
         max: 16
       T:
@@ -774,7 +774,7 @@ axes:
         p95: 22134
         max: 22134
     without_agridat:
-      n: 686
+      n: 684
       min: 0
       p5: 0
       p10: 1
@@ -784,7 +784,7 @@ axes:
       max: 22134
   d_all:
     pooled:
-      n: 714
+      n: 712
       min: 0
       p5: 0
       p10: 1
@@ -803,7 +803,7 @@ axes:
         p95: 35
         max: 14966
       E:
-        n: 101
+        n: 99
         min: 0
         p5: 0
         p10: 0
@@ -839,7 +839,7 @@ axes:
         p95: 23770
         max: 23770
     without_agridat:
-      n: 686
+      n: 684
       min: 0
       p5: 0
       p10: 1
@@ -913,36 +913,36 @@ axes:
       p95: 12
       max: 717
 imbalance:
-  balanced_share: 0.388
+  balanced_share: 0.39
 shares:
   covariate_type:
     continuous: 0.443
-    binary: 0.33
-    categorical: 0.189
+    binary: 0.329
+    categorical: 0.19
     ordered: 0.038
   level:
-    within: 0.688
-    group: 0.312
+    within: 0.686
+    group: 0.314
   relation:
-    single: 0.56
+    single: 0.557
     crossed: 0.199
     nested: 0.158
-    mixed: 0.083
+    mixed: 0.086
   response_type:
     continuous: 0.632
-    binary: 0.161
+    binary: 0.16
     count: 0.105
     ordinal: 0.063
     binomial: 0.022
     categorical: 0.017
   reader:
-    pandas: 0.643
-    pyreadr: 0.34
+    pandas: 0.642
+    pyreadr: 0.341
     deparse: 0.01
     rdata: 0.007
   published_model:
-    'yes': 0.738
-    'no': 0.262
+    'yes': 0.729
+    'no': 0.271
 k_distribution:
   3: 0.35
   4: 0.213
@@ -976,7 +976,7 @@ k_distribution:
   30: 0.002
   47: 0.002
 implied_columns:
-  categorical_share: 0.227
+  categorical_share: 0.228
   mean_columns_per_categorical: 6.737
-  terms_9: 20.72
-  terms_14: 32.24
+  terms_9: 20.75
+  terms_14: 32.28
