@@ -245,8 +245,8 @@ its levels less one, an interaction the product.
 
 | published | n | share |
 |---|---|---|
-| yes | 537 | 75% |
-| no | 177 | 25% |
+| yes | 527 | 74% |
+| no | 187 | 26% |
 
 ## Tier D
 

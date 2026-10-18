@@ -941,8 +941,8 @@ shares:
     deparse: 0.01
     rdata: 0.007
   published_model:
-    'yes': 0.752
-    'no': 0.248
+    'yes': 0.738
+    'no': 0.262
 k_distribution:
   3: 0.35
   4: 0.213
