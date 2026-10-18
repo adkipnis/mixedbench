@@ -331,8 +331,11 @@ cropareas #1 follows #2 and Gcsemv #2 gets the clarified notes, as siblings. Zoo
 Claude: the book's table of contents confirms section 7.4.2, a binomial GLMM with a Zoo random
 intercept on standardized covariates; the fixed part becomes model M1 of the source paper, Quirke,
 O'Riordan and Zuur (2012, Table 3), whose 12 covariates leave out Visual and Diet for collinearity.
-Not yet applied: Gcsemv's -1 sentinels. The same 1,905 pupils are also mlmRev Gcsemv, rabe_hesketh
-coursework.dta and cmm_sci SCI.DAT, and their fold is open.
+Gcsemv, settled on review: the same 1,905 pupils are also mlmRev Gcsemv, rabe_hesketh
+coursework.dta and cmm_sci SCI.DAT (`duplicates_hand_sample_2_3.csv`). All fold into mlmRev Gcsemv,
+first in frame order, which codes the missing scores as NA and gains the coursework row
+(`registry_hand_sample_2_3_gcsemv.csv`). No response keeps a -1, so the sentinel rule waits for a
+case.
 
 - **1. towerlondon — stands.** The Stata example confirms both nested intercepts and the stated fixed effects. [Manual](https://www.stata.com/manuals18/me.pdf#page=175).
 
