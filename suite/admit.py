@@ -63,7 +63,6 @@ REFUSED = {
     'gumundsdottir_2026_osf_6/Questionnaire_data_long/1': (
         'non_affine_feature: time is a non-linear recode of wave (#27)'
     ),
-    'rabe_hesketh/fat.dta/1': 'non_affine_feature: the slope is on the hinge pmax(time, 0) (#61)',
     # a random effect correlated across groups by a known matrix, which no iid factor is (#45)
     'marton_2022_figshare/OS_pigmentation_data.csv/1': (
         'covariance_structured_effect: (1 | phylogeny) (#45)'
@@ -155,6 +154,7 @@ FIDELITY: dict[str, Fidelity] = {
     'stan_arm/ARM/Ch.20/allvar.csv/1': 'approximate',
     'goldstein_msm/playactivity.xls/1': 'approximate',
     'rabe_hesketh/electricity.dta/1': 'approximate',
+    'rabe_hesketh/fat.dta/1': 'approximate',  # the hinge after = pmax(time, 0) dropped (#61)
     'rabe_hesketh/yogurt.dta/1': 'approximate',  # two brand contrasts, no intercept (#61)
     'goldstein_msm/OXBOYS.xls/1': 'approximate',
     'koczynska_2026_osf_48/data_means_20241030/1': 'approximate',
