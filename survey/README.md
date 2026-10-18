@@ -23,6 +23,7 @@ by script.
 | `registry/help/`, `cache/` | `pull.py`, the loader | untracked: one help page per kept object; downloads |
 | `candidates.csv`, `duplicates.csv`, `dropped.csv` | `pull.py`, `merge.py` | the survey's bookkeeping (below) |
 | `deposits.csv`, `deposit_files.csv` | the archived `deposits.py`, `resolve.py` | Tier D's frame: the drawn papers and every file their deposits list |
+| `sample.csv`, `agreement.csv` | `verify.py` | the second hand sample (#61): 100 candidates not yet hand-checked with their readings at draw time, and the share of readings that stood per field |
 | `practice_quantiles.yaml` | copied | the practice survey's `quantiles.yaml` (metabeta-v3), the practice column of `SUMMARY.md` |
 | `shards/<table>_<label>.csv` | agents, `pull.py` | one shard per reading run; `table` ∈ `registry`, `excluded`, `duplicates`, `dropped` |
 | `prompts/read.md` | | the reading agent's brief |
@@ -59,7 +60,8 @@ One pass per tier:
 7. **Spot check.** 20 rows drawn with seed 0, stratified by shard, read by Alex at the source.
 8. **Verification** (once after all tiers). A seeded hand sample of Tiers R, E, T and O
    against [ADR 0002](../docs/adr/0002-registry-suite-versioning-licenses.md)'s bar
-   ([HISTORY](HISTORY.md#hand-sample-11-12)).
+   ([HISTORY](HISTORY.md#hand-sample-11-12)); a second one over suite 1.1's candidates not yet
+   hand-checked (#61).
 
 ## Frame: `sources.yaml`
 
