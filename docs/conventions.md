@@ -235,16 +235,17 @@ The words are [`CONTEXT.md`](../CONTEXT.md)'s.
 
 | module | owns | imported by |
 |---|---|---|
-| `registry/row.py` | how a `registry.csv` row is written and read; nothing else parses a cell | `registry`, `contract/problem.py`, `suite`, `suite/admit.py`, the survey |
+| `registry/row.py` | how a `registry.csv` row is written and read; nothing else parses a cell | `registry`, `contract/problem.py`, `suite`, `suite/admit.py`, `suite/drive.py`, the survey |
 | `registry/__init__.py` | the installed registry files as objects; `Tables` from a row to its typed table | `suite`, `suite/admit.py`, the survey |
 | `datasets/loader.py` | a pinned source to tables: download, checksum on every load, cache, declared column types | `registry`, the survey |
 | `datasets/readers.py` | the file formats, a class per format family, and which files are data | `loader.py`, `survey/help.py` |
 | `datasets/deparse.py` | base R's `data/*.R` files, read without R | `readers.py` |
-| `contract/problem.py` | the contract's rules: typing, coding, family, prior, splits, scales, parameter names | `contract`, through it `suite`, `suite/admit.py` and the survey |
-| `contract/materialized.py` | a problem's files on disk and the contract hash over them | `contract`, through it `suite` and `suite/admit.py` |
-| `suite/__init__.py` | a suite's problems by id: built and materialized on first use, checked against the suite's list in the wheel | the user |
+| `contract/problem.py` | the contract's rules: typing, coding, family, prior, splits, scales, parameter names | `contract`, through it `suite`, `references`, `suite/admit.py` and the survey |
+| `contract/materialized.py` | a problem's files on disk and the contract hash over them | `contract`, through it `suite`, `references/runner.py` and `suite/admit.py` |
+| `suite/__init__.py` | a suite's problems by id: built and materialized on first use, checked against the suite's list in the wheel | the user, `suite/drive.py` |
 | `suite/admit.py` | the admission of suite 1.1 and its hand decisions; writes `suite/1.1/` | run as a script |
 | `references/handoff.py` | what passes between a problem and `run.R`: the aliased table, the model and a level's settings out; the draws under the contract's names and the diagnostics back | `runner.py` |
+| `references/run.R` | one level's fit by brms through cmdstanr: the variables kept or summarized, the files written back | `runner.py`, as a subprocess |
 | `references/runner.py` | a problem's reference run: the pinned R stack, the ladder, the bar and the cap, the run's directory and its record | `references`, through it `suite/drive.py` |
 | `suite/drive.py` | suite 1.1's reference runs: one candidate by id or index, every record collected into `references.csv` | run as a script, by `suite/drive.sbatch` |
 
