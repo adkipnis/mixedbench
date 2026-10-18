@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import subprocess
 from dataclasses import asdict, fields
 from pathlib import Path
@@ -18,8 +19,6 @@ from mixedbench.references import runner
 from mixedbench.references.handoff import Handoff
 
 from .conftest import binomialTrials, fixtureProblem, gaussianMixed, nestedProblem, ordinalProblem
-
-pytestmark = [pytest.mark.brms, pytest.mark.usefixtures('rstack')]
 
 FOUR_CHAINS = {chain: list(range(1000)) for chain in range(4)}  # 1,000 draws each, from 0
 
@@ -45,6 +44,7 @@ def ran(tmp_path_factory: pytest.TempPathFactory) -> tuple[Problem, runner.Outco
     return problem, outcome, problemDir(dir, problem)
 
 
+@pytest.mark.brms
 def test_a_passing_run_writes_4000_global_draws_over_4_chains(ran) -> None:
     problem, outcome, dir = ran
     draws = pd.read_parquet(dir / 'globals.parquet')
@@ -54,6 +54,7 @@ def test_a_passing_run_writes_4000_global_draws_over_4_chains(ran) -> None:
     assert (draws.dtypes.iloc[2:] == 'float64').all()
 
 
+@pytest.mark.brms
 def test_a_run_records_its_seed_aliases_and_r_stack(ran) -> None:
     _, _, dir = ran
     written = record(dir)
@@ -67,13 +68,7 @@ def test_a_run_records_its_seed_aliases_and_r_stack(ran) -> None:
     }
 
 
-def test_a_run_records_its_outcome_row(ran) -> None:
-    """The driver's collect step reads `references.csv`'s row back from the record."""
-    _, outcome, dir = ran
-    written = record(dir)
-    assert {field.name: written[field.name] for field in fields(outcome)} == asdict(outcome)
-
-
+@pytest.mark.brms
 def test_a_run_records_each_level_with_its_settings_time_and_diagnostics(ran) -> None:
     """The bar gates on R-hat, ESS and divergences, so a passing level shows them within it;
     tree depth, E-BFMI per chain and the random effects' R-hat are recorded for a reviewer."""
@@ -91,9 +86,12 @@ def test_a_run_records_each_level_with_its_settings_time_and_diagnostics(ran) ->
     assert 1 <= level['rhat_locals'] < 1.05
 
 
-def test_the_outcome_is_the_references_row_of_the_last_level(ran) -> None:
+@pytest.mark.brms
+def test_the_outcome_is_the_last_levels_references_row_and_the_record_holds_it(ran) -> None:
+    """The driver's collect step reads `references.csv`'s row back from the record."""
     problem, outcome, dir = ran
-    [level] = record(dir)['levels']
+    written = record(dir)
+    [level] = written['levels']
     assert outcome == runner.Outcome(
         id='fixture/trial/1',
         contract_hash=contractHash(problem),
@@ -106,8 +104,10 @@ def test_the_outcome_is_the_references_row_of_the_last_level(ran) -> None:
         brms='2.23.0',
         cmdstan='2.40.0',
     )
+    assert {field.name: written[field.name] for field in fields(outcome)} == asdict(outcome)
 
 
+@pytest.mark.brms
 def test_the_intercept_is_the_uncentered_one(ran) -> None:
     """brms samples a centered intercept and reports the uncentered `b_Intercept`. Every group of
     the fixture holds the same design rows, so least squares gives the mixed model's fixed
@@ -124,6 +124,7 @@ def test_the_intercept_is_the_uncentered_one(ran) -> None:
     assert abs(leastSquares) > 10 * tolerance
 
 
+@pytest.mark.brms
 def test_a_pin_mismatch_raises_before_any_level(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -138,6 +139,27 @@ def test_a_pin_mismatch_raises_before_any_level(
 # the ladder and the ends of a run
 # ==============================================================================================
 
+PASSING = {'rhat': 1.009, 'ess_bulk': 400.0, 'ess_tail': 400.0, 'divergences': 0}  # at the edge
+
+
+@pytest.mark.parametrize(
+    'diagnostic, value',
+    [
+        ('rhat', 1.01),
+        ('rhat', math.nan),
+        ('ess_bulk', 399.0),
+        ('ess_bulk', math.nan),
+        ('ess_tail', 399.0),
+        ('ess_tail', math.nan),
+        ('divergences', 1),
+    ],
+)
+def test_the_bar_fails_past_a_threshold_and_on_nan(diagnostic: str, value: float) -> None:
+    """Without R. posterior gives NaN for an R-hat or ESS it could not compute,
+    and a NaN that passed would make a reference of an unchecked fit."""
+    assert runner._Runner._passes(PASSING)
+    assert not runner._Runner._passes({**PASSING, diagnostic: value})
+
 
 def tinyLevels() -> dict[int, dict]:
     """The ladder at 10 draws per chain: 40 draws hold no bulk ESS of 400, so every level
@@ -148,6 +170,7 @@ def tinyLevels() -> dict[int, dict]:
     return levels
 
 
+@pytest.mark.brms
 def test_a_failed_bar_climbs_the_ladder_and_ends_as_bar_at_level_2(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -161,6 +184,7 @@ def test_a_failed_bar_climbs_the_ladder_and_ends_as_bar_at_level_2(
     assert sorted(path.name for path in dir.iterdir()) == ['R.log', 'run.json']
 
 
+@pytest.mark.brms
 def test_thinning_hides_no_divergence_from_the_bar(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -177,6 +201,7 @@ def test_thinning_hides_no_divergence_from_the_bar(
     assert divergences[2] == divergences[1]
 
 
+@pytest.mark.brms
 def test_a_thinned_level_stores_4000_draws_numbered_within_their_chain(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -189,6 +214,7 @@ def test_a_thinned_level_stores_4000_draws_numbered_within_their_chain(
     assert drawsPerChain(problemDir(tmp_path, problem) / 'globals.parquet') == FOUR_CHAINS
 
 
+@pytest.mark.brms
 def test_a_run_out_of_time_ends_as_cap_with_its_record(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -203,6 +229,7 @@ def test_a_run_out_of_time_ends_as_cap_with_its_record(
     assert sorted(path.name for path in dir.iterdir()) == ['R.log', 'run.json']
 
 
+@pytest.mark.brms
 def test_a_rerun_leaves_no_file_of_the_earlier_run(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -217,6 +244,7 @@ def test_a_rerun_leaves_no_file_of_the_earlier_run(
     assert sorted(path.name for path in dir.iterdir()) == ['R.log', 'run.json']
 
 
+@pytest.mark.brms
 def test_an_r_error_ends_the_run_as_error_and_keeps_r_log(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -241,6 +269,7 @@ def test_an_r_error_ends_the_run_as_error_and_keeps_r_log(
 # ==============================================================================================
 
 
+@pytest.mark.brms
 @pytest.mark.parametrize('shape', [gaussianMixed, binomialTrials, ordinalProblem])
 def test_each_model_shape_writes_its_draws_stan_program_and_data(shape, tmp_path: Path) -> None:
     """Mixed `|` and `||` slopes, a binomial with trials and an ordinal model: every factor has
@@ -266,6 +295,7 @@ def test_each_model_shape_writes_its_draws_stan_program_and_data(shape, tmp_path
     assert json.loads((dir / 'standata.json').read_text())['N'] == len(problem.table)
 
 
+@pytest.mark.brms
 def test_a_summarized_factor_reaches_locals_summary_and_stays_out_of_draws_rds(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
