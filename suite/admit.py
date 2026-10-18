@@ -3,7 +3,8 @@
 Every row the family rule covers is built into its problem and materialized under the cache.
 Its contract hash goes into the candidate list. Five decisions guide admission:
 - hand decisions first: a row whose documented model does not survive into the contract
-  is refused by id, a row whose random effects were changed carries its fidelity:
+  is refused by id, or by its notes' marker when the model is nonlinear;
+  a row whose random effects were changed carries its fidelity:
   `structure_equivalent` (the same structure in another basis)
   or `approximate` (terms changed or dropped);
 - a refusal is kept with its reason beside the candidates;
@@ -17,6 +18,7 @@ pipeline:
 ---------
 the registry's rows
 -> refused by hand decision                    REFUSED
+-> refused as nonlinear by its notes' marker   NONLINEAR
 -> the loaded table, or a failure              loadTable
 -> the problem, or refused by the contract     Problem.build
 -> materialized, its candidate                 _candidate
@@ -92,7 +94,24 @@ REFUSED = {
     'kleisner_2026_osf/data.csv/3': (
         'covariance_structured_effect: POPULATION correlated by linguistic similarity (#32)'
     ),
+    # a censored time filed as a continuous response, whose Gaussian fit ignores the censoring (#61)
+    'MASS/gehan/1': 'censored_response: a censored time filed as continuous (#61)',
+    'rabe_hesketh/bladder.dta/1': 'censored_response: a censored time filed as continuous (#61)',
+    'rabe_hesketh/blindness.dta/1': 'censored_response: a censored time filed as continuous (#61)',
+    'rabe_hesketh/divorce2.dta/1': 'censored_response: a censored time filed as continuous (#61)',
+    'rabe_hesketh/infections.dta/1': 'censored_response: a censored time filed as continuous (#61)',
+    'rabe_hesketh/mortality.dta/1': 'censored_response: a censored time filed as continuous (#61)',
+    'rabe_hesketh/recurrent.dta/1': 'censored_response: a censored time filed as continuous (#61)',
+    'hox/SibDiv.sav/1': 'censored_response: a censored time filed as continuous (#61)',
+    'stata_nlswork3/nlswork3.dta/1': 'censored_response: a censored wage filed as continuous (#61)',
+    'pymc_examples/examples/data/external_pp.csv/1': (
+        'censored_response: a censored score filed as continuous (#61)'
+    ),
 }
+
+# The marker that opens the notes of a row whose documented model is nonlinear in its parameters
+# (survey README). No linear problem stands for such a model, so every marked row is refused.
+NONLINEAR = 'NONLINEAR:'
 
 # how far the problem's random effects are from the documented model's
 # (VERDICTS.md, "Slope decisions"; #45): the same structure in another basis or changed.
@@ -113,7 +132,6 @@ FIDELITY: dict[str, Fidelity] = {
     'HLMdiag/autism/1': 'approximate',
     'carData/KosteckiDillon/1': 'approximate',
     'stan_arm/ARM/Ch.20/allvar.csv/1': 'approximate',
-    'pymc_examples/examples/data/external_pp.csv/1': 'approximate',
     'goldstein_msm/playactivity.xls/1': 'approximate',
     'rabe_hesketh/electricity.dta/1': 'approximate',
     'goldstein_msm/OXBOYS.xls/1': 'approximate',
@@ -191,6 +209,9 @@ class Admission:
             id = row.id
             if id in self.refused:
                 refused[id] = self.refused[id]
+                continue
+            if row.notes.startswith(NONLINEAR):
+                refused[id] = 'nonlinear_model: the documented model is nonlinear in its parameters'
                 continue
             try:
                 table = self.loadTable(row)
