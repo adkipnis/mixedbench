@@ -121,7 +121,6 @@ FIDELITY: dict[str, Fidelity] = {
     'carData/Blackmore/1': 'structure_equivalent',
     'languageR/beginningReaders/1': 'structure_equivalent',
     'pymc_examples/examples/data/employee.csv/1': 'structure_equivalent',
-    'rabe_hesketh/yogurt.dta/1': 'structure_equivalent',
     'timmer_2024_osf_16/color_experiments_data_27.05.2024.txt/1': 'structure_equivalent',
     'timmer_2024_osf_15/tone_experiments_data_27.05.2024.txt/1': 'structure_equivalent',
     'avetisyan_2020_osf_2/E3_data.csv/1': 'structure_equivalent',
@@ -134,6 +133,7 @@ FIDELITY: dict[str, Fidelity] = {
     'stan_arm/ARM/Ch.20/allvar.csv/1': 'approximate',
     'goldstein_msm/playactivity.xls/1': 'approximate',
     'rabe_hesketh/electricity.dta/1': 'approximate',
+    'rabe_hesketh/yogurt.dta/1': 'approximate',  # two brand contrasts, no intercept (#61)
     'goldstein_msm/OXBOYS.xls/1': 'approximate',
     'koczynska_2026_osf_48/data_means_20241030/1': 'approximate',
     'koczynska_2026_osf_49/merge_iter_20241030/1': 'approximate',
