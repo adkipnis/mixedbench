@@ -725,7 +725,7 @@ axes:
       p10: 1
       p50: 4
       p90: 13
-      p95: 17
+      p95: 16
       max: 22134
     tiers:
       R:
@@ -789,7 +789,7 @@ axes:
       p5: 0
       p10: 1
       p50: 5
-      p90: 21
+      p90: 22
       p95: 51
       max: 23770
     tiers:
@@ -849,7 +849,7 @@ axes:
       max: 23770
   K:
     pooled:
-      n: 460
+      n: 459
       min: 1
       p5: 2
       p10: 3
@@ -877,7 +877,7 @@ axes:
         p95: 10
         max: 10
       T:
-        n: 148
+        n: 147
         min: 1
         p5: 2
         p10: 3
@@ -904,7 +904,7 @@ axes:
         p95: 37
         max: 717
     without_agridat:
-      n: 432
+      n: 431
       min: 1
       p5: 2
       p10: 3
@@ -916,9 +916,9 @@ imbalance:
   balanced_share: 0.39
 shares:
   covariate_type:
-    continuous: 0.443
-    binary: 0.329
-    categorical: 0.19
+    continuous: 0.444
+    binary: 0.33
+    categorical: 0.189
     ordered: 0.038
   level:
     within: 0.686
@@ -941,17 +941,17 @@ shares:
     deparse: 0.01
     rdata: 0.007
   published_model:
-    'yes': 0.729
-    'no': 0.271
+    'yes': 0.726
+    'no': 0.274
 k_distribution:
-  3: 0.35
-  4: 0.213
-  5: 0.093
+  3: 0.349
+  4: 0.214
+  5: 0.096
   2: 0.074
   6: 0.059
   7: 0.05
-  10: 0.035
-  9: 0.03
+  10: 0.033
+  9: 0.031
   8: 0.02
   11: 0.011
   14: 0.009
@@ -976,7 +976,7 @@ k_distribution:
   30: 0.002
   47: 0.002
 implied_columns:
-  categorical_share: 0.228
-  mean_columns_per_categorical: 6.737
-  terms_9: 20.75
-  terms_14: 32.28
+  categorical_share: 0.227
+  mean_columns_per_categorical: 6.736
+  terms_9: 20.71
+  terms_14: 32.21

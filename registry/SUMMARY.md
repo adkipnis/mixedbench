@@ -159,45 +159,45 @@ coefficient of variation are readable companions.
 
 | covariate type | n | share |
 |---|---|---|
-| continuous | 896 | 44% |
-| binary | 665 | 33% |
-| categorical | 383 | 19% |
+| continuous | 898 | 44% |
+| binary | 667 | 33% |
+| categorical | 382 | 19% |
 | ordered | 77 | 4% |
 
 | level | n | share |
 |---|---|---|
-| within | 1387 | 69% |
-| group | 634 | 31% |
+| within | 1389 | 69% |
+| group | 635 | 31% |
 
 Levels of the categorical covariates:
 
 | K | n | min | p5 | p10 | p50 | p90 | p95 | max | practice |
 |---|---|---|---|---|---|---|---|---|---|
-| pooled | 460 | 1 | 2 | 3 | 4 | 10 | 14 | 717 | – |
+| pooled | 459 | 1 | 2 | 3 | 4 | 10 | 14 | 717 | – |
 | tier R | 166 | 2 | 3 | 3 | 4 | 9 | 10 | 56 |  |
 | tier E | 51 | 1 | 2 | 2 | 3 | 7 | 10 | 10 |  |
-| tier T | 148 | 1 | 2 | 3 | 4 | 9 | 10 | 17 |  |
+| tier T | 147 | 1 | 2 | 3 | 4 | 9 | 10 | 17 |  |
 | tier D | 54 | 3 | 3 | 3 | 4 | 47 | 76 | 117 |  |
 | tier O | 41 | 2 | 2 | 3 | 5 | 17 | 37 | 717 |  |
-| without agridat | 432 | 1 | 2 | 3 | 4 | 9 | 12 | 717 |  |
+| without agridat | 431 | 1 | 2 | 3 | 4 | 9 | 12 | 717 |  |
 
 | K | n | share |
 |---|---|---|
-| 3 | 161 | 35% |
+| 3 | 160 | 35% |
 | 4 | 98 | 21% |
-| 5 | 43 | 9% |
+| 5 | 44 | 10% |
 | 2 | 34 | 7% |
 | 11+ | 32 | 7% |
 | 6 | 27 | 6% |
 | 7 | 23 | 5% |
-| 10 | 16 | 3% |
+| 10 | 15 | 3% |
 | 9 | 14 | 3% |
 | 8 | 9 | 2% |
 | 1 | 3 | 1% |
 
 Implied design columns of a model under the observed categorical share
-(0.228) and mean columns per categorical (6.737):
-9 terms 20.75 columns, 14 terms 32.28 columns.
+(0.227) and mean columns per categorical (6.736):
+9 terms 20.71 columns, 14 terms 32.21 columns.
 
 ## Design columns
 
@@ -207,7 +207,7 @@ its levels less one, an interaction the product.
 
 | d_doc | n | min | p5 | p10 | p50 | p90 | p95 | max | practice |
 |---|---|---|---|---|---|---|---|---|---|
-| pooled | 712 | 0 | 0 | 1 | 4 | 13 | 17 | 22134 | 11 |
+| pooled | 712 | 0 | 0 | 1 | 4 | 13 | 16 | 22134 | 11 |
 | tier R | 252 | 0 | 0 | 0 | 3 | 14 | 19 | 55 |  |
 | tier E | 99 | 0 | 0 | 0 | 3 | 11 | 12 | 16 |  |
 | tier T | 244 | 0 | 1 | 1 | 4 | 11 | 13 | 25 |  |
@@ -217,7 +217,7 @@ its levels less one, an interaction the product.
 
 | d_all | n | min | p5 | p10 | p50 | p90 | p95 | max | practice |
 |---|---|---|---|---|---|---|---|---|---|
-| pooled | 712 | 0 | 0 | 1 | 5 | 21 | 51 | 23770 | – |
+| pooled | 712 | 0 | 0 | 1 | 5 | 22 | 51 | 23770 | – |
 | tier R | 252 | 0 | 0 | 1 | 5 | 20 | 35 | 14966 |  |
 | tier E | 99 | 0 | 0 | 0 | 4 | 16 | 21 | 555 |  |
 | tier T | 244 | 0 | 1 | 1 | 4 | 13 | 16 | 11030 |  |
@@ -245,8 +245,8 @@ its levels less one, an interaction the product.
 
 | published | n | share |
 |---|---|---|
-| yes | 519 | 73% |
-| no | 193 | 27% |
+| yes | 517 | 73% |
+| no | 195 | 27% |
 
 ## Tier D
 
