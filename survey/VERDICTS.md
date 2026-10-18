@@ -394,7 +394,9 @@ SpidersHongKongV2 #3 follows #1 and #2 as a sibling. The refusals go to `suite/a
 also for the rows it covers outside the sample: frequency weights for keen.potatodamage, thailand
 (`wt1`) and twin_hay (`freq`); the phylogenetic covariance for Primates301 #2 and #1; the choice
 model for elections; the item-response model for cito. stata_dialyzer's notes already open with the
-nonlinear marker. fat waits for a decision: the contract cannot derive `after`.
+nonlinear marker. fat, settled on review: the registry and the contract hold no derived column, so
+`covariates` and `random_slopes` keep `time`, the formula records the hinge `after = pmax(time, 0)`
+(`registry_hand_sample_2_4_fat.csv`), and the row is refused as a non-affine feature, as nlme Ovary.
 
 - 1. **keen.potatodamage — refuse under the current contract.** The documented ordinal-probit model requires frequency weights `weights=count`; treating each aggregated cell once changes its likelihood. Other listed fields stand. [Source](https://kwstat.github.io/agridat/reference/keen.potatodamage.html).
 
