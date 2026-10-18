@@ -17,16 +17,15 @@ import pytest
 from mixedbench import registry
 
 ROOT = Path(__file__).parents[2]
-# imports both packages from the target, reports where they, the registry files and the suite's
-# list resolve
+# imports the package from the target, reports where it, the registry files and the suite's list
+# resolve
 REPORT = """
 import json, typing
-import mixedbench.datasets
+import mixedbench
 from mixedbench import registry, suite
 files = [registry.path(name) for name in typing.get_args(registry.RegistryFile)]
 print(json.dumps({
-    'datasets': mixedbench.datasets.__file__,
-    'registry': registry.__file__,
+    'package': mixedbench.__file__,
     'files': [str(p) for p in files if p.is_file()],
     'suite': str(suite.path('1.1') / 'candidates.csv'),
 }))
@@ -50,10 +49,10 @@ def installed(tmp_path_factory: pytest.TempPathFactory) -> tuple[Path, dict]:
     return target, json.loads(run.stdout)
 
 
-def test_both_packages_import_from_the_wheel(installed: tuple[Path, dict]) -> None:
+def test_the_package_imports_from_the_wheel(installed: tuple[Path, dict]) -> None:
+    """Its subpackages resolve under it, so none can come from the checkout."""
     target, report = installed
-    assert Path(report['datasets']).is_relative_to(target)
-    assert Path(report['registry']).is_relative_to(target)
+    assert Path(report['package']).is_relative_to(target)
 
 
 def test_the_registry_files_resolve_inside_the_install(installed: tuple[Path, dict]) -> None:
@@ -69,18 +68,28 @@ def test_the_suites_list_resolves_inside_the_install(installed: tuple[Path, dict
     assert Path(report['suite']).is_relative_to(target)
 
 
-def test_the_metadata_names_both_licences(installed: tuple[Path, dict]) -> None:
+def test_the_metadata_names_both_licenses(installed: tuple[Path, dict]) -> None:
     """The wheel bundles code under Apache-2.0 and registry files under CC BY 4.0."""
     target, _ = installed
     distribution = installedDistribution(target)
     assert distribution.metadata['License-Expression'] == 'Apache-2.0 AND CC-BY-4.0'
 
 
-def test_both_licence_files_ship_in_the_wheel(installed: tuple[Path, dict]) -> None:
+def test_both_license_files_ship_in_the_wheel(installed: tuple[Path, dict]) -> None:
     target, _ = installed
     distribution = installedDistribution(target)
-    licences = {file.name for file in distribution.files if 'licenses' in file.parts}
-    assert licences == {'LICENSE', 'LICENSE-CC-BY-4.0'}
+    licenses = {file.name for file in distribution.files if 'licenses' in file.parts}
+    assert licenses == {'LICENSE', 'LICENSE-CC-BY-4.0'}
+
+
+def test_the_reference_runners_r_script_and_lock_ship_in_the_wheel(
+    installed: tuple[Path, dict],
+) -> None:
+    """`references.run` calls `run.R` and checks the pins in `renv.lock` from the install."""
+    target, _ = installed
+    references = target / 'mixedbench' / 'references'
+    assert (references / 'run.R').is_file()
+    assert (references / 'renv.lock').is_file()
 
 
 def installedDistribution(target: Path) -> importlib.metadata.Distribution:

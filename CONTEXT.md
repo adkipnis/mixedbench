@@ -2,7 +2,7 @@
 
 Posterior approximation and prediction on real grouped data for generalized linear mixed
 models (GLMMs): what a problem is, what a reference is, and what a result is measured against.
-Statistical terms (family, link, fixed and random effects, grouping factor, standardised
+Statistical terms (family, link, fixed and random effects, grouping factor, standardized
 scale) are those of metabeta's GLMM glossary and are not redefined here.
 
 ## Language
@@ -40,7 +40,7 @@ _Avoid_: benchmark, corpus, suite (a subset)
 
 **Contract**:
 The fixed rules that turn a registry row and its table into a problem (rows dropped, coding,
-standardisation, family, prior, splits), so that two results on one problem compare. It binds
+standardization, family, prior, splits), so that two results on one problem compare. It binds
 the benchmark, not the user, who may fit any model to a table; a change to a rule is a new
 suite.
 _Avoid_: preprocessing (one part of it), config
@@ -50,7 +50,7 @@ One registry row under the contract: a design, a family, a prior and the splits,
 as `<source>/<object>/<model_index>`. The unit everything is computed and scored on.
 _Avoid_: dataset, task, posterior (posteriordb's word for the same thing)
 
-**Materialised problem**:
+**Materialized problem**:
 A problem written to files: one table of the coded columns in raw units, with the response,
 the trials, the grouping factors and the two split regimes, and beside it the record a table
 cannot hold (family, prior, column roles, the per-regime scales, the contract hash). The
@@ -59,7 +59,7 @@ _Avoid_: dataset, export, the parquet
 
 **Regime**:
 The rows a fit sees: the full table (posterior track), or the seen rows of a held-out-rows
-or a held-out-groups split (predictive track). Standardisation is computed per regime.
+or a held-out-groups split (predictive track). Standardization is computed per regime.
 _Avoid_: split (the partition), fold
 
 **Verified row**:
@@ -123,7 +123,7 @@ the last, until the diagnostics bar passes or the compute cap ends the run.
 _Avoid_: retry, escalation schedule
 
 **Diagnostics bar**:
-The convergence a run must reach to become a reference posterior: rank-normalised R-hat,
+The convergence a run must reach to become a reference posterior: rank-normalized R-hat,
 bulk and tail effective sample size on every global parameter, and no divergences.
 _Avoid_: threshold, convergence check
 

@@ -20,13 +20,13 @@ first use fetches each source and verifies its digest. Nothing is mirrored.
 - Every mirrored file is a derivative-work question, and the package would weigh gigabytes (a
   full fetch is 4.5 GB).
 - Rejected: OpenClustered's way. It bundled all 19 of its datasets, lme4's and MASS's
-  included, and its paper never mentions a licence; we do not follow it.
+  included, and its paper never mentions a license; we do not follow it.
 - The permanent loss is link rot. Each release records a fetch status per problem from the
   weekly CI fetch; a rotted source retires its problems from the next suite (ADR 0002).
 
 ## Consequences
 
-- A per-row `licence` column, filled by script (CRAN from the package DESCRIPTION, git and
+- A per-row `license` column, filled by script (CRAN from the package DESCRIPTION, git and
   url sources from `sources.yaml`, companion sites `not stated`), so that a permitted-mirror
   fallback for rotted links can be added in a later version without re-reading.
 - No R in the loader. The 36 objects that the survey read through an Rscript dump (27 agridat
@@ -38,7 +38,7 @@ first use fetches each source and verifies its digest. Nothing is mirrored.
   > load through `rdata`, and none is retired.
 - CI loads every problem: per pull request three operating systems × a seeded 20-problem
   subset, weekly a full fetch with checksum verification, at release a full fetch on three
-  operating systems. A problem materialises to one parquet file per problem for R and Julia
+  operating systems. A problem materializes to one parquet file per problem for R and Julia
   users.
 
 ## Amendment 2026-10-08: a mirror where a CC0 host refuses scripts (#4)
@@ -48,7 +48,7 @@ could not be fetched by a user's loader. Their data are CC0, which permits a cop
 package mirrors exactly those files as assets of the release `mirror-1` of this repository
 (`survey/mirror.py`), recorded as `mirror:` in their `sources.yaml` entries. The host stays
 the source and is asked first; the mirror is asked on a 404 or a refusal (401, 403), and its
-file must carry the same pinned sha256. Nothing under another licence is mirrored; a rotted
+file must carry the same pinned sha256. Nothing under another license is mirrored; a rotted
 non-CC0 source still retires its problems.
 
 ## Amendment 2026-10-09: rdata for the R files librdata rejects (#9)
@@ -60,14 +60,14 @@ that, the Rscript route leaves the loader; `reader` is `pyreadr`, `rdata`, `pand
 `deparse`. A file neither pyreadr nor rdata parses (a model fit's bytecode) is one object
 without a table, as an object pyreadr cannot frame is.
 
-## Amendment 2026-10-09: materialised problems are a cache; the weekly fetch opens issues
+## Amendment 2026-10-09: materialized problems are a cache; the weekly fetch opens issues
 
-A materialised problem (one parquet and one JSON, ADR 0001) is derived from a pin, a
+A materialized problem (one parquet and one JSON, ADR 0001) is derived from a pin, a
 registry row and the contract, so it lives under `registry/cache/` like the fetched files:
 never committed, never uploaded, rebuilt from the pins. Committing or hosting the arrays
 would be redistribution with another file extension. The suite commits ids and contract
-hashes only, and a test rebuilds a sample and compares them. The materialised files are the
+hashes only, and a test rebuilds a sample and compares them. The materialized files are the
 package's interface to a problem: `Problem` loads from them, and metabeta never fetches a
-source. The weekly fetch opens one GitHub issue per failing source, labelled `registry`, and
+source. The weekly fetch opens one GitHub issue per failing source, labeled `registry`, and
 closes it when the source returns; item 9's retirements read that history. A committed log
 was rejected because it would make a bot the author of registry commits.

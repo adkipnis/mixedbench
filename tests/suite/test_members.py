@@ -1,5 +1,5 @@
 """A suite's problems by id (#55): `suite.load` builds a problem from its pinned source on first
-use, materialises it into the cache and checks its contract hash against the suite's list;
+use, materializes it into the cache and checks its contract hash against the suite's list;
 later calls load it from the cache. Every test but the first fetches a source, so it is marked
 network."""
 
@@ -12,8 +12,9 @@ from pathlib import Path
 import pandas as pd
 import pytest
 from mixedbench import registry, suite
-from mixedbench.contract import Problem, contractHash, materialise, storedHash
+from mixedbench.contract import Problem, contractHash, materialize, storedHash
 from mixedbench.registry.row import writeCsv
+from mixedbench.suite import members
 
 # suite 1.1's list, copied by hand
 SLEEPSTUDY = '8111b74ef393568a2cb445ef9f10cc4f538abd8d6a6d48c6b91181fac5a8f330'
@@ -49,7 +50,7 @@ def test_files_written_with_another_hash_are_rebuilt(tmp_path: Path) -> None:
     are rebuilt from the pin rather than refused."""
     [row] = [row for row in registry.rows() if row.id == 'lme4/sleepstudy/1']
     table = registry.Tables(tmp_path).load(row)
-    materialise(Problem.build(row, table.iloc[:-1]), tmp_path)
+    materialize(Problem.build(row, table.iloc[:-1]), tmp_path)
     assert storedHash('lme4/sleepstudy/1', tmp_path) != SLEEPSTUDY
     problem = suite.load('lme4/sleepstudy/1', tmp_path)
     assert contractHash(problem) == SLEEPSTUDY
@@ -76,7 +77,7 @@ def test_a_problem_that_builds_off_its_listed_hash_raises_and_writes_nothing(
     def movedList(version: suite.Version) -> Path:
         return listed
 
-    monkeypatch.setattr(suite, 'path', movedList)
+    monkeypatch.setattr(members, 'path', movedList)
     with pytest.raises(ValueError, match='lme4/sleepstudy/1 builds to contract hash'):
         suite.load('lme4/sleepstudy/1', tmp_path)
     assert storedHash('lme4/sleepstudy/1', tmp_path) is None

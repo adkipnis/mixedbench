@@ -34,10 +34,6 @@ Issues = "https://github.com/adkipnis/mixedbench/issues"
 Demo = "https://github.com/adkipnis/mixedbench/blob/main/examples/demo.ipynb"
 Planned = "https://github.com/adkipnis/mixedbench#planned"
 
-[project.optional-dependencies]
-# The reference sampler stack (#62): brms and cmdstanr in an R subprocess.
-references = []
-
 [dependency-groups]
 dev = [
     "pytest",
@@ -48,7 +44,7 @@ dev = [
 ]
 
 [build-system]
-requires = ["hatchling>=1.27"]  # PEP 639 licence expression and licence files
+requires = ["hatchling>=1.27"]  # PEP 639 license expression and license files
 build-backend = "hatchling.build"
 
 # The repository keeps one copy of the registry files at registry/; the wheel carries them as
@@ -103,7 +99,8 @@ testpaths = ["tests"]
 # pytest's defaults kept; survey tests run by hand (`uv run pytest survey/tests`);
 # registry/cache holds fetched repositories with tests of their own
 norecursedirs = [".*", "build", "dist", "venv", "*.egg", "survey", "cache"]
-addopts = "-m 'not network' --import-mode=importlib"
+addopts = "-m 'not network and not brms' --import-mode=importlib"
 markers = [
     "network: fetches a source over the network; runs only in the CI fetch matrix",
+    "brms: fits a reference with R, brms and CmdStan; runs by `-m brms`, skipped where R or CmdStan is absent",
 ]

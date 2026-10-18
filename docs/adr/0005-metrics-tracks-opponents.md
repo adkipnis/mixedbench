@@ -10,7 +10,7 @@ date: 2026-10-08
 - Decision: per marginal, Wasserstein-1 against the reference, scaled by the reference SD;
   coverage of the reference's central 50% and 90% intervals for the practitioner.
 - Why W1: closed form in one dimension, no kernel, a unit (posterior SDs of mass moved).
-- Decision: one joint metric on the standardised global parameters. The classifier two-sample
+- Decision: one joint metric on the standardized global parameters. The classifier two-sample
   test (C2ST, sbibm's primary; fixed small MLP, five-fold; 0.5 means indistinguishable) and MMD
   with the median heuristic are both computed in suite 1.1, and one is chosen empirically in
   the opponent-line ticket, read against the chain-split null.
@@ -66,4 +66,4 @@ date: 2026-10-08
 - Decision: whether the regimes stay one seeded 10% split or become grouped K-fold (#47) is
   settled before suite 1.1 freezes, by a lab note scoring cheap predictive lines (a GLM, a
   REML mixed model) under both. After the freeze, a change of the splits is a new contract.
-- Why: the splits are in the materialised problem and so in the contract hash.
+- Why: the splits are in the materialized problem and so in the contract hash.

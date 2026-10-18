@@ -125,7 +125,7 @@ def test_a_package_without_a_data_folder_has_no_objects(tmp_path):
 
 
 def test_the_tree_is_the_package_below_the_tarballs_top_level_folder(tmp_path):
-    """What the survey reads beside the data (the DESCRIPTION's licence, man/'s help pages)
+    """What the survey reads beside the data (the DESCRIPTION's license, man/'s help pages)
     sits in the tree, the archive's single top-level folder dropped as layout."""
     tree = Loader(tmp_path, fetch=Server({CURRENT: TARBALL})).tree(FIXTURE)
     assert (tree / 'DESCRIPTION').is_file()

@@ -116,17 +116,9 @@ class Loader:
         self._tables: dict[Source, dict[str, tuple[DataObject, pd.DataFrame | None]]] = {}
         self._verified: set[tuple[Path, str]] = set()  # (file, checksum) pairs that matched
 
-    def objects(self, source: Source) -> list[DataObject]:
-        pairs = self._read(source).values()
-        return [obj for obj, _ in pairs]
-
-    def load(
-        self, source: Source, name: str, types: Mapping[str, ColumnType] | None = None
-    ) -> pd.DataFrame:
-        file, table = self._object(source, name)
-        if table is None:
-            raise ValueError(f'{source.name} {source.pin} {file}: {name!r} is no DataFrame')
-        return table.assign(**self._declared(table, types or {}))
+    # ------------------------------------------------------------------------------------------
+    # url -> archive -> tree
+    # ------------------------------------------------------------------------------------------
 
     def tree(self, source: Source) -> Path:
         """The source's files, extracted once:
@@ -146,10 +138,6 @@ class Loader:
             return tree / 'src/library/datasets'
         return tree
 
-    # ------------------------------------------------------------------------------------------
-    # url -> archive -> tree -> files -> tables
-    # ------------------------------------------------------------------------------------------
-
     def _dir(self, source: Source) -> Path:
         if source.kind == 'cran':
             return self.cache / 'cran' / f'{source.name}_{source.pin}'
@@ -157,6 +145,21 @@ class Loader:
             owner, repo = self._repo(source).split('/')
             return self.cache / 'git' / f'{owner}_{repo}_{source.pin}'
         return self.cache / 'url' / source.pin
+
+    @staticmethod
+    def _repo(source: Source) -> str:
+        return source.name.removeprefix('https://github.com/')
+
+    def _download(self, source: Source) -> Path:
+        """The digest is checked on a cache hit too."""
+        urls = self._urls(source)
+        filename = source.file or Path(urlparse(urls[0]).path).name
+        file = self._dir(source) / filename
+        if not file.exists():
+            file.parent.mkdir(parents=True, exist_ok=True)
+            file.write_bytes(self._fetchFirst(source, urls))
+        self._verify(file, source.checksum)
+        return file
 
     @staticmethod
     def _urls(source: Source) -> list[str]:
@@ -173,16 +176,12 @@ class Loader:
             return [source.name, source.mirror]
         return [source.name]
 
-    def _download(self, source: Source) -> Path:
-        """The digest is checked on a cache hit too."""
-        urls = self._urls(source)
-        filename = source.file or Path(urlparse(urls[0]).path).name
-        file = self._dir(source) / filename
-        if not file.exists():
-            file.parent.mkdir(parents=True, exist_ok=True)
-            file.write_bytes(self._fetchFirst(source, urls))
-        self._verify(file, source.checksum)
-        return file
+    def _fetchFirst(self, source: Source, urls: list[str]) -> bytes:
+        for url in urls:
+            data = self.fetch(url)
+            if data is not None:
+                return data
+        raise FileNotFoundError(f'{source.name} {source.pin}: not at {", ".join(urls)}')
 
     def _verify(self, file: Path, checksum: str | None) -> None:
         """Once per file and loader: every manifest load passes through its source's download
@@ -195,13 +194,6 @@ class Loader:
             raise ValueError(f'{file} checksum {digest} differs from pinned {checksum}')
         self._verified.add((file, checksum))
 
-    def _fetchFirst(self, source: Source, urls: list[str]) -> bytes:
-        for url in urls:
-            data = self.fetch(url)
-            if data is not None:
-                return data
-        raise FileNotFoundError(f'{source.name} {source.pin}: not at {", ".join(urls)}')
-
     @staticmethod
     def _extract(archive: Path, dir: Path) -> None:
         if archive.suffix.lower() == '.zip':
@@ -210,6 +202,35 @@ class Loader:
         else:
             with tarfile.open(archive) as t:
                 t.extractall(dir, filter='data')
+
+    # ------------------------------------------------------------------------------------------
+    # tree -> files -> objects
+    # ------------------------------------------------------------------------------------------
+
+    def objects(self, source: Source) -> list[DataObject]:
+        pairs = self._read(source).values()
+        return [obj for obj, _ in pairs]
+
+    def _read(self, source: Source) -> dict[str, tuple[DataObject, pd.DataFrame | None]]:
+        """Parsed once per source: pyreadr is slow on factors,
+        and a survey merge asks for a table several times."""
+        if source not in self._tables:
+            self._tables[source] = self._parse(source)
+        return self._tables[source]
+
+    def _parse(self, source: Source) -> dict[str, tuple[DataObject, pd.DataFrame | None]]:
+        tree = self.tree(source)
+        cran = source.kind == 'cran'
+        objects = {}
+        for file in self._files(source, tree):
+            label = file.relative_to(tree).as_posix()
+            tables, reader = readers.read(file, label, layout=source.layout, cran=cran)
+            for name, table in tables.items():
+                shape = (None, None)
+                if table is not None:
+                    shape = table.shape
+                objects[name] = DataObject(name, label, *shape, reader), table
+        return objects
 
     @staticmethod
     def _files(source: Source, tree: Path) -> list[Path]:
@@ -225,6 +246,18 @@ class Loader:
                 candidates = root.rglob('*')
         files = [f for f in candidates if f.is_file() and readers.isData(f, cran=cran)]
         return sorted(files)
+
+    # ------------------------------------------------------------------------------------------
+    # name -> file -> typed table
+    # ------------------------------------------------------------------------------------------
+
+    def load(
+        self, source: Source, name: str, types: Mapping[str, ColumnType] | None = None
+    ) -> pd.DataFrame:
+        file, table = self._object(source, name)
+        if table is None:
+            raise ValueError(f'{source.name} {source.pin} {file}: {name!r} is no DataFrame')
+        return table.assign(**self._declared(table, types or {}))
 
     def _object(self, source: Source, name: str) -> tuple[str, pd.DataFrame | None]:
         if self.manifest is None:
@@ -247,31 +280,6 @@ class Loader:
             revision = f'https://raw.githubusercontent.com/{self._repo(source)}/{source.pin}'
             file.write_bytes(self._fetchFirst(source, [f'{revision}/{quote(row.file)}']))
         return file
-
-    @staticmethod
-    def _repo(source: Source) -> str:
-        return source.name.removeprefix('https://github.com/')
-
-    def _read(self, source: Source) -> dict[str, tuple[DataObject, pd.DataFrame | None]]:
-        """Parsed once per source: pyreadr is slow on factors,
-        and a survey merge asks for a table several times."""
-        if source not in self._tables:
-            self._tables[source] = self._parse(source)
-        return self._tables[source]
-
-    def _parse(self, source: Source) -> dict[str, tuple[DataObject, pd.DataFrame | None]]:
-        tree = self.tree(source)
-        cran = source.kind == 'cran'
-        objects = {}
-        for file in self._files(source, tree):
-            label = file.relative_to(tree).as_posix()
-            tables, reader = readers.read(file, label, layout=source.layout, cran=cran)
-            for name, table in tables.items():
-                shape = (None, None)
-                if table is not None:
-                    shape = table.shape
-                objects[name] = DataObject(name, label, *shape, reader), table
-        return objects
 
     @staticmethod
     def _declared(table: pd.DataFrame, types: Mapping[str, ColumnType]) -> dict[str, pd.Series]:

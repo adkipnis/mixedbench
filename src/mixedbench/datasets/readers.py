@@ -298,6 +298,10 @@ class PandasFile:
     # the names of a workbook's codebook sheets
     NOTE_SHEETS = ('contents', 'readme', 'codebook', 'notes', 'description')
 
+    # ------------------------------------------------------------------------------------------
+    # file -> workbook | layout | extension -> tables
+    # ------------------------------------------------------------------------------------------
+
     @staticmethod
     def read(
         file: Path, label: str, layout: tuple[str, ...] | None
@@ -308,29 +312,6 @@ class PandasFile:
         if layout is not None:
             return {label: PandasFile._readLayout(file, layout)}
         return {label: PandasFile._readByExtension(file)}
-
-    @staticmethod
-    def isNoteSheet(name: str) -> bool:
-        return any(stem in name.lower() for stem in PandasFile.NOTE_SHEETS)
-
-    @staticmethod
-    def banner(file: Path) -> tuple[list[str], str]:
-        """The lines starting with `#` that open the file, and the header line after them."""
-        opener = open
-        if file.suffix.lower() == '.gz':
-            opener = gzip.open
-        lines = []
-        with opener(file, 'rb') as f:
-            for raw in f:
-                line = raw.decode('utf-8', errors='replace')
-                if not line.startswith('#'):
-                    return lines, line
-                lines.append(line.rstrip())
-        return lines, ''
-
-    # ------------------------------------------------------------------------------------------
-    # file -> workbook | layout | extension -> tables
-    # ------------------------------------------------------------------------------------------
 
     @staticmethod
     def _readWorkbook(file: Path, label: str) -> dict[str, pd.DataFrame | None]:
@@ -349,6 +330,10 @@ class PandasFile:
             # names stripped as in text files
             objects[key] = sheets[name].rename(columns=lambda c: str(c).strip())
         return objects
+
+    @staticmethod
+    def isNoteSheet(name: str) -> bool:
+        return any(stem in name.lower() for stem in PandasFile.NOTE_SHEETS)
 
     @staticmethod
     def _readLayout(file: Path, layout: tuple[str, ...]) -> pd.DataFrame:
@@ -387,8 +372,8 @@ class PandasFile:
         try:
             return pd.read_stata(file)
         except struct.error:
-            labelled = {'apply_value_formats': True, 'formats_as_category': True}
-            table, _ = pyreadstat.read_dta(str(file), **labelled)
+            labeled = {'apply_value_formats': True, 'formats_as_category': True}
+            table, _ = pyreadstat.read_dta(str(file), **labeled)
             return table
 
     @staticmethod
@@ -396,13 +381,13 @@ class PandasFile:
         """Value labels that cover every value of a column make it a categorical in code order.
         Labels on a scale's extremes alone (`lowest`, `highest`) leave it numeric."""
         table, meta = pyreadstat.read_sav(str(file))
-        labelled = {}
+        labeled = {}
         for column, labels in meta.variable_value_labels.items():
             present = set(table[column].dropna())
             if present <= set(labels):  # pandas would make every value a category
                 levels = [labels[code] for code in sorted(labels)]
-                labelled[column] = pd.Categorical(table[column].map(labels), categories=levels)
-        return table.assign(**labelled)
+                labeled[column] = pd.Categorical(table[column].map(labels), categories=levels)
+        return table.assign(**labeled)
 
     @staticmethod
     def _readDelimited(file: Path) -> pd.DataFrame | None:
@@ -412,7 +397,7 @@ class PandasFile:
         options = {'encoding': 'utf-8-sig', 'encoding_errors': 'replace'}
         lines, header = PandasFile.banner(file)
         # the sniffer needs the python engine, which ignores quotes under a regex separator; the C
-        # engine honours them, as read.table does (R's write.table output)
+        # engine honors them, as read.table does (R's write.table output)
         sep, engine = None, 'python'
         if not any(mark in header for mark in ',;\t|'):  # columns aligned with runs of spaces
             sep, engine = r'\s+', 'c'
@@ -423,6 +408,21 @@ class PandasFile:
         except pd.errors.ParserError:
             return None
         return PandasFile._tidyText(table)
+
+    @staticmethod
+    def banner(file: Path) -> tuple[list[str], str]:
+        """The lines starting with `#` that open the file, and the header line after them."""
+        opener = open
+        if file.suffix.lower() == '.gz':
+            opener = gzip.open
+        lines = []
+        with opener(file, 'rb') as f:
+            for raw in f:
+                line = raw.decode('utf-8', errors='replace')
+                if not line.startswith('#'):
+                    return lines, line
+                lines.append(line.rstrip())
+        return lines, ''
 
     @staticmethod
     def _tidyText(table: pd.DataFrame) -> pd.DataFrame:
@@ -446,6 +446,10 @@ class JsonFile:
     """A .json or .json.zip file: JSON records, or a Stan data dict as the table of its
     observations."""
 
+    # ------------------------------------------------------------------------------------------
+    # file -> dict -> observations -> table
+    # ------------------------------------------------------------------------------------------
+
     @staticmethod
     def read(file: Path) -> pd.DataFrame | None:
         data = JsonFile.unwrap(file)
@@ -461,6 +465,27 @@ class JsonFile:
         with zipfile.ZipFile(file) as z:
             member = z.namelist()[0]
             return z.read(member)
+
+    @staticmethod
+    def _observations(content: dict) -> pd.DataFrame | None:
+        """The arrays of the modal length are the columns, a dict without arrays no table.
+        Scalars, arrays of another length and of three or more dimensions are no columns."""
+        n = JsonFile.observationLength(content)
+        if n is None:
+            return None
+        columns = {}
+        for name, value in content.items():
+            if not isinstance(value, list) or len(value) != n:
+                continue
+            depth = JsonFile.arrayDepth(value)
+            if depth > 2:
+                continue
+            if depth == 2:  # a matrix, one row per observation, as numbered columns
+                for k in range(len(value[0])):
+                    columns[f'{name}_{k + 1}'] = [row[k] for row in value]
+            else:
+                columns[name] = value
+        return pd.DataFrame(columns)
 
     @staticmethod
     def observationLength(content: dict) -> int | None:
@@ -483,28 +508,3 @@ class JsonFile:
             shape.append(len(value))
             value = value[0] if value else None
         return shape
-
-    # ------------------------------------------------------------------------------------------
-    # dict -> observations -> table
-    # ------------------------------------------------------------------------------------------
-
-    @staticmethod
-    def _observations(content: dict) -> pd.DataFrame | None:
-        """The arrays of the modal length are the columns, a dict without arrays no table.
-        Scalars, arrays of another length and of three or more dimensions are no columns."""
-        n = JsonFile.observationLength(content)
-        if n is None:
-            return None
-        columns = {}
-        for name, value in content.items():
-            if not isinstance(value, list) or len(value) != n:
-                continue
-            depth = JsonFile.arrayDepth(value)
-            if depth > 2:
-                continue
-            if depth == 2:  # a matrix, one row per observation, as numbered columns
-                for k in range(len(value[0])):
-                    columns[f'{name}_{k + 1}'] = [row[k] for row in value]
-            else:
-                columns[name] = value
-        return pd.DataFrame(columns)

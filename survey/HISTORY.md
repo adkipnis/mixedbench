@@ -125,7 +125,7 @@ reading's open disagreements, four to eight per tier.
   - Dryad refuses scripts on every route (401 and 403), so its 11 deposits came through Alex's
     browser into `cache/dryad_raw/`, matched file by file against the API's md5. Since #4 a
     user's loader gets them from the release mirror (ADR 0003).
-  - One help page per deposit under `help/deposits/`: title, licence, the paper's text around
+  - One help page per deposit under `help/deposits/`: title, license, the paper's text around
     the link, its models as the practice survey filed them, the listing, README, codebook,
     scripts.
 - **Reading:** 226 objects had no frame (fitted brms and lme4 models saved as `.rds`), 320 of
@@ -161,11 +161,11 @@ reading's open disagreements, four to eight per tier.
 
 ## Registry columns and verification (#6, 2026-10-09)
 
-### Licences (#7)
+### Licenses (#7)
 
-- `GPL-3.0-or-later` and `AGPL-3.0` joined `LICENCES` for CRAN DESCRIPTIONs.
-- A string that states access or attribution but no licence (OpenML's `Public`) is `other` or
-  `not stated`, never a licence it does not name.
+- `GPL-3.0-or-later` and `AGPL-3.0` joined `LICENSES` for CRAN DESCRIPTIONs.
+- A string that states access or attribution but no license (OpenML's `Public`) is `other` or
+  `not stated`, never a license it does not name.
 - The schema change was migrated by merging a shard with the new header and no rows
   (`shards/registry_schema.csv`).
 
@@ -211,7 +211,7 @@ reading's open disagreements, four to eight per tier.
 - The text reader read a whitespace-separated file with pandas' python engine, which ignores
   quotes under a regex separator: R's `write.table` output with a quoted string holding a space
   (stan_arm's `ideo2.dat`: `"NEW HAM"`) did not parse, and quoted names kept their quotes. The
-  C engine honours quotes as read.table does.
+  C engine honors quotes as read.table does.
   - `ideo2.dat` reads again at 10268 × 22 (its exclusion stands); ros's `hibbs.dat` and
     `hdi.dat` read for the first time; quoted column names in 17 ARM, ROS and Diggle files lose
     their quotes; no registry object changed.
@@ -325,7 +325,7 @@ reading's open disagreements, four to eight per tier.
   merged registry on response, response type, trials, grouping factors, covariates,
   interactions, formula and published_model, and writes `agreement.csv`.
   - `;`-lists compare as sets, `a:b` unordered, formulas without whitespace; this
-    normalisation changed no count, so every disagreement is a real change.
+    normalization changed no count, so every disagreement is a real change.
   - hox SocsLong.sav, taken out of the registry, disagrees on every field (the per-batch
     tallies above left it out of response and grouping).
   - rabe_hesketh coursework #1, aligned to `written` by batch 3's siblings before batch 4

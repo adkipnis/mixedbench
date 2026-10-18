@@ -1,4 +1,4 @@
-from mixedbench.contract.materialised import contractHash, load, materialise, storedHash
+from mixedbench.contract.materialized import contractHash, load, materialize, storedHash
 from mixedbench.contract.problem import (
     Prior,
     Problem,
@@ -16,7 +16,7 @@ __all__ = [
     'columnType',
     'contractHash',
     'load',
-    'materialise',
+    'materialize',
     'storedHash',
     'withComposites',
 ]

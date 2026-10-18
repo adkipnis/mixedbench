@@ -21,7 +21,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # the suite's scri
 from admit import Admission
 
 CELLS = {column: '' for column in COLUMNS} | {
-    'source': 'fixture', 'tier': 'R', 'reader': 'pandas', 'licence': 'MIT', 'model_index': '1',
+    'source': 'fixture', 'tier': 'R', 'reader': 'pandas', 'license': 'MIT', 'model_index': '1',
     'response': 'y', 'response_type': 'continuous', 'grouping_factors': 'g', 'covariates': 'x',
     'formula': 'y ~ x + (1 | g)', 'published_model': 'yes', 'domain': 'test',
     'confidence': 'high', 'verified': 'high',
@@ -58,7 +58,7 @@ class Tables:
 # =====================================================================================
 def test_the_list_has_one_row_per_admissible_row_in_registry_order_with_its_hash(tmp_path):
     """The list the runner (#62) reads: registry order, not sorted by id, and each hash the
-    one the materialised files verify against, so the list and the cache agree."""
+    one the materialized files verify against, so the list and the cache agree."""
     objects = ['zeta', 'alpha', 'mid']
     rows = scratchRegistry(tmp_path, objects)
     tables = Tables(
@@ -86,18 +86,18 @@ def test_a_refused_row_leaves_the_list_and_keeps_its_reason(tmp_path):
     complete row, which only `Problem.build` can see (Phenobarb, #29)."""
     rows = [
         *scratchRegistry(tmp_path, ['kept']),
-        *scratchRegistry(tmp_path, ['colours'], response_type='categorical'),
+        *scratchRegistry(tmp_path, ['colors'], response_type='categorical'),
         *scratchRegistry(tmp_path, ['curve']),
         *scratchRegistry(tmp_path, ['empty']),
     ]
-    tables = Tables({name: groupedTable() for name in ['kept', 'colours', 'curve']})
+    tables = Tables({name: groupedTable() for name in ['kept', 'colors', 'curve']})
     tables.tables['empty'] = groupedTable(missing=12)
     refused = {'fixture/curve/1': 'nonlinear_parameter_model: random effects on curve parameters'}
     admission = Admission(rows, tables, tmp_path / 'cache', refused=refused)
     admitted = admission.admit()
     assert list(admitted.candidates['id']) == ['fixture/kept/1']
-    assert set(admitted.refused) == {'fixture/colours/1', 'fixture/curve/1', 'fixture/empty/1'}
-    assert 'categorical response' in admitted.refused['fixture/colours/1']
+    assert set(admitted.refused) == {'fixture/colors/1', 'fixture/curve/1', 'fixture/empty/1'}
+    assert 'categorical response' in admitted.refused['fixture/colors/1']
     assert admitted.refused['fixture/curve/1'].startswith('nonlinear_parameter_model')
     assert 'no row has every model value' in admitted.refused['fixture/empty/1']
 
@@ -138,19 +138,19 @@ def test_the_report_names_the_refused_rows_and_the_top_dropped_shares(tmp_path):
     losing most to missing values, largest first, since ADR 0002 caps no dropped share."""
     rows = [
         *scratchRegistry(tmp_path, ['none', 'most', 'some']),
-        *scratchRegistry(tmp_path, ['colours'], response_type='categorical'),
+        *scratchRegistry(tmp_path, ['colors'], response_type='categorical'),
     ]
     tables = Tables(
         {
             'none': groupedTable(),
             'most': groupedTable(6),
             'some': groupedTable(3),
-            'colours': groupedTable(),
+            'colors': groupedTable(),
         }
     )
     admission = Admission(rows, tables, tmp_path / 'cache')
     report = admission.admit().report(top=2)
-    assert 'fixture/colours/1' in report
+    assert 'fixture/colors/1' in report
     assert 'categorical response' in report
     assert report.index('fixture/most/1') < report.index('fixture/some/1')
     assert '0.5' in report
@@ -162,10 +162,10 @@ def test_the_list_and_the_refusals_are_written_beside_each_other(tmp_path):
     registry keeps every row (ADR 0002): both files in registry order, in the package's dialect."""
     rows = [
         *scratchRegistry(tmp_path, ['kept']),
-        *scratchRegistry(tmp_path, ['colours'], response_type='categorical'),
+        *scratchRegistry(tmp_path, ['colors'], response_type='categorical'),
         *scratchRegistry(tmp_path, ['curve']),
     ]
-    tables = Tables({name: groupedTable() for name in ['kept', 'colours', 'curve']})
+    tables = Tables({name: groupedTable() for name in ['kept', 'colors', 'curve']})
     refused = {'fixture/curve/1': 'nonlinear_parameter_model: a curve (#27)'}
     admission = Admission(rows, tables, tmp_path / 'cache', refused=refused)
     admission.admit().write(tmp_path / 'suite')
@@ -173,5 +173,5 @@ def test_the_list_and_the_refusals_are_written_beside_each_other(tmp_path):
     written = readCsv(tmp_path / 'suite' / 'refused.csv')
     assert list(candidates['id']) == ['fixture/kept/1']
     assert list(written.columns) == ['id', 'reason']
-    assert list(written['id']) == ['fixture/colours/1', 'fixture/curve/1']
+    assert list(written['id']) == ['fixture/colors/1', 'fixture/curve/1']
     assert written['reason'].iloc[1] == 'nonlinear_parameter_model: a curve (#27)'

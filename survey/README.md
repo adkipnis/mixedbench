@@ -19,14 +19,14 @@ by script.
 | `registry/sources.yaml` | hand, `mirror.py` | the frame (below) |
 | `registry/registry.csv`, `excluded.csv`, `dimensions.csv`, `columns.csv` | `merge.py` | the census tables (below) |
 | `registry/manifest.csv` | `merge.py` | per registry object the file it loads from, with sha256 and size |
-| `registry/quantiles.yaml`, `SUMMARY.md` | `merge.py` via `summarise.py` | every axis pooled, per tier and without agridat; the summary from the digit-free `SUMMARY.template.md` |
+| `registry/quantiles.yaml`, `SUMMARY.md` | `merge.py` via `summarize.py` | every axis pooled, per tier and without agridat; the summary from the digit-free `SUMMARY.template.md` |
 | `registry/help/`, `cache/` | `pull.py`, the loader | untracked: one help page per kept object; downloads |
 | `candidates.csv`, `duplicates.csv`, `dropped.csv` | `pull.py`, `merge.py` | the survey's bookkeeping (below) |
 | `deposits.csv`, `deposit_files.csv` | the archived `deposits.py`, `resolve.py` | Tier D's frame: the drawn papers and every file their deposits list |
 | `practice_quantiles.yaml` | copied | the practice survey's `quantiles.yaml` (metabeta-v3), the practice column of `SUMMARY.md` |
 | `shards/<table>_<label>.csv` | agents, `pull.py` | one shard per reading run; `table` ∈ `registry`, `excluded`, `duplicates`, `dropped` |
 | `prompts/read.md` | | the reading agent's brief |
-| `schema.py`, `sources.py`, `help.py`, `measure.py`, `summarise.py` | | file contract, frame, help pages, measures, summary |
+| `schema.py`, `sources.py`, `help.py`, `measure.py`, `summarize.py` | | file contract, frame, help pages, measures, summary |
 | [`archive/`](https://github.com/adkipnis/mixedbench/tree/survey-archive-3/survey/archive) | | finished scripts and their outputs, kept at tag `survey-archive-3` and reproducible at tags `survey-archive` and `survey-archive-2` ([README](https://github.com/adkipnis/mixedbench/blob/survey-archive-3/survey/archive/README.md)) |
 | `tests/` | | `uv run pytest survey/tests`, by hand; the root run never recurses here |
 
@@ -50,7 +50,7 @@ One pass per tier:
    about 60 objects and file each in a registry or an excluded shard, deciding only what the
    data cannot tell.
 4. **Merge.** `merge.py` loads, validates, upserts, supersedes, reconciles, measures, writes
-   the manifest, summarises and reports.
+   the manifest, summarizes and reports.
 5. **Duplicates.** Flagged pairs are answered by script where the tables are identical, else by
    one agent.
 6. **Blind second reading.** `medium` and `low` rows are re-read by fresh agents and compared
@@ -58,7 +58,7 @@ One pass per tier:
    to Alex.
 7. **Spot check.** 20 rows drawn with seed 0, stratified by shard, read by Alex at the source.
 8. **Verification** (once after all tiers). A seeded hand sample of Tiers R, E, T and O
-   against [ADR 0002](../docs/adr/0002-registry-suite-versioning-licences.md)'s bar
+   against [ADR 0002](../docs/adr/0002-registry-suite-versioning-licenses.md)'s bar
    ([HISTORY](HISTORY.md#hand-sample-11-12)).
 
 ## Frame: `sources.yaml`
@@ -73,7 +73,7 @@ tiers:
   R:
     agridat: {kind: cran, pin: '1.26', cap: 50}
   E:
-    pingouin: {kind: git, name: https://github.com/raphaelvallat/pingouin, pin: b1c2d3e, path: src/pingouin/datasets, licence: GPL-3.0}
+    pingouin: {kind: git, name: https://github.com/raphaelvallat/pingouin, pin: b1c2d3e, path: src/pingouin/datasets, license: GPL-3.0}
   D:
     smith_2019_dryad: {kind: url, name: https://datadryad.org/.../data.zip, pin: <sha256>}
 dropped:
@@ -92,13 +92,13 @@ dropped:
   the host under the same pin (ADR 0003).
 - `layout`: the columns of a headerless text file, `name` (whitespace-separated) or
   `name:start-end` (fixed-width, from 1).
-- `licence`: as the collection states it, or `not stated` once read. An absent key means nobody
+- `license`: as the collection states it, or `not stated` once read. An absent key means nobody
   looked, and the merge refuses a git or url source without one; a CRAN entry needs none.
 - `dropped`: every candidate left out, with the reason. `nets`: the Tier O keyword net, a
   record the frame reader skips.
 
 The sources of each tier are the entries of `sources.yaml`. Tier D has one `url` entry per
-file, labelled `<paper_id>_<repository>` (`_2`, `_3` for further files). Gelman's and West's
+file, labeled `<paper_id>_<repository>` (`_2`, `_3` for further files). Gelman's and West's
 sites refuse scripts, so ARM data come through `stan_arm` and `ros`.
 
 ## File contracts
@@ -147,8 +147,8 @@ Key `source`, `object`, `model_index`. Agent columns, in order:
 | `notes` | what was read; `RULE GAP:` for an unsettled case; `NONLINEAR:` and `RESPONSE INFERRED:` open their rows' notes |
 
 The merge fills `tier`; `sources` (`source:object` of every duplicate folded in, its own
-first); `reader`; `licence`, the `licence:` key or a CRAN DESCRIPTION's `License`, mapped by
-`LICENCES` in `schema.py` and rewritten at every merge (ADR 0003).
+first); `reader`; `license`, the `license:` key or a CRAN DESCRIPTION's `License`, mapped by
+`LICENSES` in `schema.py` and rewritten at every merge (ADR 0003).
 
 `random_slopes` and `verified` came in by the header-only `shards/registry_schema_2.csv`;
 the archived `verified.py` filled `verified` once through `shards/registry_verified.csv`;
@@ -165,7 +165,7 @@ rows that named a nested `a:b` by a `b` whose codes repeat across `a` through
   `detail`; the merge adds `tier`. `reason` ∈ `no grouping structure`,
   `time series without replication`, `fewer than two groups`,
   `response missing or undocumented`, `derived or duplicated table`, `simulated data`,
-  `unreadable format`, `licence forbids redistribution`, `too large`, `not the paper's data`
+  `unreadable format`, `license forbids redistribution`, `too large`, `not the paper's data`
   (Tier D).
 - An object is in the registry or the exclusions, never both; to re-file one, drop it first.
 - `duplicates.csv`: key `source_a`, `object_a`, `source_b`, `object_b` in frame order, with
@@ -223,7 +223,7 @@ A failing shard is refused, its offending rows printed, nothing written.
 - The response shows its type: `continuous` numeric, `binary` two values, `count` and
   `binomial` non-negative integers, `ordinal` at most 10 values, `categorical` not float; a
   `binomial` row's integer `trials` never below the response.
-- `documented_prior` only when `published_model` is `yes`; every registry source's licence in
+- `documented_prior` only when `published_model` is `yes`; every registry source's license in
   the lookup.
 - The object not in the rival file; a dropped object in one of the two.
 
@@ -244,7 +244,7 @@ object and the deciding issue.
   Sparrows; m3#25); a repeating dyad the book fits (Crofoot; m3#25); a design level the first
   reading missed (lawn's `machine:speed`; m3#23); a genotype-by-environment term fitted as
   random (salmon.bunt; m3#22).
-- Not counted: strata and waves modelled as fixed (CES11; m3#23); field coordinates
+- Not counted: strata and waves modeled as fixed (CES11; m3#23); field coordinates
   (connolly.potato; m3#22), though a Latin square's rows and columns are blocks (OrchardSprays;
   m3#23); a factor that classifies rather than clusters (singer; m3#23); a dyad with one row
   per pair (Monks; m3#25).
@@ -262,7 +262,7 @@ object and the deciding issue.
 - Totals are `count`, 1–5 ratings `ordinal`, non-integer abundances `continuous`, a bounded
   score without trials `count` (eggprod, InstEval; m3#22–m3#26); a float-coded nominal stays
   `ordinal` (antibiotics; #11).
-- A documented normalised score is its own column (jsp_728; m3#25).
+- A documented normalized score is its own column (jsp_728; m3#25).
 - Survival: `continuous`, the event indicator in `ignore` and `Surv(time, event)` in the
   formula (catheter; m3#24). Discrete-time hazard: the indicator is the response, `PERIOD` a
   categorical covariate (cigarette; m3#25).
