@@ -18,8 +18,8 @@ How to read the tables:
   (the minimum for the smallest group size), read at merge time; `–` where the practice survey
   has no such axis.
 
-**Corpus.** 712 registry rows over 640 datasets and 941 grouping
-factors; per tier R 252, T 244, D 104, E 99, O 13. Excluded: 2133 objects (no grouping structure 1164, derived or duplicated table 622, unreadable format 192, not the paper's data 46, simulated data 44, response missing or undocumented 36, time series without replication 28, fewer than two groups 1).
+**Corpus.** 707 registry rows over 637 datasets and 936 grouping
+factors; per tier R 253, T 238, D 104, E 99, O 13. Excluded: 2133 objects (no grouping structure 1164, derived or duplicated table 622, unreadable format 192, not the paper's data 46, simulated data 44, response missing or undocumented 36, time series without replication 28, fewer than two groups 1).
 
 ## Observations
 
@@ -27,29 +27,29 @@ Rows with a measured response; a pharmacokinetic table's dosing rows are not obs
 
 | n_obs | n | min | p5 | p10 | p50 | p90 | p95 | max | practice |
 |---|---|---|---|---|---|---|---|---|---|
-| pooled | 712 | 7 | 29 | 45 | 459 | 7584 | 20796 | 1000209 | 23025 |
-| tier R | 252 | 12 | 21 | 30 | 196 | 3078 | 7185 | 73421 |  |
+| pooled | 707 | 7 | 29 | 45 | 445 | 7584 | 20796 | 1000209 | 23025 |
+| tier R | 253 | 12 | 21 | 30 | 196 | 3078 | 7185 | 73421 |  |
 | tier E | 99 | 20 | 30 | 40 | 528 | 19200 | 28534 | 1000209 |  |
-| tier T | 244 | 7 | 36 | 70 | 853 | 7185 | 10036 | 283728 |  |
+| tier T | 238 | 7 | 32 | 67 | 826 | 7374 | 13931 | 283728 |  |
 | tier D | 104 | 45 | 76 | 219 | 1211 | 21729 | 61248 | 210658 |  |
 | tier O | 13 | 52 | 52 | 63 | 478 | 181800 | 318438 | 318438 |  |
-| without agridat | 684 | 7 | 29 | 45 | 500 | 8164 | 21729 | 1000209 |  |
+| without agridat | 679 | 7 | 29 | 45 | 480 | 8437 | 21805 | 1000209 |  |
 
 ## Grouping factors
 
 | n_grouping_factors | n | min | p5 | p10 | p50 | p90 | p95 | max | practice |
 |---|---|---|---|---|---|---|---|---|---|
-| pooled | 712 | 1 | 1 | 1 | 1 | 2 | 2 | 5 | 3 |
-| tier R | 252 | 1 | 1 | 1 | 1 | 2 | 2 | 4 |  |
+| pooled | 707 | 1 | 1 | 1 | 1 | 2 | 2 | 5 | 3 |
+| tier R | 253 | 1 | 1 | 1 | 1 | 2 | 2 | 4 |  |
 | tier E | 99 | 1 | 1 | 1 | 1 | 2 | 4 | 5 |  |
-| tier T | 244 | 1 | 1 | 1 | 1 | 2 | 2 | 3 |  |
+| tier T | 238 | 1 | 1 | 1 | 1 | 2 | 2 | 3 |  |
 | tier D | 104 | 1 | 1 | 1 | 1 | 2 | 3 | 4 |  |
 | tier O | 13 | 1 | 1 | 1 | 1 | 2 | 2 | 2 |  |
-| without agridat | 684 | 1 | 1 | 1 | 1 | 2 | 2 | 5 |  |
+| without agridat | 679 | 1 | 1 | 1 | 1 | 2 | 2 | 5 |  |
 
 | relation | n | share |
 |---|---|---|
-| single | 524 | 56% |
+| single | 519 | 55% |
 | crossed | 187 | 20% |
 | nested | 149 | 16% |
 | mixed | 81 | 9% |
@@ -58,115 +58,115 @@ Rows with a measured response; a pharmacokinetic table's dosing rows are not obs
 
 | n_groups | n | min | p5 | p10 | p50 | p90 | p95 | max | practice |
 |---|---|---|---|---|---|---|---|---|---|
-| pooled | 941 | 2 | 4 | 5 | 32 | 361 | 1128 | 92017 | 414 |
-| tier R | 335 | 2 | 4 | 4 | 20 | 184 | 316 | 10767 |  |
+| pooled | 936 | 2 | 4 | 5 | 32 | 369 | 1151 | 92017 | 414 |
+| tier R | 336 | 2 | 4 | 4 | 20 | 184 | 316 | 10767 |  |
 | tier E | 142 | 3 | 4 | 5 | 37 | 595 | 4434 | 19898 |  |
-| tier T | 290 | 2 | 4 | 6 | 59 | 546 | 1323 | 4856 |  |
+| tier T | 284 | 2 | 4 | 6 | 58 | 546 | 1323 | 4856 |  |
 | tier D | 158 | 2 | 3 | 5 | 54 | 281 | 554 | 13319 |  |
 | tier O | 16 | 3 | 3 | 3 | 32 | 71518 | 92017 | 92017 |  |
-| without agridat | 888 | 2 | 4 | 5 | 40 | 392 | 1270 | 92017 |  |
+| without agridat | 883 | 2 | 4 | 5 | 38 | 392 | 1270 | 92017 |  |
 
 ## Group size
 
 | group_size_min | n | min | p5 | p10 | p50 | p90 | p95 | max | practice |
 |---|---|---|---|---|---|---|---|---|---|
-| pooled | 941 | 1 | 1 | 1 | 5 | 81 | 240 | 18180 | 1 |
-| tier R | 335 | 1 | 1 | 1 | 5 | 32 | 62 | 567 |  |
+| pooled | 936 | 1 | 1 | 1 | 5 | 84 | 240 | 18180 | 1 |
+| tier R | 336 | 1 | 1 | 1 | 5 | 32 | 62 | 567 |  |
 | tier E | 142 | 1 | 1 | 1 | 6 | 216 | 500 | 1872 |  |
-| tier T | 290 | 1 | 1 | 1 | 4 | 50 | 92 | 1098 |  |
+| tier T | 284 | 1 | 1 | 1 | 4 | 50 | 92 | 1098 |  |
 | tier D | 158 | 1 | 1 | 1 | 21 | 376 | 927 | 8162 |  |
 | tier O | 16 | 1 | 1 | 1 | 21 | 1240 | 18180 | 18180 |  |
-| without agridat | 888 | 1 | 1 | 1 | 5 | 91 | 255 | 18180 |  |
+| without agridat | 883 | 1 | 1 | 1 | 5 | 91 | 255 | 18180 |  |
 
 | group_size_p10 | n | min | p5 | p10 | p50 | p90 | p95 | max | practice |
 |---|---|---|---|---|---|---|---|---|---|
-| pooled | 941 | 1 | 1 | 2 | 7 | 107 | 255 | 18180 | – |
-| tier R | 335 | 1 | 1 | 2 | 6 | 36 | 72 | 583 |  |
+| pooled | 936 | 1 | 1 | 2 | 7 | 107 | 278 | 18180 | – |
+| tier R | 336 | 1 | 1 | 2 | 6 | 36 | 72 | 583 |  |
 | tier E | 142 | 1 | 1 | 2 | 7 | 216 | 500 | 2442 |  |
-| tier T | 290 | 1 | 1 | 1 | 6 | 58 | 135 | 1098 |  |
+| tier T | 284 | 1 | 1 | 1 | 6 | 58 | 135 | 1098 |  |
 | tier D | 158 | 1 | 1 | 1 | 24 | 384 | 1020 | 8162 |  |
 | tier O | 16 | 1 | 1 | 1 | 21 | 3630 | 18180 | 18180 |  |
-| without agridat | 888 | 1 | 1 | 2 | 7 | 108 | 282 | 18180 |  |
+| without agridat | 883 | 1 | 1 | 2 | 7 | 108 | 282 | 18180 |  |
 
 | group_size_p50 | n | min | p5 | p10 | p50 | p90 | p95 | max | practice |
 |---|---|---|---|---|---|---|---|---|---|
-| pooled | 941 | 1 | 2 | 3 | 10 | 145 | 465 | 18180 | – |
-| tier R | 335 | 1 | 2 | 3 | 8 | 47 | 105 | 600 |  |
+| pooled | 936 | 1 | 2 | 3 | 10 | 146 | 491 | 18180 | – |
+| tier R | 336 | 1 | 2 | 3 | 8 | 47 | 105 | 600 |  |
 | tier E | 142 | 1 | 3 | 3 | 11 | 500 | 660 | 4200 |  |
-| tier T | 290 | 1 | 2 | 2 | 10 | 84 | 190 | 2037 |  |
+| tier T | 284 | 1 | 2 | 2 | 10 | 84 | 190 | 2037 |  |
 | tier D | 158 | 1 | 2 | 3 | 30 | 528 | 1393 | 8511 |  |
 | tier O | 16 | 1 | 1 | 1 | 25 | 8150 | 18180 | 18180 |  |
-| without agridat | 888 | 1 | 2 | 3 | 10 | 160 | 491 | 18180 |  |
+| without agridat | 883 | 1 | 2 | 3 | 10 | 160 | 491 | 18180 |  |
 
 | group_size_p90 | n | min | p5 | p10 | p50 | p90 | p95 | max | practice |
 |---|---|---|---|---|---|---|---|---|---|
-| pooled | 941 | 1 | 2 | 3 | 14 | 232 | 600 | 20425 | – |
-| tier R | 335 | 1 | 2 | 3 | 9 | 61 | 171 | 1204 |  |
+| pooled | 936 | 1 | 2 | 3 | 14 | 240 | 600 | 20425 | – |
+| tier R | 336 | 1 | 2 | 3 | 9 | 61 | 171 | 1204 |  |
 | tier E | 142 | 2 | 3 | 4 | 14 | 762 | 1292 | 4650 |  |
-| tier T | 290 | 2 | 2 | 3 | 14 | 139 | 315 | 4014 |  |
+| tier T | 284 | 2 | 2 | 3 | 14 | 139 | 315 | 4014 |  |
 | tier D | 158 | 2 | 3 | 4 | 45 | 806 | 1898 | 8639 |  |
 | tier O | 16 | 2 | 2 | 2 | 25 | 18180 | 20425 | 20425 |  |
-| without agridat | 888 | 2 | 2 | 3 | 14 | 257 | 730 | 20425 |  |
+| without agridat | 883 | 2 | 2 | 3 | 14 | 257 | 730 | 20425 |  |
 
 | group_size_max | n | min | p5 | p10 | p50 | p90 | p95 | max | practice |
 |---|---|---|---|---|---|---|---|---|---|
-| pooled | 941 | 2 | 3 | 4 | 17 | 290 | 873 | 33076 | 300 |
-| tier R | 335 | 2 | 2 | 3 | 10 | 92 | 217 | 7500 |  |
+| pooled | 936 | 2 | 3 | 4 | 16 | 290 | 876 | 33076 | 300 |
+| tier R | 336 | 2 | 2 | 3 | 10 | 93 | 217 | 7500 |  |
 | tier E | 142 | 2 | 3 | 4 | 27 | 873 | 2314 | 4860 |  |
-| tier T | 290 | 2 | 2 | 3 | 17 | 209 | 436 | 7745 |  |
+| tier T | 284 | 2 | 2 | 3 | 16 | 209 | 436 | 7745 |  |
 | tier D | 158 | 3 | 4 | 5 | 45 | 927 | 1898 | 8639 |  |
 | tier O | 16 | 8 | 8 | 10 | 40 | 18180 | 33076 | 33076 |  |
-| without agridat | 888 | 2 | 3 | 4 | 17 | 326 | 927 | 33076 |  |
+| without agridat | 883 | 2 | 3 | 4 | 17 | 326 | 927 | 33076 |  |
 
 ## Imbalance
 
 The concentration of a symmetric Dirichlet fitted by moment matching to the group-size
 proportions, the statistic the simulator draws; a balanced allocation has infinite
-concentration (share of grouping factors: 0.39). Singleton share and the
+concentration (share of grouping factors: 0.392). Singleton share and the
 coefficient of variation are readable companions.
 
 | alpha | n | min | p5 | p10 | p50 | p90 | p95 | max | practice |
 |---|---|---|---|---|---|---|---|---|---|
-| pooled | 941 | 0.0251 | 0.9669 | 1.7027 | 51.954 | inf | inf | inf | – |
-| tier R | 335 | 0.0251 | 1.1846 | 2.6431 | inf | inf | inf | inf |  |
+| pooled | 936 | 0.0251 | 0.9496 | 1.7367 | 55.7971 | inf | inf | inf | – |
+| tier R | 336 | 0.0251 | 1.1846 | 2.3601 | inf | inf | inf | inf |  |
 | tier E | 142 | 0.1733 | 0.3236 | 0.9384 | 18.3212 | inf | inf | inf |  |
-| tier T | 290 | 0.0438 | 1.0843 | 1.6398 | 11.4003 | inf | inf | inf |  |
+| tier T | 284 | 0.0438 | 1.0843 | 1.9306 | 12.1176 | inf | inf | inf |  |
 | tier D | 158 | 0.2722 | 0.8708 | 1.7108 | 43.4569 | inf | inf | inf |  |
 | tier O | 16 | 1.6802 | 1.6802 | 1.7019 | 80.9739 | inf | inf | inf |  |
-| without agridat | 888 | 0.0296 | 0.9496 | 1.6866 | 37.9216 | inf | inf | inf |  |
+| without agridat | 883 | 0.0296 | 0.9496 | 1.7108 | 38.0449 | inf | inf | inf |  |
 
 | singleton_share | n | min | p5 | p10 | p50 | p90 | p95 | max | practice |
 |---|---|---|---|---|---|---|---|---|---|
-| pooled | 941 | 0 | 0 | 0 | 0 | 0.0897 | 0.25 | 0.9964 | – |
-| tier R | 335 | 0 | 0 | 0 | 0 | 0.0428 | 0.1525 | 0.9964 |  |
+| pooled | 936 | 0 | 0 | 0 | 0 | 0.0902 | 0.25 | 0.9964 | – |
+| tier R | 336 | 0 | 0 | 0 | 0 | 0.0428 | 0.1525 | 0.9964 |  |
 | tier E | 142 | 0 | 0 | 0 | 0 | 0.0909 | 0.1525 | 0.5329 |  |
-| tier T | 290 | 0 | 0 | 0 | 0 | 0.1154 | 0.2741 | 0.8448 |  |
+| tier T | 284 | 0 | 0 | 0 | 0 | 0.1154 | 0.2741 | 0.8448 |  |
 | tier D | 158 | 0 | 0 | 0 | 0 | 0.1 | 0.2917 | 0.7481 |  |
 | tier O | 16 | 0 | 0 | 0 | 0 | 0.688 | 0.7655 | 0.7655 |  |
-| without agridat | 888 | 0 | 0 | 0 | 0 | 0.0902 | 0.2211 | 0.8448 |  |
+| without agridat | 883 | 0 | 0 | 0 | 0 | 0.0902 | 0.2211 | 0.8448 |  |
 
 | cv | n | min | p5 | p10 | p50 | p90 | p95 | max | practice |
 |---|---|---|---|---|---|---|---|---|---|
-| pooled | 941 | 0 | 0 | 0 | 0.1321 | 0.7307 | 0.9899 | 5.899 | – |
-| tier R | 335 | 0 | 0 | 0 | 0 | 0.615 | 0.8761 | 5.899 |  |
+| pooled | 936 | 0 | 0 | 0 | 0.1321 | 0.7235 | 0.9946 | 5.899 | – |
+| tier R | 336 | 0 | 0 | 0 | 0 | 0.6432 | 0.8761 | 5.899 |  |
 | tier E | 142 | 0 | 0 | 0 | 0.2438 | 1.0108 | 1.5292 | 1.9835 |  |
-| tier T | 290 | 0 | 0 | 0 | 0.2911 | 0.7262 | 0.9096 | 3.5667 |  |
+| tier T | 284 | 0 | 0 | 0 | 0.273 | 0.7041 | 0.9096 | 3.5667 |  |
 | tier D | 158 | 0 | 0 | 0 | 0.1428 | 0.7504 | 0.9946 | 1.7829 |  |
 | tier O | 16 | 0 | 0 | 0 | 0.1098 | 0.7524 | 0.7665 | 0.7665 |  |
-| without agridat | 888 | 0 | 0 | 0 | 0.1556 | 0.7478 | 1.0049 | 4.9111 |  |
+| without agridat | 883 | 0 | 0 | 0 | 0.149 | 0.7262 | 1.0049 | 4.9111 |  |
 
 ## Covariates of the documented models
 
 | covariate type | n | share |
 |---|---|---|
 | continuous | 898 | 44% |
-| binary | 667 | 33% |
+| binary | 662 | 33% |
 | categorical | 382 | 19% |
 | ordered | 77 | 4% |
 
 | level | n | share |
 |---|---|---|
-| within | 1389 | 69% |
+| within | 1384 | 69% |
 | group | 635 | 31% |
 
 Levels of the categorical covariates:
@@ -197,7 +197,7 @@ Levels of the categorical covariates:
 
 Implied design columns of a model under the observed categorical share
 (0.227) and mean columns per categorical (6.736):
-9 terms 20.71 columns, 14 terms 32.21 columns.
+9 terms 20.74 columns, 14 terms 32.26 columns.
 
 ## Design columns
 
@@ -207,29 +207,29 @@ its levels less one, an interaction the product.
 
 | d_doc | n | min | p5 | p10 | p50 | p90 | p95 | max | practice |
 |---|---|---|---|---|---|---|---|---|---|
-| pooled | 712 | 0 | 0 | 1 | 4 | 13 | 16 | 22134 | 11 |
-| tier R | 252 | 0 | 0 | 0 | 3 | 14 | 19 | 55 |  |
+| pooled | 707 | 0 | 0 | 1 | 4 | 13 | 16 | 22134 | 11 |
+| tier R | 253 | 0 | 0 | 0 | 3 | 14 | 19 | 55 |  |
 | tier E | 99 | 0 | 0 | 0 | 3 | 11 | 12 | 16 |  |
-| tier T | 244 | 0 | 1 | 1 | 4 | 11 | 13 | 25 |  |
+| tier T | 238 | 0 | 0 | 1 | 4 | 11 | 13 | 25 |  |
 | tier D | 104 | 0 | 1 | 1 | 4 | 15 | 36 | 277 |  |
 | tier O | 13 | 2 | 2 | 2 | 11 | 85 | 22134 | 22134 |  |
-| without agridat | 684 | 0 | 0 | 1 | 4 | 12 | 16 | 22134 |  |
+| without agridat | 679 | 0 | 0 | 1 | 4 | 12 | 16 | 22134 |  |
 
 | d_all | n | min | p5 | p10 | p50 | p90 | p95 | max | practice |
 |---|---|---|---|---|---|---|---|---|---|
-| pooled | 712 | 0 | 0 | 1 | 5 | 22 | 51 | 23770 | – |
-| tier R | 252 | 0 | 0 | 1 | 5 | 20 | 35 | 14966 |  |
+| pooled | 707 | 0 | 0 | 1 | 5 | 22 | 51 | 23770 | – |
+| tier R | 253 | 0 | 0 | 1 | 5 | 20 | 35 | 14966 |  |
 | tier E | 99 | 0 | 0 | 0 | 4 | 16 | 21 | 555 |  |
-| tier T | 244 | 0 | 1 | 1 | 4 | 13 | 16 | 11030 |  |
+| tier T | 238 | 0 | 1 | 1 | 5 | 13 | 16 | 11030 |  |
 | tier D | 104 | 1 | 2 | 3 | 15 | 156 | 294 | 4580 |  |
 | tier O | 13 | 2 | 2 | 2 | 19 | 85 | 23770 | 23770 |  |
-| without agridat | 684 | 0 | 0 | 1 | 5 | 21 | 51 | 23770 |  |
+| without agridat | 679 | 0 | 0 | 1 | 5 | 22 | 55 | 23770 |  |
 
 ## Response, reader and published model
 
 | response type | n | share |
 |---|---|---|
-| continuous | 450 | 63% |
+| continuous | 445 | 63% |
 | binary | 114 | 16% |
 | count | 75 | 11% |
 | ordinal | 45 | 6% |
@@ -238,15 +238,15 @@ its levels less one, an interaction the product.
 
 | reader | n | share |
 |---|---|---|
-| pandas | 457 | 64% |
-| pyreadr | 243 | 34% |
+| pandas | 451 | 64% |
+| pyreadr | 244 | 35% |
 | deparse | 7 | 1% |
 | rdata | 5 | 1% |
 
 | published | n | share |
 |---|---|---|
-| yes | 517 | 73% |
-| no | 195 | 27% |
+| yes | 512 | 72% |
+| no | 195 | 28% |
 
 ## Tier D
 

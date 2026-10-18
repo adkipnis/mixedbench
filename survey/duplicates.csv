@@ -459,3 +459,6 @@
 "jing_2020_osf","mydata_exp3_pref1_two","jing_2020_osf_2","mydata_exp1_pref_two","different","same shape, different values: two experiments with the same design (answered by script, #26)"
 "jing_2020_osf","mydata_exp3_pref1_two","jing_2020_osf_2","mydata_exp3_pref1_two","same","byte-identical tables (answered by script, #26)"
 "stan_arm","ARM/Ch.23/sesame.data.json","stan_arm","ARM/Ch.23/sesame.dta","same","the same 240 children: postlet = yt_1, regular = yt_2, encour = z, siteset = site + 5*(setting - 1), the same nine groups (hand sample #61)"
+"mlmRev","Gcsemv","goldstein_msm","Gcsemv.xls","same","the same 1,905 pupils in 73 schools, ids equal: Gcsemv.xls holds the unrounded percentages mlmRev rounds, missing scores coded -1 where mlmRev has NA (hand sample #61)"
+"mlmRev","Gcsemv","cmm_sci","SCI.DAT","same","the same 1,905 pupils in 73 schools, ids equal: SCI.DAT holds the raw points (written/160, coursework/108 give Gcsemv.xls exactly) and the 202 written and 180 coursework scores the others mark missing (hand sample #61)"
+"mlmRev","Gcsemv","rabe_hesketh","coursework.dta","same","the same 1,905 pupils in 73 schools, ids equal: coursework.dta holds mlmRev's values, missing scores coded -1 where mlmRev has NA (hand sample #61)"
