@@ -65,5 +65,5 @@ Three rules keep results comparable:
 
 ## Licence
 
-By contributing, you agree that your code is released under [MIT](LICENSE) and your changes to
+By contributing, you agree that your code is released under [Apache-2.0](LICENSE) and your changes to
 the registry and suite files under [CC BY 4.0](docs/LICENSE-CC-BY-4.0).
