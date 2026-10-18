@@ -310,8 +310,6 @@ object and the deciding issue.
 
 - One-level categoricals over the measured rows (stata_quinidine's `dose` and `interval`,
   Zuur Seedling's `Year`): the `K` 1 cell.
-- `-1` codes for missing (Goldstein's Gcsemv.xls, coursework.dta) are kept as values, for the
-  contract to settle (#12).
 - Not read: ROS's Congress `.asc` files and `cows.dat`, liu_2022's merged-header workbook,
   walker_2021b's text sentinels.
 - Not representable: polynomial and derived terms, multiple membership.
