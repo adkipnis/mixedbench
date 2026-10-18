@@ -230,3 +230,62 @@ prior), `approximate` changes it.
   dropped.
 - kleisner_2026_osf #1–3: `SEX|POPULATION`; approximate, the sex-specific intercepts kept and
   the SEX × covariate slopes dropped.
+
+## Hand sample 2, batch 1 (#61, 2026-10-18)
+
+The second hand sample, over suite 1.1's candidates not yet hand-checked; `shards/registry_hand_sample_2_1.csv`,
+`registry_hand_sample_2_1_siblings.csv`. Taken on review: every row whose notes open with `NONLINEAR:` is
+refused at admission (`nonlinear_model`); a censored time filed as continuous is refused
+(`censored_response`: gehan, bladder, blindness, divorce2, infections, mortality, recurrent, SibDiv,
+nlswork3, external_pp); Soils #3 and carData Pottery #1 and #3 follow Soils #2 and Pottery #2 as
+siblings. The contract cannot drop amenorrhea's `trt` main effect or keep danish's quadratic.
+
+- **1. Soils — `published_model=no`**; the source uses fixed Block in MANOVA, so the random-Block formula is a proposal. [Source](https://www.jstatsoft.org/article/view/v017i06).
+
+- **2. Owls — stands**; Chapter 13’s `O2.lmer` explicitly fits this Poisson model, including the brood-size offset and random nest intercept. [Scripts](https://www.highstat.com/Books/Book2/ZuurMixedModellingAllRCode.zip).
+
+- **3. troutegg — stands**, including `published_model=no`; Faraway fits fixed `location + period`, and the random-location adaptation is correctly labelled unpublished. [Script](https://julianfaraway.github.io/faraway/ELM/scripts/binary.R).
+
+- **4. ISIT — `published_model=no` for the recorded linear formula**; the documented GAMM uses `Sources ~ s(Depth1000) + fMonth`, with a Station random intercept, where `Depth1000=SampleDepth/1000` and Month is categorical. [Chapter 17 scripts](https://www.highstat.com/Books/Book2/ZuurMixedModellingAllRCode.zip).
+
+- **5. Lanza — stands**, including `published_model=no`; the book’s `cmh_test(classification ~ treatment | study, ...)` conditions on study strata rather than fitting random study intercepts. [Source](https://github.com/cran/HSAUR3/blob/1.0-16/vignettes/Ch_conditional_inference.Rnw).
+
+- **6. indo_rct — stands**, including `published_model=no`; the proposed random-site model is not the trial’s published analysis. [Paper](https://doi.org/10.1056/NEJMoa1111103).
+
+- **7. amenorrhea — `interactions=trt:time`; `formula=y ~ time + I(time^2) + trt:time + trt:I(time^2) + (1|id)`**; FLW §14.7 includes both treatment-by-time terms and no treatment main effect; `published_model=yes` remains correct for this corrected formula. [Author’s code](https://content.sph.harvard.edu/fitzmaur/ala2e/prog14_7.html).
+
+- **8. Alfalfa — stands**; Pinheiro–Bates Chapter 1, Exercise 4(b), explicitly states `fixed=Yield ~ Date*Variety`, `random=~1|Block/Variety`. [Book chapter](https://link.springer.com/chapter/10.1007/978-1-4419-0318-1_1).
+
+- **9. HUNGARY, Physics core — `formula=I(``Physics core``/10) ~ ``gender,girl=1`` + (1|School)`**, using backticks around the two column names; the source divides Physics core by its ten items. `published_model=yes` remains appropriate under the multivariate-split rule. [Source, §4.4](https://www.bristol.ac.uk/media-library/sites/cmm/migrated/documents/multbook1995.pdf).
+
+- **10. bacteria — stands**; the help explicitly fits the recorded binomial PQL model with `I(week > 2)` and an ID random intercept. [Source](https://github.com/cran/MASS/blob/7.3-66/man/bacteria.Rd).
+
+- **11. SibDiv — `published_model=no` for the filed `Surv(...)` formula; refuse the raw-duration candidate**; Hox Chapter 8 instead documents person-year logistic `divorce ~ t + I(t^2) + period53 + educlev + gender + (1|famid)`, with standardized duration `t`. This requires person-year expansion; `family=cox` would not describe that source model. [Hox, pp. 167–168](https://elib.vku.udn.vn/bitstream/123456789/4239/1/2010.%20Multilevel%20Analysis-Techniques%20and%20Applications%20%282nd%20Edition%29.pdf).
+
+- **12. ratdrink — stands**; Faraway’s second edition, Chapter 11, Exercise 11.1(b), p. 251 explicitly specifies treatment-specific mean lines and random rat intercepts and slopes, supporting the recorded formula and `published_model=yes`. [Book](https://julianfaraway.github.io/faraway/ELM/).
+
+- **13. Gasoline — stands**; the authors’ MEMSS companion explicitly fits `yield ~ endpoint + (1|Sample)`. [Source](https://cran.r-universe.dev/MEMSS/doc/manual.html#Gasoline).
+
+- **14. unemployment_pp — stands**; UCLA Chapter 5 Model C uses `cesd ~ months*unemp` with correlated intercept and months effects within ID. [Source](https://stats.oarc.ucla.edu/r/examples/alda/r-applied-longitudinal-data-analysis-ch-5/).
+
+- **15. FirstSexPP — `published_model=no` for the recorded proposal**; Hox’s example is single-level logistic survival with six grade indicators and `partrans`, rather than numeric-only period, PAS, and a person random intercept. [Author’s appendix](https://www.joophox.net/mlbook2/DataStories.pdf).
+
+- **16. tvsfpors — stands**; Stata explicitly fits `meologit thk prethk cc##tv || school: || class:`, with ordinal thk and classes nested within schools. [Source](https://www.stata.com/features/overview/multilevel-ordered-logistic-models/).
+
+- **17. employee — stands**; separate Normal priors for team intercept and lmx-slope deviations confirm `lmx||team`. [Pinned notebook](https://github.com/pymc-devs/pymc-examples/blob/17c8f90dc90691b41587dfdf477698d74cf5c18c/examples/howto/Missing_Data_Imputation.myst.md#L703-L746).
+
+- **18. Loblolly — specify `height ~ SSasymp(age, Asym, R0, lrc)`, with `fixed=Asym+R0+lrc~1`, `random=Asym~1|Seed`**; `published_model=yes` applies to this documented nonlinear model, not its linear surrogate. Refuse the linear candidate. [Source](https://stat.ethz.ch/R-manual/R-patched/library/nlme/html/nlme.html).
+
+- **19. schizophrenia2 — `published_model=no`**; the book’s own slides assign this as a GEE exercise and do not state the recorded random-intercept GLMM. [Pinned source](https://github.com/cran/HSAUR3/blob/1.0-16/inst/slides/Ch_analysing_longitudinal_dataII.Rnw#L286-L297).
+
+- **20. Ospreys — stands as an explicitly unpublished proposal**; `published_model=no` is correct, while random COAST remains an unverified assumption—no accessible source model established it. [Official book page](https://www.highstat.com/index.php/books2?catid=18&id=23&view=article).
+
+- **21. Machines — stands**; the book script explicitly fits `lme(score ~ Machine, random=~1|Worker)`. [Pinned script](https://github.com/cran/nlme/blob/3.1-171/inst/scripts/ch01.R#L52-L60).
+
+- **22. danish — add `LogWordFreq:LogAffixFreq:Sex` to `interactions`**; the source’s three-way product includes this term, and its quadratic LogCUP term must also survive materialization. [Pinned source](https://github.com/cran/languageR/blob/1.6/man/danish.Rd).
+
+- **23. Pottery — `published_model=no` for the recorded random-Site model**; the source fits fixed Site, with `Fe ~ Site` as the iron component of its MANOVA. [SAS manual](https://support.sas.com/documentation/cdl/en/statug/68162/HTML/default/statug_glm_examples06.htm).
+
+- **24. rm_corr — `published_model=no` for the recorded mixed model**; the implementation fits fixed-subject ANCOVA, `PacO2 ~ C(Subject) + pH`, rather than random subject intercepts. [Pinned implementation](https://github.com/raphaelvallat/pingouin/blob/bb1cb22a3137f5864341c7a06cd030c072a170d4/src/pingouin/parametric.py#L1702-L1708).
+
+- **25. fims — the nonlinear reading stands**, with literal latent regression `theta ~ normal(W_adj * lambda_adj, 1)`; `published_model=yes` applies to the documented 2PL, not an additive 1PL surrogate. Refuse that linear candidate; every unsupported `NONLINEAR:` row needs the same admission treatment. [Pinned Stan model](https://github.com/stan-dev/posteriordb/blob/91027f9cdd13b7e76283fec3f2898f59d4b83ec4/posterior_database/models/stan/2pl_latent_reg_irt.stan).
