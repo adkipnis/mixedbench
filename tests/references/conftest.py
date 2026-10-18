@@ -4,6 +4,7 @@ and the mixed model's generalized least squares give the same fixed effects."""
 
 from __future__ import annotations
 
+import functools
 import shutil
 import subprocess
 from dataclasses import replace
@@ -37,15 +38,26 @@ def fixtureProblem(row: Row = ROW) -> Problem:
     return Problem.build(row, table)
 
 
-@pytest.fixture(scope='session')
-def rstack() -> None:
-    """Skips a `brms` test where R or CmdStan is absent (CI's runners have R, not cmdstanr)."""
+def pytest_runtest_setup(item: pytest.Item) -> None:
+    """Skips a `brms` test where R or CmdStan is absent (CI's runners have R, not cmdstanr),
+    before its fixtures fit anything."""
+    if item.get_closest_marker('brms') is None:
+        return
+    missing = _probeRStack()
+    if missing:
+        pytest.skip(missing)
+
+
+@functools.cache
+def _probeRStack() -> str:
+    """What of R and CmdStan is absent, empty where both are there."""
     rscript = shutil.which('Rscript')
     if rscript is None:
-        pytest.skip('no Rscript')
+        return 'no Rscript'
     probe = subprocess.run([rscript, '-e', 'cmdstanr::cmdstan_version()'], capture_output=True)
     if probe.returncode != 0:
-        pytest.skip('no cmdstanr or CmdStan')
+        return 'no cmdstanr or CmdStan'
+    return ''
 
 
 # ==============================================================================================
