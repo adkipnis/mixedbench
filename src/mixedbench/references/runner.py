@@ -1,11 +1,10 @@
 """runner.py defines a problem's reference run: a problem and a directory in, its outcome out.
 
-The run climbs the ladder.
-At each level, `run.R` fits the problem with brms through cmdstanr, and Python checks the bar on
-the fit's diagnostics.
-The first level that passes ends the run, and its draws are kept under the contract's names.
-The run refuses to start on an R stack other than the pinned one: brms, cmdstanr and posterior as
-`renv.lock` pins them, CmdStan at `CMDSTAN`.
+The run climbs the NUTS ladder (each level allocates more resources):
+`run.R` fits the problem with brms through cmdstanr,
+and Python checks the convergence bar on the fit's diagnostics.
+The first passing level ends the run, and its draws are kept under the contract's names.
+brms, cmdstanr and posterior are pinned by `renv.lock`, CmdStan at `CMDSTAN`.
 
 pipeline:
 ---------
@@ -33,6 +32,7 @@ from typing import Literal, TextIO
 from mixedbench.contract import Problem, contractHash
 from mixedbench.references.handoff import Handoff
 
+CMDSTAN = '2.40.0'
 # the ladder: the settings of `brm()` per level.
 # four chains run in parallel at every level, one core each
 LEVELS = {
@@ -71,7 +71,6 @@ CAP = 12 * 60 * 60  # seconds over the whole ladder
 # in any iteration
 RHAT = 1.01
 ESS = 400
-CMDSTAN = '2.40.0'
 _HERE = Path(__file__).parent
 
 Ending = Literal['passed', 'bar', 'cap', 'error']
@@ -95,15 +94,9 @@ class Outcome:
 
 
 def run(problem: Problem, dir: Path) -> Outcome:
-    """Climbs the ladder on `problem` and returns its outcome.
-    The ladder stops at the first level that passes, at an R error, or when `CAP` seconds are spent.
-    The run writes into `dir/<the first 16 hex characters of sha256 of the id>`
-    and replaces an earlier run there.
-    It always leaves `run.json` and R's output, `R.log`.
-    Where the bar passed, it adds the draws as `Handoff.read` gives them
-    (`globals.parquet`, `locals.parquet`, `locals_summary.parquet`),
-    and brms's Stan program and data (`model.stan`, `standata.json`).
-    Raises before any level on an unpinned R stack."""
+    """Writes the run's files into a directory of `dir` named by the id's hash,
+    replacing an earlier run there.
+    Raises before any level where the R stack differs from its pins."""
     return _Runner(problem, dir).run()
 
 
@@ -113,11 +106,14 @@ def run(problem: Problem, dir: Path) -> Outcome:
 
 
 class _Runner:
+    """A problem's reference run, in a directory of its own."""
+
     def __init__(self, problem: Problem, dir: Path) -> None:
         self.problem = problem
         self.handoff = Handoff(problem)
         # an id may hold `/`, `!` and spaces, and the record carries the id itself
-        self.dir = dir / hashlib.sha256(problem.id.encode()).hexdigest()[:16]
+        digest = hashlib.sha256(problem.id.encode()).hexdigest()
+        self.dir = dir / digest[:16]
 
     def run(self) -> Outcome:
         versions = self._checkStack()
@@ -126,8 +122,8 @@ class _Runner:
         self.dir.mkdir(parents=True)
         with tempfile.TemporaryDirectory() as tmp, open(self.dir / 'R.log', 'w') as log:
             work = Path(tmp)
-            levels = self._climbLadder(work, log)
-            last = levels[-1]
+            attempts = self._climbLadder(work, log)
+            last = attempts[-1]
             if last['outcome'] == 'passed':
                 self._keep(work)
         outcome = Outcome(
@@ -145,7 +141,7 @@ class _Runner:
         record = asdict(outcome) | {
             'seed': self.handoff.seed,
             'aliases': self.handoff.aliases,
-            'levels': levels,
+            'levels': attempts,
             'versions': versions,
         }
         (self.dir / 'run.json').write_text(json.dumps(record, indent=2))
@@ -166,34 +162,38 @@ class _Runner:
             'posterior': lock['posterior']['Version'],
             'cmdstan': CMDSTAN,
         }
-        report = (
+        # R prints the installed versions in the order of `pins`
+        script = (
             'cat(as.character(packageVersion("brms")), as.character(packageVersion("cmdstanr")), '
             'as.character(packageVersion("posterior")), cmdstanr::cmdstan_version())'
         )
-        found = subprocess.run(
-            ['Rscript', '-e', report], capture_output=True, text=True, check=True
+        process = subprocess.run(
+            ['Rscript', '-e', script], capture_output=True, text=True, check=True
         )
-        installed = dict(zip(pins, found.stdout.split()))
+        installed = dict(zip(pins, process.stdout.split()))
         if installed != pins:
             raise RuntimeError(f'the R stack {installed} differs from the pins {pins}')
         return installed
 
     def _climbLadder(self, work: Path, log: TextIO) -> list[dict]:
         """Each level's attempt, up to the first that does not end at the bar."""
-        levels = []
+        attempts = []
         start = time.monotonic()
         for level in LEVELS:
-            timeout = CAP - (time.monotonic() - start)
-            levels.append(self._attemptLevel(work, level, log, timeout))
-            if levels[-1]['outcome'] != 'bar':
+            spent = time.monotonic() - start
+            timeout = CAP - spent
+            attempt = self._attemptLevel(work, level, log, timeout)
+            attempts.append(attempt)
+            if attempt['outcome'] != 'bar':
                 break
-        return levels
+        return attempts
 
     def _attemptLevel(self, work: Path, level: int, log: TextIO, timeout: float) -> dict:
         """The level's settings, seconds and outcome, and its diagnostics where R ran to the end."""
-        began = time.monotonic()
+        start = time.monotonic()
         ended = self._fit(work, level, log, timeout)
-        attempt = {'level': level, 'settings': LEVELS[level], 'seconds': time.monotonic() - began}
+        seconds = time.monotonic() - start
+        attempt = {'level': level, 'settings': LEVELS[level], 'seconds': seconds}
         if ended == 'ran':
             diagnostics = self.handoff.diagnostics(work)
             attempt['outcome'] = 'passed' if self._passes(diagnostics) else 'bar'
