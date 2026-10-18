@@ -9,7 +9,7 @@ Thank you for your interest. mixedbench is early stage and help is welcome.
   files are written by script, so we add it in the next survey pass.
 - **A bug in the loader or the contract.** Open an issue with the smallest example that shows
   it, or a pull request with a failing test and the fix.
-- **A method to benchmark.** Scoring arrives with suite 1.1 (see the [roadmap](ROADMAP.md));
+- **A method to benchmark.** Scoring arrives with suite 1.1 (see the [plan](README.md#planned));
   until then, open an issue describing the method.
 
 For anything bigger than a small fix, open an issue before writing code, so we can agree on
@@ -66,5 +66,5 @@ Three rules keep results comparable:
 
 ## License
 
-By contributing, you agree that your code is released under [MIT](LICENSE) and your changes to
+By contributing, you agree that your code is released under [Apache-2.0](LICENSE) and your changes to
 the registry and suite files under [CC BY 4.0](docs/LICENSE-CC-BY-4.0).
