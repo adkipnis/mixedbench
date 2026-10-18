@@ -13,9 +13,11 @@ from pathlib import Path
 
 import pandas as pd
 import pytest
+from mixedbench.references import CAP, LEVELS
 from mixedbench.registry.row import readCsv, writeCsv
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # the suite's scripts
+SCRIPTS = Path(__file__).resolve().parents[1]  # the suite's scripts
+sys.path.insert(0, str(SCRIPTS))
 
 from drive import Driver
 
@@ -53,16 +55,29 @@ def writeRecord(
     (dir / name / 'run.json').write_text(json.dumps(record))
 
 
+def sbatchOptions() -> dict[str, str]:
+    """The `#SBATCH --name=value` lines of drive.sbatch."""
+    script = SCRIPTS / 'drive.sbatch'
+    options = {}
+    for line in script.read_text().splitlines():
+        if line.startswith('#SBATCH --'):
+            name, value = line.removeprefix('#SBATCH --').split('=', 1)
+            options[name] = value
+    return options
+
+
 # =====================================================================================
 # collect
 # =====================================================================================
 def test_collect_writes_one_row_per_candidate_in_candidate_order(tmp_path):
     """`references.csv` is read beside the candidate list, so it keeps the list's order,
-    whatever order the records lie in on disk; a failed run is a row too."""
+    whatever order the records lie in on disk.
+    A failed run is a row too, and a record of an id off the list is none."""
     references = tmp_path / 'references'
     writeRecord(references, '0a', 'mid/c/1', outcome='cap', level=2)
     writeRecord(references, '0b', 'alpha/b/1', outcome='passed', level=1)
     writeRecord(references, '0c', 'zeta/a/1', outcome='passed')
+    writeRecord(references, '0d', 'gone/d/1', hash='hash-g')
     driver = Driver(candidateList(tmp_path), references)
     driver.collect(tmp_path / 'references.csv')
     written = readCsv(tmp_path / 'references.csv')
@@ -84,26 +99,15 @@ def test_collect_writes_one_row_per_candidate_in_candidate_order(tmp_path):
     assert list(written['divergences']) == ['0', '0', '']  # counts, not floats beside a cap
 
 
-def test_collect_refuses_while_a_candidate_has_no_record(tmp_path):
+def test_collect_refuses_while_a_candidate_has_no_record_of_its_listed_hash(tmp_path):
     """A missing row would read as a problem never run, so nothing is written until every
-    candidate has its record."""
+    candidate has its record.
+    A run made before the problem's hash moved is no record of the listed problem."""
     references = tmp_path / 'references'
     writeRecord(references, '0a', 'zeta/a/1')
-    writeRecord(references, '0b', 'mid/c/1')
+    writeRecord(references, '0b', 'alpha/b/1', hash='hash-old')  # mid/c/1 never ran
     driver = Driver(candidateList(tmp_path), references)
-    with pytest.raises(ValueError, match='alpha/b/1'):
-        driver.collect(tmp_path / 'references.csv')
-    assert not (tmp_path / 'references.csv').exists()
-
-
-def test_collect_takes_a_record_of_another_contract_hash_for_no_record(tmp_path):
-    """A run made before the problem's hash moved is not a reference of the listed problem."""
-    references = tmp_path / 'references'
-    writeRecord(references, '0a', 'zeta/a/1')
-    writeRecord(references, '0b', 'alpha/b/1', hash='hash-old')
-    writeRecord(references, '0c', 'mid/c/1')
-    driver = Driver(candidateList(tmp_path), references)
-    with pytest.raises(ValueError, match='alpha/b/1'):
+    with pytest.raises(ValueError, match='2 of 3 candidates .* alpha/b/1, mid/c/1$'):
         driver.collect(tmp_path / 'references.csv')
     assert not (tmp_path / 'references.csv').exists()
 
@@ -117,3 +121,14 @@ def test_an_index_names_the_candidate_at_that_position_and_an_id_names_itself(tm
     assert driver._resolveId('1') == 'alpha/b/1'
     assert driver._resolveId('0') == 'zeta/a/1'
     assert driver._resolveId('mid/c/1') == 'mid/c/1'
+
+
+def test_the_job_asks_for_a_core_per_chain_and_the_cap_plus_a_quarter_hour():
+    """Slurm reads its options literally, so drive.sbatch restates the ladder's cores and the cap.
+    The quarter hour covers the pin check, the draws kept and the record."""
+    options = sbatchOptions()
+    hours, minutes, seconds = options['time'].split(':')
+    limit = int(hours) * 3600 + int(minutes) * 60 + int(seconds)
+    cores = max(level['cores'] for level in LEVELS.values())
+    assert int(options['cpus-per-task']) == cores
+    assert limit == CAP + 15 * 60
