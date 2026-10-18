@@ -482,7 +482,6 @@ requires-dist = [
     { name = "rdata" },
     { name = "xlrd" },
 ]
-provides-extras = ["references"]
 
 [package.metadata.requires-dev]
 dev = [

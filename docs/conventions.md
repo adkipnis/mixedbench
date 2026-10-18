@@ -227,7 +227,8 @@ The words are [`CONTEXT.md`](../CONTEXT.md)'s.
 
 ### Tooling
 
-- Python 3.14. `uv sync --extra references` adds the reference runner.
+- Python 3.14. The reference runs also need R, brms and CmdStan at their pins, installed apart
+  from uv.
 - CI runs `ruff format` and `pytest` on the matrix of [ADR 0003](adr/0003-fetch-only.md); the
   survey's tests run by hand (`uv run pytest survey/tests`).
 

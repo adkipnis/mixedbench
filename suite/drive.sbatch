@@ -12,4 +12,4 @@
 
 # CmdStan's draws of a large problem reach gigabytes, kept off the node's /tmp
 export TMPDIR=~/tmp
-uv run --extra references python suite/drive.py run "$SLURM_ARRAY_TASK_ID"
+uv run python suite/drive.py run "$SLURM_ARRAY_TASK_ID"
