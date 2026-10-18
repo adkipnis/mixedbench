@@ -1,12 +1,13 @@
 """drive.py defines suite 1.1's reference runs: one candidate's run, and every record collected.
 
 A cluster job runs one candidate, named by its 0-based index in the list as a scheduler array
-task knows it, or by its id. The draws stay under `references/`, never committed;
+task knows it, or by its id.
+The draws stay under `references/`, never committed.
 `references.csv` is the suite's record of every run, failures included.
 
 pipeline:
 ---------
-a candidate id or its index in the list           id
+a candidate id or its index in the list           _resolveId
 -> its reference run, a directory with run.json   run
 -> the record of each run, by its id and hash     _records
 -> one row per candidate, in list order           collect
@@ -29,26 +30,40 @@ from mixedbench import references, suite
 from mixedbench.references import Outcome
 from mixedbench.registry.row import readCsv, writeCsv
 
+# =====================================================================================
+# the driver
+# =====================================================================================
+
 
 class Driver:
+    """The reference runs of a candidate list, a directory each under `dir`."""
+
     def __init__(self, candidates: Path, dir: Path) -> None:
-        """`candidates` is the suite's candidate list, `dir` holds a directory per run."""
         self.candidates = readCsv(candidates)
         self.dir = dir
 
-    def id(self, name: str) -> str:
-        """An all-digit name is an index; no id is all digits."""
+    # ---------------------------------------------------------------------------------
+    # name -> id -> run
+    # ---------------------------------------------------------------------------------
+
+    def run(self, name: str, cache: Path) -> Outcome:
+        id = self._resolveId(name)
+        problem = suite.load(id, cache)
+        return references.run(problem, self.dir)
+
+    def _resolveId(self, name: str) -> str:
+        """An all-digit name is an index. No id is all digits."""
         if name.isdigit():
             return self.candidates['id'].iloc[int(name)]
         return name
 
-    def run(self, name: str, cache: Path) -> Outcome:
-        problem = suite.load(self.id(name), cache)
-        return references.run(problem, self.dir)
+    # ---------------------------------------------------------------------------------
+    # records -> rows -> references.csv
+    # ---------------------------------------------------------------------------------
 
     def collect(self, file: Path) -> None:
-        """`references.csv`: the outcome row of every candidate's record, in list order.
-        Refuses while a candidate has no record of its listed contract hash."""
+        """Writes the outcome row of every candidate's record, in list order.
+        Raises while a candidate has no record of its listed contract hash."""
         records = self._records()
         listed = list(zip(self.candidates['id'], self.candidates['contract_hash']))
         missing = [id for id, hash in listed if (id, hash) not in records]
@@ -60,19 +75,20 @@ class Driver:
             )
         columns = [field.name for field in fields(Outcome)]
         rows = [records[candidate] for candidate in listed]
+        table = pd.DataFrame(rows, columns=columns)
         # integers, though a run that ended at the cap or an error counts no divergences
-        table = pd.DataFrame(rows, columns=columns).astype({'divergences': 'Int64'})
+        table = table.astype({'divergences': 'Int64'})
         writeCsv(table, file)
-
-    # ---------------------------------------------------------------------------------
-    # id -> record -> row
-    # ---------------------------------------------------------------------------------
 
     def _records(self) -> dict[tuple[str, str], dict]:
         """Keyed by id and contract hash: a run made before its problem's hash moved is
         no record of the listed problem."""
-        records = [json.loads(file.read_text()) for file in self.dir.glob('*/run.json')]
-        return {(record['id'], record['contract_hash']): record for record in records}
+        records = {}
+        for file in self.dir.glob('*/run.json'):
+            record = json.loads(file.read_text())
+            key = (record['id'], record['contract_hash'])
+            records[key] = record
+        return records
 
 
 # =====================================================================================
@@ -88,7 +104,8 @@ if __name__ == '__main__':
     # fmt: off
     parser = argparse.ArgumentParser(description='The reference runs of suite 1.1.')
     commands = parser.add_subparsers(dest='command', required=True)
-    commands.add_parser('run', help='one candidate').add_argument('name', help='an id or a 0-based index')
+    single = commands.add_parser('run', help='one candidate')
+    single.add_argument('name', help='an id or a 0-based index')
     commands.add_parser('collect', help='every record into references.csv')
     args = parser.parse_args()
     # fmt: on

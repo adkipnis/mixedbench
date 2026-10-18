@@ -114,6 +114,6 @@ def test_collect_takes_a_record_of_another_contract_hash_for_no_record(tmp_path)
 def test_an_index_names_the_candidate_at_that_position_and_an_id_names_itself(tmp_path):
     """A scheduler array task knows only its 0-based index; a rerun by hand names the id."""
     driver = Driver(candidateList(tmp_path), tmp_path / 'references')
-    assert driver.id('1') == 'alpha/b/1'
-    assert driver.id('0') == 'zeta/a/1'
-    assert driver.id('mid/c/1') == 'mid/c/1'
+    assert driver._resolveId('1') == 'alpha/b/1'
+    assert driver._resolveId('0') == 'zeta/a/1'
+    assert driver._resolveId('mid/c/1') == 'mid/c/1'
