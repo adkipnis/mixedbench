@@ -70,10 +70,10 @@ def test_the_suites_list_resolves_inside_the_install(installed: tuple[Path, dict
 
 
 def test_the_metadata_names_both_licences(installed: tuple[Path, dict]) -> None:
-    """The wheel bundles code under MIT and registry files under CC BY 4.0."""
+    """The wheel bundles code under Apache-2.0 and registry files under CC BY 4.0."""
     target, _ = installed
     distribution = installedDistribution(target)
-    assert distribution.metadata['License-Expression'] == 'MIT AND CC-BY-4.0'
+    assert distribution.metadata['License-Expression'] == 'Apache-2.0 AND CC-BY-4.0'
 
 
 def test_both_licence_files_ship_in_the_wheel(installed: tuple[Path, dict]) -> None:
