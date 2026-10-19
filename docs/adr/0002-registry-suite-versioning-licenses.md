@@ -1,5 +1,5 @@
 ---
-status: accepted, amended 2026-10-09, 2026-10-10 and 2026-10-18
+status: accepted, amended 2026-10-09, 2026-10-10, 2026-10-18 and 2026-10-19
 date: 2026-10-08
 ---
 
@@ -126,3 +126,15 @@ correction a benchmark change.
 - Decision: the second hand sample's rows become `verified` `hand`, as the first sample's did,
   whether the check corrected them or not.
 - Why: `verified` records why a problem is in the suite, and these rows were read at the source.
+
+## Amendment 2026-10-19: the verdicts leave the tree (#85)
+
+- Decision: `survey/VERDICTS.md` is kept outside the repository from the next release on; the
+  history and the releases up to 1.0.5 keep it. Of the 2026-10-10 decision that keeps the
+  survey's provenance public, only `VERDICTS.md` is withdrawn.
+- Why: the verdicts are a working log between Alex and the agents that apply them; no user
+  reads them. The provenance a user needs stays public: each corrected row's notes say what
+  changed and why, `verified` marks the rows read at the source, and `HISTORY.md` records
+  each pass.
+- Rejected: rewriting the history to remove the file, for the reasons of the 2026-10-10
+  decision against a rewrite.

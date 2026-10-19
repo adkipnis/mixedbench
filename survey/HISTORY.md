@@ -3,8 +3,7 @@
 *The registry's build record, kept for provenance.*
 
 What each pass of the dimension survey did and found, as dated bullets. The living method and
-rules are in [`README.md`](README.md), Alex's per-row verdicts in [`VERDICTS.md`](VERDICTS.md),
-the current counts in [`SUMMARY.md`](../registry/SUMMARY.md). `m3#` is an issue of
+rules are in [`README.md`](README.md), the current counts in [`SUMMARY.md`](../registry/SUMMARY.md). `m3#` is an issue of
 metabeta-v3, a private repository where the survey ran until 2026-10-08 (spec m3#14, tickets m3#15–m3#27); `#` is an
 issue of this repository. The finished scripts named here (`deposits.py`, `resolve.py`,
 `net.py`, `verify.py`) and the files only they wrote were in `archive/`, reproducible at tag
@@ -264,7 +263,6 @@ reading's open disagreements, four to eight per tier.
   three systems.
 - The readings #10's code read questioned were checked at the source by four agents, Alex
   deciding; `shards/registry_code_read.csv` replaced 54 rows and added 3 (registry 712 → 715).
-  Verdicts in [`VERDICTS.md`](VERDICTS.md#code-read-15-2026-10-09).
 - Left open: valdebenito's MCMCglmm `categorical` fits with residual variance fixed at 1 (a
   logit with an observation-level term) keep `family` blank; fims' item parameters have fixed
   priors and no estimated scale, `ii` stays a grouping factor.
@@ -276,8 +274,7 @@ reading's open disagreements, four to eight per tier.
   and at least one row per stratum, four batches of 25 in draw order. A further run appends
   one batch of 25 with the next seed and no floor.
 - `verify.py handoff --batch k` renders a batch with the source's page and download URLs, the
-  reading and the help page. Alex checked each batch at the source. Verdicts per row in
-  [`VERDICTS.md`](VERDICTS.md).
+  reading and the help page. Alex checked each batch at the source.
 - **Batch 1** (#11): `shards/registry_hand_sample_1.csv` replaced its 25 rows (registry 715).
   - 8 rows stood in the compared fields (5 of them with notes or confidence corrected), 17
     were corrected: `published_model` and `formula` 11 each, `covariates` 7, `interactions` 2,
@@ -345,8 +342,7 @@ reading's open disagreements, four to eight per tier.
   (0.812) and R/medium on grouping (0.938).
 - The whole O/low stratum, 7 rows, was re-read blind by a fresh Opus agent with
   `prompts/read.md` into a scratch directory: response 7 of 7, grouping factors 4 of 7. Alex
-  decided (`shards/registry_reread_o_low.csv`, 4 rows replaced, registry 714); verdicts in
-  [`VERDICTS.md`](VERDICTS.md#the-olow-re-read-13-2026-10-09).
+  decided (`shards/registry_reread_o_low.csv`, 4 rows replaced, registry 714).
 - No further batch was drawn: after the re-read no stratum is under the bar, and an untargeted
   batch of 25 would give O/low no row.
 - The low formula (0.61) and `published_model` (0.73) agreement, worst in Tier T, is the cost
