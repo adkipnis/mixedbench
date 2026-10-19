@@ -121,6 +121,12 @@ REFUSED = {
     'rabe_hesketh/hybrid.dta/1': (
         'choice_model: a mixed multinomial logit over three-car choice sets (#82)'
     ),
+    'rabe_hesketh/electricity.dta/1': (
+        'choice_model: a mixed logit over four-supplier choice sets (#82)'
+    ),
+    'rabe_hesketh/yogurt.dta/1': (
+        'choice_model: a mixed multinomial logit over brand choice sets (#82)'
+    ),
     'rabe_hesketh/cito.dta/1': (
         'item_response_model: the items y1-y18 reshaped long, cito a school indicator (#61)'
     ),
