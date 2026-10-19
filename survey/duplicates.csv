@@ -471,3 +471,5 @@
 "stata_fifeschool","fifeschool.dta","rabe_hesketh","fife.dta","same","the same 3,435 pupils: pid, sid, attain, vrq and sex equal; fife's crossed score model becomes fifeschool's model 2 (hand pass #82)"
 "mlmRev","Hsb82","rabe_hesketh","hsb.dta","same","the same 7,185 pupils in row order: mathach = mAch and ses equal to 1e-5, Stata float storage; hsb.dta adds school summaries and fit columns (hand pass #82)"
 "mlmRev","ScotsSec","stata_fifeschool","fifeschool.dta","same","the same 3,435 pupils in row order: attain equal, pid = primary, sid = second, vrq = verbal + 100, sex 0/1 = M/F; fifeschool's two models become ScotsSec's models 2 and 3 (hand pass #82)"
+"mlmRev","Mmmec","rabe_hesketh","skincancer.dta","same","the same 354 counties in row order: region, county and deaths equal, expected and uv = uvb equal to 1e-5, Stata float storage, the nine nations one-to-one under other spellings; const is a constant (hand pass #82)"
+"stata_tvsfpors","tvsfpors.dta","rabe_hesketh","tvsfpors.dta","same","the same 1,600 students: the six columns equal once the rabe_hesketh copy's blank 1,601st row is dropped; the ordinal model of stata_tvsfpors stands (hand pass #82)"
