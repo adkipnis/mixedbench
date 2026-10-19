@@ -159,45 +159,45 @@ coefficient of variation are readable companions.
 
 | covariate type | n | share |
 |---|---|---|
-| continuous | 872 | 44% |
-| binary | 647 | 33% |
-| categorical | 372 | 19% |
+| continuous | 869 | 44% |
+| binary | 645 | 33% |
+| categorical | 365 | 19% |
 | ordered | 74 | 4% |
 
 | level | n | share |
 |---|---|---|
-| within | 1345 | 68% |
-| group | 620 | 32% |
+| within | 1337 | 68% |
+| group | 616 | 32% |
 
 Levels of the categorical covariates:
 
 | K | n | min | p5 | p10 | p50 | p90 | p95 | max | practice |
 |---|---|---|---|---|---|---|---|---|---|
-| pooled | 446 | 1 | 2 | 3 | 4 | 10 | 14 | 717 | – |
+| pooled | 439 | 1 | 2 | 3 | 4 | 10 | 14 | 717 | – |
 | tier R | 166 | 2 | 3 | 3 | 4 | 9 | 10 | 56 |  |
 | tier E | 51 | 1 | 2 | 2 | 3 | 7 | 10 | 10 |  |
-| tier T | 134 | 1 | 2 | 3 | 4 | 9 | 10 | 17 |  |
+| tier T | 127 | 2 | 2 | 3 | 4 | 9 | 10 | 17 |  |
 | tier D | 54 | 3 | 3 | 3 | 4 | 47 | 76 | 117 |  |
 | tier O | 41 | 2 | 2 | 3 | 5 | 17 | 37 | 717 |  |
-| without agridat | 418 | 1 | 2 | 3 | 4 | 10 | 13 | 717 |  |
+| without agridat | 411 | 1 | 2 | 3 | 4 | 10 | 13 | 717 |  |
 
 | K | n | share |
 |---|---|---|
-| 3 | 157 | 35% |
-| 4 | 95 | 21% |
+| 3 | 154 | 35% |
+| 4 | 94 | 21% |
 | 5 | 41 | 9% |
 | 2 | 34 | 8% |
 | 11+ | 32 | 7% |
-| 6 | 24 | 5% |
+| 6 | 23 | 5% |
 | 7 | 22 | 5% |
 | 10 | 15 | 3% |
-| 9 | 14 | 3% |
+| 9 | 13 | 3% |
 | 8 | 9 | 2% |
-| 1 | 3 | 1% |
+| 1 | 2 | 0% |
 
 Implied design columns of a model under the observed categorical share
-(0.227) and mean columns per categorical (6.825):
-9 terms 20.9 columns, 14 terms 32.51 columns.
+(0.225) and mean columns per categorical (6.884):
+9 terms 20.9 columns, 14 terms 32.52 columns.
 
 ## Design columns
 
@@ -245,8 +245,8 @@ its levels less one, an interaction the product.
 
 | published | n | share |
 |---|---|---|
-| yes | 482 | 69% |
-| no | 215 | 31% |
+| yes | 478 | 69% |
+| no | 219 | 31% |
 
 ## Tier D
 
