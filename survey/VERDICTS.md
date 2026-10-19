@@ -678,7 +678,10 @@ and videos (novices), police's offset, pups' litter size, and the logs, squares,
 same-country indicator live in the formula only, as Cetaceans' `Sex != 0` and depression_pp's
 polynomial. patents' year is declared categorical, as the formula's factor; towerl's level,
 wagepan's year and taxprep's depend are declared continuous, as the source fits them linearly
-(antisocial's momage). The family rule fits videos and ezunem as Poisson.
+(antisocial's momage). The family rule fits videos and ezunem as Poisson. Taken on review after the
+merge (`registry_targeted_5_review.csv`; Alex: "ytis"): star1 #2, the math row of the 2026-10-08
+multivariate split, shared model 1's response once row 12 took tmaths, so it is re-filed on treads,
+the reading score, with tmaths in `ignore`.
 
 Alex: "Unmentioned fields stand."
 
