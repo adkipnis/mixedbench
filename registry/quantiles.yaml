@@ -921,8 +921,8 @@ shares:
     categorical: 0.19
     ordered: 0.038
   level:
-    within: 0.686
-    group: 0.314
+    within: 0.685
+    group: 0.315
   relation:
     single: 0.554
     crossed: 0.2
@@ -941,8 +941,8 @@ shares:
     deparse: 0.01
     rdata: 0.007
   published_model:
-    'yes': 0.72
-    'no': 0.28
+    'yes': 0.704
+    'no': 0.296
 k_distribution:
   3: 0.349
   4: 0.214
@@ -978,5 +978,5 @@ k_distribution:
 implied_columns:
   categorical_share: 0.228
   mean_columns_per_categorical: 6.736
-  terms_9: 20.78
-  terms_14: 32.33
+  terms_9: 20.8
+  terms_14: 32.35
