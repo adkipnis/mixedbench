@@ -1204,7 +1204,7 @@
 "stata_toenail","toenail.dta","1","E","trt_month","continuous","","within","","0.0","yes"
 "stata_towerlondon","towerlondon.dta","1","E","difficulty","categorical","3","within","","0.0","yes"
 "stata_towerlondon","towerlondon.dta","1","E","group","categorical","3","group","subject","0.0","yes"
-"stata_tvsfpors","tvsfpors.dta","1","E","prethk","categorical","7","within","","0.0","yes"
+"stata_tvsfpors","tvsfpors.dta","1","E","prethk","continuous","","within","","0.0","yes"
 "stata_tvsfpors","tvsfpors.dta","1","E","cc","binary","2","group","school;class","0.0","yes"
 "stata_tvsfpors","tvsfpors.dta","1","E","tv","binary","2","group","school;class","0.0","yes"
 "stata_union","union.dta","1","E","year","continuous","","within","","0.0","yes"

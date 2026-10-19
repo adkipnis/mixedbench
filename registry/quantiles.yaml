@@ -849,7 +849,7 @@ axes:
       max: 23770
   K:
     pooled:
-      n: 433
+      n: 432
       min: 1
       p5: 2
       p10: 3
@@ -868,12 +868,12 @@ axes:
         p95: 10
         max: 56
       E:
-        n: 51
+        n: 50
         min: 1
         p5: 2
         p10: 2
         p50: 3
-        p90: 7
+        p90: 9
         p95: 10
         max: 10
       T:
@@ -904,7 +904,7 @@ axes:
         p95: 37
         max: 717
     without_agridat:
-      n: 405
+      n: 404
       min: 1
       p5: 2
       p10: 3
@@ -916,7 +916,7 @@ imbalance:
   balanced_share: 0.397
 shares:
   covariate_type:
-    continuous: 0.448
+    continuous: 0.449
     binary: 0.329
     categorical: 0.187
     ordered: 0.036
@@ -944,15 +944,15 @@ shares:
     'yes': 0.722
     'no': 0.278
 k_distribution:
-  3: 0.358
-  4: 0.21
+  3: 0.359
+  4: 0.211
   5: 0.097
   2: 0.076
   6: 0.051
-  7: 0.048
+  7: 0.046
   10: 0.032
   9: 0.03
-  8: 0.018
+  8: 0.019
   11: 0.012
   14: 0.009
   17: 0.007
@@ -977,6 +977,6 @@ k_distribution:
   47: 0.002
 implied_columns:
   categorical_share: 0.223
-  mean_columns_per_categorical: 6.908
-  terms_9: 20.87
-  terms_14: 32.47
+  mean_columns_per_categorical: 6.91
+  terms_9: 20.85
+  terms_14: 32.43
