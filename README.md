@@ -2,7 +2,6 @@
 [![Weekly fetch](https://github.com/adkipnis/mixedbench/actions/workflows/weekly-fetch.yml/badge.svg)](https://github.com/adkipnis/mixedbench/actions/workflows/weekly-fetch.yml)
 [![PyPI](https://img.shields.io/pypi/v/mixedbench)](https://pypi.org/project/mixedbench/)
 [![Python](https://img.shields.io/pypi/pyversions/mixedbench)](https://github.com/adkipnis/mixedbench/blob/main/pyproject.toml)
-[![License](https://img.shields.io/badge/license-Apache--2.0%20%C2%B7%20CC%20BY%204.0-blue)](https://github.com/adkipnis/mixedbench#license)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23285683.svg)](https://doi.org/10.5281/zenodo.23285683)
 [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/adkipnis/mixedbench/blob/main/examples/demo.ipynb)
 
