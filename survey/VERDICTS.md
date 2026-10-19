@@ -449,3 +449,46 @@ sub-model, unlike Ovary's periodic one.
 - 24. **Squid — stands as an unpublished candidate under the existing cluster convention.** The documented analysis is GLS with `DML*factor(MONTH)` and month-specific variance functions, rather than a random month intercept. [Author code, chapter 4](https://highstat.com/Books/Book2/ZuurMixedModellingAllRCode.zip).
 
 - 25. **Crofoot — fields stand as an unpublished candidate; remove the book-fit claim.** Chapter 14’s fitted dyadic example uses `KosterLeckie` gifts, which does not establish this Crofoot formula. [Source code](https://github.com/rmcelreath/rethinking/blob/ac1b3b2cda83f3e14096e2d997a6e30ad109eeee/book_code_boxes.txt#L3719-L3756).
+
+## Targeted hand pass, batch 1 (#82, 2026-10-19)
+
+`shards/registry_targeted_1.csv`, `duplicates_targeted_1.csv`. Rows 13, 15, 20 and 23 were skipped
+as copies, and row 16 joins them: each folds into the object that comes first in frame order,
+Contraceptive use.xls into mlmRev Contraception, SOCATT.xls into mlmRev Socatt, primary-secondary.xls
+into mlmRev ScotsSec, OXBOYS.xls and OXBOYS.DAT into nlme Oxboys (values checked; two women's living
+children differ in the Contraception copy). relapse_pp was already folded into cocaine_relapse_pp by
+the survey. Taken on review: HTBONEBoys is refused in `suite/admit.py` as a multivariate response,
+and OXBOYS.xls's fidelity entry leaves with the fold. Alex: "Goldstein's third-edition downloads were
+checked directly; the book citations identify the accessible edition used."
+
+- **1. alcohol2 — `published_model=no` for the filed candidate.** The source uses growth loadings 0, .75, 1.75 and occasion-specific residual variances; its peer model relates latent growth factors rather than additive current `peer` plus `FEMALE`. Keep the formula only as an inferred proposal. [Chapter 8](https://stats.oarc.ucla.edu/mplus/examples/alda/applied-longitudinal-data-analysis-modeling-change-and-event-occurrenceby-judith-d-singer-and-john-b-willett-chapter-8-modeling-change-using-covarian/).
+
+- **2. external_pp — fields stand, including `published_model=yes`; correct the notes to Table 6.5 Model B.** That model explicitly fits `EXTERNAL ~ TIME + (TIME|ID)`; cubic Model D is a different specification and must not be cited as this linear formula. [Chapter 6](https://stats.oarc.ucla.edu/r/examples/alda/r-applied-longitudinal-data-analysis-ch-6/).
+
+- **3. opposites_pp — stands.** Table 7.2 explicitly fits `OPP ~ TIME*CCOG + (TIME|ID)`. [Chapter 7](https://stats.oarc.ucla.edu/r/examples/alda/r-applied-longitudinal-data-analysis-ch-7/).
+
+- **4–8. firstsex_pp, tenure_pp, mathdropout_pp, firstarrest_pp and suicide_pp — `published_model=no`.** The person random intercept is an inferred extension; the cited analyses fit fixed-effect hazards or, for suicide, Kaplan–Meier estimates. Other fields remain proposed specifications. [Chapter 11](https://stats.oarc.ucla.edu/r/examples/alda/r-applied-longitudinal-data-analysis-ch-11/), [Chapter 12](https://stats.oarc.ucla.edu/r/examples/alda/r-applied-longitudinal-data-analysis-ch-12/), [Chapter 10](https://stats.oarc.ucla.edu/r/examples/alda/r-applied-longitudinal-data-analysis-ch-10/).
+
+- **9. cocaine_relapse_pp — `published_model=no`; correct the notes and fold later `relapse_pp` into this row.** All 770 rows match after renaming `NASAL` to `NEEDLE`, and the cocaine-named file comes first in frame order; the source explicitly makes that rename, so “nasal route” is misleading. The person-intercept hazard remains inferred. [Download](https://stats.idre.ucla.edu/wp-content/uploads/2016/02/aldaascii.zip), [naming correction](https://stats.oarc.ucla.edu/r/examples/alda/r-applied-longitudinal-data-analysis-ch-15/).
+
+- **10. examjsp — stands.** Table 3.3 Analysis A fits normalised exam score on normalised LRT, gender and social class with a school random intercept. [Goldstein, second edition](https://www.bristol.ac.uk/media-library/sites/cmm/migrated/documents/multbook1995.pdf#page=71).
+
+- **11. HUNGARY — correct formula to ``I(`Environment science core`/6) ~ `gender,girl=1` + (1|School)``; other fields stand.** The source divides this subtest by its six items; retain `published_model=yes` under the same multivariate-split convention already applied to Physics core. [Goldstein, second edition, §4.4](https://www.bristol.ac.uk/media-library/sites/cmm/migrated/documents/multbook1995.pdf#page=92).
+
+- **12. bes83 — stands, including `published_model=yes`.** Goldstein and colleagues explicitly omit the covariates and fit the intercept-only Bernoulli model to these 800 voters. [Primary paper, §3.5](https://www.bristol.ac.uk/media-library/sites/cmm/migrated/documents/variance-partitioning.pdf#page=8).
+
+- **14. HTBONEBoys — refuse as filed; `published_model=no` for this surrogate.** The source requires separate height/bone-age residual variances, no adult-height residual, polynomial growth and several correlated boy coefficients. [Goldstein, second edition](https://www.bristol.ac.uk/media-library/sites/cmm/migrated/documents/multbook1995.pdf#page=108).
+
+- **16. primary-secondary — fold into earlier `mlmRev::ScotsSec`.** All 3,435 responses and both school identifiers match, with `VRQ score = verbal + 100` throughout; this is another copy under the Gcsemv convention. [Download](https://www.bristol.ac.uk/cmm/media/migrated/datasets-3rd-edition.zip).
+
+- **17. partnership — `published_model=no` for the filed additive candidate; replace its source-model attribution.** Record the source formula in notes as `change ~ np*(poly(episode,5,raw=TRUE) + start_age + social_class) + (1+np|id)`, fitted from the first partnership onward, with `np` denoting non-partnership and no `n_previous` effect. The downloaded state coding and subset do not establish a literal mapping of `np` to `partnership`. [Primary paper, Table 2](https://www.bristol.ac.uk/media-library/sites/cmm/migrated/documents/discrete-time-event-history-multilevel-model.pdf#page=20).
+
+- **18. ASIAN.DAT — `published_model=no`; other fields stand as inferred.** The page and distributed codebook document the data but do not state this linear-age, birthweight-plus-gender, correlated-slope formula. [Source and download](https://www.bristol.ac.uk/cmm/learning/support/datasets/).
+
+- **19. EMPLOY.DAT — stands.** Goldstein explicitly fits employment out of cell totals on gender and qualification with an area random intercept, including the binomial-variance fit. [Primary paper, Table 1](https://www.bristol.ac.uk/media-library/sites/cmm/migrated/documents/nonlinear-multilevel-models.pdf#page=5).
+
+- **21. depression_pp — `published_model=no`; correct `covariates=age_18;PD;FEMALE;BIGFAMILY` and `formula=EVENT ~ 1 + age_18 + I(age_18^2) + I(age_18^3) + PD + FEMALE + BIGFAMILY + (1|ID)`.** The BIGFAMILY fit is Table 12.4 Model C, whose `ONE` supplies a fixed intercept; removing `ONE` while retaining `-1` wrongly deletes it. Powers stay in the formula under #22; the added ID intercept remains inferred. [Chapter 12](https://stats.oarc.ucla.edu/r/examples/alda/r-applied-longitudinal-data-analysis-ch-12/).
+
+- **22. jsp_728 — stands.** The normalised-score model includes prior normalised score, gender, social class and a school random intercept. [Goldstein, fourth edition, §2.11/Table 2.6](https://studylib.net/doc/27854818/multilevel-statistical-models-4th-edition-2011).
+
+- **24. reading_pp — stands.** Table 5.2 fits PIAT on observed age centred at 6.5 with correlated child intercepts and age slopes, equivalent to the recorded formula. [Chapter 5](https://stats.oarc.ucla.edu/r/examples/alda/r-applied-longitudinal-data-analysis-ch-5/).
