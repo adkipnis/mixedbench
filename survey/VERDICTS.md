@@ -492,3 +492,91 @@ checked directly; the book citations identify the accessible edition used."
 - **22. jsp_728 — stands.** The normalised-score model includes prior normalised score, gender, social class and a school random intercept. [Goldstein, fourth edition, §2.11/Table 2.6](https://studylib.net/doc/27854818/multilevel-statistical-models-4th-edition-2011).
 
 - **24. reading_pp — stands.** Table 5.2 fits PIAT on observed age centred at 6.5 with correlated child intercepts and age slopes, equivalent to the recorded formula. [Chapter 5](https://stats.oarc.ucla.edu/r/examples/alda/r-applied-longitudinal-data-analysis-ch-5/).
+
+
+## Targeted hand pass, batch 2 (#82, 2026-10-19)
+
+Unmentioned fields stand. Empty lists below mean blank fields. These decisions supersede the earlier summary, including its treatment of rows 6 and 15.
+
+- **1. popular2 — exclude as `simulated data`; the recorded model structure and `published_model=yes` stand.** The author explicitly identifies popular2 as simulated. [Author’s data descriptions](https://multilevel-analysis.sites.uu.nl/datasets/), [Chapter 2, Table 2.3](https://www.joophox.net/mlbook2/Chapter2.pdf).
+
+- **2. Nurses — exclude as `simulated data`; the recorded formula and `published_model=yes` stand as Table 2.5 M1.** M2 adds the hospital-level expcon slope, and M3 adds expcon:hospsize; their presence in later models does not invalidate M1. [Author’s data descriptions](https://multilevel-analysis.sites.uu.nl/datasets/), [Chapter 2, Table 2.5](https://www.joophox.net/mlbook2/Chapter2.pdf).
+
+- **3. gpa2long — exclude as `simulated data`.** The author explicitly identifies the GPA data and their long form as simulated. [Author’s data descriptions](https://multilevel-analysis.sites.uu.nl/datasets/).
+
+- **4. AstLrd — refuse under the current contract: meta-analysis effect sizes with known sampling variances; `published_model=no` for the filed plain-Gaussian formula.** `VarLor=SE_LOR^2` and `InvLorW=1/VarLor`; replacing those known variances with an estimated common residual variance changes the likelihood. Also correct the notes: `condition` is the sequence 1–67, not the asthma/LRD indicator; the pinned file has 58 distinct IDs, nine repeated, of which eight pairs contain both outcomes. [Source description](https://multilevel-analysis.sites.uu.nl/datasets/), [pinned data](https://github.com/MirjamMoerbeek/Data_Sets_ML_book/blob/55e410ee2c9d1613ca8ae74359b7d5cf5e3c8f82/AstLrd.sav).
+
+- **5. FamIQData — stands as an inferred candidate, including `published_model=no`.** The source describes multilevel factor analysis, without establishing the filed single-wordlist regression for this exact 400-row file. [Source description](https://multilevel-analysis.sites.uu.nl/datasets/).
+
+- **6. MultResp — `published_model=no`; retain the other fields as the inferred candidate, without an additional refusal.** The filed plain-Gaussian specification is not established by the primary material checked; the exact later multivariate fit and its weighting were not verified. [Original paper](https://www.joophox.net/publist/qq94.pdf), [author’s appendix](https://www.joophox.net/mlbook2/DataStories.pdf).
+
+- **7. Safety — correct `random_slopes=age|street` and `formula=unsafe ~ age + sex + economic + crowded + (age|street)`; `published_model=yes`; other fields stand.** Table 7.1 includes a random age slope and intercept–age covariance; the source divides age by ten and centers predictors, an equivalent structural parameterization of this raw-variable formula. [Author’s ordinal chapter, Table 7.1](https://www.joophox.net/papers/7Ordinal.pdf#page=6).
+
+- **8. manager, item1 — `published_model=no`; other fields stand as the inferred proposal.** The source’s measurement example does not use pupil or manager gender and does not establish this separate item regression. [Source description](https://multilevel-analysis.sites.uu.nl/datasets/).
+
+- **9. manager, item2 — `published_model=no`; other fields stand as the inferred proposal.** The source’s measurement example does not establish this gender-adjusted item regression. [Source description](https://multilevel-analysis.sites.uu.nl/datasets/).
+
+- **10. manager, item3 — `published_model=no`; other fields stand as the inferred proposal.** The source’s measurement example does not establish this gender-adjusted item regression. [Source description](https://multilevel-analysis.sites.uu.nl/datasets/).
+
+- **11. pupcross2 — exclude as `simulated data`.** The author explicitly identifies the cross-classified data in this file as simulated. [Source description](https://multilevel-analysis.sites.uu.nl/datasets/).
+
+- **12. sheet 03B — exclude as `simulated data` (explicitly artificial); `published_model=no` for the recorded mixed formula.** Examples 3.5–3.6 fit total/between OLS regressions and calculate within/between correlations, rather than `Y ~ X + (1|j)` or an empty mixed model. [Author-hosted companion, Examples 3.5–3.6](https://www.stats.ox.ac.uk/~snijders/Chap03_np.do).
+
+- **13. sheet 04 — correct `covariates=iq_verb;ses;sch_iqv;sch_ses`, `interactions=iq_verb:ses;sch_iqv:sch_ses`, `random_slopes=iq_verb|school`, `formula=langpost ~ iq_verb*ses + sch_iqv*sch_ses + (iq_verb|school)`, `published_model=yes`.** This is the documented Example 5.4; response/type and school grouping stand. [Author’s R script](https://www.stats.ox.ac.uk/~snijders/ch45.r).
+
+- **14. sheet 09 — correct `covariates=iq_verb;ses;sch_iqv;sch_ses`, `interactions=iq_verb:ses;sch_iqv:sch_ses`, `random_slopes=—`, `formula=langpost ~ iq_verb*ses + sch_iqv*sch_ses + (1|school)`, `published_model=yes`.** The final substantive `model6` uses these terms, without langpre, minority, or homework; response/type and school grouping stand. [Author’s R script, final model6](https://www.stats.ox.ac.uk/~snijders/ch9.r).
+
+- **15. sheet 15 SOEP — replace the inferred income model with `response=lifesat`, `response_type=continuous`, `trials=—`, `grouping_factors=id`, `covariates=age`, `interactions=—`, `random_slopes=age|id`, `formula=lifesat ~ 0 + factor(age) + (I(age-55)|id)`, `published_model=yes`.** Table 15.2 model 3 fits the 0–10 life-satisfaction score with separate age means and a person-specific linear age slope; remove the other income-model covariates and the RESPONSE INFERRED attribution. The centered age term remains in the formula, with raw age recorded once. [Author’s longitudinal script](https://www.stats.ox.ac.uk/~snijders/ch_15.r).
+
+- **16. sheet 17B, scicourse — correct `covariates=female;minority`, `formula=scicourse ~ female + minority + (1|school)`, `published_model=yes`; other fields stand.** Drop SES from this binary-logit row only: Table 17.4 model 1 excludes it. [Author’s R script](https://www.stats.ox.ac.uk/~snijders/ch17_ex6.r).
+
+- **17. sheet 17B, scicount — retain `response_type=count`, `covariates=female;minority;ses`, `interactions=—`, `random_slopes=—`, `formula=scicount ~ female + minority + ses + (1|school)`; set `published_model=no` for the default-Poisson adaptation.** Do not drop SES or relabel the raw count ordinal: Table 17.6 fits four-category cumulative-logit regression with all three predictors and a school intercept. Record that likelihood as a RULE GAP in notes; the current family enum cannot express cumulative logit on a count response. [Author’s slides, Table 17.6](https://www.stats.ox.ac.uk/~snijders/MLB_new_S.pdf#page=197).
+
+- **18. sheet 17C — correct `response=cnt_mmb`, `response_type=count`, `trials=—`, `grouping_factors=regionnl`, `covariates=female;age;prtstnt`, `interactions=female:age`, `random_slopes=female|regionnl`, `formula=cnt_mmb ~ female*I((age-40)/10) + I(((age-40)/10)^2) + prtstnt + (female|regionnl)`, `published_model=yes`.** This is Poisson Table 17.7 model 2: raw age is recorded once, with its square only in the formula; do not list age_sqrd as a covariate. cnt_mmb counts memberships, not countries; married, isei, rural, and yrlvdaeV2 are absent from this fit. [Author’s slides, Tables 17.7–17.8](https://www.stats.ox.ac.uk/~snijders/MLB_new_S.pdf#page=199).
+
+## Targeted hand pass, batch 2 (#82, 2026-10-19)
+
+`shards/registry_targeted_2.csv`, `dropped_targeted_2.csv`, `excluded_targeted_2.csv`. Rows 1, 2, 3
+and 11 (popular2, Nurses, gpa2long, pupcross2) and row 12 (sheet 03B) leave the registry as
+`simulated data`, under the census rule that constructed textbook data stays unless the source
+states simulation (as SocsLong); the excluded detail keeps what stood. AstLrd is refused in
+`suite/admit.py` (known sampling variances). Taken on review: sheet 15 declares `age=continuous`,
+since an integer column of six values would be typed categorical and turn the linear person slope
+into five; the problem then fits age linearly in the fixed part, where the source fits a mean per
+age.
+
+- **1. popular2 — exclude as `simulated data`; the recorded model structure and `published_model=yes` stand.** The author explicitly identifies popular2 as simulated. [Author’s data descriptions](https://multilevel-analysis.sites.uu.nl/datasets/), [Chapter 2, Table 2.3](https://www.joophox.net/mlbook2/Chapter2.pdf).
+
+- **2. Nurses — exclude as `simulated data`; the recorded formula and `published_model=yes` stand as Table 2.5 M1.** M2 adds the hospital-level expcon slope, and M3 adds expcon:hospsize; their presence in later models does not invalidate M1. [Author’s data descriptions](https://multilevel-analysis.sites.uu.nl/datasets/), [Chapter 2, Table 2.5](https://www.joophox.net/mlbook2/Chapter2.pdf).
+
+- **3. gpa2long — exclude as `simulated data`.** The author explicitly identifies the GPA data and their long form as simulated. [Author’s data descriptions](https://multilevel-analysis.sites.uu.nl/datasets/).
+
+- **4. AstLrd — refuse under the current contract: meta-analysis effect sizes with known sampling variances; `published_model=no` for the filed plain-Gaussian formula.** `VarLor=SE_LOR^2` and `InvLorW=1/VarLor`; replacing those known variances with an estimated common residual variance changes the likelihood. Also correct the notes: `condition` is the sequence 1–67, not the asthma/LRD indicator; the pinned file has 58 distinct IDs, nine repeated, of which eight pairs contain both outcomes. [Source description](https://multilevel-analysis.sites.uu.nl/datasets/), [pinned data](https://github.com/MirjamMoerbeek/Data_Sets_ML_book/blob/55e410ee2c9d1613ca8ae74359b7d5cf5e3c8f82/AstLrd.sav).
+
+- **5. FamIQData — stands as an inferred candidate, including `published_model=no`.** The source describes multilevel factor analysis, without establishing the filed single-wordlist regression for this exact 400-row file. [Source description](https://multilevel-analysis.sites.uu.nl/datasets/).
+
+- **6. MultResp — `published_model=no`; retain the other fields as the inferred candidate, without an additional refusal.** The filed plain-Gaussian specification is not established by the primary material checked; the exact later multivariate fit and its weighting were not verified. [Original paper](https://www.joophox.net/publist/qq94.pdf), [author’s appendix](https://www.joophox.net/mlbook2/DataStories.pdf).
+
+- **7. Safety — correct `random_slopes=age|street` and `formula=unsafe ~ age + sex + economic + crowded + (age|street)`; `published_model=yes`; other fields stand.** Table 7.1 includes a random age slope and intercept–age covariance; the source divides age by ten and centers predictors, an equivalent structural parameterization of this raw-variable formula. [Author’s ordinal chapter, Table 7.1](https://www.joophox.net/papers/7Ordinal.pdf#page=6).
+
+- **8. manager, item1 — `published_model=no`; other fields stand as the inferred proposal.** The source’s measurement example does not use pupil or manager gender and does not establish this separate item regression. [Source description](https://multilevel-analysis.sites.uu.nl/datasets/).
+
+- **9. manager, item2 — `published_model=no`; other fields stand as the inferred proposal.** The source’s measurement example does not establish this gender-adjusted item regression. [Source description](https://multilevel-analysis.sites.uu.nl/datasets/).
+
+- **10. manager, item3 — `published_model=no`; other fields stand as the inferred proposal.** The source’s measurement example does not establish this gender-adjusted item regression. [Source description](https://multilevel-analysis.sites.uu.nl/datasets/).
+
+- **11. pupcross2 — exclude as `simulated data`.** The author explicitly identifies the cross-classified data in this file as simulated. [Source description](https://multilevel-analysis.sites.uu.nl/datasets/).
+
+- **12. sheet 03B — exclude as `simulated data` (explicitly artificial); `published_model=no` for the recorded mixed formula.** Examples 3.5–3.6 fit total/between OLS regressions and calculate within/between correlations, rather than `Y ~ X + (1|j)` or an empty mixed model. [Author-hosted companion, Examples 3.5–3.6](https://www.stats.ox.ac.uk/~snijders/Chap03_np.do).
+
+- **13. sheet 04 — correct `covariates=iq_verb;ses;sch_iqv;sch_ses`, `interactions=iq_verb:ses;sch_iqv:sch_ses`, `random_slopes=iq_verb|school`, `formula=langpost ~ iq_verb*ses + sch_iqv*sch_ses + (iq_verb|school)`, `published_model=yes`.** This is the documented Example 5.4; response/type and school grouping stand. [Author’s R script](https://www.stats.ox.ac.uk/~snijders/ch45.r).
+
+- **14. sheet 09 — correct `covariates=iq_verb;ses;sch_iqv;sch_ses`, `interactions=iq_verb:ses;sch_iqv:sch_ses`, `random_slopes=—`, `formula=langpost ~ iq_verb*ses + sch_iqv*sch_ses + (1|school)`, `published_model=yes`.** The final substantive `model6` uses these terms, without langpre, minority, or homework; response/type and school grouping stand. [Author’s R script, final model6](https://www.stats.ox.ac.uk/~snijders/ch9.r).
+
+- **15. sheet 15 SOEP — replace the inferred income model with `response=lifesat`, `response_type=continuous`, `trials=—`, `grouping_factors=id`, `covariates=age`, `interactions=—`, `random_slopes=age|id`, `formula=lifesat ~ 0 + factor(age) + (I(age-55)|id)`, `published_model=yes`.** Table 15.2 model 3 fits the 0–10 life-satisfaction score with separate age means and a person-specific linear age slope; remove the other income-model covariates and the RESPONSE INFERRED attribution. The centered age term remains in the formula, with raw age recorded once. [Author’s longitudinal script](https://www.stats.ox.ac.uk/~snijders/ch_15.r).
+
+- **16. sheet 17B, scicourse — correct `covariates=female;minority`, `formula=scicourse ~ female + minority + (1|school)`, `published_model=yes`; other fields stand.** Drop SES from this binary-logit row only: Table 17.4 model 1 excludes it. [Author’s R script](https://www.stats.ox.ac.uk/~snijders/ch17_ex6.r).
+
+- **17. sheet 17B, scicount — retain `response_type=count`, `covariates=female;minority;ses`, `interactions=—`, `random_slopes=—`, `formula=scicount ~ female + minority + ses + (1|school)`; set `published_model=no` for the default-Poisson adaptation.** Do not drop SES or relabel the raw count ordinal: Table 17.6 fits four-category cumulative-logit regression with all three predictors and a school intercept. Record that likelihood as a RULE GAP in notes; the current family enum cannot express cumulative logit on a count response. [Author’s slides, Table 17.6](https://www.stats.ox.ac.uk/~snijders/MLB_new_S.pdf#page=197).
+
+- **18. sheet 17C — correct `response=cnt_mmb`, `response_type=count`, `trials=—`, `grouping_factors=regionnl`, `covariates=female;age;prtstnt`, `interactions=female:age`, `random_slopes=female|regionnl`, `formula=cnt_mmb ~ female*I((age-40)/10) + I(((age-40)/10)^2) + prtstnt + (female|regionnl)`, `published_model=yes`.** This is Poisson Table 17.7 model 2: raw age is recorded once, with its square only in the formula; do not list age_sqrd as a covariate. cnt_mmb counts memberships, not countries; married, isei, rural, and yrlvdaeV2 are absent from this fit. [Author’s slides, Tables 17.7–17.8](https://www.stats.ox.ac.uk/~snijders/MLB_new_S.pdf#page=199).
