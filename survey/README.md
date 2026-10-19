@@ -6,8 +6,7 @@ by script.
 
 - **Status:** closed 2026-10-08, corrected since. Counts are in
   [`SUMMARY.md`](../registry/SUMMARY.md), regenerated on every merge.
-- **History** per pass: [`HISTORY.md`](HISTORY.md). Alex's per-row verdicts:
-  [`VERDICTS.md`](VERDICTS.md).
+- **History** per pass: [`HISTORY.md`](HISTORY.md).
 - **Issue numbers:** `m3#` and `#` as in [`HISTORY.md`](HISTORY.md).
 - **Contract test:** metabeta-v3's `packages/glmm/tests/surveys/test_dimension_quantiles.py`
   asserts the shape of `quantiles.yaml`; an axis or tier name changes only with it.
@@ -155,8 +154,8 @@ first); `reader`; `license`, the `license:` key or a CRAN DESCRIPTION's `License
 `random_slopes` and `verified` came in by the header-only `shards/registry_schema_2.csv`;
 the archived `verified.py` filled `verified` once through `shards/registry_verified.csv`;
 the archived `slopes.py` filled `random_slopes` through `shards/registry_slopes.csv`, Alex's
-decisions on the rows it reported through `shards/registry_slopes_decisions.csv`
-(`VERDICTS.md`). A later row fills both in its own shard. The archived `factors.py` regrouped the
+decisions on the rows it reported through `shards/registry_slopes_decisions.csv`.
+A later row fills both in its own shard. The archived `factors.py` regrouped the
 rows that named a nested `a:b` by a `b` whose codes repeat across `a` through
 `shards/registry_factors.csv`; Wafer's slopes, waiting on that, followed in
 `shards/registry_slopes_wafer.csv`.
