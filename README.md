@@ -67,4 +67,4 @@ GitHub. All versions share the DOI [10.5281/zenodo.23285683](https://doi.org/10.
 ## License
 
 - Code: [Apache-2.0](https://github.com/adkipnis/mixedbench/blob/main/LICENSE). Registry and suite files: [CC BY 4.0](https://github.com/adkipnis/mixedbench/blob/main/docs/LICENSE-CC-BY-4.0).
-- The data keep their sources' terms: they are fetched at first use, not redistributed.
+- The datasets keep their sources' terms and are not redistributed through MixedBench.
