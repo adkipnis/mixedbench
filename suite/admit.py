@@ -3,7 +3,8 @@
 Every row the family rule covers is built into its problem and materialized under the cache.
 Its contract hash goes into the candidate list. Five decisions guide admission:
 - hand decisions first: a row whose documented model does not survive into the contract
-  is refused by id, a row whose random effects were changed carries its fidelity:
+  is refused by id, or by its notes' marker when the model is nonlinear;
+  a row whose random effects were changed carries its fidelity:
   `structure_equivalent` (the same structure in another basis)
   or `approximate` (terms changed or dropped);
 - a refusal is kept with its reason beside the candidates;
@@ -17,6 +18,7 @@ pipeline:
 ---------
 the registry's rows
 -> refused by hand decision                    REFUSED
+-> refused as nonlinear by its notes' marker   NONLINEAR
 -> the loaded table, or a failure              loadTable
 -> the problem, or refused by the contract     Problem.build
 -> materialized, its candidate                 _candidate
@@ -92,7 +94,72 @@ REFUSED = {
     'kleisner_2026_osf/data.csv/3': (
         'covariance_structured_effect: POPULATION correlated by linguistic similarity (#32)'
     ),
+    'rethinking/data/Primates301.csv/1': (
+        'covariance_structured_effect: species correlated by phylogenetic distance (#61)'
+    ),
+    'rethinking/data/Primates301.csv/2': (
+        'covariance_structured_effect: species correlated by phylogenetic distance (#61)'
+    ),
+    'rabe_hesketh/family.dta/1': (
+        'covariance_structured_effect: genetic effects shared by mother, father and child (#82)'
+    ),
+    # a row that stands for several observations, which the documented fit weights by count (#61)
+    'agridat/keen.potatodamage/1': 'frequency_weighted: each cell weighted by count (#61)',
+    'rabe_hesketh/thailand.dta/1': (
+        'frequency_weighted: each covariate pattern weighted by wt1 (#61)'
+    ),
+    'rabe_hesketh/twin_hay.dta/1': (
+        'frequency_weighted: each response pattern weighted by freq (#61)'
+    ),
+    # a documented model whose likelihood the filed rows do not hold (#61)
+    'rabe_hesketh/elections.dta/1': (
+        'choice_model: rank == 1 in conditional and mixed logits over choice sets (#61)'
+    ),
+    'rabe_hesketh/crackers.dta/1': (
+        'choice_model: a mixed multinomial logit over four-brand choice sets (#82)'
+    ),
+    'rabe_hesketh/hybrid.dta/1': (
+        'choice_model: a mixed multinomial logit over three-car choice sets (#82)'
+    ),
+    'rabe_hesketh/electricity.dta/1': (
+        'choice_model: a mixed logit over four-supplier choice sets (#82)'
+    ),
+    'rabe_hesketh/yogurt.dta/1': (
+        'choice_model: a mixed multinomial logit over brand choice sets (#82)'
+    ),
+    'rabe_hesketh/cito.dta/1': (
+        'item_response_model: the items y1-y18 reshaped long, cito a school indicator (#61)'
+    ),
+    'goldstein_msm/HTBONEBoys.xls/1': (
+        'multivariate_response: height and bone age stacked, each with its own residual (#82)'
+    ),
+    'hox/AstLrd.sav/1': (
+        'known_sampling_variance: meta-analysis log odds ratios with variances VarLor (#82)'
+    ),
+    'rabe_hesketh/contraceptive.dta/1': (
+        'categorical_response: method, multinomial with correlated district intercepts (#82)'
+    ),
+    'rabe_hesketh/ecls_child.dta/1': (
+        'joined_covariate: nbhoodcl comes from ecls_school.dta, merged by s4_id (#82)'
+    ),
+    # a censored time filed as a continuous response, whose Gaussian fit ignores the censoring (#61)
+    'MASS/gehan/1': 'censored_response: a censored time filed as continuous (#61)',
+    'rabe_hesketh/bladder.dta/1': 'censored_response: a censored time filed as continuous (#61)',
+    'rabe_hesketh/blindness.dta/1': 'censored_response: a censored time filed as continuous (#61)',
+    'rabe_hesketh/divorce2.dta/1': 'censored_response: a censored time filed as continuous (#61)',
+    'rabe_hesketh/infections.dta/1': 'censored_response: a censored time filed as continuous (#61)',
+    'rabe_hesketh/mortality.dta/1': 'censored_response: a censored time filed as continuous (#61)',
+    'rabe_hesketh/recurrent.dta/1': 'censored_response: a censored time filed as continuous (#61)',
+    'hox/SibDiv.sav/1': 'censored_response: a censored time filed as continuous (#61)',
+    'stata_nlswork3/nlswork3.dta/1': 'censored_response: a censored wage filed as continuous (#61)',
+    'pymc_examples/examples/data/external_pp.csv/1': (
+        'censored_response: a censored score filed as continuous (#61)'
+    ),
 }
+
+# The marker that opens the notes of a row whose documented model is nonlinear in its parameters
+# (survey README). No linear problem stands for such a model, so every marked row is refused.
+NONLINEAR = 'NONLINEAR:'
 
 # how far the problem's random effects are from the documented model's
 # (VERDICTS.md, "Slope decisions"; #45): the same structure in another basis or changed.
@@ -102,7 +169,6 @@ FIDELITY: dict[str, Fidelity] = {
     'carData/Blackmore/1': 'structure_equivalent',
     'languageR/beginningReaders/1': 'structure_equivalent',
     'pymc_examples/examples/data/employee.csv/1': 'structure_equivalent',
-    'rabe_hesketh/yogurt.dta/1': 'structure_equivalent',
     'timmer_2024_osf_16/color_experiments_data_27.05.2024.txt/1': 'structure_equivalent',
     'timmer_2024_osf_15/tone_experiments_data_27.05.2024.txt/1': 'structure_equivalent',
     'avetisyan_2020_osf_2/E3_data.csv/1': 'structure_equivalent',
@@ -113,10 +179,10 @@ FIDELITY: dict[str, Fidelity] = {
     'HLMdiag/autism/1': 'approximate',
     'carData/KosteckiDillon/1': 'approximate',
     'stan_arm/ARM/Ch.20/allvar.csv/1': 'approximate',
-    'pymc_examples/examples/data/external_pp.csv/1': 'approximate',
     'goldstein_msm/playactivity.xls/1': 'approximate',
     'rabe_hesketh/electricity.dta/1': 'approximate',
-    'goldstein_msm/OXBOYS.xls/1': 'approximate',
+    'rabe_hesketh/fat.dta/1': 'approximate',  # the hinge after = pmax(time, 0) dropped (#61)
+    'rabe_hesketh/yogurt.dta/1': 'approximate',  # two brand contrasts, no intercept (#61)
     'koczynska_2026_osf_48/data_means_20241030/1': 'approximate',
     'koczynska_2026_osf_49/merge_iter_20241030/1': 'approximate',
     'naranowicz_2024_osf_2/MO--ST_beh.csv/2': 'approximate',
@@ -191,6 +257,9 @@ class Admission:
             id = row.id
             if id in self.refused:
                 refused[id] = self.refused[id]
+                continue
+            if row.notes.startswith(NONLINEAR):
+                refused[id] = 'nonlinear_model: the documented model is nonlinear in its parameters'
                 continue
             try:
                 table = self.loadTable(row)

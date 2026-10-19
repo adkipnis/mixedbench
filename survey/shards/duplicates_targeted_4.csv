@@ -1,0 +1,4 @@
+"source_a","object_a","source_b","object_b","verdict","notes"
+"stata_drvisits","drvisits.dta","rabe_hesketh","drvisits.dta","same","the same 2,227 doctor-visit records: the eight shared columns equal; drvisits.dta here adds summer, whose model does not transfer (hand pass #82)"
+"stata_fifeschool","fifeschool.dta","rabe_hesketh","fife.dta","same","the same 3,435 pupils: pid, sid, attain, vrq and sex equal; fife's crossed score model becomes fifeschool's model 2 (hand pass #82)"
+"mlmRev","Hsb82","rabe_hesketh","hsb.dta","same","the same 7,185 pupils in row order: mathach = mAch and ses equal to 1e-5, Stata float storage; hsb.dta adds school summaries and fit columns (hand pass #82)"

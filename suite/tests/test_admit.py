@@ -102,6 +102,24 @@ def test_a_refused_row_leaves_the_list_and_keeps_its_reason(tmp_path):
     assert 'no row has every model value' in admitted.refused['fixture/empty/1']
 
 
+def test_a_row_whose_notes_mark_a_nonlinear_model_is_refused(tmp_path):
+    """A nonlinear documented model has no linear problem that stands for it, so every row the
+    reader marked `NONLINEAR:` is refused, not only those a hand decision names (Loblolly, #61).
+    A hand decision keeps its own reason."""
+    curve = 'NONLINEAR: an asymptotic growth curve in age.'
+    rows = [
+        *scratchRegistry(tmp_path, ['kept']),
+        *scratchRegistry(tmp_path, ['growth', 'decided'], notes=curve),
+    ]
+    tables = Tables({name: groupedTable() for name in ['kept', 'growth', 'decided']})
+    refused = {'fixture/decided/1': 'nonlinear_parameter_model: a curve (#27)'}
+    admission = Admission(rows, tables, tmp_path / 'cache', refused=refused)
+    admitted = admission.admit()
+    assert list(admitted.candidates['id']) == ['fixture/kept/1']
+    assert admitted.refused['fixture/growth/1'].startswith('nonlinear_model')
+    assert admitted.refused['fixture/decided/1'] == 'nonlinear_parameter_model: a curve (#27)'
+
+
 def test_a_row_whose_random_effects_were_changed_carries_its_fidelity(tmp_path):
     """The slope decisions of #27 and the dropped terms of #45 travel with the problem into the
     list; a row the parser filled unchanged has none."""

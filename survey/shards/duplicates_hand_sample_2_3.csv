@@ -1,0 +1,4 @@
+"source_a","object_a","source_b","object_b","verdict","notes"
+"mlmRev","Gcsemv","goldstein_msm","Gcsemv.xls","same","the same 1,905 pupils in 73 schools, ids equal: Gcsemv.xls holds the unrounded percentages mlmRev rounds, missing scores coded -1 where mlmRev has NA (hand sample #61)"
+"mlmRev","Gcsemv","cmm_sci","SCI.DAT","same","the same 1,905 pupils in 73 schools, ids equal: SCI.DAT holds the raw points (written/160, coursework/108 give Gcsemv.xls exactly) and the 202 written and 180 coursework scores the others mark missing (hand sample #61)"
+"mlmRev","Gcsemv","rabe_hesketh","coursework.dta","same","the same 1,905 pupils in 73 schools, ids equal: coursework.dta holds mlmRev's values, missing scores coded -1 where mlmRev has NA (hand sample #61)"

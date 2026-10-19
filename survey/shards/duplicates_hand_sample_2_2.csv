@@ -1,0 +1,2 @@
+"source_a","object_a","source_b","object_b","verdict","notes"
+"stan_arm","ARM/Ch.23/sesame.data.json","stan_arm","ARM/Ch.23/sesame.dta","same","the same 240 children: postlet = yt_1, regular = yt_2, encour = z, siteset = site + 5*(setting - 1), the same nine groups (hand sample #61)"

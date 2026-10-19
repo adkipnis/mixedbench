@@ -120,3 +120,9 @@ correction a benchmark change.
 - Why: Apache-2.0 adds an explicit patent grant from every contributor, which company legal
   teams look for, and licenses contributions under the same terms without a separate
   agreement.
+
+## Amendment 2026-10-18: the second hand sample (#61)
+
+- Decision: the second hand sample's rows become `verified` `hand`, as the first sample's did,
+  whether the check corrected them or not.
+- Why: `verified` records why a problem is in the suite, and these rows were read at the source.

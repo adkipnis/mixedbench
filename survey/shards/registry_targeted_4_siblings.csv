@@ -1,0 +1,2 @@
+"source","object","model_index","response","response_type","trials","family","grouping_factors","covariates","interactions","random_slopes","ignore","types","formula","documented_prior","published_model","domain","confidence","verified","notes"
+"stata_fifeschool","fifeschool.dta","2","attain","count","","gaussian","pid;sid","","","","vrq;sex","","attain ~ 1 + (1 | pid) + (1 | sid)","","yes","education","high","hand","Chapter 9.6.3 fits the raw 1–10 attainment score with Gaussian likelihood and crossed primary/secondary intercepts."
