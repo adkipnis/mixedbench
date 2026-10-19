@@ -240,10 +240,10 @@ class Lab:
 if __name__ == '__main__':
     # fmt: off
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument('--work', type=Path, required=True, help='the directory of the per-problem runs')
+    parser.add_argument('--work', type=Path, default=HERE / 'work', help='the directory of the per-problem runs')
     parser.add_argument('--seeds', type=int, default=10)
     parser.add_argument('--workers', type=int, default=8)
-    parser.add_argument('--pilot', type=int, default=0, help='run every n-th problem only, e.g. 26 for 20')
+    parser.add_argument('--pilot', type=int, default=0, help='run every n-th problem only, e.g. 26 for 21')
     parser.add_argument('--out', type=Path, default=HERE / 'scores.parquet')
     args = parser.parse_args()
     # fmt: on
