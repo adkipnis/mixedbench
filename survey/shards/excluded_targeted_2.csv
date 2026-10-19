@@ -1,0 +1,6 @@
+"source","object","reason","detail"
+"hox","popular2.sav","simulated data","The author's data descriptions (multilevel-analysis.sites.uu.nl/datasets) state the popularity data are simulated; hand pass #82. The registry's reading, Table 2.3's random extrav slope with extrav x texp, stood."
+"hox","Nurses.sav","simulated data","The author's data descriptions (multilevel-analysis.sites.uu.nl/datasets) state the nurses data are simulated; hand pass #82. The recorded formula stood as Table 2.5 M1; M2 adds an expcon slope over hospitals, M3 expcon:hospsize."
+"hox","gpa2long.sav","simulated data","The author's data descriptions (multilevel-analysis.sites.uu.nl/datasets) state the GPA data and their long form are simulated; hand pass #82."
+"hox","pupcross2.sav","simulated data","The author's data descriptions (multilevel-analysis.sites.uu.nl/datasets) state the cross-classified pupil data are simulated; hand pass #82."
+"snijders_bosker","Multilevel_Analysis_2nd_Ed_data.xlsx!03B","simulated data","An artificial ten-row didactic table (Snijders & Bosker 2012, Table 3.2); examples 3.5-3.6 fit total and between-group OLS regressions and within/between correlations, not a mixed model (the author's Chap03_np.do); hand pass #82."
