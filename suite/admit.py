@@ -118,6 +118,9 @@ REFUSED = {
     'goldstein_msm/HTBONEBoys.xls/1': (
         'multivariate_response: height and bone age stacked, each with its own residual (#82)'
     ),
+    'hox/AstLrd.sav/1': (
+        'known_sampling_variance: meta-analysis log odds ratios with variances VarLor (#82)'
+    ),
     # a censored time filed as a continuous response, whose Gaussian fit ignores the censoring (#61)
     'MASS/gehan/1': 'censored_response: a censored time filed as continuous (#61)',
     'rabe_hesketh/bladder.dta/1': 'censored_response: a censored time filed as continuous (#61)',
