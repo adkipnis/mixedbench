@@ -162,7 +162,7 @@ REFUSED = {
 NONLINEAR = 'NONLINEAR:'
 
 # how far the problem's random effects are from the documented model's
-# (VERDICTS.md, "Slope decisions"; #45): the same structure in another basis or changed.
+# (#45): the same structure in another basis or changed.
 Fidelity = Literal['structure_equivalent', 'approximate']
 FIDELITY: dict[str, Fidelity] = {
     'agridat/harris.wateruse/1': 'structure_equivalent',
