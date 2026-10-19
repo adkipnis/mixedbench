@@ -115,6 +115,9 @@ REFUSED = {
     'rabe_hesketh/cito.dta/1': (
         'item_response_model: the items y1-y18 reshaped long, cito a school indicator (#61)'
     ),
+    'goldstein_msm/HTBONEBoys.xls/1': (
+        'multivariate_response: height and bone age stacked, each with its own residual (#82)'
+    ),
     # a censored time filed as a continuous response, whose Gaussian fit ignores the censoring (#61)
     'MASS/gehan/1': 'censored_response: a censored time filed as continuous (#61)',
     'rabe_hesketh/bladder.dta/1': 'censored_response: a censored time filed as continuous (#61)',
@@ -156,7 +159,6 @@ FIDELITY: dict[str, Fidelity] = {
     'rabe_hesketh/electricity.dta/1': 'approximate',
     'rabe_hesketh/fat.dta/1': 'approximate',  # the hinge after = pmax(time, 0) dropped (#61)
     'rabe_hesketh/yogurt.dta/1': 'approximate',  # two brand contrasts, no intercept (#61)
-    'goldstein_msm/OXBOYS.xls/1': 'approximate',
     'koczynska_2026_osf_48/data_means_20241030/1': 'approximate',
     'koczynska_2026_osf_49/merge_iter_20241030/1': 'approximate',
     'naranowicz_2024_osf_2/MO--ST_beh.csv/2': 'approximate',
