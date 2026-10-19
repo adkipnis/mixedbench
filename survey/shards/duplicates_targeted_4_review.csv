@@ -1,0 +1,2 @@
+"source_a","object_a","source_b","object_b","verdict","notes"
+"mlmRev","ScotsSec","stata_fifeschool","fifeschool.dta","same","the same 3,435 pupils in row order: attain equal, pid = primary, sid = second, vrq = verbal + 100, sex 0/1 = M/F; fifeschool's two models become ScotsSec's models 2 and 3 (hand pass #82)"
