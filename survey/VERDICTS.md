@@ -493,6 +493,13 @@ checked directly; the book citations identify the accessible edition used."
 
 - **24. reading_pp — stands.** Table 5.2 fits PIAT on observed age centred at 6.5 with correlated child intercepts and age slopes, equivalent to the recorded formula. [Chapter 5](https://stats.oarc.ucla.edu/r/examples/alda/r-applied-longitudinal-data-analysis-ch-5/).
 
+Taken on review after the merge (`registry_targeted_1_review.csv`): with party categorical, Socatt
+left the suite, so it gains model 2 on numpos. Alex: "use an agent for this one please". The
+subagent's bullet follows as written; its grouping is respond only, the documented random part, as
+part 3d only clusters the standard errors on district.
+
+- **Socatt, model 2 — add.** Set `response=numpos`, `response_type=ordinal`, `grouping_factors=respond`, `covariates=religion;year;age;gender`, `ignore=party`, `published_model=yes`, `confidence=high`, and `formula=pmax(numpos, 2) ~ religion + year + age + gender + (1 | respond), cumulative logit`. Exercise 11.5 fits a random-intercept ordinal logit (`meologit score i.religion i.year age male || person:`) after merging scores 0–2 (`recode score 0/2=2`). Its last part, 3d, keeps that model and clusters the standard errors on district, so district gets no random effect. Family and trials stay blank: the contract's cumulative logit is the source's likelihood. The row keeps all eight levels, and the merge lives in the formula only. The Centre for Multilevel Modelling (CMM) software review fits the same kind of model with religion only and scores 0–1 merged. Goldstein fits a three-level Normal model to normal scores. [Primary source, ex11_5_abortion.do](https://www.stata-press.com/books/multilevel-longitudinal-modeling-stata/mlmus4-vol2-solutions-dofiles.zip); [CMM review, Table 6](https://www.bristol.ac.uk/media-library/sites/cmm/migrated/documents/comp-rev-tables.pdf); [Goldstein 1995, section 3.2](https://bristol.ac.uk/media-library/sites/cmm/migrated/documents/multbook1995.pdf).
+
 
 ## Targeted hand pass, batch 2 (#82, 2026-10-19)
 
