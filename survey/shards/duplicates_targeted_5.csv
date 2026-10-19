@@ -1,0 +1,3 @@
+"source_a","object_a","source_b","object_b","verdict","notes"
+"mlmRev","Mmmec","rabe_hesketh","skincancer.dta","same","the same 354 counties in row order: region, county and deaths equal, expected and uv = uvb equal to 1e-5, Stata float storage, the nine nations one-to-one under other spellings; const is a constant (hand pass #82)"
+"stata_tvsfpors","tvsfpors.dta","rabe_hesketh","tvsfpors.dta","same","the same 1,600 students: the six columns equal once the rabe_hesketh copy's blank 1,601st row is dropped; the ordinal model of stata_tvsfpors stands (hand pass #82)"
