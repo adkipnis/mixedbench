@@ -2501,7 +2501,7 @@
 "rethinking","data/Crofoot.csv","1","T","n_focal","categorical","4","group","focal","0.0","yes"
 "rethinking","data/Crofoot.csv","1","T","n_other","categorical","4","group","other","0.0","yes"
 "rabe_hesketh","star1.dta","2","T","gender","ordered","2","within","","0.0001","yes"
-"rabe_hesketh","star1.dta","2","T","race","ordered","6","within","","0.0011","yes"
+"rabe_hesketh","star1.dta","2","T","race","ordered","6","within","","0.0012","yes"
 "rabe_hesketh","star1.dta","2","T","classt","ordered","3","group","class","0.0","yes"
 "rabe_hesketh","star1.dta","2","T","freelu","ordered","2","within","","0.0247","yes"
 "rabe_hesketh","star1.dta","2","T","school","continuous","","within","","0.0","no"

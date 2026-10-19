@@ -61,7 +61,7 @@ Rows with a measured response; a pharmacokinetic table's dosing rows are not obs
 | pooled | 917 | 2 | 4 | 5 | 32 | 376 | 1151 | 92017 | 414 |
 | tier R | 340 | 2 | 4 | 4 | 20 | 184 | 316 | 10767 |  |
 | tier E | 140 | 3 | 4 | 5 | 37 | 600 | 4711 | 19898 |  |
-| tier T | 263 | 2 | 4 | 6 | 55 | 568 | 1333 | 4856 |  |
+| tier T | 263 | 2 | 4 | 6 | 55 | 568 | 1323 | 4856 |  |
 | tier D | 158 | 2 | 3 | 5 | 54 | 281 | 554 | 13319 |  |
 | tier O | 16 | 3 | 3 | 3 | 32 | 71518 | 92017 | 92017 |  |
 | without agridat | 864 | 2 | 4 | 5 | 38 | 398 | 1270 | 92017 |  |
