@@ -462,3 +462,8 @@
 "mlmRev","Gcsemv","goldstein_msm","Gcsemv.xls","same","the same 1,905 pupils in 73 schools, ids equal: Gcsemv.xls holds the unrounded percentages mlmRev rounds, missing scores coded -1 where mlmRev has NA (hand sample #61)"
 "mlmRev","Gcsemv","cmm_sci","SCI.DAT","same","the same 1,905 pupils in 73 schools, ids equal: SCI.DAT holds the raw points (written/160, coursework/108 give Gcsemv.xls exactly) and the 202 written and 180 coursework scores the others mark missing (hand sample #61)"
 "mlmRev","Gcsemv","rabe_hesketh","coursework.dta","same","the same 1,905 pupils in 73 schools, ids equal: coursework.dta holds mlmRev's values, missing scores coded -1 where mlmRev has NA (hand sample #61)"
+"mlmRev","Contraception","goldstein_msm","Contraceptive use.xls","same","the same 1,934 women in 60 districts, ids equal: use, urban and centred age equal, living children equal but for women 674 and 1925 (1 in mlmRev, 2 here) (hand pass #82)"
+"mlmRev","Socatt","goldstein_msm","SOCATT.xls","same","the same 1,056 answers of 264 respondents over four years: attitude to abortion = numpos, ids and districts equal (hand pass #82)"
+"mlmRev","ScotsSec","goldstein_msm","primary-secondary.xls","same","the same 3,435 pupils: Exam score = attain, VRQ score = verbal + 100, primary and secondary school ids equal (hand pass #82)"
+"nlme","Oxboys","goldstein_msm","OXBOYS.xls","same","the same 234 measurements of 26 boys: ids, centred age and height equal; OXBOYS.xls adds the season (hand pass #82)"
+"nlme","Oxboys","cmm_oxboys","OXBOYS.DAT","same","the same 234 measurements of 26 boys: ids, centred age, height and occasion equal; OXBOYS.DAT adds a junk row, a Ctrl-Z with no values (hand pass #82)"
