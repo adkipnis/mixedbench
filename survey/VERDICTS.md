@@ -681,7 +681,8 @@ wagepan's year and taxprep's depend are declared continuous, as the source fits 
 (antisocial's momage). The family rule fits videos and ezunem as Poisson. Taken on review after the
 merge (`registry_targeted_5_review.csv`; Alex: "ytis"): star1 #2, the math row of the 2026-10-08
 multivariate split, shared model 1's response once row 12 took tmaths, so it is re-filed on treads,
-the reading score, with tmaths in `ignore`.
+the reading score, with tmaths in `ignore`; stata_tvsfpors's prethk, seven integer values, is
+declared continuous, as the source fits it linearly (Alex: "2 continuous").
 
 Alex: "Unmentioned fields stand."
 
