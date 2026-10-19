@@ -9,7 +9,7 @@
 #SBATCH --job-name=kfold
 #SBATCH --cpus-per-task=32
 #SBATCH --mem=48G
-#SBATCH --time=04:00:00
+#SBATCH --time=1-00:00:00
 #SBATCH --output=lab/2026-10-19-kfold/work/%j.log
 
 export TMPDIR=~/tmp
