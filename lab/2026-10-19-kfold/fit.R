@@ -42,12 +42,14 @@ fitMixed <- function(formula, data, family) {
 # the scores
 # =====================================================================================
 
-# the log density of the response given the mean, for the families without a scale
-logDensity <- function(family, test, mu) {
+# the log density of the response given the linear predictor, for the families without a scale;
+# from the logit itself, since a mean rounded to 1 would score a failure -Inf instead of -η
+logDensity <- function(family, test, eta) {
   switch(family,
-    bernoulli = dbinom(test$y, 1, mu, log = TRUE),
-    binomial = dbinom(test$y, test$n, mu, log = TRUE),
-    poisson = dpois(test$y, mu, log = TRUE)
+    bernoulli = test$y * plogis(eta, log.p = TRUE) + (1 - test$y) * plogis(-eta, log.p = TRUE),
+    binomial = lchoose(test$n, test$y) + test$y * plogis(eta, log.p = TRUE) +
+      (test$n - test$y) * plogis(-eta, log.p = TRUE),
+    poisson = dpois(test$y, exp(eta), log = TRUE)
   )
 }
 
@@ -56,7 +58,7 @@ scoreGlm <- function(fit, test, family) {
   if (family == "gaussian") {
     return(dnorm(test$y, eta, sigma(fit), log = TRUE))
   }
-  logDensity(family, test, fit$family$linkinv(eta))
+  logDensity(family, test, eta)
 }
 
 # a seen group adds its predicted random effects to the linear predictor;
@@ -70,38 +72,49 @@ scoreMixed <- function(fit, train, test, family) {
   integrateEffect(family, test, eta, sqrt(v))
 }
 
-# log ∫ p(y | η + s t) φ(t) dt per row, by adaptive Gauss-Hermite quadrature around the
-# integrand's mode (Liu & Pierce 1994, Biometrika 81:624); plain nodes miss a peak far from 0.
-# The links are canonical, so the integrand's log is concave in t and Newton finds its mode.
+# log ∫ p(y | η + s t) φ(t) dt per row, by adaptive Gauss-Kronrod quadrature (R's integrate) on
+# either side of the integrand's mode. The links are canonical, so the integrand's log l(t) has
+# l''(t) = -s² Var(y | η + s t) - 1 ≤ -1: the integrand lies below exp(l(mode) - (t - mode)² / 2),
+# and mode ± 10 holds all but e^-50 of it. Gauss-Hermite nodes, placed by the curvature at the
+# mode, miss most of the mass when s is large and p(y | η + s t) falls steeply on one side.
 integrateEffect <- function(family, test, eta, s) {
-  linkinv <- FAMILY[[family]]$linkinv
-  t <- rep(0, length(eta))
-  for (iteration in 1:100) {
-    moments <- momentsOf(family, test, linkinv(eta + s * t))
-    gradient <- s * (test$y - moments$mean) - t
-    curvature <- -s^2 * moments$var - 1
-    t <- t + pmax(pmin(-gradient / curvature, 1), -1)  # Newton, at most one unit per step
+  mode <- findMode(family, test, eta, s)
+  scores <- numeric(nrow(test))
+  for (i in seq_len(nrow(test))) {
+    row <- test[i, ]
+    logIntegrand <- function(t) logDensity(family, row, eta[i] + s[i] * t) + dnorm(t, log = TRUE)
+    peak <- logIntegrand(mode[i])
+    integrand <- function(t) exp(logIntegrand(t) - peak)
+    left <- integrate(integrand, mode[i] - 10, mode[i], rel.tol = 1e-10)$value
+    right <- integrate(integrand, mode[i], mode[i] + 10, rel.tol = 1e-10)$value
+    scores[i] <- peak + log(left + right)
   }
-  stopifnot(max(abs(gradient)) < 1e-6)
-  scale <- 1 / sqrt(-curvature)
-  quadrature <- gaussHermite(20)
-  # (rows, nodes): the log of each node's term, with the change of variables t = mode + scale x
-  terms <- matrix(0, length(eta), length(quadrature$nodes))
-  for (k in seq_along(quadrature$nodes)) {
-    x <- quadrature$nodes[k]
-    node <- t + scale * x
-    terms[, k] <- log(quadrature$weights[k]) + logDensity(family, test, linkinv(eta + s * node)) - node^2 / 2 + x^2 / 2
-  }
-  top <- apply(terms, 1, max)
-  log(scale) + top + log(rowSums(exp(terms - top)))
+  scores
 }
 
-# the response's mean and variance given the mean of one trial
-momentsOf <- function(family, test, mu) {
+# per row, the integrand's mode: the root of l'(t) = s (y - E(y | η + s t)) - t, found by bisection,
+# since l' falls in t; Newton jumps back and forth across an l' that falls steeply, when s is large.
+# The root lies in [-s E(y | η), s y], since the mean is at least 0 and rises in t.
+findMode <- function(family, test, eta, s) {
+  linkinv <- FAMILY[[family]]$linkinv
+  lower <- -s * meanOf(family, test, linkinv(eta))
+  upper <- s * test$y
+  for (iteration in 1:100) {
+    t <- (lower + upper) / 2
+    gradient <- s * (test$y - meanOf(family, test, linkinv(eta + s * t))) - t
+    lower <- ifelse(gradient > 0, t, lower)
+    upper <- ifelse(gradient > 0, upper, t)
+  }
+  stopifnot(max(abs(gradient)) < 1e-6)
+  t
+}
+
+# the response's mean given the mean of one trial
+meanOf <- function(family, test, mu) {
   switch(family,
-    bernoulli = list(mean = mu, var = mu * (1 - mu)),
-    binomial = list(mean = test$n * mu, var = test$n * mu * (1 - mu)),
-    poisson = list(mean = mu, var = mu)
+    bernoulli = mu,
+    binomial = test$n * mu,
+    poisson = mu
   )
 }
 
@@ -122,16 +135,6 @@ newGroupVariance <- function(fit, train, test) {
     v <- v + new * rowSums((z %*% sigma) * z)
   }
   v
-}
-
-# the nodes and weights of the expectation under N(0, 1) (Golub & Welsch 1969)
-gaussHermite <- function(k) {
-  jacobi <- matrix(0, k, k)
-  offDiagonal <- sqrt(seq_len(k - 1))
-  jacobi[cbind(1:(k - 1), 2:k)] <- offDiagonal
-  jacobi[cbind(2:k, 1:(k - 1))] <- offDiagonal
-  eigen <- eigen(jacobi, symmetric = TRUE)
-  list(nodes = eigen$values, weights = eigen$vectors[1, ]^2)
 }
 
 # =====================================================================================
