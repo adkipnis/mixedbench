@@ -378,3 +378,59 @@ reading's open disagreements, four to eight per tier.
   1.0.2, as for #57.
 - The 5: `agridat/burgueno.alpha/1`, `agridat/snedecor.asparagus/1`,
   `agridat/turner.herbicide/1`, `agridat/yates.oats/{1,2}`.
+
+## Second hand sample (#61, 2026-10-18)
+
+- `verify.py` came back from tag `survey-archive-3` with its draw, handoff and agreement steps. It
+  drew 100 of the 489 candidates of suite 1.1 not yet checked by hand, stratified by tier and
+  `verified`, seed 1 (`sample.csv`). Alex checked them in four batches of 25.
+- Agreement per field and stratum is in `agreement.csv`. Response and grouping agreed on at
+  least 0.83 of the rows in every stratum, so no stratum was re-read; the formula agreed on 0.84,
+  `published_model` on 0.70.
+- Every checked row became `verified=hand`. At release 1.0.5, 58 rows stood, 39 had a model field
+  corrected and 3 had left the registry as copies of another object.
+- Copies were folded into the object first in frame order: sesame.dta into sesame.data.json; the
+  1,905 pupils of goldstein Gcsemv.xls, cmm_sci SCI.DAT and rabe_hesketh coursework.dta into
+  mlmRev Gcsemv, which gained model 2 on `course`.
+- `suite/admit.py` gained refusals, each applied to the whole registry, not only to the sample:
+  - `nonlinear_model` for every row whose notes open with `NONLINEAR:`;
+  - `censored_response` for ten censored times filed as continuous;
+  - `frequency_weighted`, `covariance_structured_effect`, `choice_model` and
+    `item_response_model`.
+- fat was first refused for its hinge term `pmax(time, 0)`. It then became a candidate again with
+  fidelity `approximate`, like the polynomial rows the contract fits as linear terms.
+
+## Targeted hand pass (#82, 2026-10-18 to 2026-10-19)
+
+- The second sample changed most rows from textbook sites, rabe_hesketh and zuur. Alex checked by
+  hand the 111 rows from there not yet checked (`targeted/sample.csv`), in five batches by source.
+- At release 1.0.5, 30 rows stood, 66 had a model field corrected and 15 had left the registry.
+  The corrections were mostly to `published_model` (52 rows) and the formula (35).
+- Copies were folded into the object first in frame order, their values checked:
+  - goldstein Contraceptive use.xls into mlmRev Contraception, SOCATT.xls into Socatt;
+  - goldstein primary-secondary.xls, rabe_hesketh fife.dta and stata_fifeschool into mlmRev
+    ScotsSec, which gained fifeschool's two models as models 2 and 3;
+  - OXBOYS.xls and cmm_oxboys OXBOYS.DAT into nlme Oxboys;
+  - rabe_hesketh drvisits.dta, hsb.dta, skincancer.dta and tvsfpors.dta into stata_drvisits,
+    mlmRev Hsb82, mlmRev Mmmec and stata_tvsfpors.
+- popular2, Nurses, gpa2long, pupcross2 and sheet 03B left as simulated data, like SocsLong.
+- New refusal codes: `multivariate_response` (HTBONEBoys), `known_sampling_variance` (AstLrd),
+  `categorical_response` (contraceptive) and `joined_covariate` (ecls_child). `choice_model`
+  now covers crackers, hybrid, electricity and yogurt.
+- Rules the verdicts applied:
+  - a subset, offset, transform or derived term lives in the formula only, so a problem pools
+    every row (police, star1, videos);
+  - an integer covariate with at most ten values that the source fits linearly is declared
+    continuous in `types` (antisocial, towerl, wagepan, taxprep, stata_tvsfpors);
+  - a count the source fits as Gaussian stays a count, and the family rule makes it Poisson.
+- New models: Socatt model 2, the ordinal `numpos` of Rabe-Hesketh and Skrondal's exercise 11.5;
+  star1 model 2 refiled on `treads`, so it no longer repeats model 1's response.
+- The registry went from 714 rows over 641 datasets at release 1.0.4 to 694 rows over 621.
+
+## Suite 1.1 candidates at release 1.0.5 (#61, #82)
+
+- `suite/admit.py`'s rerun took the candidates from 675 to 608 and the refused rows from 39 to 86.
+  - 71 candidates left: 25 with their registry rows (folds and exclusions), 46 refused.
+  - 4 joined: `mlmRev/Gcsemv/2`, `mlmRev/ScotsSec/2`, `mlmRev/ScotsSec/3`, `mlmRev/Socatt/2`.
+- 50 contract hashes moved, each with its corrected registry row; no contract rule changed. It is
+  a patch, 1.0.5, as for #57: no suite is frozen before release 1.1.
