@@ -4,7 +4,7 @@
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23285683.svg)](https://doi.org/10.5281/zenodo.23285683)
 [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/adkipnis/mixedbench/blob/main/examples/demo.ipynb)
 
-# mixedbench
+# MixedBench
 
 A benchmark of posterior approximation and prediction for generalized linear mixed models
 (GLMMs) on real grouped data.
@@ -12,7 +12,7 @@ A benchmark of posterior approximation and prediction for generalized linear mix
 ## What and why
 
 - Bayesian methods for GLMMs are hard to compare: each paper and released method tests them on its own few datasets. This benchmark aims to fix that.
-- mixedbench lists the documented mixed-effects models of 641 public tabular datasets with grouping structure, each downloaded at a fixed version.
+- MixedBench lists the documented mixed-effects models of 641 public tabular datasets with grouping structure, each downloaded at a fixed version.
 - A fixed set of rules turns each dataset into an inference problem ready to fit. Results of different methods are comparable.
 - From release 1.1, suites add reference posteriors to score against.
 
