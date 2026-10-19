@@ -609,7 +609,11 @@ family as a covariance-structured effect. Taken on review, by precedent: the squ
 hours, the logs and deflators of airlines, cigar and dairy, calcium's time in years and marriage's
 wife coding live in the formula only, as depression_pp's polynomial. The family rule fits
 antisocial, kenya and fifeschool #2 as Poisson; their `family=gaussian` records the source's
-likelihood.
+likelihood. Taken on review after the merge (`registry_targeted_4_review.csv`,
+`duplicates_targeted_4_review.csv`; Alex: "ytis"): antisocial's `momage`, ten integer values, is
+declared continuous, as the source fits it linearly; stata_fifeschool, the same pupils as mlmRev
+ScotsSec, folds into it, and its two models become ScotsSec's models 2 and 3 under ScotsSec's
+column names.
 
 Alex: "Unmentioned fields stand."
 
