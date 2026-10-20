@@ -210,11 +210,13 @@ class Handoff:
     # summary.rds, chains.rds, meta.rds -> diagnostics
     # ---------------------------------------------------------------------------------
 
-    @staticmethod
-    def diagnostics(dir: Path) -> dict:
-        """Returns what R reported of a level it ran to its end.
+    def diagnostics(self, dir: Path) -> dict:
+        """Returns what R reported of a level it ran to its end,
+        with each global parameter's R-hat and ESS under the contract's names.
         An R-hat or ESS that R could not compute stays NaN, so the bar fails on it."""
         summary = pyreadr.read_r(dir / 'summary.rds')[None]  # per global parameter
+        summary['variable'] = summary['variable'].map(self._contractNames())
+        summary = summary.set_index('variable').loc[list(self.problem.globalDraws())]
         chains = pyreadr.read_r(dir / 'chains.rds')[None]  # per chain, over every iteration
         meta = pyreadr.read_r(dir / 'meta.rds')[None]  # the largest R-hat over the random effects
         return {
@@ -225,4 +227,5 @@ class Handoff:
             'treedepth_hits': int(chains['treedepth_hits'].sum()),
             'ebfmi': chains['ebfmi'].tolist(),
             'rhat_locals': float(meta['rhat_locals'].iloc[0]),
+            'globals': summary.to_dict(orient='index'),
         }
