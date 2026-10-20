@@ -17,10 +17,11 @@ the approach first.
 
 ## Set up
 
-You need [uv](https://docs.astral.sh/uv/); R only for the reference fits.
+You need [uv](https://docs.astral.sh/uv/); R only for the reference fits. Fork the repository on
+GitHub, then clone your fork:
 
 ```
-git clone https://github.com/adkipnis/mixedbench
+git clone https://github.com/<your-username>/mixedbench
 cd mixedbench
 uv sync
 uv run pytest               # the offline tests, about ten seconds
@@ -51,7 +52,10 @@ words (source, table, registry, contract, problem, suite).
 
 ## Pull requests
 
-- Branch off `main`, one change per pull request, linked to its issue.
+GitHub walks through the fork, the branch and the pull request in
+[Contributing to a project](https://docs.github.com/en/get-started/exploring-projects-on-github/contributing-to-a-project).
+
+- Branch off `main` in your fork, one change per pull request, linked to its issue.
 - Add a test with each change; mark a test that downloads with `@pytest.mark.network`.
 - Run `uv run ruff format .` and `uv run pytest`. CI runs the tests on Linux, macOS and Windows.
 - Please follow the style [conventions](docs/conventions.md).
