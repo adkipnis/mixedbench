@@ -87,6 +87,23 @@ def test_a_run_records_each_level_with_its_settings_time_and_diagnostics(ran) ->
 
 
 @pytest.mark.brms
+def test_a_level_records_each_chains_sampler_and_each_global_parameters_rhat_and_ess(ran) -> None:
+    """Counting `bar` endings by their slowest parameters,
+    and the difficulty of a problem for NUTS, read these later without a rerun (#93).
+    Every iteration takes at least one leapfrog step, and the chains run within the level's time.
+    brms's labels of a real fit reach the record under every global parameter's contract name."""
+    problem, _, dir = ran
+    [level] = record(dir)['levels']
+    assert len(level['step_size']) == 4
+    assert min(level['step_size']) > 0
+    assert min(level['leapfrog_steps']) >= 1000
+    assert 0 < min(level['acceptance']) <= max(level['acceptance']) <= 1
+    seconds = np.add(level['warmup_seconds'], level['sampling_seconds'])  # per chain
+    assert 0 < seconds.min() <= seconds.max() < level['seconds']
+    assert list(level['by_parameter']) == list(problem.globalDraws())
+
+
+@pytest.mark.brms
 def test_the_outcome_is_the_last_levels_references_row_and_the_record_holds_it(ran) -> None:
     """The driver's collect step reads `references.csv`'s row back from the record."""
     problem, outcome, dir = ran
@@ -174,14 +191,45 @@ def tinyLevels() -> dict[int, dict]:
 def test_a_failed_bar_climbs_the_ladder_and_ends_as_bar_at_level_2(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Every level gets its chance; what failed keeps its record and R's log, and no draws."""
+    """Every level gets its chance; what failed keeps its record and R's log, and no draws.
+    So each level's record names its slowest parameters."""
     monkeypatch.setattr(runner, 'LEVELS', tinyLevels())
     problem = fixtureProblem()
     outcome = runner.run(problem, tmp_path)
     dir = problemDir(tmp_path, problem)
+    levels = record(dir)['levels']
     assert (outcome.outcome, outcome.level) == ('bar', 2)
-    assert [level['outcome'] for level in record(dir)['levels']] == ['bar', 'bar', 'bar']
+    assert [level['outcome'] for level in levels] == ['bar', 'bar', 'bar']
     assert sorted(path.name for path in dir.iterdir()) == ['R.log', 'run.json']
+    for level in levels:
+        assert list(level['by_parameter']) == list(problem.globalDraws())
+
+
+@pytest.mark.brms
+def test_a_diagnostic_r_could_not_compute_is_null_in_the_record(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The record is published, and strict JSON readers (JavaScript, jq) reject a bare NaN.
+    No small fit reliably leaves posterior without an R-hat, so the NaN is set on a real fit's."""
+    diagnostics = Handoff.diagnostics
+
+    def withoutRhat(handoff: Handoff, dir: Path) -> dict:
+        reported = diagnostics(handoff, dir)
+        reported['rhat'] = math.nan
+        reported['by_parameter']['sigma']['rhat'] = math.nan
+        return reported
+
+    monkeypatch.setattr(Handoff, 'diagnostics', withoutRhat)
+    monkeypatch.setattr(runner, 'LEVELS', {0: tinyLevels()[0]})
+    problem = fixtureProblem()
+    runner.run(problem, tmp_path)
+    text = (problemDir(tmp_path, problem) / 'run.json').read_text()
+    written = json.loads(text)
+    [level] = written['levels']
+    assert 'NaN' not in text
+    assert written['rhat'] is None
+    assert level['rhat'] is None
+    assert level['by_parameter']['sigma']['rhat'] is None
 
 
 @pytest.mark.brms

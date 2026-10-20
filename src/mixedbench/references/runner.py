@@ -12,7 +12,8 @@ a Problem and a directory
 -> the R stack, checked against the pins                        _Runner._checkStack
 -> each level fitted by run.R                                   _climbLadder, _attemptLevel, _fit
 -> its outcome, judged by the bar                               _passes
--> the draws as parquet, Stan's program and data, the record    _keep, _Runner.run
+-> the draws as parquet, Stan's program and data                _keep
+-> the record, with null for a diagnostic R could not compute   _Runner.run, _nullifyNonFinite
 -> the outcome                                                  run
 """
 
@@ -20,6 +21,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import shutil
 import signal
 import subprocess
@@ -144,7 +146,8 @@ class _Runner:
             'levels': attempts,
             'versions': versions,
         }
-        (self.dir / 'run.json').write_text(json.dumps(record, indent=2))
+        strict = _nullifyNonFinite(record)
+        (self.dir / 'run.json').write_text(json.dumps(strict, indent=2))
         return outcome
 
     # ---------------------------------------------------------------------------------
@@ -238,3 +241,21 @@ class _Runner:
             draws.to_parquet(self.dir / f'{name}.parquet', index=False)
         for name in ('model.stan', 'standata.json'):
             shutil.copy(work / name, self.dir / name)
+
+
+# =====================================================================================
+# the record as strict JSON
+# =====================================================================================
+# the record is published, and strict JSON readers reject a bare NaN
+
+
+def _nullifyNonFinite(value: object) -> object:
+    """Returns `value` with each NaN or infinity as `None`, which JSON writes as null,
+    as JavaScript's `JSON.stringify` does."""
+    if isinstance(value, float) and not math.isfinite(value):
+        return None
+    if isinstance(value, dict):
+        return {key: _nullifyNonFinite(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_nullifyNonFinite(item) for item in value]
+    return value

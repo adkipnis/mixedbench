@@ -292,6 +292,30 @@ def test_a_factor_above_1000_groups_reads_back_as_summaries_without_draws() -> N
     assert summary.iloc[1000, 1:].tolist() == row.tolist()
 
 
+CHAINS = pd.DataFrame({
+    'chain': [1, 2], 'divergences': [0, 3], 'treedepth_hits': [2, 0], 'ebfmi': [0.9, 1.1],
+    'step_size': [0.31, 0.27], 'leapfrog_steps': [7012.0, 6890.0], 'acceptance': [0.86, 0.91],
+    'warmup_seconds': [4.2, 3.9], 'sampling_seconds': [3.1, 3.4],
+})  # fmt: skip
+SUMMARY = pd.DataFrame({
+    'variable': ['sigma', 'sd_g1__Intercept', 'b_x2', 'b_x1', 'b_Intercept'],
+    'rhat': [1.0, 1.02, 1.001, 1.002, 1.003], 'ess_bulk': [1200.0, 320.0, 900.0, 800.0, 700.0],
+    'ess_tail': [1100.0, 410.0, 950.0, 850.0, 750.0],
+})  # fmt: skip
+
+
+def recordedDiagnostics(dir: Path, summary: pd.DataFrame) -> dict:
+    """`Handoff.diagnostics` of the fixture problem, from files written as run.R writes them."""
+    pyreadr.write_rds(dir / 'summary.rds', summary)
+    pyreadr.write_rds(dir / 'chains.rds', CHAINS)
+    pyreadr.write_rds(dir / 'meta.rds', pd.DataFrame({'rhat_locals': [1.003]}))
+    return Handoff(fixtureProblem()).diagnostics(dir)
+
+
+def picked(diagnostics: dict, keys: tuple[str, ...]) -> dict:
+    return {key: diagnostics[key] for key in keys}
+
+
 def test_diagnostics_read_back_as_the_worst_over_parameters_with_nan_kept(tmp_path: Path) -> None:
     """posterior gives NA for the R-hat and ESS of constant draws, and for the tail ESS of
     non-finite ones.
@@ -299,22 +323,70 @@ def test_diagnostics_read_back_as_the_worst_over_parameters_with_nan_kept(tmp_pa
     Divergences and tree-depth hits add up over the chains."""
     nan = float('nan')
     summary = pd.DataFrame({
-        'variable': ['b_Intercept', 'b_x1', 'sd_g1__Intercept'], 'rhat': [1.001, nan, 1.002],
-        'ess_bulk': [900.0, 500.0, 700.0], 'ess_tail': [800.0, 600.0, nan],
+        'variable': ['b_Intercept', 'b_x1', 'b_x2', 'sd_g1__Intercept', 'sigma'],
+        'rhat': [1.001, nan, 1.0, 1.002, 1.0], 'ess_bulk': [900.0, 500.0, 1000.0, 700.0, 1200.0],
+        'ess_tail': [800.0, 600.0, 1000.0, nan, 1100.0],
     })  # fmt: skip
-    chains = pd.DataFrame({
-        'chain': [1, 2], 'divergences': [0, 3], 'treedepth_hits': [2, 0], 'ebfmi': [0.9, 1.1],
-    })  # fmt: skip
-    pyreadr.write_rds(tmp_path / 'summary.rds', summary)
-    pyreadr.write_rds(tmp_path / 'chains.rds', chains)
-    pyreadr.write_rds(tmp_path / 'meta.rds', pd.DataFrame({'rhat_locals': [1.003]}))
-    diagnostics = Handoff.diagnostics(tmp_path)
-    assert np.isnan(diagnostics.pop('rhat'))
-    assert np.isnan(diagnostics.pop('ess_tail'))
-    assert diagnostics == {
+    diagnostics = recordedDiagnostics(tmp_path, summary)
+    assert np.isnan(diagnostics['rhat'])
+    assert np.isnan(diagnostics['ess_tail'])
+    keys = ('ess_bulk', 'divergences', 'treedepth_hits', 'ebfmi', 'rhat_locals')
+    assert picked(diagnostics, keys) == {
         'ess_bulk': 500.0,
         'divergences': 3,
         'treedepth_hits': 2,
         'ebfmi': [0.9, 1.1],
         'rhat_locals': 1.003,
     }
+
+
+def test_diagnostics_name_each_global_parameters_rhat_and_ess_by_the_contract(
+    tmp_path: Path,
+) -> None:
+    """A run that ends at the bar keeps no draws, so its record names the slowest parameters.
+    Renamed by brms's label, never by position: `SUMMARY` lists them in reverse,
+    and they come back in the contract's order."""
+    parameters = recordedDiagnostics(tmp_path, SUMMARY)['by_parameter']
+    assert list(parameters) == ['Intercept', 'x', 'sex', 'sd[block]', 'sigma']
+    assert parameters == {
+        'Intercept': {'rhat': 1.003, 'ess_bulk': 700.0, 'ess_tail': 750.0},
+        'x': {'rhat': 1.002, 'ess_bulk': 800.0, 'ess_tail': 850.0},
+        'sex': {'rhat': 1.001, 'ess_bulk': 900.0, 'ess_tail': 950.0},
+        'sd[block]': {'rhat': 1.02, 'ess_bulk': 320.0, 'ess_tail': 410.0},
+        'sigma': {'rhat': 1.0, 'ess_bulk': 1200.0, 'ess_tail': 1100.0},
+    }
+
+
+def test_a_brms_global_the_contract_does_not_name_still_counts_toward_the_bar(
+    tmp_path: Path,
+) -> None:
+    """The bar reads every global R summarized, as before the record named them.
+    Only the record of each parameter keeps to the contract's names."""
+    unnamed = pd.DataFrame(
+        {'variable': ['b_x3'], 'rhat': [1.2], 'ess_bulk': [40.0], 'ess_tail': [30.0]}
+    )
+    diagnostics = recordedDiagnostics(tmp_path, pd.concat([SUMMARY, unnamed]))
+    assert picked(diagnostics, ('rhat', 'ess_bulk', 'ess_tail')) == {
+        'rhat': 1.2,
+        'ess_bulk': 40.0,
+        'ess_tail': 30.0,
+    }
+    assert list(diagnostics['by_parameter']) == ['Intercept', 'x', 'sex', 'sd[block]', 'sigma']
+
+
+def test_diagnostics_keep_each_chains_step_size_leapfrog_steps_acceptance_and_seconds(
+    tmp_path: Path,
+) -> None:
+    """Leapfrog steps per effective draw measure how hard a problem is for NUTS without wall-clock.
+    A leapfrog step is one gradient evaluation (Hoffman & Gelman 2014, §4).
+    R sums the steps as doubles, and they reach the record as integers."""
+    diagnostics = recordedDiagnostics(tmp_path, SUMMARY)
+    kept = ('step_size', 'leapfrog_steps', 'acceptance', 'warmup_seconds', 'sampling_seconds')
+    assert picked(diagnostics, kept) == {
+        'step_size': [0.31, 0.27],
+        'leapfrog_steps': [7012, 6890],
+        'acceptance': [0.86, 0.91],
+        'warmup_seconds': [4.2, 3.9],
+        'sampling_seconds': [3.1, 3.4],
+    }
+    assert {type(steps) for steps in diagnostics['leapfrog_steps']} == {int}
