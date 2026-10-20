@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import get_args
 
 import pytest
+from measure import COLUMN_COLUMNS, DIMENSION_COLUMNS
 from mixedbench.registry.row import Family, ResponseType, Verified
 from schema import ALLOWED, CANDIDATE_COLUMNS, SCREENS, TABLES
 
@@ -18,6 +19,12 @@ PROMPT = (HERE / 'prompts' / 'read.md').read_text()
 def test_readme_documents_every_column(table):
     for column in TABLES[table].columns:
         assert re.search(rf'`{column}`', README), f'{table}.{column} undocumented'
+
+
+@pytest.mark.parametrize('columns', [DIMENSION_COLUMNS, COLUMN_COLUMNS], ids=['dimensions', 'columns'])  # fmt: skip
+def test_readme_documents_every_measured_column(columns):
+    for column in columns:
+        assert re.search(rf'`{column}`', README), f'{column} undocumented'
 
 
 @pytest.mark.parametrize('table', list(TABLES))
