@@ -119,8 +119,8 @@ def test_the_dropped_share_counts_the_rows_missing_a_model_value() -> None:
     problem = Problem.build(fixtureRow(), fixtureTable())
     assert problem.dropped_share == 2 / 14
     assert -1.0 in problem.table['x'].tolist()
-    withoutPlot = fixtureTable().assign(plot=lambda table: table['plot'].mask(table.index == 0))
-    assert Problem.build(fixtureRow(), withoutPlot).dropped_share == 3 / 14
+    without_plot = fixtureTable().assign(plot=lambda table: table['plot'].mask(table.index == 0))
+    assert Problem.build(fixtureRow(), without_plot).dropped_share == 3 / 14
 
 
 def test_a_table_with_no_complete_row_is_refused() -> None:
@@ -162,8 +162,8 @@ def test_the_response_is_coded_by_its_type_and_the_family_follows_the_rule(
     assert problem.trials == (trials or None)
     if trials:
         assert problem.table[trials].tolist() == GAMES
-    expectedLevels = {'binary': ('no', 'yes'), 'ordinal': (1, 3, 5)}.get(response_type)
-    assert problem.levels.get(response) == expectedLevels
+    expected_levels = {'binary': ('no', 'yes'), 'ordinal': (1, 3, 5)}.get(response_type)
+    assert problem.levels.get(response) == expected_levels
 
 
 @pytest.mark.parametrize(
@@ -216,10 +216,11 @@ def test_the_prior_record_states_adr_0001s_prior_per_parameter_group_the_problem
         'cor': Prior('lkj', (1,)),
         'sigma': HALF_T,
     }
-    interceptOnly = fixtureRow(
+    intercept_only = fixtureRow(
         response='n', response_type='count', covariates=(), interactions=(), random_slopes=()
     )
-    assert Problem.build(interceptOnly, fixtureTable()).prior == {'Intercept': NORMAL, 'sd': HALF_T}
+    prior = Problem.build(intercept_only, fixtureTable()).prior
+    assert prior == {'Intercept': NORMAL, 'sd': HALF_T}
     ordinal = fixtureRow(response='rating', response_type='ordinal')
     assert 'Intercept' not in Problem.build(ordinal, fixtureTable()).prior
 
@@ -378,9 +379,9 @@ def test_each_fold_scales_the_continuous_columns_by_the_rows_its_fit_sees() -> N
     for the continuous covariate `x` and the continuous response `y` only. The fixture's six
     holdable rows fill five folds, and its three blocks fill three. The table stays in raw units."""
     problem = Problem.build(fixtureRow(), fixtureTable())
-    everyRow = pd.Series([True] * 12)
+    every_row = pd.Series([True] * 12)
     assert problem.scales == {
-        'full': ({'x': momentsOf(X, everyRow), 'y': momentsOf(Y, everyRow)},),
+        'full': ({'x': momentsOf(X, every_row), 'y': momentsOf(Y, every_row)},),
         'rows': foldMoments(problem, 'rows', 5),
         'groups': foldMoments(problem, 'groups', 3),
     }
@@ -402,10 +403,10 @@ def test_a_level_present_only_in_held_rows_leaves_an_all_zero_column_in_that_fol
     row = replace(groupedRow(), covariates=('x', 'kind'), types={'kind': 'categorical'})
     problem = Problem.build(row, table)
     seen = problem.table['groups'] != 0
-    [heldLevel] = set(table.loc[~seen, 'kind']) - {'base'}
+    [held_level] = set(table.loc[~seen, 'kind']) - {'base'}
     assert problem.design == ('Intercept', 'x', 'kind[k0]', 'kind[k1]', 'kind[k2]')
-    assert problem.table.loc[seen, f'kind[{heldLevel}]'].eq(0).all()
-    assert problem.table.loc[~seen, f'kind[{heldLevel}]'].eq(1).any()
+    assert problem.table.loc[seen, f'kind[{held_level}]'].eq(0).all()
+    assert problem.table.loc[~seen, f'kind[{held_level}]'].eq(1).any()
 
 
 # ==============================================================================================
