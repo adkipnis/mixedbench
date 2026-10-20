@@ -401,7 +401,7 @@ def test_a_column_missing_on_every_measured_row_relates_to_no_factor(herds, rows
     assert pairs[list(statistics)].isna().all().all()
 
 
-SHARES =('outlier_share', 'zero_share', 'min_share', 'max_share', 'unique_share', 'rare_level_share', 'max_abs_rho')  # fmt: skip
+SHARES = ('outlier_share', 'zero_share', 'min_share', 'max_share', 'unique_share', 'rare_level_share', 'max_abs_rho')  # fmt: skip
 GENERATED = readRows(FIXTURES / 'registry_herds.csv')[0] | {
     'response': 'y', 'grouping_factors': 'g', 'covariates': '', 'ignore': '', 'types': '',
 }  # fmt: skip
