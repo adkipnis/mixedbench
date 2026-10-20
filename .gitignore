@@ -8,13 +8,18 @@ dist/
 .ruff_cache/
 .ipynb_checkpoints/
 .DS_Store
-# rebuilt from pins (cache) and by survey/pull.py (help), never committed
-registry/cache/
+# rebuilt from pins (cache) and by survey/pull.py (help), never committed;
+# without a trailing slash, so that a symlink to large storage is ignored too
+registry/cache
 registry/help/
 # the demo notebook's cache, fetched where it runs
 examples/cache/
 # the reference runs' directories and logs, published apart (suite/drive.py)
 # the leading / anchors it, so src/mixedbench/references/ stays tracked
-/references/
+/references
+# the lab notes, private
+/lab/
+# an experiment's per-problem runs
+/experiments/*/work
 # local agent instructions (docs/conventions.md is the public part)
 CLAUDE.md

@@ -227,9 +227,20 @@ Markdown meets the same bar as code: simple, and read top to bottom.
 ## Lab notes and experiments
 
 - `lab/YYYY-MM-DD-slug/`: one small design choice, its notebook with outputs and any PDFs,
-  indexed in `lab/README.md` with the decision. Nothing imports from `lab/`.
-- `experiments/`: rerunnable scripted studies that feed a paper. Rerun with flags; never
-  one-off.
+  indexed in `lab/README.md` with the decision. Lab notes are private: `lab/` is in
+  `.gitignore`, and nothing imports from it.
+- `experiments/`: rerunnable scripted studies, tracked and public. A lab note moves here once
+  something public rests on it: a released behavior, an ADR's reason or a paper's number.
+  Rerun with flags; never one-off.
+
+## Notebooks
+
+- The text speaks to a reader who knows the field but not the repository: no project
+  vocabulary, and every abbreviation spelled out at first use.
+- It holds only what the figures and the decision need. Implementation details, fixed bugs and
+  caveats that leave the result unchanged belong in the code or the issue.
+- Short plain sentences, one per line, with `<br>` between them in a paragraph. A bullet is a
+  bold label and one fact; a second fact is a second bullet, never a `<br>`.
 <!-- end of shared conventions -->
 
 ## In mixedbench
@@ -303,6 +314,6 @@ The words are [`CONTEXT.md`](../CONTEXT.md)'s.
   A contract change is a new suite version, never a recomputation.
 - The cache under `registry/cache/` is rebuilt from pins, never edited.
 
-### Lab notes
+### Experiments
 
-- A lab note's notebook is committed with its outputs.
+- An experiment's notebook is committed with its outputs.
