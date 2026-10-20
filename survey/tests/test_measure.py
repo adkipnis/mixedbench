@@ -6,6 +6,8 @@ import numpy as np
 import pandas as pd
 import pytest
 from conftest import FIXTURES, readRows
+from hypothesis import given, settings
+from hypothesis import strategies as st
 from measure import COLUMN_COLUMNS, Measurer, fitAlpha
 from mixedbench.registry.row import Row
 from schema import REGISTRY
@@ -276,3 +278,40 @@ def test_max_abs_rho_pairs_over_the_rows_both_columns_observe(herds, rows):
     assert (rho['tested'], rho['weight'], rho['sick']) == (0.5295, 0.6841, 0.6841)
     assert pd.isna(rho['dose'])
     assert pd.isna(measuredColumns(herds, rows[0]).loc['sick', 'max_abs_rho'])
+
+
+SHARES = ('outlier_share', 'zero_share', 'min_share', 'max_share', 'unique_share', 'rare_level_share', 'max_abs_rho')  # fmt: skip
+GENERATED = readRows(FIXTURES / 'registry_herds.csv')[0] | {
+    'response': 'y', 'grouping_factors': 'g', 'covariates': '', 'ignore': '', 'types': '',
+}  # fmt: skip
+
+
+@st.composite
+def tables(draw: st.DrawFn) -> pd.DataFrame:
+    """A table of one to thirty rows whose covariate columns take any kind the typing rule
+    gives them: ties, gaps, a single value or two."""
+    n = draw(st.integers(1, 30))
+    number = st.one_of(st.floats(-100, 100), st.sampled_from([0.0, 1.0]), st.none())
+    word = st.sampled_from(['lo', 'mid', 'hi', None])
+    words = draw(st.lists(word, min_size=n, max_size=n))
+    return pd.DataFrame({
+        'y': np.arange(n, dtype=float),
+        'g': draw(st.lists(st.sampled_from('ab'), min_size=n, max_size=n)),
+        'x': draw(st.lists(number, min_size=n, max_size=n)),
+        'k': draw(st.lists(st.integers(0, 4), min_size=n, max_size=n)),
+        's': words,
+        'o': pd.Categorical(words, categories=['lo', 'mid', 'hi'], ordered=True),
+    })  # fmt: skip
+
+
+@settings(max_examples=100, deadline=None)
+@given(table=tables())
+def test_shares_and_correlations_lie_in_the_unit_interval_and_no_level_is_above_its_share(table):
+    """Whatever the column, a share and an absolute correlation lie in [0, 1] or are blank, and
+    the rarest of K levels holds at most 1/K of the rows."""
+    columns = measuredColumns(table, GENERATED)
+    for share in SHARES:
+        values = columns[share].dropna()
+        assert values.between(0, 1).all(), share
+    levelled = columns.dropna(subset='rare_level_share')
+    assert (levelled['rare_level_share'] <= 1 / levelled['K'].astype(int) + 1e-4).all()
