@@ -159,7 +159,9 @@ class Handoff:
         if full:
             files['locals'] = draws[['chain', 'draw', *self._effectsOf(full)]]
         if summarized:
-            files['locals_summary'] = self._localsSummary(dir, names, summarized)
+            summary = self._readSummary(dir / 'locals_summary.rds')
+            effects = summary.loc[self._effectsOf(summarized)]
+            files['locals_summary'] = effects.rename_axis('name').reset_index()
         return files
 
     def _contractNames(self) -> dict[str, str]:
@@ -197,14 +199,11 @@ class Handoff:
             names += local[factor]
         return names
 
-    def _localsSummary(
-        self, dir: Path, names: dict[str, str], summarized: list[str]
-    ) -> pd.DataFrame:
-        summary = pyreadr.read_r(dir / 'locals_summary.rds')[None]  # a row per random effect
-        summary['variable'] = summary['variable'].map(names)
-        summary = summary.rename(columns={'variable': 'name'})
-        order = self._effectsOf(summarized)
-        return summary.set_index('name').loc[order].reset_index()
+    def _readSummary(self, file: Path) -> pd.DataFrame:
+        """Returns an R summary indexed by the contract's names."""
+        summary = pyreadr.read_r(file)[None]  # a row per variable, as brms named it
+        summary['variable'] = summary['variable'].map(self._contractNames())
+        return summary.set_index('variable')
 
     # ---------------------------------------------------------------------------------
     # summary.rds, chains.rds, meta.rds -> diagnostics
@@ -214,9 +213,8 @@ class Handoff:
         """Returns what R reported of a level it ran to its end,
         with each global parameter's R-hat and ESS under the contract's names.
         An R-hat or ESS that R could not compute stays NaN, so the bar fails on it."""
-        summary = pyreadr.read_r(dir / 'summary.rds')[None]  # per global parameter
-        summary['variable'] = summary['variable'].map(self._contractNames())
-        summary = summary.set_index('variable').loc[list(self.problem.globalDraws())]
+        summary = self._readSummary(dir / 'summary.rds')  # per global variable R summarized
+        parameters = summary.loc[list(self.problem.globalDraws())]
         chains = pyreadr.read_r(dir / 'chains.rds')[None]  # per chain, over every iteration
         meta = pyreadr.read_r(dir / 'meta.rds')[None]  # the largest R-hat over the random effects
         return {
@@ -232,5 +230,5 @@ class Handoff:
             'warmup_seconds': chains['warmup_seconds'].tolist(),
             'sampling_seconds': chains['sampling_seconds'].tolist(),
             'rhat_locals': float(meta['rhat_locals'].iloc[0]),
-            'globals': summary.to_dict(orient='index'),
+            'by_parameter': parameters.to_dict(orient='index'),
         }
