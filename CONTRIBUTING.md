@@ -43,6 +43,7 @@ survey/         the pipeline that built the registry
 tests/          mirrors src/
 docs/adr/       the design decisions and why they were taken
 examples/       the demo notebook
+experiments/    the studies a decision or the paper rests on, rerunnable
 ```
 
 Each module's docstring says what it defines and how. [`CONTEXT.md`](CONTEXT.md) defines the
