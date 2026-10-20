@@ -76,7 +76,7 @@ def gaussianMixed() -> Problem:
     dose = rng.normal(2, 1, len(school))
     sex = rng.binomial(1, 0.3, len(school))
     age = rng.normal(-1, 1, len(school))
-    u = rng.normal(0, 1, (12, 4))[school]  # (N, 4)
+    u = rng.normal(0, 1, (12, 4))[school]  # (n, q)
     y = 1 + u[:, 0] + (0.5 + u[:, 1]) * dose + (-0.3 + u[:, 2]) * sex + (0.2 + u[:, 3]) * age
     table = pd.DataFrame({
         'school': [f's{j:02d}' for j in school], 'dose': dose, 'sex': np.array(['f', 'm'])[sex],

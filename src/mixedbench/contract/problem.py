@@ -493,7 +493,7 @@ MAX_INTEGER_LEVELS = 10
 
 
 def columnType(values: pd.Series, declared: str) -> tuple[str, int | str]:
-    """Returns a column's kind and its level count K, blank if continuous.
+    """Returns a column's kind and its level count k, blank if continuous.
     The first rule that matches wins."""
     distinct = values.dropna().nunique()
     dtype = values.dtype

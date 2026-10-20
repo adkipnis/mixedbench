@@ -137,7 +137,7 @@ class Summarizer:
 
     def impliedColumns(self) -> dict:
         """Expected design columns of a model with T terms under the observed categorical share c
-        and mean K − 1: T (c (K − 1) + (1 − c)), one column per non-categorical term."""
+        and mean k − 1: T (c (k − 1) + (1 − c)), one column per non-categorical term."""
         share = float(self.modeled['type'].isin(CATEGORICAL_TYPES).mean())
         perCategorical = float((self.categoricals['K'] - 1).mean())
         perTerm = share * perCategorical + (1 - share)

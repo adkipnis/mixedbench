@@ -75,7 +75,7 @@ def fixtureRow(**overrides) -> Row:
 def test_the_design_has_the_coded_columns_in_order_with_the_intercept_first() -> None:
     """ADR 0001's coding, one column per parameter in the row's order: a continuous covariate
     raw, a binary 0/1 with the first loaded level 0, a categorical and an ordered factor as
-    K − 1 treatment contrasts against the first level, an interaction the product."""
+    k − 1 treatment contrasts against the first level, an interaction the product."""
     problem = Problem.build(fixtureRow(), fixtureTable())
     assert problem.design == ('Intercept', 'x', 'sex', 'diet[b]', 'diet[c]', 'grade[mid]', 'grade[hi]', 'x:sex')  # fmt: skip
     design = problem.table[list(problem.design)]
@@ -255,7 +255,7 @@ def test_a_slope_on_a_categorical_names_each_contrast_and_an_uncorrelated_one_ha
 
 
 def test_an_ordinal_problem_names_its_thresholds_as_brms_does() -> None:
-    """Where the rule is silent the name is brms's at the pinned version: cumulative's K − 1
+    """Where the rule is silent the name is brms's at the pinned version: cumulative's k − 1
     thresholds are `Intercept[k]` (brms's `b_Intercept[k]` without the `b_` that `Intercept`
     drops too), and there is no `Intercept`."""
     problem = Problem.build(fixtureRow(response='rating', response_type='ordinal'), fixtureTable())
@@ -315,7 +315,7 @@ def test_regime_rows_holds_out_a_tenth_and_every_group_keeps_a_seen_row(
 ) -> None:
     """Regime `rows` predicts inside seen groups, so every group of every factor keeps a seen
     row and a single-row group keeps its row; it holds out the nearest whole number to 10% of
-    the rows, fewer only when the groups leave no more, as with one factor and n − G < n/10."""
+    the rows, fewer only when the groups leave no more, as with one factor and n − m < n/10."""
     table = groupedTable(sizes, crossed)
     problem = Problem.build(groupedRow(source, crossed=bool(crossed)), table)
     held = problem.table['rows'] == 'held'
