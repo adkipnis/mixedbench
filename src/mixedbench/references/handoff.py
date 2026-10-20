@@ -226,6 +226,11 @@ class Handoff:
             'divergences': int(chains['divergences'].sum()),
             'treedepth_hits': int(chains['treedepth_hits'].sum()),
             'ebfmi': chains['ebfmi'].tolist(),
+            'step_size': chains['step_size'].tolist(),
+            'leapfrog_steps': chains['leapfrog_steps'].astype(int).tolist(),
+            'acceptance': chains['acceptance'].tolist(),
+            'warmup_seconds': chains['warmup_seconds'].tolist(),
+            'sampling_seconds': chains['sampling_seconds'].tolist(),
             'rhat_locals': float(meta['rhat_locals'].iloc[0]),
             'globals': summary.to_dict(orient='index'),
         }
