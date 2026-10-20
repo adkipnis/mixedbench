@@ -166,13 +166,9 @@ def test_the_hash_ignores_the_parquet_writers_options(options: dict) -> None:
 
 
 def perturbedCell(table: pd.DataFrame, column: str, row: int) -> pd.DataFrame:
-    """One cell changed: a regime flipped between `seen` and `held`, a number plus one."""
+    """One cell changed: a number plus one, a fold among them."""
     changed = table.copy()
-    value = changed.at[row, column]
-    if isinstance(changed[column].dtype, pd.CategoricalDtype):
-        changed.at[row, column] = 'held' if value == 'seen' else 'seen'
-    else:
-        changed.at[row, column] = value + 1
+    changed.at[row, column] += 1
     return changed
 
 
