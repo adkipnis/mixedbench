@@ -28,6 +28,7 @@ RegistryFile = Literal[
     'excluded.csv',
     'dimensions.csv',
     'columns.csv',
+    'column_factors.csv',
     'quantiles.yaml',
     'SUMMARY.md',
     'manifest.csv',

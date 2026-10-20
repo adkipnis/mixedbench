@@ -61,6 +61,7 @@ packages = ["src/mixedbench"]
 "registry/excluded.csv" = "mixedbench/registry/files/excluded.csv"
 "registry/dimensions.csv" = "mixedbench/registry/files/dimensions.csv"
 "registry/columns.csv" = "mixedbench/registry/files/columns.csv"
+"registry/column_factors.csv" = "mixedbench/registry/files/column_factors.csv"
 "registry/quantiles.yaml" = "mixedbench/registry/files/quantiles.yaml"
 "registry/SUMMARY.md" = "mixedbench/registry/files/SUMMARY.md"
 "registry/manifest.csv" = "mixedbench/registry/files/manifest.csv"
@@ -74,6 +75,7 @@ only-include = [
     "registry/excluded.csv",
     "registry/dimensions.csv",
     "registry/columns.csv",
+    "registry/column_factors.csv",
     "registry/quantiles.yaml",
     "registry/SUMMARY.md",
     "registry/manifest.csv",
