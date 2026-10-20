@@ -292,6 +292,19 @@ def test_a_factor_above_1000_groups_reads_back_as_summaries_without_draws() -> N
     assert summary.iloc[1000, 1:].tolist() == row.tolist()
 
 
+CHAINS = pd.DataFrame({
+    'chain': [1, 2], 'divergences': [0, 3], 'treedepth_hits': [2, 0], 'ebfmi': [0.9, 1.1],
+})  # fmt: skip
+
+
+def recordedDiagnostics(dir: Path, summary: pd.DataFrame, chains: pd.DataFrame) -> dict:
+    """`Handoff.diagnostics` of the fixture problem, from files written as run.R writes them."""
+    pyreadr.write_rds(dir / 'summary.rds', summary)
+    pyreadr.write_rds(dir / 'chains.rds', chains)
+    pyreadr.write_rds(dir / 'meta.rds', pd.DataFrame({'rhat_locals': [1.003]}))
+    return Handoff(fixtureProblem()).diagnostics(dir)
+
+
 def test_diagnostics_read_back_as_the_worst_over_parameters_with_nan_kept(tmp_path: Path) -> None:
     """posterior gives NA for the R-hat and ESS of constant draws, and for the tail ESS of
     non-finite ones.
@@ -299,22 +312,39 @@ def test_diagnostics_read_back_as_the_worst_over_parameters_with_nan_kept(tmp_pa
     Divergences and tree-depth hits add up over the chains."""
     nan = float('nan')
     summary = pd.DataFrame({
-        'variable': ['b_Intercept', 'b_x1', 'sd_g1__Intercept'], 'rhat': [1.001, nan, 1.002],
-        'ess_bulk': [900.0, 500.0, 700.0], 'ess_tail': [800.0, 600.0, nan],
+        'variable': ['b_Intercept', 'b_x1', 'b_x2', 'sd_g1__Intercept', 'sigma'],
+        'rhat': [1.001, nan, 1.0, 1.002, 1.0], 'ess_bulk': [900.0, 500.0, 1000.0, 700.0, 1200.0],
+        'ess_tail': [800.0, 600.0, 1000.0, nan, 1100.0],
     })  # fmt: skip
-    chains = pd.DataFrame({
-        'chain': [1, 2], 'divergences': [0, 3], 'treedepth_hits': [2, 0], 'ebfmi': [0.9, 1.1],
-    })  # fmt: skip
-    pyreadr.write_rds(tmp_path / 'summary.rds', summary)
-    pyreadr.write_rds(tmp_path / 'chains.rds', chains)
-    pyreadr.write_rds(tmp_path / 'meta.rds', pd.DataFrame({'rhat_locals': [1.003]}))
-    diagnostics = Handoff.diagnostics(tmp_path)
-    assert np.isnan(diagnostics.pop('rhat'))
-    assert np.isnan(diagnostics.pop('ess_tail'))
-    assert diagnostics == {
+    diagnostics = recordedDiagnostics(tmp_path, summary, CHAINS)
+    assert np.isnan(diagnostics['rhat'])
+    assert np.isnan(diagnostics['ess_tail'])
+    worst = ('ess_bulk', 'divergences', 'treedepth_hits', 'ebfmi', 'rhat_locals')
+    assert {key: diagnostics[key] for key in worst} == {
         'ess_bulk': 500.0,
         'divergences': 3,
         'treedepth_hits': 2,
         'ebfmi': [0.9, 1.1],
         'rhat_locals': 1.003,
+    }
+
+
+def test_diagnostics_name_each_global_parameters_rhat_and_ess_by_the_contract(
+    tmp_path: Path,
+) -> None:
+    """A run that ends at the bar keeps no draws, so its record names the slowest parameters.
+    Renamed by brms's label, never by position, and listed in the contract's order."""
+    summary = pd.DataFrame({
+        'variable': ['sigma', 'sd_g1__Intercept', 'b_x2', 'b_x1', 'b_Intercept'],
+        'rhat': [1.0, 1.02, 1.001, 1.002, 1.003], 'ess_bulk': [1200.0, 320.0, 900.0, 800.0, 700.0],
+        'ess_tail': [1100.0, 410.0, 950.0, 850.0, 750.0],
+    })  # fmt: skip
+    parameters = recordedDiagnostics(tmp_path, summary, CHAINS)['globals']
+    assert list(parameters) == ['Intercept', 'x', 'sex', 'sd[block]', 'sigma']
+    assert parameters == {
+        'Intercept': {'rhat': 1.003, 'ess_bulk': 700.0, 'ess_tail': 750.0},
+        'x': {'rhat': 1.002, 'ess_bulk': 800.0, 'ess_tail': 850.0},
+        'sex': {'rhat': 1.001, 'ess_bulk': 900.0, 'ess_tail': 950.0},
+        'sd[block]': {'rhat': 1.02, 'ess_bulk': 320.0, 'ess_tail': 410.0},
+        'sigma': {'rhat': 1.0, 'ess_bulk': 1200.0, 'ess_tail': 1100.0},
     }
