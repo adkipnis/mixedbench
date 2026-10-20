@@ -191,3 +191,36 @@ def test_a_constant_column_has_no_moments(herds, rows):
     dose = measuredColumns(herds.assign(dose=2.5), rows[1]).loc['dose']
     assert dose['type'] == 'continuous'
     assert dose[['skewness', 'excess_kurtosis', 'outlier_share']].isna().all()
+
+
+def test_a_continuous_columns_shares_at_zero_and_at_its_bounds(herds, rows):
+    """Weight's minimum and maximum occur once each, zero never. Three weights set to zero
+    make zero the minimum, held by three rows. A constant column sits at both bounds."""
+    weight = measuredColumns(herds, rows[1]).loc['weight']
+    assert (weight['zero_share'], weight['min_share'], weight['max_share']) == (0, 0.0714, 0.0714)
+    zeroed = herds.copy()
+    zeroed.loc[:2, 'weight'] = 0.0
+    weight = measuredColumns(zeroed, rows[1]).loc['weight']
+    assert (weight['zero_share'], weight['min_share']) == (0.2143, 0.2143)
+    dose = measuredColumns(herds.assign(dose=2.5), rows[1]).loc['dose']
+    assert (dose['zero_share'], dose['min_share'], dose['max_share']) == (0, 1, 1)
+
+
+def asOrdered(values: pd.Series, levels: list) -> pd.Series:
+    return values.astype(pd.CategoricalDtype(levels, ordered=True))
+
+
+def test_an_ordered_columns_bounds_are_its_lowest_and_highest_levels(herds, rows):
+    """Parity as an ordered factor: five rows at its lowest level, one at its highest. Its
+    zero share reads the levels as loaded: levels 0 to 3 put the five lowest rows at zero,
+    and named levels leave it blank."""
+    numbered = herds.assign(parity=asOrdered(herds['parity'], [1, 2, 3, 4]))
+    parity = measuredColumns(numbered, rows[1]).loc['parity']
+    assert (parity['zero_share'], parity['min_share'], parity['max_share']) == (0, 0.3571, 0.0714)
+    fromZero = herds.assign(parity=asOrdered(herds['parity'] - 1, [0, 1, 2, 3]))
+    assert measuredColumns(fromZero, rows[1]).loc['parity', 'zero_share'] == 0.3571
+    names = ['first', 'second', 'third', 'fourth']
+    named = herds.assign(parity=asOrdered(herds['parity'].map(dict(zip([1, 2, 3, 4], names))), names))  # fmt: skip
+    parity = measuredColumns(named, rows[1]).loc['parity']
+    assert pd.isna(parity['zero_share'])
+    assert (parity['min_share'], parity['max_share']) == (0.3571, 0.0714)
