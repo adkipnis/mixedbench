@@ -30,7 +30,11 @@ DIMENSION_COLUMNS = (
     'group_size_min', 'group_size_p10', 'group_size_p50', 'group_size_p90', 'group_size_max',
     'singleton_share', 'cv', 'alpha',
 )  # fmt: skip
-COLUMN_COLUMNS = (*IDENTITY, 'column', 'type', 'K', 'level', 'constant_within', 'missing_share', 'in_model')  # fmt: skip
+COLUMN_COLUMNS = (
+    *IDENTITY, 'column', 'type', 'K', 'level', 'constant_within', 'missing_share', 'in_model',
+    'skewness', 'excess_kurtosis', 'outlier_share', 'zero_share', 'min_share', 'max_share',
+    'unique_share', 'rare_level_share', 'max_abs_rho',
+)  # fmt: skip
 
 
 def fitAlpha(sizes: pd.Series) -> float:
@@ -144,11 +148,32 @@ class Measurer:
             'constant_within': ';'.join(constantWithin),
             'missing_share': round(float(values.isna().mean()), 4),
             'in_model': 'yes' if column in self.row.covariates else 'no',
-        }
+        } | self.shape(values.dropna(), kind)
 
     def constantWithin(self, column: str, factor: str) -> bool:
         distinct = self.table.groupby(factor, observed=True)[column].nunique()
         return bool(distinct.max() <= 1)
+
+    def shape(self, values: pd.Series, kind: str) -> dict:
+        """The quirk statistics that the column's kind defines, over its non-missing values;
+        a statistic left out is blank in columns.csv."""
+        shape = {}
+        if kind == 'continuous':
+            shape |= self.moments(values)
+        return shape
+
+    @staticmethod
+    def moments(values: pd.Series) -> dict:
+        """Fisher's G1 and G2 as pandas computes them, and the share beyond four sample
+        standard deviations; none for a constant column."""
+        if values.nunique() < 2:
+            return {}
+        z = (values - values.mean()) / values.std()
+        return {
+            'skewness': round(float(values.skew()), 4),  # blank under three values
+            'excess_kurtosis': round(float(values.kurt()), 4),  # blank under four
+            'outlier_share': round(float((z.abs() > 4).mean()), 4),
+        }
 
     # ---------------------------------------------------------------------------------
     # design columns
