@@ -87,6 +87,27 @@ def test_a_run_records_each_level_with_its_settings_time_and_diagnostics(ran) ->
 
 
 @pytest.mark.brms
+def test_a_level_records_each_chains_sampler_and_each_global_parameters_rhat_and_ess(ran) -> None:
+    """Counting `bar` endings by their slowest parameters, and the difficulty of a problem for
+    NUTS, read these later without a rerun (#93).
+    Every iteration takes at least one leapfrog step, and the chains run within the level's time.
+    The bar's worst R-hat and ESS are those of single parameters."""
+    problem, _, dir = ran
+    [level] = record(dir)['levels']
+    assert len(level['step_size']) == 4
+    assert min(level['step_size']) > 0
+    assert min(level['leapfrog_steps']) >= 1000
+    assert 0 < min(level['acceptance']) <= max(level['acceptance']) <= 1
+    seconds = np.add(level['warmup_seconds'], level['sampling_seconds'])  # per chain
+    assert 0 < seconds.min() <= seconds.max() < level['seconds']
+    parameters = pd.DataFrame.from_dict(level['globals'], orient='index')  # a row per parameter
+    assert list(parameters.index) == list(problem.globalDraws())
+    assert parameters['rhat'].max() == level['rhat']
+    assert parameters['ess_bulk'].min() == level['ess_bulk']
+    assert parameters['ess_tail'].min() == level['ess_tail']
+
+
+@pytest.mark.brms
 def test_the_outcome_is_the_last_levels_references_row_and_the_record_holds_it(ran) -> None:
     """The driver's collect step reads `references.csv`'s row back from the record."""
     problem, outcome, dir = ran
