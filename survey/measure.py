@@ -90,6 +90,7 @@ class Measurer:
         self.identity = {k: getattr(row, k) for k in IDENTITY}
         taken = {row.response, row.trials, *self.factors, *row.ignore}
         self.columnNames = [c for c in table.columns if c not in taken]
+        self.groupLevel = self.findGroupLevel()
 
     def columns(self) -> list[dict]:
         rho = self.maxAbsRho()
@@ -172,6 +173,13 @@ class Measurer:
     def constantWithin(self, column: str, factor: str) -> bool:
         distinct = self.table.groupby(factor, observed=True)[column].nunique()
         return bool(distinct.max() <= 1)
+
+    def findGroupLevel(self) -> dict[str, list[str]]:
+        """Each factor's group-level columns, found once: every column × factor pair asks."""
+        groupLevel = {}
+        for factor in self.factors:
+            groupLevel[factor] = [c for c in self.columnNames if self.constantWithin(c, factor)]
+        return groupLevel
 
     def shape(self, values: pd.Series, kind: str) -> dict:
         """The quirk statistics that the column's kind defines, over its non-missing values;
@@ -312,7 +320,7 @@ class Measurer:
         the group count m and the design's rank p, 1 − (1 − R²)(m − 1) / (m − p − 1), over the
         rows that observe them all. Blank when the partners span nothing beyond the intercept,
         leave no degree of freedom, or the column is constant."""
-        partners = [c for c in self.columnNames if c != column and self.constantWithin(c, factor)]
+        partners = [c for c in self.groupLevel[factor] if c != column]
         complete = self.table[[column, factor, *partners]].dropna().index
         y = self.codeColumn(column, kind)[complete].to_numpy(float)
         design = self.codeDesign(partners, complete)
