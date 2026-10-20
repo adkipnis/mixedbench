@@ -1,6 +1,8 @@
 """The merge script at its file seams: shard in, canonical CSVs and refusals out (#17)."""
 
 import hashlib
+import subprocess
+import sys
 from pathlib import Path
 
 import pandas as pd
@@ -12,6 +14,8 @@ from mixedbench.registry.row import readCsv, writeCsv
 from sources import readFrame
 
 RENAMED_TYPES = 'area=categorical;farm=categorical;type=categorical;diet=categorical'
+SURVEY = Path(__file__).resolve().parents[1]
+MEASURED = ('dimensions.csv', 'columns.csv')
 
 
 def test_passing_registry_shard_merges_with_tier_and_reader_filled_in(merger):
@@ -358,6 +362,19 @@ def test_every_merge_measures_the_registry_into_dimensions_and_columns(merger):
     mergeShard(merger, FIXTURES / 'excluded_cattle.csv')
     after = {p.name: p.read_bytes() for p in merger.registry.glob('*.csv')}
     assert after == before | {'excluded.csv': after['excluded.csv']}
+
+
+def test_the_measure_script_writes_what_the_merge_writes(merger):
+    """`measure.py` reruns the merge's measure pass without a shard to merge, so a changed
+    statistic reaches the whole registry in one run (#98). It loads from the cache the merge
+    filled, so the run is offline."""
+    mergeShard(merger, FIXTURES / 'registry_herds.csv')
+    merged = {name: (merger.registry / name).read_bytes() for name in MEASURED}
+    for name in MEASURED:
+        (merger.registry / name).unlink()
+    command = [sys.executable, SURVEY / 'measure.py', '--registry', merger.registry, '--survey', merger.survey]  # fmt: skip
+    subprocess.run(command, check=True)
+    assert {name: (merger.registry / name).read_bytes() for name in MEASURED} == merged
 
 
 def test_every_merge_names_each_registry_objects_file_in_the_manifest(merger):
