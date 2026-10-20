@@ -289,17 +289,16 @@ def groupedRow(source: str = 'fixture', crossed: bool = False) -> Row:
 
 
 def regimes(problem: Problem) -> pd.DataFrame:
-    return problem.table[['rows', 'groups']].astype(str)
+    return problem.table[['rows', 'groups']]
 
 
 def test_the_splits_are_a_pure_function_of_the_problem_id() -> None:
     """The seed is the first 8 bytes of sha256 of the id (ADR 0001), so a rebuild anywhere
-    gives the same split, and another problem over the same table gets another split."""
+    gives the same folds, and another problem over the same table gets other folds."""
     table = groupedTable([10] * 20)
     problem = Problem.build(groupedRow(), table)
     again = Problem.build(groupedRow(), table)
     other = Problem.build(groupedRow(source='other'), table)
-    assert set(regimes(problem).stack()) == {'seen', 'held'}
     assert regimes(problem).equals(regimes(again))
     assert not regimes(problem)['rows'].equals(regimes(other)['rows'])
     assert not regimes(problem)['groups'].equals(regimes(other)['groups'])
@@ -310,42 +309,40 @@ SOURCES = st.text(alphabet='abcxyz', min_size=1, max_size=8)
 
 
 @given(sizes=SIZES, crossed=st.integers(0, 5), source=SOURCES)
-def test_regime_rows_holds_out_a_tenth_and_every_group_keeps_a_seen_row(
+def test_regime_rows_deals_every_row_but_a_first_per_group_into_five_even_folds(
     sizes: list[int], crossed: int, source: str
 ) -> None:
-    """Regime `rows` predicts inside seen groups, so every group of every factor keeps a seen
-    row and a single-row group keeps its row; it holds out the nearest whole number to 10% of
-    the rows, fewer only when the groups leave no more, as with one factor and n − m < n/10."""
+    """Regime `rows` predicts inside seen groups.
+    So every group of every factor keeps a row that no fold holds (-1), and a single-row group
+    keeps its row. With one factor it keeps only that row, and every other row is held out once,
+    in one of five folds of even size."""
     table = groupedTable(sizes, crossed)
     problem = Problem.build(groupedRow(source, crossed=bool(crossed)), table)
-    held = problem.table['rows'] == 'held'
-    tenth = len(table) / 10
+    folds = problem.table['rows']
+    never = folds == -1
     for factor in problem.factors:
-        seen = problem.table.loc[~held, factor]
-        assert set(seen) == set(problem.table[factor])
-    singletons = problem.table.groupby('g')['g'].transform('size') == 1
-    assert not (held & singletons).any()
-    assert held.sum() <= tenth + 0.5
+        assert set(problem.table.loc[never, factor]) == set(problem.table[factor])
     if not crossed:
-        assert abs(held.sum() - tenth) <= 0.5 or held.sum() == len(table) - len(sizes)
+        assert never.sum() == len(sizes)
+    assert set(folds) <= {-1, 0, 1, 2, 3, 4}
+    counts = folds[~never].value_counts().reindex(range(5), fill_value=0)
+    assert counts.max() - counts.min() <= 1
 
 
 @given(sizes=SIZES, source=SOURCES)
-def test_regime_groups_holds_out_a_tenth_of_the_first_factors_groups_whole(
+def test_regime_groups_deals_the_first_factors_groups_whole_into_min_5_g_folds(
     sizes: list[int], source: str
 ) -> None:
-    """Regime `groups` predicts new groups: the nearest whole number to 10% of the first
-    factor's groups is held with all its rows, at least one group and at least two remaining
-    (ADR 0001); a 3-group factor holds out one."""
+    """Regime `groups` predicts new groups: each group of the first factor is held out once,
+    with all its rows, in one of min(5, G) folds that differ by at most one group. So a fold
+    leaves at least two groups seen, and a 3-group factor holds out one group per fold."""
     table = groupedTable(sizes)
     problem = Problem.build(groupedRow(source), table)
-    held = problem.table['groups'] == 'held'
-    heldGroups = set(problem.table.loc[held, 'g'])
-    seenGroups = set(problem.table.loc[~held, 'g'])
-    assert not heldGroups & seenGroups
-    assert len(heldGroups) >= 1
-    assert len(seenGroups) >= 2
-    assert abs(len(heldGroups) - len(sizes) / 10) <= 0.5 or len(heldGroups) == 1
+    folds_per_group = problem.table.groupby('g')['groups'].nunique()
+    assert (folds_per_group == 1).all()
+    groups_per_fold = problem.table.groupby('g')['groups'].first().value_counts()
+    assert sorted(groups_per_fold.index) == list(range(min(5, len(sizes))))
+    assert groups_per_fold.max() - groups_per_fold.min() <= 1
 
 
 def test_a_first_factor_of_two_groups_has_no_groups_regime() -> None:
@@ -366,33 +363,37 @@ def momentsOf(values: list[float], seen: pd.Series) -> Scale:
     return Scale(mean=float(np.mean(kept)), sd=float(np.std(kept, ddof=1)))
 
 
-def test_each_regime_scales_the_continuous_columns_by_the_rows_it_sees() -> None:
-    """No held-out row leaks into a scaler (ADR 0001): `full` holds the table's moments and each
-    regime its seen rows' (sample SD, as R's `scale`), for the continuous covariate `x` and the
-    continuous response `y` only; the table itself stays in raw units."""
+def foldMoments(problem: Problem, regime: str, folds: int) -> tuple[dict[str, Scale], ...]:
+    """The moments of `x` and `y` over the rows each fold's fit sees."""
+    moments = []
+    for fold in range(folds):
+        seen = problem.table[regime] != fold
+        moments.append({'x': momentsOf(X, seen), 'y': momentsOf(Y, seen)})
+    return tuple(moments)
+
+
+def test_each_fold_scales_the_continuous_columns_by_the_rows_its_fit_sees() -> None:
+    """No held-out row leaks into a scaler (ADR 0001): `full` is one fold with the table's
+    moments, and each fold of a split regime holds its seen rows' (sample SD, as R's `scale`),
+    for the continuous covariate `x` and the continuous response `y` only. The fixture's six
+    holdable rows fill five folds, and its three blocks fill three. The table stays in raw units."""
     problem = Problem.build(fixtureRow(), fixtureTable())
     everyRow = pd.Series([True] * 12)
     assert problem.scales == {
-        'full': {'x': momentsOf(X, everyRow), 'y': momentsOf(Y, everyRow)},
-        'rows': {
-            'x': momentsOf(X, problem.table['rows'] == 'seen'),
-            'y': momentsOf(Y, problem.table['rows'] == 'seen'),
-        },
-        'groups': {
-            'x': momentsOf(X, problem.table['groups'] == 'seen'),
-            'y': momentsOf(Y, problem.table['groups'] == 'seen'),
-        },
+        'full': ({'x': momentsOf(X, everyRow), 'y': momentsOf(Y, everyRow)},),
+        'rows': foldMoments(problem, 'rows', 5),
+        'groups': foldMoments(problem, 'groups', 3),
     }
     assert problem.table['x'].tolist() == X
     assert problem.table['y'].tolist() == Y
     count = Problem.build(fixtureRow(response='n', response_type='count'), fixtureTable())
-    assert set(count.scales['full']) == {'x'}
+    assert set(count.scales['full'][0]) == {'x'}
 
 
-def test_a_level_present_only_in_held_rows_leaves_an_all_zero_column_in_that_regime() -> None:
+def test_a_level_present_only_in_held_rows_leaves_an_all_zero_column_in_that_fold() -> None:
     """The coding is the full table's (ADR 0001, amended 2026-10-09): `kind` gives each group
-    its own level beside a shared reference, so the held group's level has no seen row, and
-    its contrast column stays in the design, all zero over the seen rows, not dropped."""
+    its own level beside a shared reference, so the group fold 0 holds has a level no seen row
+    has, and its contrast column stays in the design, all zero over the seen rows, not dropped."""
     table = groupedTable([4, 4, 4])
     table['kind'] = pd.Categorical(
         ['base', 'k0', 'k0', 'k0', 'base', 'k1', 'k1', 'k1', 'base', 'k2', 'k2', 'k2'],
@@ -400,7 +401,7 @@ def test_a_level_present_only_in_held_rows_leaves_an_all_zero_column_in_that_reg
     )
     row = replace(groupedRow(), covariates=('x', 'kind'), types={'kind': 'categorical'})
     problem = Problem.build(row, table)
-    seen = problem.table['groups'] == 'seen'
+    seen = problem.table['groups'] != 0
     [heldLevel] = set(table.loc[~seen, 'kind']) - {'base'}
     assert problem.design == ('Intercept', 'x', 'kind[k0]', 'kind[k1]', 'kind[k2]')
     assert problem.table.loc[seen, f'kind[{heldLevel}]'].eq(0).all()
@@ -418,13 +419,14 @@ def test_each_continuous_column_of_a_standardized_table_has_mean_0_and_sd_1(
     sizes: list[int], source: str
 ) -> None:
     """References and scores are stated on the standardized scale.
-    Each regime z-scores `x` and `y` over its own rows."""
+    Each fold z-scores `x` and `y` over the rows its fit sees."""
     problem = Problem.build(groupedRow(source), groupedTable(sizes))
-    for regime in problem.scales:
-        table = problem.standardized(regime)
-        for column in ('x', 'y'):
-            assert table[column].mean() == pytest.approx(0, abs=1e-12)
-            assert table[column].std() == pytest.approx(1)
+    for regime, folds in problem.scales.items():
+        for fold in range(len(folds)):
+            table = problem.standardized(regime, fold)
+            for column in ('x', 'y'):
+                assert table[column].mean() == pytest.approx(0, abs=1e-12)
+                assert table[column].std() == pytest.approx(1)
 
 
 def test_an_interaction_is_the_product_of_its_standardized_parts() -> None:
