@@ -117,7 +117,7 @@ def test_the_intercept_is_the_uncentered_one(ran) -> None:
     problem, _, dir = ran
     draws = pd.read_parquet(dir / 'globals.parquet')
     table = problem.standardized('full')
-    design = table[['Intercept', 'x', 'sex']].to_numpy()  # (N, 3)
+    design = table[['Intercept', 'x', 'sex']].to_numpy()  # (n, d)
     leastSquares = np.linalg.lstsq(design, table['y'].to_numpy(), rcond=None)[0][0]
     tolerance = 4 * draws['Intercept'].std() / np.sqrt(400)
     assert abs(draws['Intercept'].mean() - leastSquares) < tolerance

@@ -27,14 +27,14 @@ COLUMN_COLUMNS = (*IDENTITY, 'column', 'type', 'K', 'level', 'constant_within', 
 
 def fitAlpha(sizes: pd.Series) -> float:
     """Concentration of a symmetric Dirichlet fitted by moment matching to the group-size
-    proportions: Var(p) = (1 − 1/G) / (G (G α + 1)) solved for α; the variance is around the
-    known mean 1/G. A balanced allocation has zero variance, hence infinite α (spec #14)."""
-    g = len(sizes)
+    proportions: Var(p) = (1 − 1/m) / (m (m α + 1)) solved for α; the variance is around the
+    known mean 1/m. A balanced allocation has zero variance, hence infinite α (spec #14)."""
+    m = len(sizes)
     p = sizes / sizes.sum()
-    variance = float(((p - 1 / g) ** 2).mean())
+    variance = float(((p - 1 / m) ** 2).mean())
     if variance == 0:
         return float('inf')
-    return ((1 - 1 / g) / (g * variance) - 1) / g
+    return ((1 - 1 / m) / (m * variance) - 1) / m
 
 
 def observed(values: pd.Series, q: float) -> int | float:
@@ -132,7 +132,7 @@ class Measurer:
     def design(self) -> dict:
         """d_doc expands the documented model, d_all every covariate column plus the documented
         interactions, so that d_all is never below d_doc (envelope rule 4): continuous and
-        binary count 1, categorical K − 1, an interaction the product."""
+        binary count 1, categorical k − 1, an interaction the product."""
         width = {c['column']: self.width(c) for c in self.columns()}
         interactions = self.row.interactions
         dInteractions = sum(np.prod([width[c] for c in parts(term)]) for term in interactions)

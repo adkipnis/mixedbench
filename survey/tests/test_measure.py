@@ -65,7 +65,7 @@ def test_rows_without_a_measured_response_are_not_observations(herds, rows):
 
 
 def test_alpha_by_moment_matching(herds, rows):
-    """Region sizes 5, 5, 4 give α = 65 exactly ((1 − 1/G) / (G s²) = 196); herd sizes
+    """Region sizes 5, 5, 4 give α = 65 exactly ((1 − 1/m) / (m s²) = 196); herd sizes
     3, 2, 4, 1, 4 give 4.41. A balanced allocation has zero variance, so α is infinite."""
     region, herd = Measurer(herds, parsed(rows[0])).dimensions()
     assert region['alpha'] == pytest.approx(65.0, abs=1e-3)
