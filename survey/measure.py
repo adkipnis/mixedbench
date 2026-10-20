@@ -85,7 +85,8 @@ class Measurer:
         self.columnNames = [c for c in table.columns if c not in taken]
 
     def columns(self) -> list[dict]:
-        return [self.identity | {'column': c} | self.describe(c) for c in self.columnNames]
+        rho = self.maxAbsRho()
+        return [self.identity | {'column': c} | self.describe(c) | {'max_abs_rho': rho[c]} for c in self.columnNames]  # fmt: skip
 
     def dimensions(self) -> list[dict]:
         shared = {'n_factors': len(self.factors), 'relation': self.relation()} | self.design()
@@ -137,9 +138,12 @@ class Measurer:
     # ---------------------------------------------------------------------------------
     # covariate columns
     # ---------------------------------------------------------------------------------
+    def typeOf(self, column: str) -> tuple[str, int | str]:
+        return columnType(self.table[column], self.row.types.get(column, ''))
+
     def describe(self, column: str) -> dict:
         values = self.table[column]
-        kind, levels = columnType(values, self.row.types.get(column, ''))
+        kind, levels = self.typeOf(column)
         constantWithin = [f for f in self.factors if self.constantWithin(column, f)]
         return {
             'type': kind,
@@ -196,6 +200,26 @@ class Measurer:
         if pd.api.types.is_numeric_dtype(loaded):
             bounds['zero_share'] = round(float((values == 0).mean()), 4)
         return bounds
+
+    # ---------------------------------------------------------------------------------
+    # dependence between covariate columns
+    # ---------------------------------------------------------------------------------
+    def maxAbsRho(self) -> pd.Series:
+        """Each column's largest |Spearman| with another, over the rows where both are observed:
+        continuous columns as loaded, binary and ordered ones by their levels in loaded order.
+        Blank with no partner, or when every partner or the column is constant on those rows."""
+        ranked = {}
+        for column in self.columnNames:
+            values = self.table[column]
+            kind, _ = self.typeOf(column)
+            if kind == 'continuous':
+                ranked[column] = values.astype(float)
+            elif kind in ('binary', 'ordered'):
+                codes = pd.Series(pd.Categorical(values).codes, index=values.index)
+                ranked[column] = codes.where(codes >= 0)  # -1 codes a missing value
+        rho = pd.DataFrame(ranked, index=self.table.index).corr(method='spearman').abs()
+        partners = rho.where(~np.eye(len(rho), dtype=bool))
+        return partners.max().round(4).reindex(self.columnNames)
 
     # ---------------------------------------------------------------------------------
     # design columns
