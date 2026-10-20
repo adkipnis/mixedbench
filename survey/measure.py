@@ -157,11 +157,17 @@ class Measurer:
     def shape(self, values: pd.Series, kind: str) -> dict:
         """The quirk statistics that the column's kind defines, over its non-missing values;
         a statistic left out is blank in columns.csv."""
-        shape = {}
+        if values.empty:
+            return {}
+        shape = {'unique_share': round(values.nunique() / len(values), 4)}
         if kind == 'continuous':
             shape |= self.moments(values)
         if kind in ('continuous', 'ordered'):
             shape |= self.bounds(values, kind)
+        if kind != 'continuous':
+            counts = values.value_counts()
+            present = counts[counts > 0]  # a categorical may carry unused levels
+            shape['rare_level_share'] = round(float(present.min() / present.sum()), 4)
         return shape
 
     @staticmethod
