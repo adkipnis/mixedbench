@@ -1,7 +1,8 @@
 """Measure every registry row against its loaded table: the dimension survey's numbers that no
 agent types (spec #14, ticket #18). `Measurer(table, row).dimensions()` gives one row per grouping
-factor, `.columns()` one row per covariate column; `measureRegistry` writes them to
-`dimensions.csv` and `columns.csv`. Every merge runs the pass; run it alone, and the summary
+factor, `.columns()` one row per covariate column, `.columnFactors()` one row per covariate
+column and grouping factor; `measureRegistry` writes them to `dimensions.csv`, `columns.csv` and
+`column_factors.csv`. Every merge runs the pass; run it alone, and the summary
 after it, from the repo root:
 
     uv run python survey/measure.py
@@ -60,19 +61,21 @@ def observed(values: pd.Series, q: float) -> int | float:
 
 
 # =====================================================================================
-# pass: registry.csv -> each row's loaded table -> dimensions.csv, columns.csv
+# pass: registry.csv -> each row's loaded table -> dimensions.csv, columns.csv, column_factors.csv
 # =====================================================================================
 def measureRegistry(registry: Path, loader: Loader) -> None:
     frame = readFrame(registry)
-    dimensions, columns = [], []
+    dimensions, columns, pairs = [], [], []
     for cells in readCsv(registry / 'registry.csv').to_dict('records'):
         row = Row.parse(cells)
         table = loader.load(frame.sources[row.source], row.object, row.types)
         measurer = Measurer(table, row)
         dimensions += measurer.dimensions()
         columns += measurer.columns()
+        pairs += measurer.columnFactors()
     writeCsv(pd.DataFrame(dimensions, columns=DIMENSION_COLUMNS), registry / 'dimensions.csv')
     writeCsv(pd.DataFrame(columns, columns=COLUMN_COLUMNS), registry / 'columns.csv')
+    writeCsv(pd.DataFrame(pairs, columns=COLUMN_FACTOR_COLUMNS), registry / 'column_factors.csv')
 
 
 # =====================================================================================
