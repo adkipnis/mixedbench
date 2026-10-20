@@ -17,7 +17,7 @@ by script.
 |---|---|---|
 | `registry/sources.yaml` | hand, `mirror.py` | the frame (below) |
 | `registry/registry.csv`, `excluded.csv` | `merge.py` | the census tables (below) |
-| `registry/dimensions.csv`, `columns.csv` | `measure.py`, on every merge too | the measured files (below) |
+| `registry/dimensions.csv`, `columns.csv`, `column_factors.csv` | `measure.py`, on every merge too | the measured files (below) |
 | `registry/manifest.csv` | `merge.py` | per registry object the file it loads from, with sha256 and size |
 | `registry/quantiles.yaml`, `SUMMARY.md` | `merge.py` and `measure.py` via `summarize.py` | every axis pooled, per tier and without agridat; the summary from the digit-free `SUMMARY.template.md` |
 | `registry/help/`, `cache/` | `pull.py`, the loader | untracked: one help page per kept object; downloads |
@@ -178,7 +178,7 @@ rows that named a nested `a:b` by a `b` whose codes repeat across `a` through
   `tier`. A dropped object leaves `registry.csv` and `excluded.csv` until a later shard re-files
   it. One the loader no longer enumerates is deleted from every file instead (#14).
 
-### `dimensions.csv` and `columns.csv`
+### `dimensions.csv`, `columns.csv` and `column_factors.csv`
 
 - Measures run over the rows with a measured response (dosing rows are no observations).
 - `dimensions.csv`: key `source`, `object`, `model_index`, `factor`, with `tier`. Per grouping
@@ -213,6 +213,24 @@ rows that named a nested `a:b` by a `b` whose codes repeat across `a` through
     - `max_abs_rho`: the largest |Spearman| with another column of the row, on the rows both
       observe; continuous columns as loaded, binary ones as 0/1, ordered ones as their codes.
       Blank without a partner or when constant on those rows.
+- `column_factors.csv`: key `source`, `object`, `model_index`, `column`, `factor`, with `tier`;
+  a row per row of `columns.csv` and grouping factor of its registry row, in that order. Over
+  the rows that observe the column and the factor, to four decimals with negatives kept, blank
+  where undefined. `absent_level_share` covers binary, categorical and ordered columns, the
+  others continuous columns as loaded, binary ones as 0/1 and ordered ones as their codes:
+  - `between_group_share`: the adjusted ICC(1) of one-way analysis of variance,
+    (MSB − MSW) / (MSB + (k₀ − 1) MSW) with k₀ = (n − Σ nⱼ² / n) / (m − 1) (Snijders & Bosker
+    2012, section 3.3.1), so 1 for a group-level column. Blank with one group, with singletons
+    only or for a constant column.
+  - `group_level_r2`: the row-level R² of the column on the factor's other group-level columns,
+    coded as the contract codes them, over the rows that observe them all, adjusted by the
+    group count, 1 − (1 − R²)(m − 1) / (m − p − 1) with p the design's rank beyond the
+    intercept. Blank when p = 0, when m − p − 1 ≤ 0 or for a constant column.
+  - `absent_level_share`: the share of the m × K group × level cells that hold no row.
+  - `size_rho`: Spearman's ρ of the groups' sizes with their means; blank when either is
+    constant.
+  - `within_sd_cv`: the population coefficient of variation of the within-group sample sds over
+    the groups of two or more rows; blank with fewer than two such groups or a zero mean.
 
 ### `quantiles.yaml`
 
