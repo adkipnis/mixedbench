@@ -13,7 +13,8 @@
 #                       quantiles, written only where a factor is summarized
 #   summary.rds         per global variable its rank-normalized R-hat, bulk and tail ESS
 #   meta.rds            the largest R-hat over the random effects
-#   chains.rds          per chain its divergences, tree-depth hits and E-BFMI
+#   chains.rds          per chain its divergences, tree-depth hits, E-BFMI, step size, leapfrog
+#                       steps, mean acceptance statistic and warmup and sampling seconds
 #   model.stan          brms's Stan program
 #   standata.json       its Stan data, as CmdStan reads it
 # The draws are thinned as the level's settings say; chains.rds alone counts every iteration.
@@ -103,11 +104,21 @@ writeChains <- function(model, max_treedepth, dir) {
   sampler <- rstan::get_sampler_params(model$fit, inc_warmup = FALSE)
   divergences <- function(chain) sum(chain[, "divergent__"])
   treedepth_hits <- function(chain) sum(chain[, "treedepth__"] >= max_treedepth)
+  # adaptation ends with warmup, so every later iteration takes the same step size
+  step_size <- function(chain) chain[1, "stepsize__"]
+  leapfrog_steps <- function(chain) sum(chain[, "n_leapfrog__"])
+  acceptance <- function(chain) mean(chain[, "accept_stat__"])
+  seconds <- rstan::get_elapsed_time(model$fit)  # a row per chain, a column per phase
   chains <- data.frame(
     chain = seq_along(sampler),
     divergences = sapply(sampler, divergences),
     treedepth_hits = sapply(sampler, treedepth_hits),
-    ebfmi = rstan::get_bfmi(model$fit)
+    ebfmi = rstan::get_bfmi(model$fit),
+    step_size = sapply(sampler, step_size),
+    leapfrog_steps = sapply(sampler, leapfrog_steps),
+    acceptance = sapply(sampler, acceptance),
+    warmup_seconds = seconds[, "warmup"],
+    sampling_seconds = seconds[, "sample"]
   )
   saveRDS(chains, file.path(dir, "chains.rds"))
 }
