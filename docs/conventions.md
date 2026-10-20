@@ -52,6 +52,9 @@ harder to understand or change; it accrues one small edit at a time.
   change and closes its issue. The branch keeps the steps: the failing test, the code, the fixes.
 - A change to behavior or to an interface starts as an issue: the problem, the decision and the
   check that closes it, in a few lines.
+- An issue holds only what a contributor needs: the problem, the decision, the check and the
+  issues that block it. Who works it, with which tool, model or budget, is planning and stays
+  out of the tracker.
 - A release is a `vX.Y.Z` tag on `main` with release notes.
 
 ## Names
