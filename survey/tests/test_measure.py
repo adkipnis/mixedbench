@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 import pytest
 from conftest import FIXTURES, readRows
-from measure import Measurer, fitAlpha
+from measure import COLUMN_COLUMNS, Measurer, fitAlpha
 from mixedbench.registry.row import Row
 from schema import REGISTRY
 
@@ -32,6 +32,12 @@ def parsed(cells: dict) -> Row:
     """A shard row as the merge reads it: the script columns blank, but the tier."""
     blank = {c: '' for c in REGISTRY.scriptColumns}
     return Row.parse(blank | cells)
+
+
+def measuredColumns(table: pd.DataFrame, cells: dict) -> pd.DataFrame:
+    """The columns.csv rows of one registry row, by column; a statistic left out is blank."""
+    columns = Measurer(table, parsed(cells)).columns()
+    return pd.DataFrame(columns, columns=COLUMN_COLUMNS).set_index('column')
 
 
 def test_group_sizes_per_factor(herds, rows):
@@ -160,3 +166,28 @@ def test_design_columns_of_the_documented_model_and_of_the_whole_table(herds, ro
     assert (interacted['d_doc'], interacted['d_all']) == (11, 15)
     assert Measurer(herds, parsed(rows[1])).dimensions()[0]['d_doc'] == 3
     assert Measurer(herds, parsed(rows[1])).dimensions()[0]['d_all'] == 12
+
+
+def test_a_continuous_columns_moments(herds, rows):
+    """Weight under model 2 against scipy.stats.skew and kurtosis with bias=False, the
+    sample-adjusted G1 and G2. Fourteen rows cannot hold |z| > 4 (at most 13/√14 ≈ 3.47)."""
+    weight = measuredColumns(herds, rows[1]).loc['weight']
+    assert (weight['skewness'], weight['excess_kurtosis']) == (0.5207, -0.6651)
+    assert weight['outlier_share'] == 0
+
+
+def test_an_outlier_lies_beyond_four_sample_standard_deviations(herds, rows):
+    """The table three times over with the first weight at 5000: that weight lies at z ≈ 6.3,
+    the 41 others below 0.2 in absolute value; scipy gives G1 6.4398 and G2 41.6368."""
+    skewed = pd.concat([herds, herds, herds], ignore_index=True)
+    skewed.loc[0, 'weight'] = 5000.0
+    weight = measuredColumns(skewed, rows[1]).loc['weight']
+    assert (weight['skewness'], weight['excess_kurtosis']) == (6.4398, 41.6368)
+    assert weight['outlier_share'] == round(1 / 42, 4)
+
+
+def test_a_constant_column_has_no_moments(herds, rows):
+    """A constant column has no standard deviation to scale by, so its moments are blank."""
+    dose = measuredColumns(herds.assign(dose=2.5), rows[1]).loc['dose']
+    assert dose['type'] == 'continuous'
+    assert dose[['skewness', 'excess_kurtosis', 'outlier_share']].isna().all()
