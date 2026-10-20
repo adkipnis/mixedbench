@@ -232,6 +232,15 @@ Markdown meets the same bar as code: simple, and read top to bottom.
 - `experiments/`: rerunnable scripted studies, tracked and public. A lab note moves here once
   something public rests on it: a released behavior, an ADR's reason or a paper's number.
   Rerun with flags; never one-off.
+
+## Notebooks
+
+- The text speaks to a reader who knows the field but not the repository: no project
+  vocabulary, and every abbreviation spelled out at first use.
+- It holds only what the figures and the decision need. Implementation details, fixed bugs and
+  caveats that leave the result unchanged belong in the code or the issue.
+- Short plain sentences, one per line, with `<br>` between them in a paragraph. A bullet is a
+  bold label and one fact; a second fact is a second bullet, never a `<br>`.
 <!-- end of shared conventions -->
 
 ## In mixedbench
