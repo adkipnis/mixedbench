@@ -224,3 +224,28 @@ def test_an_ordered_columns_bounds_are_its_lowest_and_highest_levels(herds, rows
     parity = measuredColumns(named, rows[1]).loc['parity']
     assert pd.isna(parity['zero_share'])
     assert (parity['min_share'], parity['max_share']) == (0.3571, 0.0714)
+
+
+def test_unique_and_rare_level_shares(herds, rows):
+    """Model 2's columns: weight is all distinct and has no levels; breed has four levels, the
+    smallest held by three rows; sick has two, five rows ill; parity, an integer column of four
+    levels, holds a 4 once; ordered, its smallest level is the same. A categorical's unused
+    level holds no row and is not its rarest."""
+    columns = measuredColumns(herds, rows[1])
+    shares = columns[['unique_share', 'rare_level_share']]
+    assert shares.loc['weight', 'unique_share'] == 1
+    assert pd.isna(shares.loc['weight', 'rare_level_share'])
+    assert tuple(shares.loc['breed']) == (0.2857, 0.2143)
+    assert tuple(shares.loc['sick']) == (0.1429, 0.3571)
+    assert tuple(shares.loc['parity']) == (0.2857, 0.0714)
+    numbered = herds.assign(parity=asOrdered(herds['parity'], [1, 2, 3, 4]))
+    assert measuredColumns(numbered, rows[1]).loc['parity', 'rare_level_share'] == 0.0714
+    unused = herds.assign(breed=herds['breed'].cat.add_categories('dexter'))
+    assert measuredColumns(unused, rows[1]).loc['breed', 'rare_level_share'] == 0.2143
+
+
+def test_a_column_missing_on_every_measured_row_has_no_statistic(herds, rows):
+    """Eight columns of the registry are missing wherever the response is measured."""
+    empty = measuredColumns(herds.assign(empty=float('nan')), rows[1]).loc['empty']
+    statistics = COLUMN_COLUMNS[COLUMN_COLUMNS.index('in_model') + 1 :]
+    assert empty[list(statistics)].isna().all()
