@@ -160,6 +160,8 @@ class Measurer:
         shape = {}
         if kind == 'continuous':
             shape |= self.moments(values)
+        if kind in ('continuous', 'ordered'):
+            shape |= self.bounds(values, kind)
         return shape
 
     @staticmethod
@@ -174,6 +176,20 @@ class Measurer:
             'excess_kurtosis': round(float(values.kurt()), 4),  # blank under four
             'outlier_share': round(float((z.abs() > 4).mean()), 4),
         }
+
+    @staticmethod
+    def bounds(values: pd.Series, kind: str) -> dict:
+        """The shares at the lowest value, at the highest and at zero: an ordered column's values
+        are its levels in order, its zero a level loaded as the number zero."""
+        ranks = values.cat.codes if kind == 'ordered' else values
+        bounds = {
+            'min_share': round(float((ranks == ranks.min()).mean()), 4),
+            'max_share': round(float((ranks == ranks.max()).mean()), 4),
+        }
+        loaded = values.cat.categories if kind == 'ordered' else values
+        if pd.api.types.is_numeric_dtype(loaded):
+            bounds['zero_share'] = round(float((values == 0).mean()), 4)
+        return bounds
 
     # ---------------------------------------------------------------------------------
     # design columns
