@@ -16,9 +16,10 @@ by script.
 | file | written by | content |
 |---|---|---|
 | `registry/sources.yaml` | hand, `mirror.py` | the frame (below) |
-| `registry/registry.csv`, `excluded.csv`, `dimensions.csv`, `columns.csv` | `merge.py` | the census tables (below) |
+| `registry/registry.csv`, `excluded.csv` | `merge.py` | the census tables (below) |
+| `registry/dimensions.csv`, `columns.csv` | `measure.py`, on every merge too | the measured files (below) |
 | `registry/manifest.csv` | `merge.py` | per registry object the file it loads from, with sha256 and size |
-| `registry/quantiles.yaml`, `SUMMARY.md` | `merge.py` via `summarize.py` | every axis pooled, per tier and without agridat; the summary from the digit-free `SUMMARY.template.md` |
+| `registry/quantiles.yaml`, `SUMMARY.md` | `merge.py` and `measure.py` via `summarize.py` | every axis pooled, per tier and without agridat; the summary from the digit-free `SUMMARY.template.md` |
 | `registry/help/`, `cache/` | `pull.py`, the loader | untracked: one help page per kept object; downloads |
 | `candidates.csv`, `duplicates.csv`, `dropped.csv` | `pull.py`, `merge.py` | the survey's bookkeeping (below) |
 | `deposits.csv`, `deposit_files.csv` | the archived `deposits.py`, `resolve.py` | Tier D's frame: the drawn papers and every file their deposits list |
@@ -198,6 +199,20 @@ rows that named a nested `a:b` by a `b` whose codes repeat across `a` through
     declared continuous; `continuous`.
   - `level` `group` when constant within every group of some factor (`constant_within` names
     them), else `within`; `missing_share`; `in_model` `yes` for a documented covariate.
+  - The quirk statistics of [ADR 0006](../docs/adr/0006-measurement-pass.md), over a column's
+    non-missing values, to four decimals with negatives kept, blank where the column's kind or
+    its values leave one undefined:
+    - `skewness` and `excess_kurtosis`: the sample-adjusted G1 and G2 pandas computes;
+      `outlier_share`: the share with |z| > 4 under the mean and sample sd. Continuous columns,
+      blank when constant.
+    - `zero_share`, `min_share`, `max_share`: the share at zero, at the minimum, at the maximum.
+      Continuous and ordered columns, an ordered one by its levels in order, its zero a level
+      loaded as the number 0.
+    - `unique_share`: distinct values over values. Every column.
+    - `rare_level_share`: the smallest present level's share. Binary, categorical and ordered.
+    - `max_abs_rho`: the largest |Spearman| with another column of the row, on the rows both
+      observe; continuous columns as loaded, binary ones as 0/1, ordered ones as their codes.
+      Blank without a partner or when constant on those rows.
 
 ### `quantiles.yaml`
 
