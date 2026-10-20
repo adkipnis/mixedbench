@@ -304,12 +304,16 @@ SUMMARY = pd.DataFrame({
 })  # fmt: skip
 
 
-def recordedDiagnostics(dir: Path, summary: pd.DataFrame, chains: pd.DataFrame) -> dict:
+def recordedDiagnostics(dir: Path, summary: pd.DataFrame) -> dict:
     """`Handoff.diagnostics` of the fixture problem, from files written as run.R writes them."""
     pyreadr.write_rds(dir / 'summary.rds', summary)
-    pyreadr.write_rds(dir / 'chains.rds', chains)
+    pyreadr.write_rds(dir / 'chains.rds', CHAINS)
     pyreadr.write_rds(dir / 'meta.rds', pd.DataFrame({'rhat_locals': [1.003]}))
     return Handoff(fixtureProblem()).diagnostics(dir)
+
+
+def picked(diagnostics: dict, keys: tuple[str, ...]) -> dict:
+    return {key: diagnostics[key] for key in keys}
 
 
 def test_diagnostics_read_back_as_the_worst_over_parameters_with_nan_kept(tmp_path: Path) -> None:
@@ -323,11 +327,11 @@ def test_diagnostics_read_back_as_the_worst_over_parameters_with_nan_kept(tmp_pa
         'rhat': [1.001, nan, 1.0, 1.002, 1.0], 'ess_bulk': [900.0, 500.0, 1000.0, 700.0, 1200.0],
         'ess_tail': [800.0, 600.0, 1000.0, nan, 1100.0],
     })  # fmt: skip
-    diagnostics = recordedDiagnostics(tmp_path, summary, CHAINS)
+    diagnostics = recordedDiagnostics(tmp_path, summary)
     assert np.isnan(diagnostics['rhat'])
     assert np.isnan(diagnostics['ess_tail'])
-    worst = ('ess_bulk', 'divergences', 'treedepth_hits', 'ebfmi', 'rhat_locals')
-    assert {key: diagnostics[key] for key in worst} == {
+    keys = ('ess_bulk', 'divergences', 'treedepth_hits', 'ebfmi', 'rhat_locals')
+    assert picked(diagnostics, keys) == {
         'ess_bulk': 500.0,
         'divergences': 3,
         'treedepth_hits': 2,
@@ -342,7 +346,7 @@ def test_diagnostics_name_each_global_parameters_rhat_and_ess_by_the_contract(
     """A run that ends at the bar keeps no draws, so its record names the slowest parameters.
     Renamed by brms's label, never by position: `SUMMARY` lists them in reverse,
     and they come back in the contract's order."""
-    parameters = recordedDiagnostics(tmp_path, SUMMARY, CHAINS)['globals']
+    parameters = recordedDiagnostics(tmp_path, SUMMARY)['by_parameter']
     assert list(parameters) == ['Intercept', 'x', 'sex', 'sd[block]', 'sigma']
     assert parameters == {
         'Intercept': {'rhat': 1.003, 'ess_bulk': 700.0, 'ess_tail': 750.0},
@@ -353,15 +357,32 @@ def test_diagnostics_name_each_global_parameters_rhat_and_ess_by_the_contract(
     }
 
 
+def test_a_brms_global_the_contract_does_not_name_still_counts_toward_the_bar(
+    tmp_path: Path,
+) -> None:
+    """The bar reads every global R summarized, as before the record named them.
+    Only the record of each parameter keeps to the contract's names."""
+    unnamed = pd.DataFrame(
+        {'variable': ['b_x3'], 'rhat': [1.2], 'ess_bulk': [40.0], 'ess_tail': [30.0]}
+    )
+    diagnostics = recordedDiagnostics(tmp_path, pd.concat([SUMMARY, unnamed]))
+    assert picked(diagnostics, ('rhat', 'ess_bulk', 'ess_tail')) == {
+        'rhat': 1.2,
+        'ess_bulk': 40.0,
+        'ess_tail': 30.0,
+    }
+    assert list(diagnostics['by_parameter']) == ['Intercept', 'x', 'sex', 'sd[block]', 'sigma']
+
+
 def test_diagnostics_keep_each_chains_step_size_leapfrog_steps_acceptance_and_seconds(
     tmp_path: Path,
 ) -> None:
-    """Leapfrog steps per effective draw measure how hard a problem is for NUTS without
-    wall-clock, a leapfrog step being one gradient evaluation (Hoffman & Gelman 2014, §4).
+    """Leapfrog steps per effective draw measure how hard a problem is for NUTS without wall-clock.
+    A leapfrog step is one gradient evaluation (Hoffman & Gelman 2014, §4).
     R sums the steps as doubles, and they reach the record as integers."""
-    diagnostics = recordedDiagnostics(tmp_path, SUMMARY, CHAINS)
+    diagnostics = recordedDiagnostics(tmp_path, SUMMARY)
     kept = ('step_size', 'leapfrog_steps', 'acceptance', 'warmup_seconds', 'sampling_seconds')
-    assert {key: diagnostics[key] for key in kept} == {
+    assert picked(diagnostics, kept) == {
         'step_size': [0.31, 0.27],
         'leapfrog_steps': [7012, 6890],
         'acceptance': [0.86, 0.91],
