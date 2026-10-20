@@ -35,6 +35,10 @@ COLUMN_COLUMNS = (
     'skewness', 'excess_kurtosis', 'outlier_share', 'zero_share', 'min_share', 'max_share',
     'unique_share', 'rare_level_share', 'max_abs_rho',
 )  # fmt: skip
+COLUMN_FACTOR_COLUMNS = (
+    *IDENTITY, 'column', 'factor', 'between_group_share', 'group_level_r2', 'absent_level_share',
+    'size_rho', 'within_sd_cv',
+)  # fmt: skip
 
 
 def fitAlpha(sizes: pd.Series) -> float:
@@ -91,6 +95,14 @@ class Measurer:
     def dimensions(self) -> list[dict]:
         shared = {'n_factors': len(self.factors), 'relation': self.relation()} | self.design()
         return [self.identity | {'factor': f} | shared | self.groupSizes(f) for f in self.factors]  # fmt: skip
+
+    def columnFactors(self) -> list[dict]:
+        pairs = []
+        for column in self.columnNames:
+            for factor in self.factors:
+                key = {'column': column, 'factor': factor}
+                pairs.append(self.identity | key | self.relate(column, factor))
+        return pairs
 
     # ---------------------------------------------------------------------------------
     # relation
@@ -210,16 +222,121 @@ class Measurer:
         Blank with no partner, or when every partner or the column is constant on those rows."""
         ranked = {}
         for column in self.columnNames:
-            values = self.table[column]
             kind, _ = self.typeOf(column)
-            if kind == 'continuous':
-                ranked[column] = values.astype(float)
-            elif kind in ('binary', 'ordered'):
-                codes = pd.Series(pd.Categorical(values).codes, index=values.index)
-                ranked[column] = codes.where(codes >= 0)  # -1 codes a missing value
+            if kind != 'categorical':
+                ranked[column] = self.codeColumn(column, kind)
         rho = pd.DataFrame(ranked, index=self.table.index).corr(method='spearman').abs()
         partners = rho.where(~np.eye(len(rho), dtype=bool))
         return partners.max().round(4).reindex(self.columnNames)
+
+    def codeColumn(self, column: str, kind: str) -> pd.Series:
+        """A continuous column as loaded, a binary or ordered one by its levels' codes in loaded
+        order; a missing value stays missing."""
+        values = self.table[column]
+        if kind == 'continuous':
+            return values.astype(float)
+        codes = pd.Series(pd.Categorical(values).codes, index=values.index)
+        return codes.where(codes >= 0)  # -1 codes a missing value
+
+    # ---------------------------------------------------------------------------------
+    # columns against grouping factors
+    # ---------------------------------------------------------------------------------
+    def relate(self, column: str, factor: str) -> dict:
+        """The quirk statistics of a column against a factor's groups, over the rows that observe
+        both; a statistic left out is blank in column_factors.csv."""
+        observed = self.table[column].notna() & self.table[factor].notna()
+        if not observed.any():
+            return {}
+        kind, _ = self.typeOf(column)
+        groups = self.table.loc[observed, factor]
+        statistics = {}
+        if kind != 'continuous':
+            statistics |= self.absentLevelShare(self.table.loc[observed, column], groups)
+        if kind != 'categorical':
+            values = self.codeColumn(column, kind)[observed]
+            statistics |= self.betweenGroupShare(values, groups) | self.sizeRho(values, groups)
+            statistics |= self.withinSdCv(values, groups) | self.groupLevelR2(column, factor, kind)
+        return statistics
+
+    @staticmethod
+    def absentLevelShare(values: pd.Series, groups: pd.Series) -> dict:
+        """The share of the m × k group × level cells that hold no row."""
+        cells = pd.DataFrame({'group': groups, 'level': values}).drop_duplicates()
+        m, k = groups.nunique(), values.nunique()
+        return {'absent_level_share': round(1 - len(cells) / (m * k), 4)}
+
+    @staticmethod
+    def betweenGroupShare(values: pd.Series, groups: pd.Series) -> dict:
+        """The adjusted ICC(1) of a one-way analysis of variance,
+        (MSB − MSW) / (MSB + (k₀ − 1) MSW) with k₀ = (n − Σ nⱼ² / n) / (m − 1)
+        (Snijders & Bosker 2012, section 3.3.1).
+        None with one group, when every group is a singleton or the column is constant."""
+        grouped = values.groupby(groups, observed=True)
+        sizes = grouped.size()
+        n, m = int(sizes.sum()), len(sizes)
+        if m < 2 or n == m:
+            return {}
+        between = float((sizes * (grouped.mean() - values.mean()) ** 2).sum())
+        within = float(((values - grouped.transform('mean')) ** 2).sum())
+        if between + within == 0:  # a constant column has no variance to share
+            return {}
+        msb, msw = between / (m - 1), within / (n - m)
+        k0 = (n - float((sizes**2).sum()) / n) / (m - 1)
+        return {'between_group_share': round((msb - msw) / (msb + (k0 - 1) * msw), 4)}
+
+    @staticmethod
+    def sizeRho(values: pd.Series, groups: pd.Series) -> dict:
+        """Spearman's ρ of the groups' sizes with their means; blank when either is constant."""
+        grouped = values.groupby(groups, observed=True)
+        sizes, means = grouped.size(), grouped.mean()
+        if sizes.nunique() < 2 or means.nunique() < 2:
+            return {}
+        rho = sizes.rank().corr(means.rank())  # Pearson's r of the ranks
+        return {'size_rho': round(float(rho), 4)}
+
+    @staticmethod
+    def withinSdCv(values: pd.Series, groups: pd.Series) -> dict:
+        """The population coefficient of variation of the groups' sample standard deviations,
+        over the groups of two or more rows; blank with fewer than two or a zero mean."""
+        grouped = values.groupby(groups, observed=True)
+        sds = grouped.std()[grouped.size() >= 2]
+        if len(sds) < 2 or sds.mean() == 0:
+            return {}
+        return {'within_sd_cv': round(float(sds.std(ddof=0) / sds.mean()), 4)}
+
+    def groupLevelR2(self, column: str, factor: str, kind: str) -> dict:
+        """The row-level R² of the column on the factor's other group-level columns, adjusted by
+        the group count m and the design's rank p, 1 − (1 − R²)(m − 1) / (m − p − 1), over the
+        rows that observe them all. Blank when the partners span nothing beyond the intercept,
+        leave no degree of freedom, or the column is constant."""
+        partners = [c for c in self.columnNames if c != column and self.constantWithin(c, factor)]
+        complete = self.table[[column, factor, *partners]].dropna().index
+        y = self.codeColumn(column, kind)[complete].to_numpy(float)
+        design = self.codeDesign(partners, complete)
+        m = self.table.loc[complete, factor].nunique()
+        p = np.linalg.matrix_rank(design) - 1
+        if p == 0 or m - p - 1 <= 0:
+            return {}
+        total = float(((y - y.mean()) ** 2).sum())
+        if total == 0:  # a constant column has no variance to explain
+            return {}
+        fitted = design @ np.linalg.lstsq(design, y)[0]
+        r2 = 1 - float(((y - fitted) ** 2).sum()) / total
+        return {'group_level_r2': round(float(1 - (1 - r2) * (m - 1) / (m - p - 1)), 4)}
+
+    def codeDesign(self, columns: list[str], rows: pd.Index) -> np.ndarray:
+        """An intercept, then each column as the contract's design spans it: a continuous one
+        raw, any other by its levels' indicators but the first. R² and rank depend only on the
+        span, not on which level is the reference."""
+        coded = [pd.DataFrame({'intercept': 1.0}, index=rows)]
+        for column in columns:
+            values = self.table.loc[rows, column]
+            kind, _ = self.typeOf(column)
+            if kind == 'continuous':
+                coded.append(values.astype(float).to_frame())
+            else:
+                coded.append(pd.get_dummies(values, drop_first=True, dtype=float))
+        return pd.concat(coded, axis=1).to_numpy()
 
     # ---------------------------------------------------------------------------------
     # design columns
