@@ -67,3 +67,6 @@ date: 2026-10-08
   settled before suite 1.1 freezes, by a lab note scoring cheap predictive lines (a GLM, a
   REML mixed model) under both. After the freeze, a change of the splits is a new contract.
 - Why: the splits are in the materialized problem and so in the contract hash.
+
+> Settled 2026-10-20 by #47: grouped K-fold in both regimes (ADR 0001's amendment of that
+> date).

@@ -52,15 +52,22 @@ _Avoid_: dataset, task, posterior (posteriordb's word for the same thing)
 
 **Materialized problem**:
 A problem written to files: one table of the coded columns in raw units, with the response,
-the trials, the grouping factors and the two split regimes, and beside it the record a table
-cannot hold (family, prior, column roles, the per-regime scales, the contract hash). The
-package's interface to a problem; a cache rebuilt from the pins, never redistributed.
+the trials, the grouping factors and each row's fold in the two split regimes, and beside it
+the record a table cannot hold (family, prior, column roles, the per-fold scales, the contract
+hash). The package's interface to a problem; a cache rebuilt from the pins, never
+redistributed.
 _Avoid_: dataset, export, the parquet
 
 **Regime**:
-The rows a fit sees: the full table (posterior track), or the seen rows of a held-out-rows
-or a held-out-groups split (predictive track). Standardization is computed per regime.
-_Avoid_: split (the partition), fold
+How a track chooses the rows a fit sees: the full table (posterior track), or held-out rows
+inside seen groups or held-out groups (predictive track), each dealt into folds.
+_Avoid_: split (the partition)
+
+**Fold**:
+One part of a regime: the rows it holds out, predicted by a fit on every row outside it. A
+row is held out in at most one fold of a regime, and standardization is computed per fold on
+the rows its fit sees. The full table is one fold that holds nothing out.
+_Avoid_: split, partition
 
 **Verified row**:
 A registry row admitted on its reading: `hand` (the hand sample and Tier D), `high` (a high

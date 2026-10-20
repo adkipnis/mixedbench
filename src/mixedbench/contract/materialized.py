@@ -12,7 +12,7 @@ Three decisions guide them:
 pipeline:
 ---------
 a built Problem
--> its record, every field but the table as JSON values     _record
+-> its record, every field but the table as JSON values     _serializeRecord
 -> its contract hash                                        contractHash
 -> the table as parquet, the record and the hash as JSON    materialize
 -> the problem read back, refused if its hash moved         load
@@ -37,18 +37,18 @@ from mixedbench.contract.problem import Prior, Problem, Scale
 # the package's interface to a problem: written once, loaded anywhere
 def materialize(problem: Problem, cache: Path) -> str:
     """Write the problem's two files under `cache` and return its contract hash."""
-    dir = _problemDir(problem.id, cache)
+    dir = _locateProblem(problem.id, cache)
     dir.mkdir(parents=True, exist_ok=True)
     problem.table.to_parquet(dir / 'table.parquet', index=False)
     written = contractHash(problem)
-    stored = _record(problem) | {'hash': written}
+    stored = _serializeRecord(problem) | {'hash': written}
     (dir / 'problem.json').write_text(json.dumps(stored, sort_keys=True, indent=2))
     return written
 
 
 def load(id: str, cache: Path) -> Problem:
     """Raises where the files no longer give the hash they were written with (edited, or stale)."""
-    dir = _problemDir(id, cache)
+    dir = _locateProblem(id, cache)
     stored = json.loads((dir / 'problem.json').read_text())
     problem = Problem(
         id=stored['id'],
@@ -57,10 +57,7 @@ def load(id: str, cache: Path) -> Problem:
         response=stored['response'],
         factors=tuple(stored['factors']),
         levels={column: tuple(levels) for column, levels in stored['levels'].items()},
-        scales={
-            regime: {column: Scale(**scale) for column, scale in columns.items()}
-            for regime, columns in stored['scales'].items()
-        },
+        scales=_readScales(stored['scales']),
         dropped_share=stored['dropped_share'],
         trials=stored['trials'],
         family=stored['family'],
@@ -78,15 +75,26 @@ def load(id: str, cache: Path) -> Problem:
     return problem
 
 
+def _readScales(stored: dict[str, list[dict]]) -> dict[str, tuple[dict[str, Scale], ...]]:
+    """Returns each regime's scales, one dict of `Scale`s per fold."""
+    scales = {}
+    for regime, folds in stored.items():
+        fold_scales = []
+        for columns in folds:
+            fold_scales.append({column: Scale(**scale) for column, scale in columns.items()})
+        scales[regime] = tuple(fold_scales)
+    return scales
+
+
 def storedHash(id: str, cache: Path) -> str | None:
     """None where the problem has no files under `cache`."""
-    record = _problemDir(id, cache) / 'problem.json'
+    record = _locateProblem(id, cache) / 'problem.json'
     if not record.exists():
         return None
     return json.loads(record.read_text())['hash']
 
 
-def _problemDir(id: str, cache: Path) -> Path:
+def _locateProblem(id: str, cache: Path) -> Path:
     """Named by the id's sha256: an object name may hold `/`, `!`, commas and spaces,
     and the JSON carries the id itself."""
     return Path(cache) / 'problems' / hashlib.sha256(id.encode()).hexdigest()[:16]
@@ -99,34 +107,29 @@ def _problemDir(id: str, cache: Path) -> Path:
 def contractHash(problem: Problem) -> str:
     """sha256 over the record with sorted keys,
     then every column in table order as its name, dtype and little-endian bytes."""
-    canonical = json.dumps(_record(problem), sort_keys=True, separators=(',', ':'))
+    canonical = json.dumps(_serializeRecord(problem), sort_keys=True, separators=(',', ':'))
     digest = hashlib.sha256(canonical.encode())
     for name, column in problem.table.items():
-        dtype, values = _columnBytes(column)
+        dtype, values = _serializeColumn(column)
         digest.update(f'{name}\0{dtype}\0'.encode())
         digest.update(values)
     return digest.hexdigest()
 
 
-def _record(problem: Problem) -> dict:
+def _serializeRecord(problem: Problem) -> dict:
     """Every field but the table, as JSON values: a numpy level as its Python number."""
     values = {f.name: getattr(problem, f.name) for f in fields(Problem) if f.name != 'table'}
-    return json.loads(json.dumps(values, default=_jsonValue))
+    return json.loads(json.dumps(values, default=_serializeValue))
 
 
-def _jsonValue(value: Scale | Prior | np.generic) -> dict | int | float:
+def _serializeValue(value: Scale | Prior | np.generic) -> dict | int | float:
     if isinstance(value, np.generic):
         return value.item()
     return asdict(value)
 
 
-def _columnBytes(column: pd.Series) -> tuple[str, bytes]:
-    """A regime column as its codes, its categories in the dtype; a float as float64; an
-    integer in its own width."""
-    if isinstance(column.dtype, pd.CategoricalDtype):
-        categories = ','.join(column.cat.categories)
-        codes = column.cat.codes.to_numpy()
-        return f'category[{categories}]', codes.astype(codes.dtype.newbyteorder('<')).tobytes()
+def _serializeColumn(column: pd.Series) -> tuple[str, bytes]:
+    """Returns a float column as float64, an integer column in its own width."""
     if pd.api.types.is_float_dtype(column.dtype):
         return 'float64', column.to_numpy(dtype='<f8').tobytes()
     values = column.to_numpy()

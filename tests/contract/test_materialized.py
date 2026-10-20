@@ -166,13 +166,9 @@ def test_the_hash_ignores_the_parquet_writers_options(options: dict) -> None:
 
 
 def perturbedCell(table: pd.DataFrame, column: str, row: int) -> pd.DataFrame:
-    """One cell changed: a regime flipped between `seen` and `held`, a number plus one."""
+    """One cell changed: a number plus one, a fold among them."""
     changed = table.copy()
-    value = changed.at[row, column]
-    if isinstance(changed[column].dtype, pd.CategoricalDtype):
-        changed.at[row, column] = 'held' if value == 'seen' else 'seen'
-    else:
-        changed.at[row, column] = value + 1
+    changed.at[row, column] += 1
     return changed
 
 
@@ -243,5 +239,5 @@ def test_a_changed_json_value_fails_to_load(data: st.DataObject) -> None:
 def test_another_contract_version_is_another_hash() -> None:
     """A contract change is a new suite version, never a recomputation (docs/conventions.md):
     the same arrays and record under the next major version hash differently."""
-    nextVersion = replace(PROBLEM, contract=PROBLEM.contract + 1)
-    assert contractHash(nextVersion) != contractHash(PROBLEM)
+    next_version = replace(PROBLEM, contract=PROBLEM.contract + 1)
+    assert contractHash(next_version) != contractHash(PROBLEM)
