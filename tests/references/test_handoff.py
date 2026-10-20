@@ -294,6 +294,13 @@ def test_a_factor_above_1000_groups_reads_back_as_summaries_without_draws() -> N
 
 CHAINS = pd.DataFrame({
     'chain': [1, 2], 'divergences': [0, 3], 'treedepth_hits': [2, 0], 'ebfmi': [0.9, 1.1],
+    'step_size': [0.31, 0.27], 'leapfrog_steps': [7012.0, 6890.0], 'acceptance': [0.86, 0.91],
+    'warmup_seconds': [4.2, 3.9], 'sampling_seconds': [3.1, 3.4],
+})  # fmt: skip
+SUMMARY = pd.DataFrame({
+    'variable': ['sigma', 'sd_g1__Intercept', 'b_x2', 'b_x1', 'b_Intercept'],
+    'rhat': [1.0, 1.02, 1.001, 1.002, 1.003], 'ess_bulk': [1200.0, 320.0, 900.0, 800.0, 700.0],
+    'ess_tail': [1100.0, 410.0, 950.0, 850.0, 750.0],
 })  # fmt: skip
 
 
@@ -333,13 +340,9 @@ def test_diagnostics_name_each_global_parameters_rhat_and_ess_by_the_contract(
     tmp_path: Path,
 ) -> None:
     """A run that ends at the bar keeps no draws, so its record names the slowest parameters.
-    Renamed by brms's label, never by position, and listed in the contract's order."""
-    summary = pd.DataFrame({
-        'variable': ['sigma', 'sd_g1__Intercept', 'b_x2', 'b_x1', 'b_Intercept'],
-        'rhat': [1.0, 1.02, 1.001, 1.002, 1.003], 'ess_bulk': [1200.0, 320.0, 900.0, 800.0, 700.0],
-        'ess_tail': [1100.0, 410.0, 950.0, 850.0, 750.0],
-    })  # fmt: skip
-    parameters = recordedDiagnostics(tmp_path, summary, CHAINS)['globals']
+    Renamed by brms's label, never by position: `SUMMARY` lists them in reverse,
+    and they come back in the contract's order."""
+    parameters = recordedDiagnostics(tmp_path, SUMMARY, CHAINS)['globals']
     assert list(parameters) == ['Intercept', 'x', 'sex', 'sd[block]', 'sigma']
     assert parameters == {
         'Intercept': {'rhat': 1.003, 'ess_bulk': 700.0, 'ess_tail': 750.0},
@@ -348,3 +351,21 @@ def test_diagnostics_name_each_global_parameters_rhat_and_ess_by_the_contract(
         'sd[block]': {'rhat': 1.02, 'ess_bulk': 320.0, 'ess_tail': 410.0},
         'sigma': {'rhat': 1.0, 'ess_bulk': 1200.0, 'ess_tail': 1100.0},
     }
+
+
+def test_diagnostics_keep_each_chains_step_size_leapfrog_steps_acceptance_and_seconds(
+    tmp_path: Path,
+) -> None:
+    """Leapfrog steps per effective draw measure how hard a problem is for NUTS without
+    wall-clock, a leapfrog step being one gradient evaluation (Hoffman & Gelman 2014, §4).
+    R sums the steps as doubles, and they reach the record as integers."""
+    diagnostics = recordedDiagnostics(tmp_path, SUMMARY, CHAINS)
+    kept = ('step_size', 'leapfrog_steps', 'acceptance', 'warmup_seconds', 'sampling_seconds')
+    assert {key: diagnostics[key] for key in kept} == {
+        'step_size': [0.31, 0.27],
+        'leapfrog_steps': [7012, 6890],
+        'acceptance': [0.86, 0.91],
+        'warmup_seconds': [4.2, 3.9],
+        'sampling_seconds': [3.1, 3.4],
+    }
+    assert {type(steps) for steps in diagnostics['leapfrog_steps']} == {int}
