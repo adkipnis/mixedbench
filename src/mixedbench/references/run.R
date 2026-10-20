@@ -13,8 +13,8 @@
 #                       quantiles, written only where a factor is summarized
 #   summary.rds         per global variable its rank-normalized R-hat, bulk and tail ESS
 #   meta.rds            the largest R-hat over the random effects
-#   chains.rds          per chain its divergences, tree-depth hits, E-BFMI, step size, leapfrog
-#                       steps, mean acceptance statistic and warmup and sampling seconds
+#   chains.rds          per chain its divergences, tree-depth hits, E-BFMI, step size,
+#                       leapfrog steps, mean acceptance statistic and warmup and sampling seconds
 #   model.stan          brms's Stan program
 #   standata.json       its Stan data, as CmdStan reads it
 # The draws are thinned as the level's settings say; chains.rds alone counts every iteration.
