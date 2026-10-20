@@ -3,15 +3,17 @@
 The single split is the contract's, redrawn under other seeds; its first seed is the problem's own,
 checked against the problem's `rows` and `groups` columns.
 Grouped K-fold deals the same rows or groups into folds, so that each is held out once.
+It reruns at the commit that wrote scores.parquet:
+once the contract deals K-fold (#87), the copied single split no longer matches a problem.
 
 pipeline:
 ---------
-the suite 1.1 candidates in scope                                 Lab.ids
+the suite 1.1 candidates in scope                                 Experiment.ids
 -> per problem, every split under every seed                      splits
--> the aliased table and model (Handoff), the splits as folds.csv  Lab.score
+-> the aliased table and model (Handoff), the splits as folds.csv  Experiment.score
 -> per held-out row, both lines' log predictive density            fit.R
 -> per problem, regime, scheme and seed: the scores and Δ          summarize
--> scores.parquet                                                  Lab.collect
+-> scores.parquet                                                  Experiment.collect
 """
 
 from __future__ import annotations
@@ -179,11 +181,11 @@ def _clusteredSe(delta: np.ndarray, units: np.ndarray) -> float:
 
 
 # =====================================================================================
-# the lab
+# the experiment
 # =====================================================================================
 
 
-class Lab:
+class Experiment:
     """A run over the problems in scope, one directory per problem under `work`.
     A problem whose summary.csv exists is not run again."""
 
@@ -247,11 +249,11 @@ if __name__ == '__main__':
     parser.add_argument('--out', type=Path, default=HERE / 'scores.parquet')
     args = parser.parse_args()
     # fmt: on
-    lab = Lab(args.work, args.seeds)
-    ids = lab.ids()
+    experiment = Experiment(args.work, args.seeds)
+    ids = experiment.ids()
     if args.pilot:
         ids = ids[:: args.pilot]
     print(f'{len(ids)} problems')
-    scores = lab.collect(ids, args.workers)
+    scores = experiment.collect(ids, args.workers)
     scores.to_parquet(args.out, index=False)
     print(f'{len(scores)} splits written to {args.out}')
