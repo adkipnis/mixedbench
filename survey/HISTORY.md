@@ -430,3 +430,11 @@ reading's open disagreements, four to eight per tier.
   - 4 joined: `mlmRev/Gcsemv/2`, `mlmRev/ScotsSec/2`, `mlmRev/ScotsSec/3`, `mlmRev/Socatt/2`.
 - 50 contract hashes moved, each with its corrected registry row; no contract rule changed. It is
   a patch, 1.0.5, as for #57: no suite is frozen before release 1.1.
+
+## Grouped K-fold (#87, 2026-10-20)
+
+- The predictive track's single seeded 10% split became grouped K-fold in both regimes, after
+  the experiment of #47 (ADR 0001, amended 2026-10-20).
+- `suite/admit.py`'s rerun moved all 608 contract hashes of `suite/1.1/candidates.csv`, in the
+  hash alone; the refused rows are unchanged. It is a patch, 1.0.6, as for #57: no suite is
+  frozen before release 1.1.
