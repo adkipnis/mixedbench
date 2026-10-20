@@ -249,3 +249,30 @@ def test_a_column_missing_on_every_measured_row_has_no_statistic(herds, rows):
     empty = measuredColumns(herds.assign(empty=float('nan')), rows[1]).loc['empty']
     statistics = COLUMN_COLUMNS[COLUMN_COLUMNS.index('in_model') + 1 :]
     assert empty[list(statistics)].isna().all()
+
+
+def test_max_abs_rho_ranks_continuous_binary_and_ordered_columns(herds, rows):
+    """Model 2 ranks weight and sick, 0.6841 by scipy.stats.spearmanr; region, breed, feed and
+    integer parity are categoricals of more than two levels and pair with nothing. Ordered,
+    parity ranks too: 0.3029 with weight, 0.4864 with sick."""
+    rho = measuredColumns(herds, rows[1])['max_abs_rho']
+    assert (rho['weight'], rho['sick']) == (0.6841, 0.6841)
+    assert rho[['region', 'breed', 'feed', 'parity']].isna().all()
+    numbered = herds.assign(parity=asOrdered(herds['parity'], [1, 2, 3, 4]))
+    rho = measuredColumns(numbered, rows[1])['max_abs_rho']
+    assert (rho['weight'], rho['sick'], rho['parity']) == (0.6841, 0.6841, 0.4864)
+
+
+def test_max_abs_rho_pairs_over_the_rows_both_columns_observe(herds, rows):
+    """A missing weight leaves 13 rows to pair with sick (scipy: 0.6761). A column observed on
+    the nine healthy rows only pairs with weight there (0.5295), not with sick, constant on
+    those rows. A constant column pairs with nothing; neither does model 1's sick, the one
+    column there that is not a categorical of more than two levels."""
+    unweighed = herds.copy()
+    unweighed.loc[0, 'weight'] = float('nan')
+    assert measuredColumns(unweighed, rows[1]).loc['weight', 'max_abs_rho'] == 0.6761
+    tested = herds['trials'].where(herds['sick'] == 0).astype(float)
+    rho = measuredColumns(herds.assign(tested=tested, dose=2.5), rows[1])['max_abs_rho']
+    assert (rho['tested'], rho['weight'], rho['sick']) == (0.5295, 0.6841, 0.6841)
+    assert pd.isna(rho['dose'])
+    assert pd.isna(measuredColumns(herds, rows[0]).loc['sick', 'max_abs_rho'])
