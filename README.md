@@ -62,7 +62,7 @@ Interested in becoming part of `mixedbench`? Check out [`CONTRIBUTING.md`](https
 ## Citing
 
 Please cite the release you used: [`CITATION.cff`](https://github.com/adkipnis/mixedbench/blob/main/CITATION.cff), or click "Cite this repository" on
-GitHub. All versions share the DOI [10.5281/zenodo.23285683](https://doi.org/10.5281/zenodo.23285683).
+GitHub.
 
 ## License
 
