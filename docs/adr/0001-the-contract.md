@@ -1,5 +1,5 @@
 ---
-status: accepted, amended 2026-10-09 and 2026-10-10
+status: accepted, amended 2026-10-09, 2026-10-10 and 2026-10-20
 date: 2026-10-08
 ---
 
@@ -67,6 +67,9 @@ any rule is a new suite version, never a recomputation.
   of two groups has no held-out-groups regime, since holding one leaves one (10 rows); the
   problem keeps the posterior track and the held-out-rows regime.
 
+> Superseded by the amendment of 2026-10-20 below: each split regime is dealt into folds
+> instead of holding out 10% once.
+
 **Oracle track.**
 
 - Decision: `<problem>@oracle-<seed>`: parameters drawn from the contract prior, the response
@@ -106,6 +109,8 @@ any rule is a new suite version, never a recomputation.
   Redrawing a split until every level survives was rejected: it biases toward balanced
   problems and couples the split to the coding.
 
+> Amended 2026-10-20 below: the standardization of a split regime is computed per fold.
+
 **Random slopes.**
 
 - Decision: a `random_slopes` registry column, a `;`-list of `x|g` (correlated with the
@@ -142,3 +147,38 @@ any rule is a new suite version, never a recomputation.
   and only the binary and contrast columns move the intercept. metabeta adopts it separately.
 - The contract hash does not move: the materialized problem's prior is unchanged, and this
   states its meaning.
+
+## Amendment 2026-10-20: grouped K-fold (#87)
+
+**Splits.**
+
+- Decision: each split regime is dealt into folds, and a fit per fold sees every row outside
+  it. The held-out-groups regime deals the groups of the first grouping factor into
+  K = min(5, G) folds in a seeded order, each group whole in one fold, and still needs G > 2.
+  The held-out-rows regime deals into 5 folds the rows it may hold, which are all but the
+  first row of each group of every grouping factor in a seeded order. The seed stays the
+  hash of the problem id, and the row order is drawn before the group order.
+- Decision: a method's score in a regime is the mean over its held-out rows, each held out
+  once.
+- Why: in the experiment of #47 (`experiments/kfold`), a single 10% split was too noisy for
+  per-problem scores. Under another seed, the problems' ranking by the log-score gap between
+  a mixed model and a GLM reproduced with Spearman ρ of only 0.59 for held-out rows and 0.44
+  for held-out groups. Grouped K-fold raised ρ to 0.89 and 0.87, which more than halves
+  1 − ρ, the rule fixed before the experiment ran.
+
+**The materialized problem.**
+
+- Decision: the table's `rows` and `groups` columns hold the fold that holds each row out,
+  and −1 for a row the held-out-rows regime never holds. The standardization is computed per
+  fold on the rows its fit sees, so the record carries a set of scales per fold, and the full
+  table counts as one fold that holds nothing out.
+
+**Fits.**
+
+- Decision: a predictive line fits each fold's seen rows, K fits per regime instead of one,
+  and so does the reference's posterior predictive from suite 1.2 (ADR 0005).
+
+**Hashes.**
+
+- Decision: every contract hash moves, as a patch, since no suite is frozen before
+  release 1.1.
