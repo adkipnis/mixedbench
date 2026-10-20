@@ -15,7 +15,7 @@ from sources import readFrame
 
 RENAMED_TYPES = 'area=categorical;farm=categorical;type=categorical;diet=categorical'
 SURVEY = Path(__file__).resolve().parents[1]
-MEASURED = ('dimensions.csv', 'columns.csv')
+MEASURED = ('dimensions.csv', 'columns.csv', 'column_factors.csv')
 
 
 def test_passing_registry_shard_merges_with_tier_and_reader_filled_in(merger):
@@ -320,7 +320,7 @@ def test_the_census_lands_in_the_registry_and_the_bookkeeping_in_the_survey(spli
     mergeShard(merger, FIXTURES / 'registry_cattle.csv')  # flags the pair with herds
     registryFiles = sorted(p.name for p in merger.registry.iterdir() if p.is_file())
     surveyFiles = sorted(p.name for p in merger.survey.iterdir() if p.is_file())
-    assert registryFiles == ['SUMMARY.md', 'columns.csv', 'dimensions.csv', 'excluded.csv', 'manifest.csv', 'quantiles.yaml', 'registry.csv', 'sources.yaml']  # fmt: skip
+    assert registryFiles == ['SUMMARY.md', 'column_factors.csv', 'columns.csv', 'dimensions.csv', 'excluded.csv', 'manifest.csv', 'quantiles.yaml', 'registry.csv', 'sources.yaml']  # fmt: skip
     assert surveyFiles == ['dropped.csv', 'duplicates.csv']
 
 
@@ -362,6 +362,27 @@ def test_every_merge_measures_the_registry_into_dimensions_and_columns(merger):
     mergeShard(merger, FIXTURES / 'excluded_cattle.csv')
     after = {p.name: p.read_bytes() for p in merger.registry.glob('*.csv')}
     assert after == before | {'excluded.csv': after['excluded.csv']}
+
+
+def test_every_merge_measures_each_column_against_each_grouping_factor(merger):
+    """column_factors.csv holds a row per columns.csv row and grouping factor of its registry
+    row: model 1's four columns against region and herd, model 2's six against herd (#99)."""
+    mergeShard(merger, FIXTURES / 'registry_herds.csv')
+    pairs = readRows(merger.registry / 'column_factors.csv')
+    assert list(pairs[0]) == [
+        'source', 'object', 'model_index', 'tier', 'column', 'factor', 'between_group_share',
+        'group_level_r2', 'absent_level_share', 'size_rho', 'within_sd_cv',
+    ]  # fmt: skip
+    keys = [(r['model_index'], r['column'], r['factor']) for r in pairs]
+    assert len(keys) == 4 * 2 + 6
+    assert keys[:3] == [('1', 'breed', 'region'), ('1', 'breed', 'herd'), ('1', 'feed', 'region')]
+    assert keys[-1] == ('2', 'sick', 'herd')
+    feed = pairs[keys.index(('1', 'feed', 'herd'))]
+    assert (feed['tier'], feed['absent_level_share'], feed['between_group_share']) == (
+        'D',
+        '0.6667',
+        '',
+    )
 
 
 def test_the_measure_script_writes_what_the_merge_writes(merger):
