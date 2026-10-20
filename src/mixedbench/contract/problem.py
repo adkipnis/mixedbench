@@ -10,8 +10,8 @@ the model formula, model family, prior, train/test splits, scales, and parameter
    One typing rule decides each column's kind.
 3. Complete cases only: a row that misses a model value is dropped.
    A row outside the contract (a categorical response, a censored model) raises `Refused`.
-4. Scaled per regime: the table stays in raw units.
-   Each regime records the scales of the rows its fit sees.
+4. Scaled per fold: the table stays in raw units.
+   Each fold records the scales of the rows its fit sees.
 5. Parameter names are based on brms and are in brms's block order.
 
 pipeline:
@@ -20,8 +20,8 @@ a typed registry row and its loaded table
 -> refused if outside the contract             _refuseUncovered
 -> composites added, incomplete rows dropped   withComposites, _keptRows
 -> the coded design, response and factors      _kinds, _coded, _design, _codes, _response
--> the regimes `rows` and `groups`             _splits
--> each regime's scales                        _scales
+-> the regimes `rows` and `groups`, in folds   _splits
+-> each fold's scales                          _scales
 -> the family, prior and parameter names       _prior, _parameters
 -> the problem                                 problem
 """
@@ -50,13 +50,15 @@ Regime = Literal['full', 'rows', 'groups']
 class Problem:
     id: str  # <source>/<object>/<model_index>
     table: pd.DataFrame  # the coded columns in raw units, one row per kept row
-    # the column roles in `table`; the factors hold 0-based codes
+    # the column roles in `table`; the factors hold 0-based codes, and the columns `rows` and
+    # `groups` hold the fold each row is held out in, -1 for none
     design: tuple[str, ...]  # `Intercept` first
     response: str
     factors: tuple[str, ...]
     levels: dict[str, tuple]  # each recoded column's levels, in code order
-    # per regime, the mean and SD of each continuous column over the rows its fit sees
-    scales: dict[Regime, dict[str, Scale]]
+    # per regime and fold, the mean and SD of each continuous column over the rows its fit
+    # sees, with `full` as one fold that holds nothing out
+    scales: dict[Regime, tuple[dict[str, Scale], ...]]
     dropped_share: float  # the share of loaded rows dropped for a missing model value
     trials: str | None  # the trials column of a binomial response
     family: str  # brms's name, set by the family rule
@@ -71,18 +73,18 @@ class Problem:
         """Raises `Refused` if the contract does not cover the row."""
         return _Builder(row, table).problem()
 
-    def standardized(self, regime: Regime = 'full') -> pd.DataFrame:
-        """Returns the standardized model columns of the rows a fit in `regime` sees.
-        Continuous columns are z-scored with the regime's scales.
+    def standardized(self, regime: Regime = 'full', fold: int = 0) -> pd.DataFrame:
+        """Returns the standardized model columns of the rows a fit on the regime's `fold` sees.
+        Continuous columns are z-scored with the fold's scales.
         An interaction is the product of its standardized parts,
         see Aiken & West (1991) and Gelman (2008)."""
         columns = [*self.design, self.response]
         if self.trials:
             columns.append(self.trials)
         columns += self.factors
-        rows = _seenRows(self.table, regime)
+        rows = _seenRows(self.table, regime, fold)
         table = rows[columns].copy()
-        for column, scale in self.scales[regime].items():
+        for column, scale in self.scales[regime][fold].items():
             table[column] = (table[column] - scale.mean) / scale.sd
         for column, operands in self._interactions().items():
             table[column] = table[list(operands)].prod(axis=1)
@@ -95,7 +97,7 @@ class Problem:
         contrasts = []
         for column, levels in self.levels.items():
             contrasts += [f'{column}[{level}]' for level in levels[1:]]
-        covariate_columns = [*self.scales['full'], *self.levels, *contrasts]
+        covariate_columns = [*self.scales['full'][0], *self.levels, *contrasts]
         design = self.design[1:]  # without `Intercept`
         coded = [column for column in design if column in covariate_columns]
         # every other design column is an interaction
@@ -179,11 +181,11 @@ class Refused(Exception):
         self.reason = reason
 
 
-def _seenRows(table: pd.DataFrame, regime: Regime) -> pd.DataFrame:
-    """Returns the rows a fit in `regime` sees: all in `full`, the `seen` ones in a split."""
+def _seenRows(table: pd.DataFrame, regime: Regime, fold: int) -> pd.DataFrame:
+    """Returns the rows a fit on `fold` sees: all in `full`, those outside the fold in a split."""
     if regime == 'full':
         return table
-    return table[table[regime] == 'seen']
+    return table[table[regime] != fold]
 
 
 # =====================================================================================
@@ -211,8 +213,7 @@ class _Builder:
         'cor': Prior('lkj', (1,)),
         'sigma': Prior('student_t', (3, 0, 2.5)),
     }
-    # each regime is a column of `seen` and `held`
-    REGIME = pd.CategoricalDtype(['seen', 'held'])
+    FOLDS = 5  # per split regime, or G in `groups` if fewer
 
     def __init__(self, row: Row, table: pd.DataFrame) -> None:
         self.row = row
@@ -355,42 +356,40 @@ class _Builder:
         return {column: self._levelOrder(self.table[column]) for column in recoded}
 
     def _splits(self, factors: dict[str, pd.Series]) -> dict[str, pd.Series]:
-        """Draws the regimes `rows` and `groups`, seeded by the problem id."""
+        """Deals the regimes `rows` and `groups` into folds, seeded by the problem id."""
         digest = hashlib.sha256(self.id.encode()).digest()
         seed = int.from_bytes(digest[:8], 'big')
         rng = np.random.default_rng(seed)
-        held = self._heldRows(rng, factors)
-        regimes = {'rows': self._regime(held)}
+        regimes = {'rows': self._dealRows(rng, factors)}
         first = factors[self.row.grouping_factors[0]]
         groups = first.max() + 1
         if groups > 2:  # holding out one of two groups would leave just one
-            held = self._heldGroups(rng, first)
-            regimes['groups'] = self._regime(held)
+            regimes['groups'] = self._dealGroups(rng, first)
         return regimes
 
-    def _heldRows(self, rng: np.random.Generator, factors: dict[str, pd.Series]) -> np.ndarray:
-        """Holds out 10% of the rows, rounded.
-        Every group of every factor keeps at least one row seen."""
+    def _dealRows(self, rng: np.random.Generator, factors: dict[str, pd.Series]) -> pd.Series:
+        """Returns each row's fold, the rows dealt into FOLDS folds in seeded order.
+        The first row of every group of every factor stays in no fold, as -1."""
         n = len(self.table)
         order = self._seededOrder(rng, n)  # (n,) row positions
         spare = np.ones(n, dtype=bool)  # (n,) in seeded order
         for codes in factors.values():
             ordered = pd.Series(codes.to_numpy()[order])  # (n,) in seeded order
             spare &= ordered.duplicated().to_numpy()  # not the group's first row
-        count = (n + 5) // 10  # the nearest whole number to 10%
-        held_rows = order[spare][:count]
-        held = np.zeros(n, dtype=bool)  # (n,)
-        held[held_rows] = True
-        return held
+        dealt = order[spare]  # the spare rows' positions, in seeded order
+        row_folds = np.full(n, -1, dtype=np.int8)  # (n,)
+        row_folds[dealt] = np.arange(len(dealt)) % self.FOLDS
+        return pd.Series(row_folds, index=self.table.index)
 
-    def _heldGroups(self, rng: np.random.Generator, codes: pd.Series) -> np.ndarray:
-        """Holds out 10% of the groups, rounded.
-        It holds at least one and leaves at least two."""
+    def _dealGroups(self, rng: np.random.Generator, codes: pd.Series) -> pd.Series:
+        """Returns each row's fold.
+        Its group is dealt whole into min(FOLDS, G) folds in seeded order."""
         groups = codes.max() + 1
-        tenth = (groups + 5) // 10  # the nearest whole number to 10%
-        count = min(max(1, tenth), groups - 2)
-        held = self._seededOrder(rng, groups)[:count]
-        return np.isin(codes.to_numpy(), held)  # (n,)
+        folds = min(self.FOLDS, groups)
+        order = self._seededOrder(rng, groups)  # (m,) group codes
+        group_folds = np.empty(groups, dtype=np.int8)  # (m,)
+        group_folds[order] = np.arange(groups) % folds
+        return pd.Series(group_folds[codes.to_numpy()], index=self.table.index)  # (n,)
 
     @staticmethod
     def _seededOrder(rng: np.random.Generator, n: int) -> np.ndarray:
@@ -398,28 +397,33 @@ class _Builder:
         numpy keeps uniform draws stable across versions, but not shuffles."""
         return np.argsort(rng.random(n), kind='stable')  # (n,)
 
-    def _regime(self, held: np.ndarray) -> pd.Series:
-        regime = pd.Categorical.from_codes(held.astype(int), dtype=self.REGIME)
-        return pd.Series(regime, index=self.table.index)
-
     def _scales(
         self,
         table: pd.DataFrame,
         kinds: dict[str, str],
-    ) -> dict[Regime, dict[str, Scale]]:
-        """Returns each regime's scales over the rows its fit sees."""
+    ) -> dict[Regime, tuple[dict[str, Scale], ...]]:
+        """Returns each fold's scales over the rows its fit sees."""
         columns = [column for column, kind in kinds.items() if kind == 'continuous']
         if self.row.response_type == 'continuous':
             columns.append(self.row.response)
         splits = [regime for regime in ('rows', 'groups') if regime in table]
+        scales = {'full': (self._measureScales(table[columns]),)}
+        for regime in splits:
+            folds = table[regime].max() + 1  # dealt from fold 0
+            fold_scales = []
+            for fold in range(folds):
+                seen = _seenRows(table, regime, fold)
+                fold_scales.append(self._measureScales(seen[columns]))
+            scales[regime] = tuple(fold_scales)
+        return scales
+
+    @staticmethod
+    def _measureScales(values: pd.DataFrame) -> dict[str, Scale]:
         scales = {}
-        for regime in ['full', *splits]:
-            values = _seenRows(table, regime)[columns]
-            scales[regime] = {}
-            for column in columns:
-                mean = float(values[column].mean())
-                sd = float(values[column].std())
-                scales[regime][column] = Scale(mean, sd)
+        for column in values:
+            mean = float(values[column].mean())
+            sd = float(values[column].std())
+            scales[column] = Scale(mean, sd)
         return scales
 
     def _correlations(self, coded: Coded) -> dict[str, tuple[str, ...]]:
