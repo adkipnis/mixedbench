@@ -17,10 +17,10 @@ from mixedbench.registry.row import writeCsv
 from mixedbench.suite import members
 
 # suite 1.1's list, copied by hand
-SLEEPSTUDY = '8111b74ef393568a2cb445ef9f10cc4f538abd8d6a6d48c6b91181fac5a8f330'
+SLEEPSTUDY = '7c77c1a9c2623025fad02d74c1f5748965c5985b6e97b269954ce486e2eac839'
 FIRST_TWO = {
-    'lme4/Arabidopsis/1': '2a947890bc12b8c0cbaa6433c8e68944ed8486842dbc560fba413e6af845101e',
-    'lme4/Dyestuff/1': 'b87aee4ee214c021c2b5d42f462f1a094e095529231aba23ae8bad0765d9f8c0',
+    'lme4/Arabidopsis/1': 'e4b739ba7c610a3449b827cfc3d57eb0f2f4e68810bf7bcbacacae39ee8d87bd',
+    'lme4/Dyestuff/1': 'b0d0cdcf43ab380b83c3de47ac195cf7e65df8c948ba0b757467d9ef23025ce0',
 }
 
 
