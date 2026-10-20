@@ -1,21 +1,29 @@
-"""Measure one loaded table against its registry row: the dimension survey's numbers that no
+"""Measure every registry row against its loaded table: the dimension survey's numbers that no
 agent types (spec #14, ticket #18). `Measurer(table, row).dimensions()` gives one row per grouping
-factor, `.columns()` one row per covariate column; the merge script writes them to
-`dimensions.csv` and `columns.csv`.
+factor, `.columns()` one row per covariate column; `measureRegistry` writes them to
+`dimensions.csv` and `columns.csv`. Every merge runs the pass; run it alone, and the summary
+after it, from the repo root:
+
+    uv run python survey/measure.py
 """
 
 from __future__ import annotations
 
+import argparse
 from itertools import combinations
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
 from mixedbench.contract import columnType, withComposites
-from mixedbench.registry.row import Row, parts
+from mixedbench.datasets import Loader
+from mixedbench.registry.row import Row, parts, readCsv, writeCsv
+from sources import readFrame
 
 # =====================================================================================
 # globals
 # =====================================================================================
+HERE = Path(__file__).parent
 IDENTITY = ('source', 'object', 'model_index', 'tier')
 DIMENSION_COLUMNS = (
     *IDENTITY, 'factor', 'n_factors', 'relation', 'd_doc', 'd_all', 'n_obs', 'n_groups',
@@ -41,6 +49,22 @@ def observed(values: pd.Series, q: float) -> int | float:
     """The observed value at or below the level under p50, at or above from p50 on."""
     v = values.quantile(q, interpolation='higher' if q >= 0.5 else 'lower')
     return int(v) if float(v).is_integer() else float(v)
+
+
+# =====================================================================================
+# pass: registry.csv -> each row's loaded table -> dimensions.csv, columns.csv
+# =====================================================================================
+def measureRegistry(registry: Path, loader: Loader) -> None:
+    frame = readFrame(registry)
+    dimensions, columns = [], []
+    for cells in readCsv(registry / 'registry.csv').to_dict('records'):
+        row = Row.parse(cells)
+        table = loader.load(frame.sources[row.source], row.object, row.types)
+        measurer = Measurer(table, row)
+        dimensions += measurer.dimensions()
+        columns += measurer.columns()
+    writeCsv(pd.DataFrame(dimensions, columns=DIMENSION_COLUMNS), registry / 'dimensions.csv')
+    writeCsv(pd.DataFrame(columns, columns=COLUMN_COLUMNS), registry / 'columns.csv')
 
 
 # =====================================================================================
@@ -145,3 +169,19 @@ class Measurer:
         if column['type'] in ('categorical', 'ordered'):
             return column['K'] - 1
         return 1
+
+
+# =====================================================================================
+# main
+# =====================================================================================
+if __name__ == '__main__':
+    from summarize import Summarizer  # imported here: summarize imports this module
+
+    # fmt: off
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument('--registry', type=Path, default=HERE.parent / 'registry', help='folder holding sources.yaml and the census tables')
+    parser.add_argument('--survey', type=Path, default=HERE, help='folder holding the duplicates and dropped tables')
+    args = parser.parse_args()
+    # fmt: on
+    measureRegistry(args.registry, Loader(args.registry / 'cache'))
+    Summarizer(args.registry, args.survey).flush()
