@@ -1,5 +1,5 @@
 ---
-status: accepted, amended 2026-10-09, 2026-10-10, 2026-10-18 and 2026-10-19
+status: accepted, amended 2026-10-09, 2026-10-10, 2026-10-18, 2026-10-19 and 2026-10-20
 date: 2026-10-08
 ---
 
@@ -138,3 +138,10 @@ correction a benchmark change.
   each pass.
 - Rejected: rewriting the history to remove the file, for the reasons of the 2026-10-10
   decision against a rewrite.
+
+## Amendment 2026-10-20: a measurement addition is a patch (#71)
+
+- Decision: a release that adds measured columns or files to the registry without changing a
+  row is a patch, while the next minor release names a suite freeze.
+- Why: semver would call new files a minor bump, but release 1.1 is the name of the first
+  suite, and the measurement pass (ADR 0006) ships before it.
