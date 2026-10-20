@@ -88,10 +88,10 @@ def test_a_run_records_each_level_with_its_settings_time_and_diagnostics(ran) ->
 
 @pytest.mark.brms
 def test_a_level_records_each_chains_sampler_and_each_global_parameters_rhat_and_ess(ran) -> None:
-    """Counting `bar` endings by their slowest parameters, and the difficulty of a problem for
-    NUTS, read these later without a rerun (#93).
+    """Counting `bar` endings by their slowest parameters,
+    and the difficulty of a problem for NUTS, read these later without a rerun (#93).
     Every iteration takes at least one leapfrog step, and the chains run within the level's time.
-    The bar's worst R-hat and ESS are those of single parameters."""
+    brms's labels of a real fit reach the record under every global parameter's contract name."""
     problem, _, dir = ran
     [level] = record(dir)['levels']
     assert len(level['step_size']) == 4
@@ -100,11 +100,7 @@ def test_a_level_records_each_chains_sampler_and_each_global_parameters_rhat_and
     assert 0 < min(level['acceptance']) <= max(level['acceptance']) <= 1
     seconds = np.add(level['warmup_seconds'], level['sampling_seconds'])  # per chain
     assert 0 < seconds.min() <= seconds.max() < level['seconds']
-    parameters = pd.DataFrame.from_dict(level['globals'], orient='index')  # a row per parameter
-    assert list(parameters.index) == list(problem.globalDraws())
-    assert parameters['rhat'].max() == level['rhat']
-    assert parameters['ess_bulk'].min() == level['ess_bulk']
-    assert parameters['ess_tail'].min() == level['ess_tail']
+    assert list(level['by_parameter']) == list(problem.globalDraws())
 
 
 @pytest.mark.brms
@@ -206,7 +202,34 @@ def test_a_failed_bar_climbs_the_ladder_and_ends_as_bar_at_level_2(
     assert [level['outcome'] for level in levels] == ['bar', 'bar', 'bar']
     assert sorted(path.name for path in dir.iterdir()) == ['R.log', 'run.json']
     for level in levels:
-        assert list(level['globals']) == list(problem.globalDraws())
+        assert list(level['by_parameter']) == list(problem.globalDraws())
+
+
+@pytest.mark.brms
+def test_a_diagnostic_r_could_not_compute_is_null_in_the_record(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The record is published, and strict JSON readers (JavaScript, jq) reject a bare NaN.
+    No small fit reliably leaves posterior without an R-hat, so the NaN is set on a real fit's."""
+    diagnostics = Handoff.diagnostics
+
+    def withoutRhat(handoff: Handoff, dir: Path) -> dict:
+        reported = diagnostics(handoff, dir)
+        reported['rhat'] = math.nan
+        reported['by_parameter']['sigma']['rhat'] = math.nan
+        return reported
+
+    monkeypatch.setattr(Handoff, 'diagnostics', withoutRhat)
+    monkeypatch.setattr(runner, 'LEVELS', {0: tinyLevels()[0]})
+    problem = fixtureProblem()
+    runner.run(problem, tmp_path)
+    text = (problemDir(tmp_path, problem) / 'run.json').read_text()
+    written = json.loads(text)
+    [level] = written['levels']
+    assert 'NaN' not in text
+    assert written['rhat'] is None
+    assert level['rhat'] is None
+    assert level['by_parameter']['sigma']['rhat'] is None
 
 
 @pytest.mark.brms
