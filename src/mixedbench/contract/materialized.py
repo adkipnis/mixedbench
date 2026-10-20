@@ -57,10 +57,7 @@ def load(id: str, cache: Path) -> Problem:
         response=stored['response'],
         factors=tuple(stored['factors']),
         levels={column: tuple(levels) for column, levels in stored['levels'].items()},
-        scales={
-            regime: {column: Scale(**scale) for column, scale in columns.items()}
-            for regime, columns in stored['scales'].items()
-        },
+        scales=_readScales(stored['scales']),
         dropped_share=stored['dropped_share'],
         trials=stored['trials'],
         family=stored['family'],
@@ -76,6 +73,17 @@ def load(id: str, cache: Path) -> Problem:
     if contractHash(problem) != stored['hash']:
         raise ValueError(f'{id}: the files in {dir} do not match their contract hash; rebuild them')
     return problem
+
+
+def _readScales(stored: dict[str, list[dict]]) -> dict[str, tuple[dict[str, Scale], ...]]:
+    """Returns each regime's scales, one dict of `Scale`s per fold."""
+    scales = {}
+    for regime, folds in stored.items():
+        fold_scales = []
+        for columns in folds:
+            fold_scales.append({column: Scale(**scale) for column, scale in columns.items()})
+        scales[regime] = tuple(fold_scales)
+    return scales
 
 
 def storedHash(id: str, cache: Path) -> str | None:
@@ -121,12 +129,7 @@ def _jsonValue(value: Scale | Prior | np.generic) -> dict | int | float:
 
 
 def _columnBytes(column: pd.Series) -> tuple[str, bytes]:
-    """A regime column as its codes, its categories in the dtype; a float as float64; an
-    integer in its own width."""
-    if isinstance(column.dtype, pd.CategoricalDtype):
-        categories = ','.join(column.cat.categories)
-        codes = column.cat.codes.to_numpy()
-        return f'category[{categories}]', codes.astype(codes.dtype.newbyteorder('<')).tobytes()
+    """Returns a float column as float64, an integer column in its own width."""
     if pd.api.types.is_float_dtype(column.dtype):
         return 'float64', column.to_numpy(dtype='<f8').tobytes()
     values = column.to_numpy()
