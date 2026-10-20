@@ -117,6 +117,19 @@ The seeded 100-row sample of Tiers R, E, T and O, stratified by tier × confiden
 checked at the source; its per-field agreement is the registry's verification bar (ADR 0002).
 _Avoid_: spot check (the 20 rows per tier read before it), audit
 
+**Dimension**:
+A size of a table or of a grouping factor, measured by script: observations, grouping
+factors, groups, group sizes and their imbalance, design columns. Recorded per registry row
+or per grouping factor.
+_Avoid_: shape, size axis (metabeta's word for the envelope's side), statistic
+
+**Quirk statistic**:
+A property of a column or of a grouping factor beyond its size: its marginal shape, ties,
+rare levels, dependence on another column, group confounding, absent levels, empty cells, the
+design's conditioning. Recorded per column, per column × grouping factor, per factor pair or
+per registry row, under the name TabDGP's glossary gives the property.
+_Avoid_: feature, descriptor, metric (a score), quirk (the property itself, TabDGP's word)
+
 ### References and results
 
 **Reference posterior**:
