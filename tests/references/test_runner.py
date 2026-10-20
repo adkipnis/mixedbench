@@ -195,14 +195,18 @@ def tinyLevels() -> dict[int, dict]:
 def test_a_failed_bar_climbs_the_ladder_and_ends_as_bar_at_level_2(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Every level gets its chance; what failed keeps its record and R's log, and no draws."""
+    """Every level gets its chance; what failed keeps its record and R's log, and no draws.
+    So each level's record names its slowest parameters."""
     monkeypatch.setattr(runner, 'LEVELS', tinyLevels())
     problem = fixtureProblem()
     outcome = runner.run(problem, tmp_path)
     dir = problemDir(tmp_path, problem)
+    levels = record(dir)['levels']
     assert (outcome.outcome, outcome.level) == ('bar', 2)
-    assert [level['outcome'] for level in record(dir)['levels']] == ['bar', 'bar', 'bar']
+    assert [level['outcome'] for level in levels] == ['bar', 'bar', 'bar']
     assert sorted(path.name for path in dir.iterdir()) == ['R.log', 'run.json']
+    for level in levels:
+        assert list(level['globals']) == list(problem.globalDraws())
 
 
 @pytest.mark.brms
