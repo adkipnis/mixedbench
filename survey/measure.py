@@ -1,10 +1,16 @@
-"""Measure every registry row against its loaded table: the dimension survey's numbers that no
-agent types (spec #14, ticket #18). `Measurer(table, row).dimensions()` gives one row per grouping
-factor, `.columns()` one row per covariate column, `.columnFactors()` one row per covariate
-column and grouping factor, `.factorPairs()` one row per pair of grouping factors;
-`measureRegistry` writes them to `dimensions.csv`, `columns.csv`, `column_factors.csv` and
-`factor_pairs.csv`. Every merge runs the pass; run it alone, and the summary
-after it, from the repo root:
+"""measure.py defines the measurement pass: the dimension survey's numbers that no agent types,
+measured on each registry row's loaded table.
+
+pipeline:
+---------
+registry.csv and each row's loaded table
+-> a row per grouping factor                         Measurer.dimensions
+-> a row per covariate column                        Measurer.columns
+-> a row per covariate column and grouping factor    Measurer.columnFactors
+-> a row per pair of grouping factors                Measurer.factorPairs
+-> the four measured files                           measureRegistry
+
+Every merge runs the pass; run it alone, and the summary after it, from the repo root:
 
     uv run python survey/measure.py
 """
@@ -18,9 +24,10 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+from mixedbench import registry
 from mixedbench.contract import Problem, Refused, columnType, withComposites
 from mixedbench.datasets import Loader
-from mixedbench.registry.row import Row, parts, readCsv, writeCsv
+from mixedbench.registry.row import Row, parts, writeCsv
 from sources import readFrame
 
 # =====================================================================================
@@ -28,10 +35,11 @@ from sources import readFrame
 # =====================================================================================
 HERE = Path(__file__).parent
 IDENTITY = ('source', 'object', 'model_index', 'tier')
+CONDITIONS = ('condition_doc', 'condition_all')
 DIMENSION_COLUMNS = (
-    *IDENTITY, 'factor', 'n_factors', 'relation', 'd_doc', 'd_all', 'condition_doc',
-    'condition_all', 'n_obs', 'n_groups', 'group_size_min', 'group_size_p10', 'group_size_p50',
-    'group_size_p90', 'group_size_max', 'singleton_share', 'cv', 'alpha',
+    *IDENTITY, 'factor', 'n_factors', 'relation', 'd_doc', 'd_all', *CONDITIONS, 'n_obs',
+    'n_groups', 'group_size_min', 'group_size_p10', 'group_size_p50', 'group_size_p90',
+    'group_size_max', 'singleton_share', 'cv', 'alpha',
 )  # fmt: skip
 COLUMN_STATISTICS = (
     'skewness', 'excess_kurtosis', 'outlier_share', 'zero_share', 'min_share', 'max_share',
@@ -45,14 +53,10 @@ COLUMN_FACTOR_STATISTICS = (
     'between_group_share', 'group_level_r2', 'absent_level_share', 'size_rho', 'within_sd_cv',
 )  # fmt: skip
 COLUMN_FACTOR_COLUMNS = (*IDENTITY, 'column', 'factor', *COLUMN_FACTOR_STATISTICS)
+FACTOR_PAIR_STATISTICS = ('empty_cell_share',)
 FACTOR_PAIR_COLUMNS = (
-    *IDENTITY,
-    'factor_a',
-    'factor_b',
-    'relation',
-    'superior',
-    'empty_cell_share',
-)
+    *IDENTITY, 'factor_a', 'factor_b', 'relation', 'superior', *FACTOR_PAIR_STATISTICS,
+)  # fmt: skip
 
 
 def fitAlpha(sizes: pd.Series) -> float:
@@ -76,25 +80,24 @@ def observed(values: pd.Series, q: float) -> int | float:
 # =====================================================================================
 # pass: registry.csv -> each row's loaded table -> the four measured files
 # =====================================================================================
-def measureRegistry(registry: Path, loader: Loader) -> None:
-    frame = readFrame(registry)
-    dimensions, columns, pairs, factorPairs = [], [], [], []
-    for cells in readCsv(registry / 'registry.csv').to_dict('records'):
-        row = Row.parse(cells)
+def measureRegistry(root: Path, loader: Loader) -> None:
+    frame = readFrame(root)
+    dimensions, columns, columnFactors, factorPairs = [], [], [], []
+    for row in registry.rows(root / 'registry.csv'):
         table = loader.load(frame.sources[row.source], row.object, row.types)
         measurer = Measurer(table, row)
         dimensions += measurer.dimensions()
         columns += measurer.columns()
-        pairs += measurer.columnFactors()
+        columnFactors += measurer.columnFactors()
         factorPairs += measurer.factorPairs()
-    writeCsv(pd.DataFrame(dimensions, columns=DIMENSION_COLUMNS), registry / 'dimensions.csv')
-    writeCsv(pd.DataFrame(columns, columns=COLUMN_COLUMNS), registry / 'columns.csv')
-    writeCsv(pd.DataFrame(pairs, columns=COLUMN_FACTOR_COLUMNS), registry / 'column_factors.csv')
-    writeCsv(pd.DataFrame(factorPairs, columns=FACTOR_PAIR_COLUMNS), registry / 'factor_pairs.csv')
+    writeCsv(pd.DataFrame(dimensions, columns=DIMENSION_COLUMNS), root / 'dimensions.csv')
+    writeCsv(pd.DataFrame(columns, columns=COLUMN_COLUMNS), root / 'columns.csv')
+    writeCsv(pd.DataFrame(columnFactors, columns=COLUMN_FACTOR_COLUMNS), root / 'column_factors.csv')  # fmt: skip
+    writeCsv(pd.DataFrame(factorPairs, columns=FACTOR_PAIR_COLUMNS), root / 'factor_pairs.csv')
 
 
 # =====================================================================================
-# pipeline: registry row -> relation -> group sizes per factor -> covariate columns -> d
+# measurer: one registry row's table -> its rows of the four measured files
 # =====================================================================================
 class Measurer:
     def __init__(self, table: pd.DataFrame, row: Row) -> None:
@@ -105,11 +108,19 @@ class Measurer:
         self.identity = {k: getattr(row, k) for k in IDENTITY}
         taken = {row.response, row.trials, *self.factors, *row.ignore}
         self.columnNames = [c for c in table.columns if c not in taken]
+        self.columnTypes = {
+            c: columnType(self.table[c], row.types.get(c, '')) for c in self.columnNames
+        }
         self.groupLevel = self.findGroupLevel()
 
     def columns(self) -> list[dict]:
         rho = self.maxAbsRho()
-        return [self.identity | {'column': c} | self.describe(c) | {'max_abs_rho': rho[c]} for c in self.columnNames]  # fmt: skip
+        columns = []
+        for column in self.columnNames:
+            key = {'column': column}
+            measured = self.describe(column) | {'max_abs_rho': rho[column]}
+            columns.append(self.identity | key | measured)
+        return columns
 
     def dimensions(self) -> list[dict]:
         shared = {'n_factors': len(self.factors), 'relation': self.relation()}
@@ -117,12 +128,12 @@ class Measurer:
         return [self.identity | {'factor': f} | shared | self.groupSizes(f) for f in self.factors]  # fmt: skip
 
     def columnFactors(self) -> list[dict]:
-        pairs = []
+        columnFactors = []
         for column in self.columnNames:
             for factor in self.factors:
                 key = {'column': column, 'factor': factor}
-                pairs.append(self.identity | key | self.relate(column, factor))
-        return pairs
+                columnFactors.append(self.identity | key | self.relate(column, factor))
+        return columnFactors
 
     def factorPairs(self) -> list[dict]:
         pairs = []
@@ -139,16 +150,23 @@ class Measurer:
         a pair is nested when every level of one factor lies in one level of the other."""
         if len(self.factors) == 1:
             return 'single'
-        nested = {self.nested(a, b) for a, b in combinations(self.factors, 2)}
+        nested = {bool(self.findHolders(a, b)) for a, b in combinations(self.factors, 2)}
         if nested == {True}:
             return 'nested'
         if nested == {False}:
             return 'crossed'
         return 'mixed'
 
-    def nested(self, a: str, b: str) -> bool:
+    def findHolders(self, a: str, b: str) -> list[str]:
+        """The factors whose groups each hold whole groups of the other: none when the two
+        cross, both when they partition the rows alike."""
         levels = self.table[[a, b]].drop_duplicates()
-        return self.oneParentEach(levels, a, b) or self.oneParentEach(levels, b, a)
+        holders = []
+        if self.oneParentEach(levels, b, a):
+            holders.append(a)
+        if self.oneParentEach(levels, a, b):
+            holders.append(b)
+        return holders
 
     @staticmethod
     def oneParentEach(levels: pd.DataFrame, child: str, parent: str) -> bool:
@@ -156,25 +174,24 @@ class Measurer:
         return bool(parents.max() == 1)
 
     def relateFactors(self, a: str, b: str) -> dict:
-        if self.nested(a, b):
-            return {'relation': 'nested'} | self.findSuperior(a, b)
-        return {'relation': 'crossed'} | self.emptyCellShare(a, b)
-
-    def findSuperior(self, a: str, b: str) -> dict:
-        """The factor whose groups each hold whole groups of the other; blank when each holds
-        the other's, as the two partitions coincide."""
-        levels = self.table[[a, b]].drop_duplicates()
-        pairs = ((a, b), (b, a))  # (parent, child)
-        holders = [parent for parent, child in pairs if self.oneParentEach(levels, child, parent)]
+        """A nested pair's superior factor, blank when each holds the other's groups; a crossed
+        pair's share of empty group × group cells."""
+        holders = self.findHolders(a, b)
+        if not holders:
+            empty = self.measureEmptyCells(self.table[[a, b]])
+            return {'relation': 'crossed', 'empty_cell_share': empty}
         if len(holders) == 2:
-            return {}
-        return {'superior': holders[0]}
+            return {'relation': 'nested'}
+        return {'relation': 'nested', 'superior': holders[0]}
 
-    def emptyCellShare(self, a: str, b: str) -> dict:
-        """The share of the m_a × m_b group × group cells that hold no row."""
-        cells = self.table[[a, b]].dropna().drop_duplicates()
-        m_a, m_b = cells[a].nunique(), cells[b].nunique()
-        return {'empty_cell_share': round(1 - len(cells) / (m_a * m_b), 4)}
+    @staticmethod
+    def measureEmptyCells(pairs: pd.DataFrame) -> float:
+        """The share of the m × k cells of two columns' levels that hold no row, over the rows
+        that observe both."""
+        cells = pairs.dropna().drop_duplicates()
+        first, second = cells.columns
+        m, k = cells[first].nunique(), cells[second].nunique()
+        return round(1 - len(cells) / (m * k), 4)
 
     # ---------------------------------------------------------------------------------
     # group sizes
@@ -198,13 +215,10 @@ class Measurer:
     # ---------------------------------------------------------------------------------
     # covariate columns
     # ---------------------------------------------------------------------------------
-    def typeOf(self, column: str) -> tuple[str, int | str]:
-        return columnType(self.table[column], self.row.types.get(column, ''))
-
     def describe(self, column: str) -> dict:
         values = self.table[column]
-        kind, levels = self.typeOf(column)
-        constantWithin = [f for f in self.factors if self.constantWithin(column, f)]
+        kind, levels = self.columnTypes[column]
+        constantWithin = [f for f in self.factors if column in self.groupLevel[f]]
         return {
             'type': kind,
             'K': levels,
@@ -214,15 +228,12 @@ class Measurer:
             'in_model': 'yes' if column in self.row.covariates else 'no',
         } | self.shape(values.dropna(), kind)
 
-    def constantWithin(self, column: str, factor: str) -> bool:
-        distinct = self.table.groupby(factor, observed=True)[column].nunique()
-        return bool(distinct.max() <= 1)
-
     def findGroupLevel(self) -> dict[str, list[str]]:
-        """Each factor's group-level columns, found once: every column × factor pair asks."""
+        """Each factor's group-level columns, those constant within each of its groups."""
         groupLevel = {}
         for factor in self.factors:
-            groupLevel[factor] = [c for c in self.columnNames if self.constantWithin(c, factor)]
+            grouped = self.table.groupby(factor, observed=True)
+            groupLevel[factor] = [c for c in self.columnNames if grouped[c].nunique().max() <= 1]
         return groupLevel
 
     def shape(self, values: pd.Series, kind: str) -> dict:
@@ -258,10 +269,9 @@ class Measurer:
     def bounds(values: pd.Series, kind: str) -> dict:
         """The shares at the lowest value, at the highest and at zero: an ordered column's values
         are its levels in order, its zero a level loaded as the number zero."""
-        ranks = values.cat.codes if kind == 'ordered' else values
         bounds = {
-            'min_share': round(float((ranks == ranks.min()).mean()), 4),
-            'max_share': round(float((ranks == ranks.max()).mean()), 4),
+            'min_share': round(float((values == values.min()).mean()), 4),
+            'max_share': round(float((values == values.max()).mean()), 4),
         }
         loaded = values.cat.categories if kind == 'ordered' else values
         if pd.api.types.is_numeric_dtype(loaded):
@@ -277,7 +287,7 @@ class Measurer:
         Blank with no partner, or when every partner or the column is constant on those rows."""
         ranked = {}
         for column in self.columnNames:
-            kind, _ = self.typeOf(column)
+            kind, _ = self.columnTypes[column]
             if kind != 'categorical':
                 ranked[column] = self.codeColumn(column, kind)
         rho = pd.DataFrame(ranked, index=self.table.index).corr(method='spearman').abs()
@@ -299,26 +309,20 @@ class Measurer:
     def relate(self, column: str, factor: str) -> dict:
         """The quirk statistics of a column against a factor's groups, over the rows that observe
         both; a statistic left out is blank in column_factors.csv."""
-        observed = self.table[column].notna() & self.table[factor].notna()
-        if not observed.any():
+        both = self.table[column].notna() & self.table[factor].notna()
+        if not both.any():
             return {}
-        kind, _ = self.typeOf(column)
-        groups = self.table.loc[observed, factor]
+        kind, _ = self.columnTypes[column]
+        groups = self.table.loc[both, factor]
         statistics = {}
         if kind != 'continuous':
-            statistics |= self.absentLevelShare(self.table.loc[observed, column], groups)
+            absent = self.measureEmptyCells(self.table.loc[both, [factor, column]])
+            statistics['absent_level_share'] = absent
         if kind != 'categorical':
-            values = self.codeColumn(column, kind)[observed]
+            values = self.codeColumn(column, kind)[both]
             statistics |= self.betweenGroupShare(values, groups) | self.sizeRho(values, groups)
             statistics |= self.withinSdCv(values, groups) | self.groupLevelR2(column, factor, kind)
         return statistics
-
-    @staticmethod
-    def absentLevelShare(values: pd.Series, groups: pd.Series) -> dict:
-        """The share of the m × k group × level cells that hold no row."""
-        cells = pd.DataFrame({'group': groups, 'level': values}).drop_duplicates()
-        m, k = groups.nunique(), values.nunique()
-        return {'absent_level_share': round(1 - len(cells) / (m * k), 4)}
 
     @staticmethod
     def betweenGroupShare(values: pd.Series, groups: pd.Series) -> dict:
@@ -346,7 +350,7 @@ class Measurer:
         sizes, means = grouped.size(), grouped.mean()
         if sizes.nunique() < 2 or means.nunique() < 2:
             return {}
-        rho = sizes.rank().corr(means.rank())  # Pearson's r of the ranks
+        rho = sizes.rank().corr(means.rank())  # by hand: Series.corr's Spearman needs scipy
         return {'size_rho': round(float(rho), 4)}
 
     @staticmethod
@@ -369,14 +373,14 @@ class Measurer:
         y = self.codeColumn(column, kind)[complete].to_numpy(float)
         design = self.codeDesign(partners, complete)
         m = self.table.loc[complete, factor].nunique()
-        p = np.linalg.matrix_rank(design) - 1
+        coefficients, _, rank, _ = np.linalg.lstsq(design, y)
+        p = rank - 1
         if p == 0 or m - p - 1 <= 0:
             return {}
         total = float(((y - y.mean()) ** 2).sum())
         if total == 0:  # a constant column has no variance to explain
             return {}
-        fitted = design @ np.linalg.lstsq(design, y)[0]
-        r2 = 1 - float(((y - fitted) ** 2).sum()) / total
+        r2 = 1 - float(((y - design @ coefficients) ** 2).sum()) / total
         return {'group_level_r2': round(float(1 - (1 - r2) * (m - 1) / (m - p - 1)), 4)}
 
     def codeDesign(self, columns: list[str], rows: pd.Index) -> np.ndarray:
@@ -386,7 +390,7 @@ class Measurer:
         coded = [pd.DataFrame({'intercept': 1.0}, index=rows)]
         for column in columns:
             values = self.table.loc[rows, column]
-            kind, _ = self.typeOf(column)
+            kind, _ = self.columnTypes[column]
             if kind == 'continuous':
                 coded.append(values.astype(float).to_frame())
             else:
@@ -400,7 +404,7 @@ class Measurer:
         """d_doc expands the documented model, d_all every covariate column plus the documented
         interactions, so that d_all is never below d_doc (envelope rule 4): continuous and
         binary count 1, categorical k − 1, an interaction the product."""
-        width = {c['column']: self.width(c) for c in self.columns()}
+        width = {c: self.width(*self.columnTypes[c]) for c in self.columnNames}
         interactions = self.row.interactions
         dInteractions = sum(np.prod([width[c] for c in parts(term)]) for term in interactions)
         dDoc = sum(width[c] for c in self.row.covariates) + dInteractions
@@ -408,9 +412,9 @@ class Measurer:
         return {'d_doc': int(dDoc), 'd_all': int(dAll)}
 
     @staticmethod
-    def width(column: dict) -> int:
-        if column['type'] in ('categorical', 'ordered'):
-            return column['K'] - 1
+    def width(kind: str, levels: int | str) -> int:
+        if kind in ('categorical', 'ordered'):
+            return levels - 1
         return 1
 
     def measureConditions(self) -> dict:
@@ -436,9 +440,9 @@ class Measurer:
         design = problem.standardized()[list(problem.design)]
         scaled = (design / np.sqrt((design**2).sum())).to_numpy()
         # a constant continuous column standardizes to 0/0, and an interaction's empty cell
-        # gives a column of zeros, which scales to 0/0: both leave the design rank-deficient
-        if not np.isfinite(scaled).all():
-            return float('inf')
+        # gives a column of zeros, which scales to 0/0: set to zeros, either leaves the design
+        # rank-deficient
+        scaled = np.nan_to_num(scaled)
         if np.linalg.matrix_rank(scaled) < scaled.shape[1]:
             return float('inf')
         singular = np.linalg.svd(scaled, compute_uv=False)
