@@ -108,9 +108,7 @@ class Measurer:
         self.identity = {k: getattr(row, k) for k in IDENTITY}
         taken = {row.response, row.trials, *self.factors, *row.ignore}
         self.columnNames = [c for c in table.columns if c not in taken]
-        self.columnTypes = {
-            c: columnType(self.table[c], row.types.get(c, '')) for c in self.columnNames
-        }
+        self.columnTypes = {c: columnType(self.table[c]) for c in self.columnNames}
         self.groupLevel = self.findGroupLevel()
 
     def findGroupLevel(self) -> dict[str, list[str]]:

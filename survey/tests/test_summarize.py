@@ -41,7 +41,7 @@ def test_quantiles_carry_every_axis_pooled_per_tier_and_without_agridat(merger):
     assert axes['alpha']['pooled']['min'] == pytest.approx(4.4118, abs=1e-3)
     assert axes['alpha']['tiers']['D']['max'] == 65.0
     assert axes['alpha']['without_agridat'] == axes['alpha']['pooled']
-    assert axes['d_doc']['pooled']['max'] == 5 and axes['d_all']['pooled']['max'] == 12
+    assert axes['d_doc']['pooled']['max'] == 5 and axes['d_all']['pooled']['max'] == 10
     assert axes['K']['pooled'] == {'n': 3, 'min': 3, 'p5': 3, 'p10': 3, 'p50': 4, 'p90': 4, 'p95': 4, 'max': 4}  # fmt: skip
     assert quantiles['imbalance'] == {'balanced_share': 0.0}
     shares = quantiles['shares']

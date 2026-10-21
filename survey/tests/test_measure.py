@@ -136,47 +136,44 @@ def test_a_composite_grouping_factor_is_built_from_its_parts(herds, rows):
 def test_column_types_and_levels_by_the_one_rule(herds, rows):
     """Model 1 leaves breed, feed, parity and sick as covariate columns (response, factors
     and the ignore list are out). breed and feed are declared categoricals; parity is an
-    integer with four distinct values, hence categorical; sick has two values, hence binary.
+    integer with four distinct values, continuous all the same (#108); sick has two values,
+    hence binary.
     feed is constant within every herd, so group-level there, but varies within region."""
     columns = Measurer(herds, parsed(rows[0])).columns()
     assert [c['column'] for c in columns] == ['breed', 'feed', 'parity', 'sick']
     typed = lambda c: (c['type'], c['K'], c['level'], c['constant_within'], c['in_model'])
     assert typed(columns[0]) == ('categorical', 4, 'within', '', 'yes')
     assert typed(columns[1]) == ('categorical', 3, 'group', 'herd', 'yes')
-    assert typed(columns[2]) == ('categorical', 4, 'within', '', 'no')
+    assert typed(columns[2]) == ('continuous', '', 'within', '', 'no')
     assert typed(columns[3]) == ('binary', 2, 'within', '', 'no')
     assert columns[0]['tier'] == 'D' and columns[0]['model_index'] == 1
     assert {c['missing_share'] for c in columns} == {0}
 
 
-def test_ordered_declared_continuous_and_missing_values(herds, rows):
-    """An ordered categorical keeps its own type; a registry declaration of continuous
-    overrides the ten-distinct-values rule for an integer; one missing value in fourteen."""
+def test_ordered_and_missing_values(herds, rows):
+    """An ordered categorical keeps its own type; one missing value in fourteen."""
     varied = herds.assign(parity=herds['parity'].astype(pd.CategoricalDtype([1, 2, 3, 4], ordered=True)))  # fmt: skip
     varied.loc[0, 'weight'] = float('nan')
-    row = rows[0] | {'response': 'sick', 'covariates': 'weight', 'ignore': 'id;cases;trials', 'types': 'parity=continuous'}  # fmt: skip
+    row = rows[0] | {'response': 'sick', 'covariates': 'weight', 'ignore': 'id;cases;trials'}  # fmt: skip
     columns = {c['column']: c for c in Measurer(varied, parsed(row)).columns()}
     assert set(columns) == {'breed', 'feed', 'parity', 'weight'}
     assert (columns['parity']['type'], columns['parity']['K']) == ('ordered', 4)
     assert (columns['weight']['type'], columns['weight']['K']) == ('continuous', '')
     assert columns['weight']['missing_share'] == pytest.approx(1 / 14, abs=1e-4)
-    declared = rows[0] | {'types': 'parity=continuous'}
-    columns = {c['column']: c for c in Measurer(herds, parsed(declared)).columns()}
-    assert columns['parity']['type'] == 'continuous'
 
 
 def test_design_columns_of_the_documented_model_and_of_the_whole_table(herds, rows):
-    """Model 1: breed (4 levels) and feed (3) give d_doc = 3 + 2 = 5; parity (4) and sick (binary)
-    bring d_all to 9; an interaction breed:feed adds 3 × 2 to both, so d_all is never below
-    d_doc. Model 2 names only breed, and the region column, no longer a factor, counts 2 in
-    its d_all."""
+    """Model 1: breed (4 levels) and feed (3) give d_doc = 3 + 2 = 5; parity (an integer) and
+    sick (binary) bring d_all to 7; an interaction breed:feed adds 3 × 2 to both, so d_all is
+    never below d_doc. Model 2 names only breed, and the region column, no longer a factor,
+    counts 2 in its d_all."""
     dimensions = Measurer(herds, parsed(rows[0])).dimensions()
-    assert {(d['d_doc'], d['d_all']) for d in dimensions} == {(5, 9)}
+    assert {(d['d_doc'], d['d_all']) for d in dimensions} == {(5, 7)}
     interacting = rows[0] | {'interactions': 'breed:feed'}
     interacted = Measurer(herds, parsed(interacting)).dimensions()[0]
-    assert (interacted['d_doc'], interacted['d_all']) == (11, 15)
+    assert (interacted['d_doc'], interacted['d_all']) == (11, 13)
     assert Measurer(herds, parsed(rows[1])).dimensions()[0]['d_doc'] == 3
-    assert Measurer(herds, parsed(rows[1])).dimensions()[0]['d_all'] == 12
+    assert Measurer(herds, parsed(rows[1])).dimensions()[0]['d_all'] == 10
 
 
 def unitLength(design: np.ndarray) -> np.ndarray:
