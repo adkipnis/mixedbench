@@ -279,8 +279,7 @@ class _Builder:
         """Returns each covariate's kind, by the typing rule."""
         kinds = {}
         for column in self.row.covariates:
-            declared = self.row.types.get(column, '')
-            kinds[column], _ = columnType(self.table[column], declared)
+            kinds[column], _ = columnType(self.table[column])
         return kinds
 
     def _codeTerms(self, kinds: dict[str, str]) -> Coded:
@@ -494,11 +493,11 @@ class _Builder:
 # the rules shared with the survey
 # =====================================================================================
 # the survey uses these rules too, so its design widths match the builds
-MAX_INTEGER_LEVELS = 10
 
 
-def columnType(values: pd.Series, declared: str) -> tuple[str, int | str]:
+def columnType(values: pd.Series) -> tuple[str, int | str]:
     """Returns a column's kind and its level count k, blank if continuous.
+    The loader has applied the row's declared types, so the dtype decides.
     The first rule that matches wins."""
     distinct = values.dropna().nunique()
     dtype = values.dtype
@@ -507,11 +506,7 @@ def columnType(values: pd.Series, declared: str) -> tuple[str, int | str]:
         return 'ordered', distinct
     if distinct == 2:
         return 'binary', 2
-    if declared == 'continuous':
-        return 'continuous', ''
     if categorical or pd.api.types.is_string_dtype(dtype):
-        return 'categorical', distinct
-    if pd.api.types.is_integer_dtype(dtype) and distinct <= MAX_INTEGER_LEVELS:
         return 'categorical', distinct
     return 'continuous', ''
 
