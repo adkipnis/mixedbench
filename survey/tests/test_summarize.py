@@ -11,6 +11,12 @@ from summarize import PRACTICE, PRACTICE_FAMILIES, TEMPLATE
 QUANTILE_KEYS = ('n', 'min', 'p5', 'p10', 'p50', 'p90', 'p95', 'max')
 FACTOR_AXES = ('n_groups', 'group_size_min', 'group_size_p10', 'group_size_p50', 'group_size_p90', 'group_size_max', 'singleton_share', 'cv', 'alpha')  # fmt: skip
 ROW_AXES = ('n_obs', 'n_grouping_factors', 'd_doc', 'd_all')
+QUIRK_AXES = (
+    'skewness', 'excess_kurtosis', 'outlier_share', 'zero_share', 'min_share', 'max_share',
+    'unique_share', 'rare_level_share', 'max_abs_rho', 'between_group_share', 'group_level_r2',
+    'absent_level_share', 'size_rho', 'within_sd_cv', 'empty_cell_share', 'condition_doc',
+    'condition_all',
+)  # fmt: skip
 
 
 def test_quantiles_carry_every_axis_pooled_per_tier_and_without_agridat(merger):
@@ -21,7 +27,7 @@ def test_quantiles_carry_every_axis_pooled_per_tier_and_without_agridat(merger):
     quantiles = yaml.safe_load((merger.registry / 'quantiles.yaml').read_text())
     assert (quantiles['n_rows'], quantiles['n_objects'], quantiles['n_factor_rows']) == (2, 1, 3)
     axes = quantiles['axes']
-    assert set(axes) == set(FACTOR_AXES) | set(ROW_AXES) | {'K'}
+    assert set(axes) == set(FACTOR_AXES) | set(ROW_AXES) | {'K'} | set(QUIRK_AXES)
     for axis in axes.values():
         assert set(axis) == {'pooled', 'tiers', 'without_agridat'}
         assert set(axis['pooled']) == set(QUANTILE_KEYS)
@@ -47,6 +53,26 @@ def test_quantiles_carry_every_axis_pooled_per_tier_and_without_agridat(merger):
     assert implied['mean_columns_per_categorical'] == pytest.approx(2.667, abs=1e-3)
     assert implied['terms_9'] == pytest.approx(24.0, abs=1e-2)
     assert implied['terms_14'] == pytest.approx(37.33, abs=1e-2)
+
+
+def test_quirk_statistics_follow_the_released_axes_counted_once_per_their_key(merger):
+    """Each quirk statistic is pooled over the rows of its own file that define it: a column
+    (all ten have a unique share, only weight a skewness), a column and grouping factor, a
+    crossed pair (the herds rows have none) and a registry row, so the condition numbers count
+    two rows, not three grouping factors. The released keys and axes stay first (#101)."""
+    mergeShard(merger, FIXTURES / 'registry_herds.csv')
+    quantiles = yaml.safe_load((merger.registry / 'quantiles.yaml').read_text())
+    assert list(quantiles) == ['n_rows', 'n_objects', 'n_factor_rows', 'axes', 'imbalance', 'shares', 'k_distribution', 'implied_columns']  # fmt: skip
+    axes = quantiles['axes']
+    assert tuple(axes)[-len(QUIRK_AXES) :] == QUIRK_AXES
+    counts = {axis: axes[axis]['pooled']['n'] for axis in QUIRK_AXES}
+    assert counts == {
+        'skewness': 1, 'excess_kurtosis': 1, 'outlier_share': 1, 'zero_share': 2, 'min_share': 2,
+        'max_share': 2, 'unique_share': 10, 'rare_level_share': 9, 'max_abs_rho': 4,
+        'between_group_share': 6, 'group_level_r2': 2, 'absent_level_share': 13, 'size_rho': 6,
+        'within_sd_cv': 6, 'empty_cell_share': 0, 'condition_doc': 2, 'condition_all': 2,
+    }  # fmt: skip
+    assert axes['between_group_share']['pooled']['min'] == -0.2986  # negatives kept
 
 
 def test_summary_template_has_no_hand_typed_digits():
