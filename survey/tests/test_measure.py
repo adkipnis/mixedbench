@@ -487,6 +487,18 @@ def test_a_column_missing_on_every_measured_row_relates_to_no_factor(herds, rows
     assert pairs[list(COLUMN_FACTOR_STATISTICS)].isna().all().all()
 
 
+def test_a_level_no_measured_row_holds_leaves_no_gap_in_the_codes(herds, rows):
+    """Parity's third level is held only by rows without a weight, so the measured rows code
+    their three levels 0, 1 and 2 in loaded order, as if the unused level were removed. Codes
+    0, 1 and 3 would move every numeric statistic of parity against herd."""
+    numbered = herds.assign(parity=asOrdered(herds['parity'], [1, 2, 3, 4]))
+    unmeasured = numbered.assign(weight=numbered['weight'].where(numbered['parity'] != 3))
+    measured = unmeasured[unmeasured['weight'].notna()]
+    compact = measured.assign(parity=measured['parity'].cat.remove_unused_categories())
+    gapped = measuredColumnFactors(unmeasured, rows[0]).loc['parity']
+    pd.testing.assert_frame_equal(gapped, measuredColumnFactors(compact, rows[0]).loc['parity'])
+
+
 def measuredFactorPairs(table: pd.DataFrame, cells: dict) -> pd.DataFrame:
     """The factor_pairs.csv rows of one registry row, by pair of factors; a statistic left out
     is blank."""
