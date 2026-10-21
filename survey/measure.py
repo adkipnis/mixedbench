@@ -150,13 +150,19 @@ class Measurer:
     def relateFactors(self, a: str, b: str) -> dict:
         if self.nested(a, b):
             return {'relation': 'nested'} | self.findSuperior(a, b)
-        return {'relation': 'crossed'}
+        return {'relation': 'crossed'} | self.emptyCellShare(a, b)
 
     def findSuperior(self, a: str, b: str) -> dict:
         """The factor whose groups each hold whole groups of the other."""
         levels = self.table[[a, b]].drop_duplicates()
         superior = a if self.oneParentEach(levels, b, a) else b
         return {'superior': superior}
+
+    def emptyCellShare(self, a: str, b: str) -> dict:
+        """The share of the m_a × m_b group × group cells that hold no row."""
+        cells = self.table[[a, b]].dropna().drop_duplicates()
+        m_a, m_b = cells[a].nunique(), cells[b].nunique()
+        return {'empty_cell_share': round(1 - len(cells) / (m_a * m_b), 4)}
 
     # ---------------------------------------------------------------------------------
     # group sizes
