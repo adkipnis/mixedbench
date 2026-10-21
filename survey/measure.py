@@ -153,10 +153,14 @@ class Measurer:
         return {'relation': 'crossed'} | self.emptyCellShare(a, b)
 
     def findSuperior(self, a: str, b: str) -> dict:
-        """The factor whose groups each hold whole groups of the other."""
+        """The factor whose groups each hold whole groups of the other; blank when each holds
+        the other's, as the two partitions coincide."""
         levels = self.table[[a, b]].drop_duplicates()
-        superior = a if self.oneParentEach(levels, b, a) else b
-        return {'superior': superior}
+        pairs = ((a, b), (b, a))  # (parent, child)
+        holders = [parent for parent, child in pairs if self.oneParentEach(levels, child, parent)]
+        if len(holders) == 2:
+            return {}
+        return {'superior': holders[0]}
 
     def emptyCellShare(self, a: str, b: str) -> dict:
         """The share of the m_a × m_b group × group cells that hold no row."""
