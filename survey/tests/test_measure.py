@@ -528,3 +528,13 @@ def test_white_noise_lies_within_groups(seed):
     noise = pd.DataFrame({'y': np.zeros(len(groups)), 'g': groups.astype(str), 'x': rng.normal(size=len(groups))})  # fmt: skip
     share = measuredColumnFactors(noise, GENERATED).loc[('x', 'g'), 'between_group_share']
     assert abs(share) < 0.1
+
+
+@settings(max_examples=50, deadline=None)
+@given(m_a=st.integers(2, 6), m_b=st.integers(2, 6), replicates=st.integers(1, 3))
+def test_a_full_cross_has_no_empty_cell(m_a, m_b, replicates):
+    a, b = np.meshgrid(np.arange(m_a), np.arange(m_b), indexing='ij')
+    cells = pd.DataFrame({'a': a.ravel().astype(str), 'b': b.ravel().astype(str)})
+    table = pd.concat([cells] * replicates, ignore_index=True).assign(y=0.0)
+    pair = measuredFactorPairs(table, GENERATED | {'grouping_factors': 'a;b'}).loc[('a', 'b')]
+    assert (pair['relation'], pair['empty_cell_share']) == ('crossed', 0)
