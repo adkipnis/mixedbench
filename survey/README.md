@@ -193,13 +193,15 @@ rows that named a nested `a:b` by a `b` whose codes repeat across `a` through
   - `d_doc` (documented model) and `d_all` (every column of `columns.csv` plus the documented
     interactions): continuous and binary count 1, a categorical K − 1, an interaction the
     product.
-  - `condition_doc` and `condition_all`: Belsley, Kuh and Welsch's (1980) condition index of
-    the contract's design with the intercept, every column scaled to unit length,
-    σ_max / σ_min to four decimals; `inf` when rank-deficient. `condition_doc` over the
-    documented model's design from `Problem.standardized`, `condition_all` over the same coding
-    of every column of `columns.csv` plus the documented interactions, on the rows complete in
-    all of them. Blank for a row the contract refuses; `condition_all` alone blank when no row
-    is complete or a column mixes strings and numbers (#105).
+  - `condition_doc` and `condition_all`: the condition index σ_max / σ_min of the contract's
+    design with the intercept, every column scaled to unit length as Belsley, Kuh and Welsch
+    (1980) scale it, to four decimals; `inf` when rank-deficient. Unlike their index, it is
+    taken after the contract centers the continuous columns, so their collinearity with the
+    intercept does not count. `condition_doc` over the documented model's design from
+    `Problem.standardized`, `condition_all` over the same coding of every column of
+    `columns.csv` plus the documented interactions, on the rows complete in all of them. Blank
+    for a row the contract refuses; `condition_all` alone blank when no row is complete or a
+    column mixes strings and numbers (#105).
 - `columns.csv`: key `source`, `object`, `model_index`, `column`, with `tier`; every column
   but the response, trials, grouping factors and ignored ones.
   - `type`, first match: `ordered` if declared; `binary` for two distinct values; `categorical`
