@@ -33,15 +33,18 @@ DIMENSION_COLUMNS = (
     'condition_all', 'n_obs', 'n_groups', 'group_size_min', 'group_size_p10', 'group_size_p50',
     'group_size_p90', 'group_size_max', 'singleton_share', 'cv', 'alpha',
 )  # fmt: skip
-COLUMN_COLUMNS = (
-    *IDENTITY, 'column', 'type', 'K', 'level', 'constant_within', 'missing_share', 'in_model',
+COLUMN_STATISTICS = (
     'skewness', 'excess_kurtosis', 'outlier_share', 'zero_share', 'min_share', 'max_share',
     'unique_share', 'rare_level_share', 'max_abs_rho',
 )  # fmt: skip
-COLUMN_FACTOR_COLUMNS = (
-    *IDENTITY, 'column', 'factor', 'between_group_share', 'group_level_r2', 'absent_level_share',
-    'size_rho', 'within_sd_cv',
+COLUMN_COLUMNS = (
+    *IDENTITY, 'column', 'type', 'K', 'level', 'constant_within', 'missing_share', 'in_model',
+    *COLUMN_STATISTICS,
 )  # fmt: skip
+COLUMN_FACTOR_STATISTICS = (
+    'between_group_share', 'group_level_r2', 'absent_level_share', 'size_rho', 'within_sd_cv',
+)  # fmt: skip
+COLUMN_FACTOR_COLUMNS = (*IDENTITY, 'column', 'factor', *COLUMN_FACTOR_STATISTICS)
 FACTOR_PAIR_COLUMNS = (
     *IDENTITY,
     'factor_a',
