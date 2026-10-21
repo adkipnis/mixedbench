@@ -296,16 +296,17 @@ def test_an_ordered_columns_bounds_are_its_lowest_and_highest_levels(herds, rows
 
 def test_unique_and_rare_level_shares(herds, rows):
     """Model 2's columns: weight is all distinct and has no levels; breed has four levels, the
-    smallest held by three rows; sick has two, five rows ill; parity, an integer column of four
-    levels, holds a 4 once; ordered, its smallest level is the same. A categorical's unused
-    level holds no row and is not its rarest."""
+    smallest held by three rows; sick has two, five rows ill; parity, an integer, has four
+    distinct values and no levels; ordered, its smallest level holds a 4 once. A categorical's
+    unused level holds no row and is not its rarest."""
     columns = measuredColumns(herds, rows[1])
     shares = columns[['unique_share', 'rare_level_share']]
     assert shares.loc['weight', 'unique_share'] == 1
     assert pd.isna(shares.loc['weight', 'rare_level_share'])
     assert tuple(shares.loc['breed']) == (0.2857, 0.2143)
     assert tuple(shares.loc['sick']) == (0.1429, 0.3571)
-    assert tuple(shares.loc['parity']) == (0.2857, 0.0714)
+    assert shares.loc['parity', 'unique_share'] == 0.2857
+    assert pd.isna(shares.loc['parity', 'rare_level_share'])
     numbered = herds.assign(parity=asOrdered(herds['parity'], [1, 2, 3, 4]))
     assert measuredColumns(numbered, rows[1]).loc['parity', 'rare_level_share'] == 0.0714
     unused = herds.assign(breed=herds['breed'].cat.add_categories('dexter'))
@@ -319,22 +320,24 @@ def test_a_column_missing_on_every_measured_row_has_no_statistic(herds, rows):
 
 
 def test_max_abs_rho_ranks_continuous_binary_and_ordered_columns(herds, rows):
-    """Model 2 ranks weight and sick, 0.6841 by scipy.stats.spearmanr; region, breed, feed and
-    integer parity are categoricals of more than two levels and pair with nothing. Ordered,
-    parity ranks too: 0.3029 with weight, 0.4864 with sick."""
+    """Model 2 ranks weight, sick and integer parity, by scipy.stats.spearmanr: 0.6841 between
+    weight and sick, parity 0.3029 with weight and 0.4864 with sick. Region, breed and feed are
+    categoricals of more than two levels and pair with nothing. Ordered, parity ranks by its
+    levels, to the same values."""
     rho = measuredColumns(herds, rows[1])['max_abs_rho']
-    assert (rho['weight'], rho['sick']) == (0.6841, 0.6841)
-    assert rho[['region', 'breed', 'feed', 'parity']].isna().all()
+    assert (rho['weight'], rho['sick'], rho['parity']) == (0.6841, 0.6841, 0.4864)
+    assert rho[['region', 'breed', 'feed']].isna().all()
     numbered = herds.assign(parity=asOrdered(herds['parity'], [1, 2, 3, 4]))
     rho = measuredColumns(numbered, rows[1])['max_abs_rho']
     assert (rho['weight'], rho['sick'], rho['parity']) == (0.6841, 0.6841, 0.4864)
 
 
 def test_max_abs_rho_pairs_over_the_rows_both_columns_observe(herds, rows):
-    """A missing weight leaves 13 rows to pair with sick (scipy: 0.6761). A column observed on
-    the nine healthy rows only pairs with weight there (0.5295), not with sick, constant on
-    those rows. A constant column pairs with nothing; neither does model 1's sick, the one
-    column there that is not a categorical of more than two levels."""
+    """A missing weight leaves 13 rows to pair with sick (scipy: 0.6761) and parity (0.2856). A
+    column observed on the nine healthy rows only pairs with weight (0.5295) and parity (0.0404)
+    there, not with sick, constant on those rows. A constant column pairs with nothing; neither
+    does model 1's sick once parity is ignored, the one other column there that is not a
+    categorical of more than two levels."""
     unweighed = herds.copy()
     unweighed.loc[0, 'weight'] = float('nan')
     assert measuredColumns(unweighed, rows[1]).loc['weight', 'max_abs_rho'] == 0.6761
@@ -342,7 +345,8 @@ def test_max_abs_rho_pairs_over_the_rows_both_columns_observe(herds, rows):
     rho = measuredColumns(herds.assign(tested=tested, dose=2.5), rows[1])['max_abs_rho']
     assert (rho['tested'], rho['weight'], rho['sick']) == (0.5295, 0.6841, 0.6841)
     assert pd.isna(rho['dose'])
-    assert pd.isna(measuredColumns(herds, rows[0]).loc['sick', 'max_abs_rho'])
+    alone = rows[0] | {'ignore': 'id;cases;trials;parity'}
+    assert pd.isna(measuredColumns(herds, alone).loc['sick', 'max_abs_rho'])
 
 
 def measuredColumnFactors(table: pd.DataFrame, cells: dict) -> pd.DataFrame:
@@ -377,13 +381,13 @@ def test_between_group_share_is_the_adjusted_intraclass_correlation(herds, rows)
 def test_a_group_level_column_lies_wholly_between_groups(herds, rows):
     """Feed is constant within each herd, so declared ordered it has no within-herd variance and
     a between-group share of 1; within region it varies. As loaded, feed is a categorical of
-    three levels, which has no between-group share, nor have breed and integer parity."""
+    three levels, which has no between-group share, nor has breed."""
     graded = herds.assign(feed=asOrdered(herds['feed'], ['grass', 'grain', 'mixed']))
     feed = measuredColumnFactors(graded, rows[0])['between_group_share'].loc['feed']
     assert feed['herd'] == 1
     assert feed['region'] < 1
     shares = measuredColumnFactors(herds, rows[0])['between_group_share']
-    assert shares.loc[['breed', 'feed', 'parity']].isna().all()
+    assert shares.loc[['breed', 'feed']].isna().all()
 
 
 def test_singleton_groups_and_a_constant_column_have_no_between_group_share(herds, rows):
