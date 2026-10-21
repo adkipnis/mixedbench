@@ -159,9 +159,9 @@ coefficient of variation are readable companions.
 
 | covariate type | n | share |
 |---|---|---|
-| continuous | 871 | 45% |
+| continuous | 949 | 49% |
 | binary | 638 | 33% |
-| categorical | 364 | 19% |
+| categorical | 286 | 15% |
 | ordered | 70 | 4% |
 
 | level | n | share |
@@ -173,31 +173,30 @@ Levels of the categorical covariates:
 
 | K | n | min | p5 | p10 | p50 | p90 | p95 | max | practice |
 |---|---|---|---|---|---|---|---|---|---|
-| pooled | 434 | 1 | 2 | 3 | 4 | 10 | 14 | 717 | – |
-| tier R | 168 | 2 | 3 | 3 | 4 | 9 | 10 | 56 |  |
-| tier E | 50 | 1 | 2 | 2 | 3 | 9 | 10 | 10 |  |
-| tier T | 121 | 2 | 2 | 3 | 4 | 9 | 10 | 17 |  |
-| tier D | 54 | 3 | 3 | 3 | 4 | 47 | 76 | 117 |  |
-| tier O | 41 | 2 | 2 | 3 | 5 | 17 | 37 | 717 |  |
-| without agridat | 406 | 1 | 2 | 3 | 4 | 10 | 13 | 717 |  |
+| pooled | 356 | 2 | 2 | 3 | 4 | 10 | 17 | 717 | – |
+| tier R | 150 | 2 | 3 | 3 | 4 | 9 | 14 | 56 |  |
+| tier E | 35 | 2 | 2 | 2 | 3 | 4 | 7 | 10 |  |
+| tier T | 83 | 2 | 2 | 2 | 3 | 9 | 11 | 17 |  |
+| tier D | 51 | 3 | 3 | 3 | 4 | 47 | 76 | 117 |  |
+| tier O | 37 | 2 | 2 | 3 | 5 | 26 | 73 | 717 |  |
+| without agridat | 330 | 2 | 2 | 2 | 4 | 10 | 15 | 717 |  |
 
 | K | n | share |
 |---|---|---|
-| 3 | 155 | 36% |
-| 4 | 93 | 21% |
-| 5 | 42 | 10% |
-| 2 | 33 | 8% |
-| 11+ | 32 | 7% |
-| 6 | 22 | 5% |
-| 7 | 20 | 5% |
-| 10 | 14 | 3% |
-| 9 | 13 | 3% |
-| 8 | 8 | 2% |
-| 1 | 2 | 0% |
+| 3 | 140 | 39% |
+| 4 | 75 | 21% |
+| 2 | 33 | 9% |
+| 11+ | 32 | 9% |
+| 5 | 30 | 8% |
+| 6 | 16 | 4% |
+| 9 | 8 | 2% |
+| 10 | 8 | 2% |
+| 7 | 7 | 2% |
+| 8 | 7 | 2% |
 
 Implied design columns of a model under the observed categorical share
-(0.223) and mean columns per categorical (6.892):
-9 terms 20.84 columns, 14 terms 32.42 columns.
+(0.183) and mean columns per categorical (7.444):
+9 terms 19.63 columns, 14 terms 30.53 columns.
 
 ## Design columns
 
@@ -207,23 +206,23 @@ its levels less one, an interaction the product.
 
 | d_doc | n | min | p5 | p10 | p50 | p90 | p95 | max | practice |
 |---|---|---|---|---|---|---|---|---|---|
-| pooled | 694 | 0 | 0 | 1 | 4 | 13 | 16 | 22134 | 11 |
-| tier R | 256 | 0 | 0 | 0 | 3 | 14 | 19 | 55 |  |
-| tier E | 98 | 0 | 0 | 0 | 3 | 11 | 12 | 16 |  |
-| tier T | 223 | 0 | 0 | 1 | 4 | 11 | 13 | 25 |  |
-| tier D | 104 | 0 | 1 | 1 | 4 | 15 | 36 | 277 |  |
-| tier O | 13 | 2 | 2 | 2 | 11 | 85 | 22134 | 22134 |  |
-| without agridat | 666 | 0 | 0 | 1 | 4 | 12 | 16 | 22134 |  |
+| pooled | 694 | 0 | 0 | 1 | 3 | 11 | 16 | 22134 | 11 |
+| tier R | 256 | 0 | 0 | 0 | 3 | 12 | 17 | 55 |  |
+| tier E | 98 | 0 | 0 | 0 | 2 | 7 | 11 | 13 |  |
+| tier T | 223 | 0 | 0 | 1 | 3 | 9 | 12 | 25 |  |
+| tier D | 104 | 0 | 1 | 1 | 4 | 15 | 36 | 270 |  |
+| tier O | 13 | 2 | 2 | 2 | 11 | 79 | 22134 | 22134 |  |
+| without agridat | 666 | 0 | 0 | 1 | 3 | 11 | 15 | 22134 |  |
 
 | d_all | n | min | p5 | p10 | p50 | p90 | p95 | max | practice |
 |---|---|---|---|---|---|---|---|---|---|
-| pooled | 694 | 0 | 0 | 1 | 5 | 23 | 56 | 23770 | – |
-| tier R | 256 | 0 | 0 | 1 | 5 | 20 | 38 | 14966 |  |
-| tier E | 98 | 0 | 0 | 0 | 4 | 16 | 21 | 555 |  |
-| tier T | 223 | 0 | 1 | 1 | 5 | 13 | 16 | 11030 |  |
-| tier D | 104 | 1 | 2 | 3 | 15 | 156 | 294 | 4580 |  |
-| tier O | 13 | 2 | 2 | 2 | 19 | 85 | 23770 | 23770 |  |
-| without agridat | 666 | 0 | 0 | 1 | 5 | 22 | 56 | 23770 |  |
+| pooled | 694 | 0 | 0 | 1 | 5 | 21 | 50 | 23759 | – |
+| tier R | 256 | 0 | 0 | 1 | 4 | 20 | 35 | 14954 |  |
+| tier E | 98 | 0 | 0 | 0 | 3 | 13 | 20 | 543 |  |
+| tier T | 223 | 0 | 1 | 1 | 4 | 11 | 14 | 11030 |  |
+| tier D | 104 | 1 | 2 | 3 | 10 | 156 | 163 | 4580 |  |
+| tier O | 13 | 2 | 2 | 2 | 19 | 79 | 23759 | 23759 |  |
+| without agridat | 666 | 0 | 0 | 1 | 5 | 20 | 51 | 23759 |  |
 
 ## Response, reader and published model
 
