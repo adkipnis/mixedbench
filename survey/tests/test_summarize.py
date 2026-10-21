@@ -61,9 +61,10 @@ def test_quantiles_carry_every_axis_pooled_per_tier_and_without_agridat(merger):
 
 def test_quirk_statistics_follow_the_released_axes_counted_once_per_their_key(merger):
     """Each quirk statistic is pooled over the rows of its own file that define it: a column
-    (all ten have a unique share, only weight a skewness), a column and grouping factor, a
-    crossed pair (the herds rows have none) and a registry row, so the condition numbers count
-    two rows, not three grouping factors. The released keys and axes stay first (#101)."""
+    (all ten have a unique share, only weight and model 2's undeclared integer parity a
+    skewness), a column and grouping factor, a crossed pair (the herds rows have none) and a
+    registry row, so the condition numbers count two rows, not three grouping factors. The
+    released keys and axes stay first (#101)."""
     mergeShard(merger, FIXTURES / 'registry_herds.csv')
     quantiles = yaml.safe_load((merger.registry / 'quantiles.yaml').read_text())
     assert list(quantiles) == ['n_rows', 'n_objects', 'n_factor_rows', 'axes', 'imbalance', 'shares', 'k_distribution', 'implied_columns']  # fmt: skip
@@ -71,10 +72,10 @@ def test_quirk_statistics_follow_the_released_axes_counted_once_per_their_key(me
     assert tuple(axes)[-len(QUIRK_AXES) :] == QUIRK_AXES
     counts = {axis: axes[axis]['pooled']['n'] for axis in QUIRK_AXES}
     assert counts == {
-        'skewness': 1, 'excess_kurtosis': 1, 'outlier_share': 1, 'zero_share': 2, 'min_share': 2,
-        'max_share': 2, 'unique_share': 10, 'rare_level_share': 9, 'max_abs_rho': 4,
-        'between_group_share': 6, 'group_level_r2': 2, 'absent_level_share': 13, 'size_rho': 6,
-        'within_sd_cv': 6, 'empty_cell_share': 0, 'condition_doc': 2, 'condition_all': 2,
+        'skewness': 2, 'excess_kurtosis': 2, 'outlier_share': 2, 'zero_share': 3, 'min_share': 3,
+        'max_share': 3, 'unique_share': 10, 'rare_level_share': 8, 'max_abs_rho': 5,
+        'between_group_share': 7, 'group_level_r2': 2, 'absent_level_share': 12, 'size_rho': 7,
+        'within_sd_cv': 7, 'empty_cell_share': 0, 'condition_doc': 2, 'condition_all': 2,
     }  # fmt: skip
     assert axes['between_group_share']['pooled']['min'] == -0.2986  # negatives kept
 
@@ -124,7 +125,7 @@ def test_summary_shows_one_pooled_table_per_measured_file(merger):
     design = summary.split('## Design columns\n', 1)[1]
     assert tableRows(design, '| statistic |') == [
         ['condition_doc', '2', '3.452', '3.452', '3.452', '6.5784', '6.5784', '6.5784', '6.5784'],
-        ['condition_all', '2', '10.2274', '10.2274', '10.2274', '44.2555', '44.2555', '44.2555', '44.2555'],
+        ['condition_all', '2', '10.2274', '10.2274', '10.2274', '34.2099', '34.2099', '34.2099', '34.2099'],
     ]  # fmt: skip
     assert '| pair relation | n | share |' in pairs and '| superior | n | share |' in pairs
 
