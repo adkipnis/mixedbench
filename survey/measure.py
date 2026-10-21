@@ -1,8 +1,9 @@
 """Measure every registry row against its loaded table: the dimension survey's numbers that no
 agent types (spec #14, ticket #18). `Measurer(table, row).dimensions()` gives one row per grouping
 factor, `.columns()` one row per covariate column, `.columnFactors()` one row per covariate
-column and grouping factor; `measureRegistry` writes them to `dimensions.csv`, `columns.csv` and
-`column_factors.csv`. Every merge runs the pass; run it alone, and the summary
+column and grouping factor, `.factorPairs()` one row per pair of grouping factors;
+`measureRegistry` writes them to `dimensions.csv`, `columns.csv`, `column_factors.csv` and
+`factor_pairs.csv`. Every merge runs the pass; run it alone, and the summary
 after it, from the repo root:
 
     uv run python survey/measure.py
@@ -28,9 +29,9 @@ from sources import readFrame
 HERE = Path(__file__).parent
 IDENTITY = ('source', 'object', 'model_index', 'tier')
 DIMENSION_COLUMNS = (
-    *IDENTITY, 'factor', 'n_factors', 'relation', 'd_doc', 'd_all', 'n_obs', 'n_groups',
-    'group_size_min', 'group_size_p10', 'group_size_p50', 'group_size_p90', 'group_size_max',
-    'singleton_share', 'cv', 'alpha', 'condition_doc', 'condition_all',
+    *IDENTITY, 'factor', 'n_factors', 'relation', 'd_doc', 'd_all', 'condition_doc',
+    'condition_all', 'n_obs', 'n_groups', 'group_size_min', 'group_size_p10', 'group_size_p50',
+    'group_size_p90', 'group_size_max', 'singleton_share', 'cv', 'alpha',
 )  # fmt: skip
 COLUMN_COLUMNS = (
     *IDENTITY, 'column', 'type', 'K', 'level', 'constant_within', 'missing_share', 'in_model',
@@ -70,11 +71,11 @@ def observed(values: pd.Series, q: float) -> int | float:
 
 
 # =====================================================================================
-# pass: registry.csv -> each row's loaded table -> dimensions.csv, columns.csv, column_factors.csv
+# pass: registry.csv -> each row's loaded table -> the four measured files
 # =====================================================================================
 def measureRegistry(registry: Path, loader: Loader) -> None:
     frame = readFrame(registry)
-    dimensions, columns, pairs = [], [], []
+    dimensions, columns, pairs, factorPairs = [], [], [], []
     for cells in readCsv(registry / 'registry.csv').to_dict('records'):
         row = Row.parse(cells)
         table = loader.load(frame.sources[row.source], row.object, row.types)
@@ -82,9 +83,11 @@ def measureRegistry(registry: Path, loader: Loader) -> None:
         dimensions += measurer.dimensions()
         columns += measurer.columns()
         pairs += measurer.columnFactors()
+        factorPairs += measurer.factorPairs()
     writeCsv(pd.DataFrame(dimensions, columns=DIMENSION_COLUMNS), registry / 'dimensions.csv')
     writeCsv(pd.DataFrame(columns, columns=COLUMN_COLUMNS), registry / 'columns.csv')
     writeCsv(pd.DataFrame(pairs, columns=COLUMN_FACTOR_COLUMNS), registry / 'column_factors.csv')
+    writeCsv(pd.DataFrame(factorPairs, columns=FACTOR_PAIR_COLUMNS), registry / 'factor_pairs.csv')
 
 
 # =====================================================================================
