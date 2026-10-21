@@ -17,7 +17,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-from mixedbench.contract import Problem, columnType, withComposites
+from mixedbench.contract import Problem, Refused, columnType, withComposites
 from mixedbench.datasets import Loader
 from mixedbench.registry.row import Row, parts, readCsv, writeCsv
 from sources import readFrame
@@ -410,14 +410,18 @@ class Measurer:
     def measureConditions(self) -> dict:
         """The condition index of the contract's design, of the documented model and of every
         measured column with the documented interactions; the contract codes, types and drops
-        incomplete rows alike for both."""
-        documented = Problem.build(self.row, self.table)
+        incomplete rows alike for both. Blank where the contract builds no problem."""
+        try:
+            documented = Problem.build(self.row, self.table)
+        except Refused:
+            return {}
+        conditions = {'condition_doc': self.computeConditionIndex(documented)}
         everything = dataclasses.replace(self.row, covariates=tuple(self.columnNames))
-        measured = Problem.build(everything, self.table)
-        return {
-            'condition_doc': self.computeConditionIndex(documented),
-            'condition_all': self.computeConditionIndex(measured),
-        }
+        try:
+            measured = Problem.build(everything, self.table)
+        except (Refused, TypeError):  # no complete row, or a column of strings and numbers (#105)
+            return conditions
+        return conditions | {'condition_all': self.computeConditionIndex(measured)}
 
     @staticmethod
     def computeConditionIndex(problem: Problem) -> float:
