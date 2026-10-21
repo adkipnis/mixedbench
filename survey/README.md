@@ -34,11 +34,12 @@ by script.
 ```
 uv run python survey/pull.py [--tiers E O]
 uv run python survey/merge.py survey/shards/<shard>.csv
+uv run python survey/measure.py
 uv run python survey/mirror.py --tag mirror-<n>
 ```
 
-`pull.py` and `merge.py` take `--registry DIR` and `--survey DIR` (default `registry/`,
-`survey/`). `pull.py --tiers` pulls only those tiers; the others keep their rows.
+`pull.py`, `merge.py` and `measure.py` take `--registry DIR` and `--survey DIR` (default
+`registry/`, `survey/`). `pull.py --tiers` pulls only those tiers; the others keep their rows.
 
 ## Method
 
@@ -253,6 +254,10 @@ rows that named a nested `a:b` by a `b` whose codes repeat across `a` through
   agridat; observed values, never interpolated.
 - Per-factor axes count once per grouping factor; `n_obs`, `n_grouping_factors`, `d_doc` and
   `d_all` once per registry row; `K` once per documented categorical covariate.
+- A quirk statistic is an axis named as its column, after `K`, counted once per row of its file
+  that defines it; `inf` kept.
+- `shares`: `pair_relation` over the rows of `factor_pairs.csv`; `superior` over its nested
+  pairs, `factor_a` or `factor_b` for the side that holds the superior, `none` when neither does.
 - `implied_columns`: the expected design columns of a 9- and a 14-term model (the practice
   survey's p90 and p95 of terms) under the observed categorical share and mean K − 1.
 
