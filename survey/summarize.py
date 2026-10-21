@@ -102,6 +102,8 @@ class Summarizer:
                 'covariate_type': self.shares(self.modeled['type']),
                 'level': self.shares(self.modeled['level']),
                 'relation': self.shares(self.dimensions['relation']),
+                'pair_relation': self.shares(self.pairs['relation']),
+                'superior': self.shares(self.superiorSides()),
                 'response_type': self.shares(self.registry['response_type']),
                 'reader': self.shares(self.registry['reader']),
                 'published_model': self.shares(self.registry['published_model']),
@@ -139,6 +141,15 @@ class Summarizer:
     def balancedShare(self) -> float:
         """Share of grouping factors whose allocation is balanced (α infinite)."""
         return round(float((self.dimensions['alpha'] == float('inf')).mean()), 3)
+
+    def superiorSides(self) -> pd.Series:
+        """Which factor of each nested pair holds whole groups of the other: `factor_a`,
+        `factor_b`, or `none` when the two partition the rows alike."""
+        nested = self.pairs[self.pairs['relation'] == 'nested']
+        sides = pd.Series('none', index=nested.index)
+        sides[nested['superior'] == nested['factor_a']] = 'factor_a'
+        sides[nested['superior'] == nested['factor_b']] = 'factor_b'
+        return sides
 
     @staticmethod
     def shares(values: pd.Series) -> dict:
