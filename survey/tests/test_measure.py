@@ -605,3 +605,13 @@ def test_a_full_cross_has_no_empty_cell(m_a, m_b, replicates):
     table = pd.concat([cells] * replicates, ignore_index=True).assign(y=0.0)
     pair = measuredFactorPairs(table, GENERATED | {'grouping_factors': 'a;b'}).loc[('a', 'b')]
     assert (pair['relation'], pair['empty_cell_share']) == ('crossed', 0)
+
+
+@settings(max_examples=100, deadline=None)
+@given(table=tables())
+def test_a_condition_index_is_at_least_one(table):
+    """Whatever the columns, the largest singular value is at least the smallest."""
+    documented = GENERATED | {'covariates': 'x;o'}
+    dimensions = measuredDimensions(table, documented)
+    for condition in ('condition_doc', 'condition_all'):
+        assert (dimensions[condition].dropna() >= 1).all(), condition
