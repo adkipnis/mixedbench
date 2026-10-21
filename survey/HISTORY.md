@@ -438,3 +438,26 @@ reading's open disagreements, four to eight per tier.
 - `suite/admit.py`'s rerun moved all 608 contract hashes of `suite/1.1/candidates.csv`, in the
   hash alone; the refused rows are unchanged. It is a patch, 1.0.6, as for #57: no suite is
   frozen before release 1.1.
+
+## Integer covariates (#108, 2026-10-21)
+
+- An integer covariate with at most ten values was categorical by default. It is now
+  continuous unless the source stores it as a factor or `types` declares it categorical
+  (ADR 0001, amended 2026-10-21).
+- The four columns the documented formula wraps in `factor()` were declared categorical
+  through `shards/registry_integer_covariates.csv`: gopherdat2 `year`, koch `day`,
+  gomez.splitsplit `nitro` and towerl `group`. Their contract hashes stay.
+- The merge measured the registry again, and 327 columns of `columns.csv` went from categorical
+  to continuous.
+- Five rows whose source transforms the column stand on #82's rule, which keeps an offset, a
+  transform or a subset in the formula only:
+  - Owls `offset(log(BroodSize))`, like gopherdat2's `offset(log(Area))`;
+  - bacteria `I(week > 2)`;
+  - muscatine `cage` and `cage2`, where `cage = age − 12` is exact after z-scoring;
+  - posteriordb radon_all `floor_measure`, which posteriordb's Stan program multiplies as a
+    number, its code 9 included;
+  - stan_arm srrs2 `floor`, 0/1 in the Minnesota subset that ARM fits.
+- The `continuous` declarations that #82 added for integer columns now restate the rule.
+- `suite/admit.py`'s rerun moved the contract hashes of 49 candidates, in the hash alone; the
+  refused rows are unchanged. It is a patch, 1.0.7, as for #57: no suite is frozen before
+  release 1.1.
