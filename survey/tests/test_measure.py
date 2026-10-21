@@ -470,6 +470,15 @@ def test_group_level_r2_needs_a_partner_and_a_group_to_spare(herds, rows):
     assert pd.isna(model2[('weight', 'herd')])
 
 
+def test_a_column_missing_on_every_measured_row_is_no_partner(herds, rows):
+    """A column with no observed value is constant within every group, but as a partner it
+    would leave no row complete, as radon's windoor blanked every R² against county. Sick keeps
+    its R² of −0.7704 on feed alone."""
+    empty = herds.assign(empty=float('nan'))
+    r2 = measuredColumnFactors(empty, rows[0]).loc[('sick', 'herd'), 'group_level_r2']
+    assert r2 == -0.7704
+
+
 def test_a_column_missing_on_every_measured_row_relates_to_no_factor(herds, rows):
     """Two ordered columns of the registry are missing wherever the response is measured, so
     they have no groups and no levels to relate."""
