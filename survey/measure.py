@@ -192,8 +192,10 @@ class Measurer:
 
     @staticmethod
     def computeConditionIndex(problem: Problem) -> float:
-        """Belsley, Kuh and Welsch's (1980) σ_max / σ_min of the standardized full-regime design,
-        intercept included, each column scaled to unit length; inf when rank-deficient."""
+        """The condition index σ_max / σ_min of the standardized full-regime design, intercept
+        included, each column scaled to unit length as Belsley, Kuh and Welsch (1980) scale it;
+        inf when rank-deficient. Unlike their index, it is taken after the contract centers the
+        continuous columns, so their collinearity with the intercept does not count."""
         design = problem.standardized()[list(problem.design)]
         scaled = (design / np.sqrt((design**2).sum())).to_numpy()
         # a constant continuous column standardizes to 0/0, and an interaction's empty cell
