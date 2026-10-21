@@ -71,7 +71,7 @@ be computed here, from the cached tables, and shipped in a pinned release. Grill
 
 - Decision: `survey/measure.py` runs the whole pass as a script and writes the measured
   files and the summary; `merge.py` calls the same function on every merge.
-- Decision: the pass ships as a patch release (1.0.7): no row changes, and the next minor
+- Decision: the pass ships as a patch release (1.0.8): no row changes, and the next minor
   release names a suite freeze (ADR 0002, amended 2026-10-20).
 - Decision: which quirks real tables show strongly enough to earn a generator axis is TabDGP's
   reading of these files, never a decision taken here.
