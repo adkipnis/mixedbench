@@ -40,6 +40,14 @@ COLUMN_FACTOR_COLUMNS = (
     *IDENTITY, 'column', 'factor', 'between_group_share', 'group_level_r2', 'absent_level_share',
     'size_rho', 'within_sd_cv',
 )  # fmt: skip
+FACTOR_PAIR_COLUMNS = (
+    *IDENTITY,
+    'factor_a',
+    'factor_b',
+    'relation',
+    'superior',
+    'empty_cell_share',
+)
 
 
 def fitAlpha(sizes: pd.Series) -> float:
@@ -108,6 +116,13 @@ class Measurer:
                 pairs.append(self.identity | key | self.relate(column, factor))
         return pairs
 
+    def factorPairs(self) -> list[dict]:
+        pairs = []
+        for a, b in combinations(self.factors, 2):
+            key = {'factor_a': a, 'factor_b': b}
+            pairs.append(self.identity | key | self.relateFactors(a, b))
+        return pairs
+
     # ---------------------------------------------------------------------------------
     # relation
     # ---------------------------------------------------------------------------------
@@ -131,6 +146,17 @@ class Measurer:
     def oneParentEach(levels: pd.DataFrame, child: str, parent: str) -> bool:
         parents = levels.groupby(child, observed=True)[parent].nunique()
         return bool(parents.max() == 1)
+
+    def relateFactors(self, a: str, b: str) -> dict:
+        if self.nested(a, b):
+            return {'relation': 'nested'} | self.findSuperior(a, b)
+        return {'relation': 'crossed'}
+
+    def findSuperior(self, a: str, b: str) -> dict:
+        """The factor whose groups each hold whole groups of the other."""
+        levels = self.table[[a, b]].drop_duplicates()
+        superior = a if self.oneParentEach(levels, b, a) else b
+        return {'superior': superior}
 
     # ---------------------------------------------------------------------------------
     # group sizes
