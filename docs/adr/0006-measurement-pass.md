@@ -48,11 +48,13 @@ be computed here, from the cached tables, and shipped in a pinned release. Grill
   over groups with two or more rows.
 - Per factor pair: `relation` (`nested` or `crossed`, by the test `dimensions.csv` uses),
   `superior` for a nested pair, `empty_cell_share` of the m_a × m_b cells for a crossed one.
-- Per row: `condition_doc` and `condition_all`, Belsley, Kuh and Welsch's (1980) condition
-  index of the contract's design with the intercept, every column scaled to unit length,
-  σ_max / σ_min, inf when rank-deficient; `condition_doc` over the documented model's design
-  from `Problem.standardized`, `condition_all` over the same coding of every measured column
-  plus the documented interactions; blank for a row the contract refuses.
+- Per row: `condition_doc` and `condition_all`, the condition index σ_max / σ_min of the
+  contract's design with the intercept, every column scaled to unit length as Belsley, Kuh and
+  Welsch (1980) scale it, inf when rank-deficient. Unlike their index, it is taken after the
+  contract centers the continuous columns, so their collinearity with the intercept does not
+  count. `condition_doc` over the documented model's design from `Problem.standardized`,
+  `condition_all` over the same coding of every measured column plus the documented
+  interactions; blank for a row the contract refuses.
 - Why the adjustments: raw η² tends to 1 as the groups approach the rows, and a group-level
   categorical with many levels fakes a full R²; adjusting both by the group count puts the
   gap between them, the share a latent group-level cause must supply, on one scale.
