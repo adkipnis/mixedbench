@@ -469,7 +469,7 @@ class Merger:
         return (len(table), tuple(sorted(table.nunique())))
 
     # ---------------------------------------------------------------------------------
-    # measure: registry rows -> dimensions.csv, columns.csv, column_factors.csv
+    # measure: registry rows -> dimensions.csv, columns.csv, column_factors.csv, factor_pairs.csv
     # ---------------------------------------------------------------------------------
     def measure(self) -> None:
         """Every merge measures the whole registry from the loaded tables; nothing is typed."""
