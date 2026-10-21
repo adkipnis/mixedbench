@@ -17,7 +17,7 @@ by script.
 |---|---|---|
 | `registry/sources.yaml` | hand, `mirror.py` | the frame (below) |
 | `registry/registry.csv`, `excluded.csv` | `merge.py` | the census tables (below) |
-| `registry/dimensions.csv`, `columns.csv`, `column_factors.csv` | `measure.py`, on every merge too | the measured files (below) |
+| `registry/dimensions.csv`, `columns.csv`, `column_factors.csv`, `factor_pairs.csv` | `measure.py`, on every merge too | the measured files (below) |
 | `registry/manifest.csv` | `merge.py` | per registry object the file it loads from, with sha256 and size |
 | `registry/quantiles.yaml`, `SUMMARY.md` | `merge.py` and `measure.py` via `summarize.py` | every axis pooled, per tier and without agridat; the summary from the digit-free `SUMMARY.template.md` |
 | `registry/help/`, `cache/` | `pull.py`, the loader | untracked: one help page per kept object; downloads |
@@ -178,13 +178,13 @@ rows that named a nested `a:b` by a `b` whose codes repeat across `a` through
   `tier`. A dropped object leaves `registry.csv` and `excluded.csv` until a later shard re-files
   it. One the loader no longer enumerates is deleted from every file instead (#14).
 
-### `dimensions.csv`, `columns.csv` and `column_factors.csv`
+### `dimensions.csv`, `columns.csv`, `column_factors.csv` and `factor_pairs.csv`
 
 - Measures run over the rows with a measured response (dosing rows are no observations).
 - `dimensions.csv`: key `source`, `object`, `model_index`, `factor`, with `tier`. Per grouping
   factor `n_obs`, `n_groups`, `group_size_min`, `group_size_p10`, `group_size_p50`,
   `group_size_p90`, `group_size_max`, `singleton_share`, `cv` (population sd over the mean),
-  `alpha`; per row `n_factors`, `relation`, `d_doc`, `d_all`.
+  `alpha`; per row `n_factors`, `relation`, `d_doc`, `d_all`, `condition_doc`, `condition_all`.
   - `alpha`: the symmetric Dirichlet concentration matched to the group-size proportions,
     `Var(p) = (1 − 1/G) / (G (G α + 1))`; `inf` when balanced.
   - `relation` ∈ `single` / `nested` / `crossed` / `mixed`: nested or crossed when every pair
@@ -192,6 +192,13 @@ rows that named a nested `a:b` by a `b` whose codes repeat across `a` through
   - `d_doc` (documented model) and `d_all` (every column of `columns.csv` plus the documented
     interactions): continuous and binary count 1, a categorical K − 1, an interaction the
     product.
+  - `condition_doc` and `condition_all`: Belsley, Kuh and Welsch's (1980) condition index of
+    the contract's design with the intercept, every column scaled to unit length,
+    σ_max / σ_min to four decimals; `inf` when rank-deficient. `condition_doc` over the
+    documented model's design from `Problem.standardized`, `condition_all` over the same coding
+    of every column of `columns.csv` plus the documented interactions, on the rows complete in
+    all of them. Blank for a row the contract refuses; `condition_all` alone blank when no row
+    is complete or a column mixes strings and numbers (#105).
 - `columns.csv`: key `source`, `object`, `model_index`, `column`, with `tier`; every column
   but the response, trials, grouping factors and ignored ones.
   - `type`, first match: `ordered` if declared; `binary` for two distinct values; `categorical`
@@ -231,6 +238,14 @@ rows that named a nested `a:b` by a `b` whose codes repeat across `a` through
     constant.
   - `within_sd_cv`: the population coefficient of variation of the within-group sample sds over
     the groups of two or more rows; blank with fewer than two such groups or a zero mean.
+- `factor_pairs.csv`: key `source`, `object`, `model_index`, `factor_a`, `factor_b`, with
+  `tier`; a row per pair of a registry row's grouping factors, in their order, none for a row of
+  one factor. Over the rows that observe both factors:
+  - `relation` `nested` or `crossed`, by the test of `dimensions.csv`'s `relation`.
+  - `superior`: the factor whose groups each hold whole groups of the other; blank for a
+    crossed pair and when each holds the other's.
+  - `empty_cell_share`: the share of the m_a × m_b group × group cells that hold no row, to four
+    decimals; blank for a nested pair.
 
 ### `quantiles.yaml`
 
