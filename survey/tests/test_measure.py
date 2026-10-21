@@ -170,6 +170,45 @@ def test_design_columns_of_the_documented_model_and_of_the_whole_table(herds, ro
     assert Measurer(herds, parsed(rows[1])).dimensions()[0]['d_all'] == 12
 
 
+def unitLength(design: np.ndarray) -> np.ndarray:
+    return design / np.linalg.norm(design, axis=0)
+
+
+def test_the_condition_index_of_the_documented_design(herds, rows):
+    """Model 2 with weight: the intercept, weight centered and breed's contrasts against angus,
+    its first level, each scaled to unit length; the index is the ratio of the extreme singular
+    values (Belsley, Kuh and Welsch 1980). Scaling makes weight's standard deviation
+    irrelevant. With every other column ignored, the all-column design is the same."""
+    weighed = rows[1] | {'covariates': 'weight;breed'}
+    weight = herds['weight'].to_numpy()
+    breed = herds['breed'].to_numpy()
+    design = np.column_stack([
+        np.ones(len(herds)), weight - weight.mean(),
+        breed == 'hereford', breed == 'holstein', breed == 'jersey',
+    ]).astype(float)  # fmt: skip
+    singular = np.linalg.svd(unitLength(design), compute_uv=False)
+    dimension = Measurer(herds, parsed(weighed)).dimensions()[0]
+    assert dimension['condition_doc'] == round(singular[0] / singular[-1], 4)
+    alone = weighed | {'ignore': 'id;region;feed;parity;sick'}
+    dimension = Measurer(herds, parsed(alone)).dimensions()[0]
+    assert dimension['condition_all'] == dimension['condition_doc']
+
+
+def test_a_rank_deficient_design_has_an_infinite_condition_index(herds, rows):
+    """Breed and feed leave cells empty, so their interaction has columns of zeros; a dose that
+    never varies is collinear with the intercept, though the contract standardizes it to 0/0;
+    weight in pounds repeats weight in kilograms, among every measured column only."""
+    interacting = rows[0] | {'interactions': 'breed:feed'}
+    assert Measurer(herds, parsed(interacting)).dimensions()[0]['condition_doc'] == np.inf
+    dosed = rows[1] | {'covariates': 'breed;dose'}
+    assert Measurer(herds.assign(dose=2.5), parsed(dosed)).dimensions()[0]['condition_doc'] == np.inf  # fmt: skip
+    pounds = herds.assign(pounds=herds['weight'] * 2.2046)
+    alone = rows[1] | {'covariates': 'weight;breed', 'ignore': 'id;region;feed;parity;sick'}
+    dimension = Measurer(pounds, parsed(alone)).dimensions()[0]
+    assert dimension['condition_doc'] < np.inf
+    assert dimension['condition_all'] == np.inf
+
+
 def test_a_continuous_columns_moments(herds, rows):
     """Weight under model 2 against scipy.stats.skew and kurtosis with bias=False, the
     sample-adjusted G1 and G2. Fourteen rows cannot hold |z| > 4 (at most 13/√14 ≈ 3.47)."""
