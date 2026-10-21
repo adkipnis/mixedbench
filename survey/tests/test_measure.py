@@ -434,6 +434,16 @@ def test_a_crossed_pairs_empty_cells(herds, rows):
     assert measuredFactorPairs(unused, crossed).loc[('herd', 'breed'), 'empty_cell_share'] == 0.35
 
 
+def test_two_factors_that_partition_the_rows_alike_have_no_superior(herds, rows):
+    """Pens that relabel the herds hold whole herds and lie in whole herds, so neither factor is
+    superior to the other, though the pair is nested."""
+    pens = herds.assign(pen=herds['herd'].str.replace('h', 'p'))
+    alike = rows[1] | {'grouping_factors': 'herd;pen'}
+    pair = measuredFactorPairs(pens, alike).loc[('herd', 'pen')]
+    assert pair['relation'] == 'nested'
+    assert pair[['superior', 'empty_cell_share']].isna().all()
+
+
 SHARES = ('outlier_share', 'zero_share', 'min_share', 'max_share', 'unique_share', 'rare_level_share', 'max_abs_rho')  # fmt: skip
 GENERATED = readRows(FIXTURES / 'registry_herds.csv')[0] | {
     'response': 'y', 'grouping_factors': 'g', 'covariates': '', 'ignore': '', 'types': '',
