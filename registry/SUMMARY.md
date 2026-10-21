@@ -6,13 +6,17 @@ design docs, not the envelope itself.
 
 How to read the tables:
 
-- Every number is filled by `merge.py` from `dimensions.csv` and `columns.csv` on each merge;
-  edit `SUMMARY.template.md`, never this file.
+- Every number is filled from the measured files by `merge.py` on each merge, or by
+  `measure.py`; edit `SUMMARY.template.md`, never this file.
 - Quantiles are observed values, never interpolated: below the median the nearest value at
   or below the level, from the median on the nearest value at or above it.
 - Per-factor axes (groups, group sizes, imbalance) count a dataset once per grouping factor;
   dataset axes (observations, grouping factors, design columns) once per registry row; `K`
   once per categorical covariate of a documented model.
+- A quirk statistic counts once per row of its file that defines it: a column, a column and
+  grouping factor, a crossed pair of factors or a registry row. Its table shows the pooled
+  quantiles, `quantiles.yaml` also those per tier and without agridat. Definitions are in the
+  [file contracts](../survey/README.md#file-contracts).
 - The last column of an axis table, `practice`, is the practice survey's upper decile, the
   maximum over the v1 families in [`practice_quantiles.yaml`](../survey/practice_quantiles.yaml)
   (the minimum for the smallest group size), read at merge time; `–` where the practice survey
@@ -224,6 +228,61 @@ its levels less one, an interaction the product.
 | tier D | 104 | 1 | 2 | 3 | 15 | 156 | 294 | 4580 |  |
 | tier O | 13 | 2 | 2 | 2 | 19 | 85 | 23770 | 23770 |  |
 | without agridat | 666 | 0 | 0 | 1 | 5 | 22 | 56 | 23770 |  |
+
+The condition index of the documented design and of the design over every column, intercept
+included and every column scaled to unit length; infinite when the design is rank-deficient.
+
+| statistic | n | min | p5 | p10 | p50 | p90 | p95 | max |
+|---|---|---|---|---|---|---|---|---|
+| condition_doc | 673 | 1 | 1 | 1 | 3.3758 | 13.9282 | 25.9406 | inf |
+| condition_all | 668 | 1 | 1 | 1 | 4.7592 | inf | inf | inf |
+
+## Quirk statistics per column
+
+Every column of `columns.csv`, documented or not, by the statistics its type defines.
+
+| statistic | n | min | p5 | p10 | p50 | p90 | p95 | max |
+|---|---|---|---|---|---|---|---|---|
+| skewness | 1884 | -6.4268 | -0.7986 | -0.5114 | 0.1893 | 2.5794 | 4.1538 | 22.8556 |
+| excess_kurtosis | 1884 | -1.9902 | -1.2703 | -1.1474 | -0.2234 | 10.0618 | 21.8492 | 1191.6867 |
+| outlier_share | 1884 | 0 | 0 | 0 | 0 | 0.01 | 0.0146 | 0.04 |
+| zero_share | 1892 | 0 | 0 | 0 | 0 | 0.1452 | 0.4061 | 1 |
+| min_share | 2059 | 0 | 0.0003 | 0.001 | 0.0284 | 0.4179 | 0.6307 | 1 |
+| max_share | 2059 | 0 | 0.0001 | 0.0004 | 0.0132 | 0.1975 | 0.2903 | 1 |
+| unique_share | 4026 | 0 | 0.0001 | 0.0004 | 0.0117 | 0.3625 | 0.8095 | 1 |
+| rare_level_share | 2137 | 0 | 0.0015 | 0.0032 | 0.1667 | 0.4936 | 0.5 | 1 |
+| max_abs_rho | 2909 | 0 | 0.007 | 0.0326 | 0.3929 | 0.8945 | 0.9799 | 1 |
+
+## Quirk statistics per column and grouping factor
+
+Every column against every grouping factor of its registry row.
+
+| statistic | n | min | p5 | p10 | p50 | p90 | p95 | max |
+|---|---|---|---|---|---|---|---|---|
+| between_group_share | 4134 | -1.6916 | -0.0909 | -0.0128 | 0.2457 | 1 | 1 | 1 |
+| group_level_r2 | 2124 | -29.5505 | -2.3385 | -0.1949 | 0.0117 | 1 | 1 | 1 |
+| absent_level_share | 2944 | 0 | 0 | 0 | 0.4091 | 0.8333 | 0.9513 | 0.9983 |
+| size_rho | 3330 | -1 | -0.8208 | -0.4588 | 0.0294 | 0.5338 | 0.8 | 1 |
+| within_sd_cv | 2979 | 0 | 0 | 0.0002 | 0.2436 | 1.4767 | 2.6522 | 129.5068 |
+
+## Quirk statistics per factor pair
+
+Every pair of grouping factors of a registry row: the empty cells over the crossed pairs, and
+which factor of a nested pair is the superior, the one listed first, second or neither.
+
+| statistic | n | min | p5 | p10 | p50 | p90 | p95 | max |
+|---|---|---|---|---|---|---|---|---|
+| empty_cell_share | 155 | 0 | 0 | 0 | 0.0727 | 0.8964 | 0.9523 | 0.9992 |
+
+| pair relation | n | share |
+|---|---|---|
+| crossed | 155 | 56% |
+| nested | 123 | 44% |
+
+| superior | n | share |
+|---|---|---|
+| factor_a | 103 | 84% |
+| factor_b | 20 | 16% |
 
 ## Response, reader and published model
 
