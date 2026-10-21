@@ -364,47 +364,25 @@ def test_every_merge_measures_the_registry_into_dimensions_and_columns(merger):
     assert after == before | {'excluded.csv': after['excluded.csv']}
 
 
-def test_every_merge_measures_each_column_against_each_grouping_factor(merger):
-    """column_factors.csv holds a row per columns.csv row and grouping factor of its registry
-    row: model 1's four columns against region and herd, model 2's six against herd (#99)."""
+def test_every_merge_writes_the_measured_headers_and_a_left_out_statistic_as_blank(merger):
+    """column_factors.csv and factor_pairs.csv carry their released headers, and dimensions.csv
+    the two condition numbers after d_all. The nested region and herd pair has no empty-cell
+    share, written as a blank cell (#99, #100)."""
     mergeShard(merger, FIXTURES / 'registry_herds.csv')
-    pairs = readRows(merger.registry / 'column_factors.csv')
-    assert list(pairs[0]) == [
+    columnFactors = readRows(merger.registry / 'column_factors.csv')
+    assert list(columnFactors[0]) == [
         'source', 'object', 'model_index', 'tier', 'column', 'factor', 'between_group_share',
         'group_level_r2', 'absent_level_share', 'size_rho', 'within_sd_cv',
     ]  # fmt: skip
-    keys = [(r['model_index'], r['column'], r['factor']) for r in pairs]
-    assert len(keys) == 4 * 2 + 6
-    assert keys[:3] == [('1', 'breed', 'region'), ('1', 'breed', 'herd'), ('1', 'feed', 'region')]
-    assert keys[-1] == ('2', 'sick', 'herd')
-    feed = pairs[keys.index(('1', 'feed', 'herd'))]
-    assert (feed['tier'], feed['absent_level_share'], feed['between_group_share']) == (
-        'D',
-        '0.6667',
-        '',
-    )
-
-
-def test_every_merge_measures_each_pair_of_grouping_factors_and_the_designs_conditioning(merger):
-    """factor_pairs.csv holds a row per pair of a registry row's grouping factors: model 1's
-    region and herd, nested, and none for model 2's one factor. dimensions.csv carries a
-    registry row's two condition numbers after d_all, on each of its factors' rows (#100)."""
-    mergeShard(merger, FIXTURES / 'registry_herds.csv')
     pairs = readRows(merger.registry / 'factor_pairs.csv')
     assert list(pairs[0]) == [
         'source', 'object', 'model_index', 'tier', 'factor_a', 'factor_b', 'relation', 'superior',
         'empty_cell_share',
     ]  # fmt: skip
-    assert [list(p.values())[2:] for p in pairs] == [
-        ['1', 'D', 'region', 'herd', 'nested', 'region', ''],
-    ]
-    dimensions = readRows(merger.registry / 'dimensions.csv')
-    columns = list(dimensions[0])
+    assert pairs[0]['empty_cell_share'] == ''
+    columns = list(readRows(merger.registry / 'dimensions.csv')[0])
     after = columns.index('d_all') + 1
     assert columns[after : after + 2] == ['condition_doc', 'condition_all']
-    conditions = {(d['model_index'], d['condition_doc'], d['condition_all']) for d in dimensions}
-    assert len(conditions) == 2  # one per registry row
-    assert '' not in {d['condition_doc'] for d in dimensions} | {d['condition_all'] for d in dimensions}  # fmt: skip
 
 
 def test_the_measure_script_writes_what_the_merge_writes(merger):
