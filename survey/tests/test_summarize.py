@@ -3,9 +3,11 @@ out (#18), over the scratch registry of conftest."""
 
 import re
 
+import pandas as pd
 import pytest
 import yaml
-from conftest import FIXTURES, mergeShard
+from conftest import FIXTURES, mergeShard, readRows
+from mixedbench.registry.row import writeCsv
 from summarize import PRACTICE, PRACTICE_FAMILIES, TEMPLATE
 
 QUANTILE_KEYS = ('n', 'min', 'p5', 'p10', 'p50', 'p90', 'p95', 'max')
@@ -73,6 +75,23 @@ def test_quirk_statistics_follow_the_released_axes_counted_once_per_their_key(me
         'within_sd_cv': 6, 'empty_cell_share': 0, 'condition_doc': 2, 'condition_all': 2,
     }  # fmt: skip
     assert axes['between_group_share']['pooled']['min'] == -0.2986  # negatives kept
+
+
+def test_factor_pairs_share_their_relation_and_the_side_of_their_superior(merger):
+    """The herds table's first model with two others: region and herd listed inner factor first,
+    and herd crossed with breed. Of the three pairs two are nested, the superior listed first in one and
+    second in the other; only the crossed pair has empty cells, 7 of the 20 herd × breed (#101)."""
+    first = readRows(FIXTURES / 'registry_herds.csv')[0]
+    inverted = first | {'model_index': '2', 'grouping_factors': 'herd;region', 'formula': 'weight ~ breed + feed + (1 | herd) + (1 | region)'}  # fmt: skip
+    crossed = first | {'model_index': '3', 'grouping_factors': 'herd;breed', 'covariates': 'feed', 'formula': 'weight ~ feed + (1 | herd) + (1 | breed)'}  # fmt: skip
+    shard = merger.survey / 'shards' / 'registry_pairs.csv'
+    writeCsv(pd.DataFrame([first, inverted, crossed]), shard)
+    mergeShard(merger, shard)
+    quantiles = yaml.safe_load((merger.registry / 'quantiles.yaml').read_text())
+    assert quantiles['shares']['pair_relation'] == {'nested': 0.667, 'crossed': 0.333}
+    assert quantiles['shares']['superior'] == {'factor_a': 0.5, 'factor_b': 0.5}
+    pooled = quantiles['axes']['empty_cell_share']['pooled']
+    assert (pooled['n'], pooled['min'], pooled['max']) == (1, 0.35, 0.35)
 
 
 def test_summary_template_has_no_hand_typed_digits():
