@@ -13,12 +13,14 @@ from summarize import PRACTICE, PRACTICE_FAMILIES, TEMPLATE
 QUANTILE_KEYS = ('n', 'min', 'p5', 'p10', 'p50', 'p90', 'p95', 'max')
 FACTOR_AXES = ('n_groups', 'group_size_min', 'group_size_p10', 'group_size_p50', 'group_size_p90', 'group_size_max', 'singleton_share', 'cv', 'alpha')  # fmt: skip
 ROW_AXES = ('n_obs', 'n_grouping_factors', 'd_doc', 'd_all')
-QUIRK_AXES = (
+COLUMN_AXES = (
     'skewness', 'excess_kurtosis', 'outlier_share', 'zero_share', 'min_share', 'max_share',
-    'unique_share', 'rare_level_share', 'max_abs_rho', 'between_group_share', 'group_level_r2',
-    'absent_level_share', 'size_rho', 'within_sd_cv', 'empty_cell_share', 'condition_doc',
-    'condition_all',
+    'unique_share', 'rare_level_share', 'max_abs_rho',
 )  # fmt: skip
+COLUMN_FACTOR_AXES = ('between_group_share', 'group_level_r2', 'absent_level_share', 'size_rho', 'within_sd_cv')  # fmt: skip
+FACTOR_PAIR_AXES = ('empty_cell_share',)
+CONDITION_AXES = ('condition_doc', 'condition_all')
+QUIRK_AXES = (*COLUMN_AXES, *COLUMN_FACTOR_AXES, *FACTOR_PAIR_AXES, *CONDITION_AXES)
 
 
 def test_quantiles_carry_every_axis_pooled_per_tier_and_without_agridat(merger):
@@ -94,11 +96,17 @@ def test_factor_pairs_share_their_relation_and_the_side_of_their_superior(merger
     assert (pooled['n'], pooled['min'], pooled['max']) == (1, 0.35, 0.35)
 
 
-def statisticRows(summary: str, heading: str) -> list[list[str]]:
-    """The cells of the statistic table under a heading, one list per statistic."""
-    section = summary.split(f'## {heading}\n', 1)[1].split('\n## ', 1)[0]
-    table = section[section.index('| statistic |') :].split('\n\n', 1)[0]
+def tableRows(text: str, header: str) -> list[list[str]]:
+    """The cells of the first Markdown table in the text whose header line starts with `header`,
+    one list per body row."""
+    table = text[text.index(header) :].split('\n\n', 1)[0]
     return [line.strip('| ').split(' | ') for line in table.splitlines()[2:]]
+
+
+def practiceP90s(axis: str) -> list[int | float]:
+    """The practice survey's p90 of an axis, one per v1 family."""
+    families = yaml.safe_load(PRACTICE.read_text())['families']
+    return [families[f]['p90'][axis] for f in PRACTICE_FAMILIES]
 
 
 def test_summary_shows_one_pooled_table_per_measured_file(merger):
@@ -107,16 +115,17 @@ def test_summary_shows_one_pooled_table_per_measured_file(merger):
     shares their statistic (#101)."""
     mergeShard(merger, FIXTURES / 'registry_herds.csv')
     summary = (merger.registry / 'SUMMARY.md').read_text()
-    columns = statisticRows(summary, 'Quirk statistics per column')
-    assert [row[0] for row in columns] == list(QUIRK_AXES[:9])
-    columnFactors = statisticRows(summary, 'Quirk statistics per column and grouping factor')
-    assert [row[0] for row in columnFactors] == list(QUIRK_AXES[9:14])
-    assert [row[0] for row in statisticRows(summary, 'Quirk statistics per factor pair')] == ['empty_cell_share']  # fmt: skip
-    assert statisticRows(summary, 'Design columns') == [
+    columns = summary.split('## Quirk statistics per column\n', 1)[1]
+    assert [row[0] for row in tableRows(columns, '| statistic |')] == list(COLUMN_AXES)
+    columnFactors = summary.split('## Quirk statistics per column and grouping factor\n', 1)[1]
+    assert [row[0] for row in tableRows(columnFactors, '| statistic |')] == list(COLUMN_FACTOR_AXES)
+    pairs = summary.split('## Quirk statistics per factor pair\n', 1)[1]
+    assert [row[0] for row in tableRows(pairs, '| statistic |')] == list(FACTOR_PAIR_AXES)
+    design = summary.split('## Design columns\n', 1)[1]
+    assert tableRows(design, '| statistic |') == [
         ['condition_doc', '2', '3.452', '3.452', '3.452', '6.5784', '6.5784', '6.5784', '6.5784'],
         ['condition_all', '2', '10.2274', '10.2274', '10.2274', '44.2555', '44.2555', '44.2555', '44.2555'],
     ]  # fmt: skip
-    pairs = summary.split('## Quirk statistics per factor pair\n', 1)[1]
     assert '| pair relation | n | share |' in pairs and '| superior | n | share |' in pairs
 
 
@@ -131,15 +140,12 @@ def test_summary_tables_end_with_the_practice_p90_read_from_the_practice_file(me
     mergeShard(merger, FIXTURES / 'registry_herds.csv')
     mergeShard(merger, FIXTURES / 'excluded_cattle.csv')
     summary = (merger.registry / 'SUMMARY.md').read_text()
-    families = yaml.safe_load(PRACTICE.read_text())['families']
-    p90 = lambda key: [families[f]['p90'][key] for f in PRACTICE_FAMILIES]
-    tables = {m.group(1): m.group(0) for m in re.finditer(r'\| (\w+) \| n \| min \|.*?(?=\n\n)', summary, re.DOTALL)}  # fmt: skip
-    assert set(tables) >= {'n_obs', 'n_groups', 'group_size_min', 'alpha', 'd_doc', 'K'}
-    rows = lambda axis: [line.split(' | ') for line in tables[axis].splitlines()[2:]]
-    assert [r[0] for r in rows('n_obs')] == ['| pooled', '| tier D', '| without agridat']
-    assert rows('n_obs')[0] == ['| pooled', '2', '14', '14', '14', '14', '14', '14', '14', f'{max(p90("n_obs"))} |']  # fmt: skip
-    assert rows('n_groups')[0][-1] == f'{max(p90("n_groups_per_factor"))} |'
-    assert rows('group_size_min')[0][-1] == f'{min(p90("group_size_min"))} |'
-    assert rows('d_doc')[0][-1] == f'{max(p90("n_fixed_effects"))} |'
-    assert rows('alpha')[0][-1] == '– |'
+    assert '| K | n | min |' in summary
+    observations = tableRows(summary, '| n_obs | n | min |')
+    assert [row[0] for row in observations] == ['pooled', 'tier D', 'without agridat']
+    assert observations[0] == ['pooled', '2', '14', '14', '14', '14', '14', '14', '14', f'{max(practiceP90s("n_obs"))}']  # fmt: skip
+    assert tableRows(summary, '| n_groups | n | min |')[0][-1] == f'{max(practiceP90s("n_groups_per_factor"))}'  # fmt: skip
+    assert tableRows(summary, '| group_size_min | n | min |')[0][-1] == f'{min(practiceP90s("group_size_min"))}'  # fmt: skip
+    assert tableRows(summary, '| d_doc | n | min |')[0][-1] == f'{max(practiceP90s("n_fixed_effects"))}'  # fmt: skip
+    assert tableRows(summary, '| alpha | n | min |')[0][-1] == '–'
     assert 'Excluded: 1 objects' in summary and 'derived or duplicated table 1' in summary
