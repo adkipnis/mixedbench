@@ -333,10 +333,13 @@ class Measurer:
         if kind != 'continuous':
             absent = self.measureEmptyCells(self.table.loc[both, [factor, column]])
             statistics['absent_level_share'] = absent
-        if kind != 'categorical':
-            values = self.codeColumn(column, kind)[both]
-            statistics |= self.betweenGroupShare(values, groups) | self.sizeRho(values, groups)
-            statistics |= self.withinSdCv(values, groups) | self.groupLevelR2(column, factor, kind)
+        if kind == 'categorical':
+            return statistics
+        values = self.codeColumn(column, kind)[both]
+        if values.nunique() < 2:  # a constant column has nothing to share, rank, spread or explain
+            return statistics
+        statistics |= self.betweenGroupShare(values, groups) | self.sizeRho(values, groups)
+        statistics |= self.withinSdCv(values, groups) | self.groupLevelR2(column, factor, kind)
         return statistics
 
     @staticmethod
@@ -353,7 +356,7 @@ class Measurer:
         """The adjusted ICC(1) of a one-way analysis of variance,
         (MSB − MSW) / (MSB + (k₀ − 1) MSW) with k₀ = (n − Σ nⱼ² / n) / (m − 1)
         (Snijders & Bosker 2012, section 3.3.1).
-        None with one group, when every group is a singleton or the column is constant."""
+        None with one group or when every group is a singleton."""
         grouped = values.groupby(groups, observed=True)
         sizes = grouped.size()
         n, m = int(sizes.sum()), len(sizes)
@@ -361,8 +364,6 @@ class Measurer:
             return {}
         between = float((sizes * (grouped.mean() - values.mean()) ** 2).sum())
         within = float(((values - grouped.transform('mean')) ** 2).sum())
-        if between + within == 0:  # a constant column has no variance to share
-            return {}
         msb, msw = between / (m - 1), within / (n - m)
         k0 = (n - float((sizes**2).sum()) / n) / (m - 1)
         return {'between_group_share': round((msb - msw) / (msb + (k0 - 1) * msw), 4)}
@@ -391,7 +392,7 @@ class Measurer:
         """The row-level R² of the column on the factor's other group-level columns, adjusted by
         the group count m and the design's rank p, 1 − (1 − R²)(m − 1) / (m − p − 1), over the
         rows that observe them all. Blank when the partners span nothing beyond the intercept,
-        leave no degree of freedom, or the column is constant."""
+        leave no degree of freedom, or the column is constant on those rows."""
         partners = [c for c in self.groupLevel[factor] if c != column]
         complete = self.table[[column, factor, *partners]].dropna().index
         y = self.codeColumn(column, kind)[complete].to_numpy(float)
@@ -401,9 +402,9 @@ class Measurer:
         p = rank - 1
         if p == 0 or m - p - 1 <= 0:
             return {}
-        total = float(((y - y.mean()) ** 2).sum())
-        if total == 0:  # a constant column has no variance to explain
+        if len(np.unique(y)) < 2:  # a constant column has no variance to explain
             return {}
+        total = float(((y - y.mean()) ** 2).sum())
         r2 = 1 - float(((y - design @ coefficients) ** 2).sum()) / total
         return {'group_level_r2': round(float(1 - (1 - r2) * (m - 1) / (m - p - 1)), 4)}
 
