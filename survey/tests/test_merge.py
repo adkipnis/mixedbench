@@ -15,7 +15,7 @@ from sources import readFrame
 
 RENAMED_TYPES = 'area=categorical;farm=categorical;type=categorical;diet=categorical'
 SURVEY = Path(__file__).resolve().parents[1]
-MEASURED = ('dimensions.csv', 'columns.csv', 'column_factors.csv')
+MEASURED = ('dimensions.csv', 'columns.csv', 'column_factors.csv', 'factor_pairs.csv')
 
 
 def test_passing_registry_shard_merges_with_tier_and_reader_filled_in(merger):
@@ -320,7 +320,7 @@ def test_the_census_lands_in_the_registry_and_the_bookkeeping_in_the_survey(spli
     mergeShard(merger, FIXTURES / 'registry_cattle.csv')  # flags the pair with herds
     registryFiles = sorted(p.name for p in merger.registry.iterdir() if p.is_file())
     surveyFiles = sorted(p.name for p in merger.survey.iterdir() if p.is_file())
-    assert registryFiles == ['SUMMARY.md', 'column_factors.csv', 'columns.csv', 'dimensions.csv', 'excluded.csv', 'manifest.csv', 'quantiles.yaml', 'registry.csv', 'sources.yaml']  # fmt: skip
+    assert registryFiles == ['SUMMARY.md', 'column_factors.csv', 'columns.csv', 'dimensions.csv', 'excluded.csv', 'factor_pairs.csv', 'manifest.csv', 'quantiles.yaml', 'registry.csv', 'sources.yaml']  # fmt: skip
     assert surveyFiles == ['dropped.csv', 'duplicates.csv']
 
 
@@ -383,6 +383,28 @@ def test_every_merge_measures_each_column_against_each_grouping_factor(merger):
         '0.6667',
         '',
     )
+
+
+def test_every_merge_measures_each_pair_of_grouping_factors_and_the_designs_conditioning(merger):
+    """factor_pairs.csv holds a row per pair of a registry row's grouping factors: model 1's
+    region and herd, nested, and none for model 2's one factor. dimensions.csv carries a
+    registry row's two condition numbers after d_all, on each of its factors' rows (#100)."""
+    mergeShard(merger, FIXTURES / 'registry_herds.csv')
+    pairs = readRows(merger.registry / 'factor_pairs.csv')
+    assert list(pairs[0]) == [
+        'source', 'object', 'model_index', 'tier', 'factor_a', 'factor_b', 'relation', 'superior',
+        'empty_cell_share',
+    ]  # fmt: skip
+    assert [list(p.values())[2:] for p in pairs] == [
+        ['1', 'D', 'region', 'herd', 'nested', 'region', ''],
+    ]
+    dimensions = readRows(merger.registry / 'dimensions.csv')
+    columns = list(dimensions[0])
+    after = columns.index('d_all') + 1
+    assert columns[after : after + 2] == ['condition_doc', 'condition_all']
+    conditions = {(d['model_index'], d['condition_doc'], d['condition_all']) for d in dimensions}
+    assert len(conditions) == 2  # one per registry row
+    assert '' not in {d['condition_doc'] for d in dimensions} | {d['condition_all'] for d in dimensions}  # fmt: skip
 
 
 def test_the_measure_script_writes_what_the_merge_writes(merger):
