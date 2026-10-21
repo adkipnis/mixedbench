@@ -111,7 +111,7 @@ class Measurer:
     # ---------------------------------------------------------------------------------
     def describe(self, column: str) -> dict:
         values = self.table[column]
-        kind, levels = columnType(values, self.row.types.get(column, ''))
+        kind, levels = columnType(values)
         constantWithin = [f for f in self.factors if self.constantWithin(column, f)]
         return {
             'type': kind,

@@ -1,5 +1,5 @@
 ---
-status: accepted, amended 2026-10-09, 2026-10-10 and 2026-10-20
+status: accepted, amended 2026-10-09, 2026-10-10, 2026-10-20 and 2026-10-21
 date: 2026-10-08
 ---
 
@@ -28,6 +28,9 @@ any rule is a new suite version, never a recomputation.
 
 > Amended 2026-10-09 below: the standardization is computed per regime on the rows a fit
 > sees; the coding stays the full table's.
+
+> Amended 2026-10-21 below: an integer covariate is continuous unless the source stores it as
+> a factor or `types` declares it categorical.
 
 **Family rule.**
 
@@ -181,4 +184,21 @@ any rule is a new suite version, never a recomputation.
 **Hashes.**
 
 - Decision: every contract hash moves, as a patch, since no suite is frozen before
+  release 1.1.
+
+## Amendment 2026-10-21: integer covariates (#108)
+
+**Typing.**
+
+- Decision: an integer covariate is continuous however few its values, unless the source
+  stores it as a factor or the row's `types` declares it categorical. A column the documented
+  formula wraps in `factor()` is declared categorical.
+- Why: the earlier rule made an integer column with at most 10 values categorical. In 49 of the
+  608 candidates the source fits such a column as one slope, which the problem replaced by K − 1
+  contrasts, and a random slope on it grew a 2 × 2 block into a K × K one. Only four candidates
+  wrap an integer column in `factor()`.
+
+**Hashes.**
+
+- Decision: the 49 contract hashes move, as a patch, since no suite is frozen before
   release 1.1.

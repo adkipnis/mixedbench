@@ -194,8 +194,8 @@ rows that named a nested `a:b` by a `b` whose codes repeat across `a` through
 - `columns.csv`: key `source`, `object`, `model_index`, `column`, with `tier`; every column
   but the response, trials, grouping factors and ignored ones.
   - `type`, first match: `ordered` if declared; `binary` for two distinct values; `categorical`
-    with `K` levels if declared, a string, or an integer column with at most 10 values not
-    declared continuous; `continuous`.
+    with `K` levels if declared, stored as a factor, or a string; `continuous`, an integer
+    column included.
   - `level` `group` when constant within every group of some factor (`constant_within` names
     them), else `within`; `missing_share`; `in_model` `yes` for a documented covariate.
 

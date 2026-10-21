@@ -90,6 +90,20 @@ def test_the_design_has_the_coded_columns_in_order_with_the_intercept_first() ->
     assert all(design[c].dtype == np.float64 for c in problem.design)
 
 
+def test_an_integer_covariate_is_continuous_unless_it_arrives_as_a_categorical() -> None:
+    """An integer column with few values is one slope, as its source fits it (#108).
+    An R factor, or a column the row declares categorical, reaches the contract as a pandas
+    categorical (the loader applies `types`) and becomes treatment contrasts."""
+    row = fixtureRow(covariates=('x', 'rating'), interactions=())
+    plain = Problem.build(row, fixtureTable())
+    assert plain.design == ('Intercept', 'x', 'rating')
+    assert plain.table['rating'].tolist() == RATING
+    assert plain.scales['full'][0]['rating'] == momentsOf(RATING, pd.Series([True] * 12))
+    factor = fixtureTable().astype({'rating': 'category'})
+    coded = Problem.build(row, factor)
+    assert coded.design == ('Intercept', 'x', 'rating[3]', 'rating[5]')
+
+
 def test_a_grouping_factor_is_integer_coded_with_its_levels_listed() -> None:
     """A factor column holds 0-based codes in the loaded level order and `levels` says which
     level each code is; the composite `block:plot` is built from its parts, its levels the
