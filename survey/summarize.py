@@ -12,7 +12,7 @@ from string import Template
 
 import pandas as pd
 import yaml
-from measure import observed
+from measure import COLUMN_FACTOR_STATISTICS, COLUMN_STATISTICS, observed
 from mixedbench.registry.row import readCsv
 from schema import TIERS
 
@@ -45,6 +45,9 @@ FACTOR_AXES = (
     'group_size_max', 'singleton_share', 'cv', 'alpha',
 )  # fmt: skip
 ROW_AXES = {'n_obs': 'n_obs', 'n_grouping_factors': 'n_factors', 'd_doc': 'd_doc', 'd_all': 'd_all'}  # fmt: skip
+# The quirk statistics of the other keys: per crossed factor pair, and per registry row.
+PAIR_STATISTICS = ('empty_cell_share',)
+CONDITIONS = ('condition_doc', 'condition_all')
 CATEGORICAL_TYPES = ('categorical', 'ordered')
 TERMS = (9, 14)  # the practice survey's p90 and p95 of fixed-effect terms (envelope rule 4)
 K_TAIL = 10  # the summary's K table pools the levels above this (the columns rule's integer cap)
@@ -58,9 +61,12 @@ class Summarizer:
         self.root, self.survey = Path(root), Path(survey)  # the registry folder, the survey's
         self.registry = readCsv(self.root / 'registry.csv')
         self.excluded = readCsv(self.root / 'excluded.csv')
-        measured = FACTOR_AXES + tuple(ROW_AXES.values())
+        measured = FACTOR_AXES + tuple(ROW_AXES.values()) + CONDITIONS
         self.dimensions = self.numeric(readCsv(self.root / 'dimensions.csv'), measured)
-        self.columns = self.numeric(readCsv(self.root / 'columns.csv'), ('K',))
+        self.columns = self.numeric(readCsv(self.root / 'columns.csv'), ('K', *COLUMN_STATISTICS))
+        columnFactors = readCsv(self.root / 'column_factors.csv')
+        self.columnFactors = self.numeric(columnFactors, COLUMN_FACTOR_STATISTICS)
+        self.pairs = self.numeric(readCsv(self.root / 'factor_pairs.csv'), PAIR_STATISTICS)
         self.rows = self.dimensions.drop_duplicates(['source', 'object', 'model_index'])
         self.modeled = self.columns[self.columns['in_model'] == 'yes']
         self.categoricals = self.modeled[self.modeled['type'].isin(CATEGORICAL_TYPES)]
@@ -82,6 +88,10 @@ class Summarizer:
         axes = {axis: self.axis(self.dimensions, axis) for axis in FACTOR_AXES}
         axes |= {axis: self.axis(self.rows, column) for axis, column in ROW_AXES.items()}
         axes['K'] = self.axis(self.categoricals, 'K')
+        axes |= {axis: self.axis(self.columns, axis) for axis in COLUMN_STATISTICS}
+        axes |= {axis: self.axis(self.columnFactors, axis) for axis in COLUMN_FACTOR_STATISTICS}
+        axes |= {axis: self.axis(self.pairs, axis) for axis in PAIR_STATISTICS}
+        axes |= {axis: self.axis(self.rows, axis) for axis in CONDITIONS}
         return {
             'n_rows': len(self.registry),
             'n_objects': len(self.registry.drop_duplicates(['source', 'object'])),
