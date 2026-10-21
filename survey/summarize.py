@@ -1,6 +1,6 @@
 """Quantiles and summary of the dimension survey from the measured files (#18):
-`quantiles.yaml` from `dimensions.csv`, `columns.csv` and `registry.csv`, every axis pooled,
-per tier and with agridat removed; `SUMMARY.md` from the digit-free template, the practice
+`quantiles.yaml` from `registry.csv` and the four measured files, every axis pooled, per tier
+and with agridat removed; `SUMMARY.md` from the digit-free template, the practice
 survey's p90 read at merge time from `practice_quantiles.yaml`, a snapshot of the practice
 survey's `quantiles.yaml`, which stays in metabeta-v3.
 """
@@ -187,9 +187,17 @@ class Summarizer:
             'mean_columns_per_categorical': implied['mean_columns_per_categorical'],
             'implied_columns': impliedText,
         }
-        for axis, block in quantiles['axes'].items():
-            fields[f'table_{PLACEHOLDERS.get(axis, axis)}'] = self.axisTable(axis, block, practice)
+        axes = quantiles['axes']
+        for axis in (*FACTOR_AXES, *ROW_AXES, 'K'):
+            placeholder = f'table_{PLACEHOLDERS.get(axis, axis)}'
+            fields[placeholder] = self.axisTable(axis, axes[axis], practice)
         fields |= {
+            'table_conditions': self.statisticTable(CONDITIONS, axes),
+            'table_column_statistics': self.statisticTable(COLUMN_STATISTICS, axes),
+            'table_column_factor_statistics': self.statisticTable(COLUMN_FACTOR_STATISTICS, axes),
+            'table_pair_statistics': self.statisticTable(PAIR_STATISTICS, axes),
+            'table_pair_relation': self.shareTable(self.pairs['relation'], 'pair relation'),
+            'table_superior': self.shareTable(self.superiorSides(), 'superior'),
             'table_relation': self.shareTable(self.dimensions['relation'], 'relation'),
             'table_covariate_type': self.shareTable(self.modeled['type'], 'covariate type'),
             'table_level': self.shareTable(self.modeled['level'], 'level'),
@@ -244,6 +252,18 @@ class Summarizer:
             for name, q in rows.items()
         ]
         return '\n'.join([head, '|' + '---|' * (len(QUANTILE_KEYS) + 2), *lines])
+
+    @staticmethod
+    def statisticTable(statistics: tuple[str, ...], axes: dict) -> str:
+        """One row per statistic, its pooled quantiles as columns."""
+        head = '| statistic | ' + ' | '.join(QUANTILE_KEYS) + ' |'
+        lines = [
+            f'| {statistic} | '
+            + ' | '.join(Summarizer.cell(axes[statistic]['pooled'][k]) for k in QUANTILE_KEYS)
+            + ' |'
+            for statistic in statistics
+        ]
+        return '\n'.join([head, '|' + '---|' * (len(QUANTILE_KEYS) + 1), *lines])
 
     @staticmethod
     def practiceP90(axis: str, practice: dict) -> int | float | None:
