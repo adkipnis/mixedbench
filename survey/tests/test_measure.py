@@ -399,6 +399,16 @@ def test_singleton_groups_and_a_constant_column_have_no_between_group_share(herd
     assert pd.isna(dose['between_group_share'])
 
 
+def test_a_constant_column_relates_to_no_factor_however_its_value_rounds(herds, rows):
+    """A dose of 0.1 is constant, but its group means differ from 0.1 in the last bit, which a
+    test for exactly zero variance lets through: a between-group share of 0.7302 within herd,
+    as for ros' Helicopters, whose constant width and length read 1.0. A constant column has
+    nothing to share, rank, spread or explain."""
+    dose = measuredColumnFactors(herds.assign(dose=0.1), rows[0]).loc['dose']
+    numeric = ['between_group_share', 'group_level_r2', 'size_rho', 'within_sd_cv']
+    assert dose[numeric].isna().all().all()
+
+
 def test_absent_levels_are_the_empty_group_by_level_cells(herds, rows):
     """Each herd is fed one of three feeds, so 10 of the 5 × 3 cells are empty; the herds hold
     13 of 20 herd × breed cells; h4's one cow is sick, so 1 of 10 cells is empty. A level no row
