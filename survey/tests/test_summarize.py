@@ -94,6 +94,32 @@ def test_factor_pairs_share_their_relation_and_the_side_of_their_superior(merger
     assert (pooled['n'], pooled['min'], pooled['max']) == (1, 0.35, 0.35)
 
 
+def statisticRows(summary: str, heading: str) -> list[list[str]]:
+    """The cells of the statistic table under a heading, one list per statistic."""
+    section = summary.split(f'## {heading}\n', 1)[1].split('\n## ', 1)[0]
+    table = section[section.index('| statistic |') :].split('\n\n', 1)[0]
+    return [line.strip('| ').split(' | ') for line in table.splitlines()[2:]]
+
+
+def test_summary_shows_one_pooled_table_per_measured_file(merger):
+    """Each measured file's quirk statistics read as one compact table, a statistic per row and
+    its pooled quantiles as columns; the condition numbers join the design columns, the pairs'
+    shares their statistic (#101)."""
+    mergeShard(merger, FIXTURES / 'registry_herds.csv')
+    summary = (merger.registry / 'SUMMARY.md').read_text()
+    columns = statisticRows(summary, 'Quirk statistics per column')
+    assert [row[0] for row in columns] == list(QUIRK_AXES[:9])
+    columnFactors = statisticRows(summary, 'Quirk statistics per column and grouping factor')
+    assert [row[0] for row in columnFactors] == list(QUIRK_AXES[9:14])
+    assert [row[0] for row in statisticRows(summary, 'Quirk statistics per factor pair')] == ['empty_cell_share']  # fmt: skip
+    assert statisticRows(summary, 'Design columns') == [
+        ['condition_doc', '2', '3.452', '3.452', '3.452', '6.5784', '6.5784', '6.5784', '6.5784'],
+        ['condition_all', '2', '10.2274', '10.2274', '10.2274', '44.2555', '44.2555', '44.2555', '44.2555'],
+    ]  # fmt: skip
+    pairs = summary.split('## Quirk statistics per factor pair\n', 1)[1]
+    assert '| pair relation | n | share |' in pairs and '| superior | n | share |' in pairs
+
+
 def test_summary_template_has_no_hand_typed_digits():
     assert not re.search(r'\d', re.sub(r'\bv1\b', '', TEMPLATE.read_text()))  # a stage name
 
