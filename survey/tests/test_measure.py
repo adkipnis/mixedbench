@@ -422,6 +422,18 @@ def test_a_nested_pairs_superior_holds_whole_groups_of_the_other(herds, rows):
     assert Measurer(herds, parsed(rows[1])).factorPairs() == []
 
 
+def test_a_crossed_pairs_empty_cells(herds, rows):
+    """Breeds recur across herds, so herd and breed cross: the herds hold 3, 2, 3, 1 and 4 of
+    the four breeds, 13 of 20 cells, and the crossed pair has no superior. A breed no row holds
+    is no cell."""
+    crossed = rows[0] | {'grouping_factors': 'herd;breed', 'covariates': 'feed'}
+    pair = measuredFactorPairs(herds, crossed).loc[('herd', 'breed')]
+    assert (pair['relation'], pair['empty_cell_share']) == ('crossed', 0.35)
+    assert pd.isna(pair['superior'])
+    unused = herds.assign(breed=herds['breed'].cat.add_categories('dexter'))
+    assert measuredFactorPairs(unused, crossed).loc[('herd', 'breed'), 'empty_cell_share'] == 0.35
+
+
 SHARES = ('outlier_share', 'zero_share', 'min_share', 'max_share', 'unique_share', 'rare_level_share', 'max_abs_rho')  # fmt: skip
 GENERATED = readRows(FIXTURES / 'registry_herds.csv')[0] | {
     'response': 'y', 'grouping_factors': 'g', 'covariates': '', 'ignore': '', 'types': '',
