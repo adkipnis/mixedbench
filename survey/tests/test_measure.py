@@ -8,7 +8,14 @@ import pytest
 from conftest import FIXTURES, readRows
 from hypothesis import given, settings
 from hypothesis import strategies as st
-from measure import COLUMN_COLUMNS, COLUMN_FACTOR_COLUMNS, FACTOR_PAIR_COLUMNS, Measurer, fitAlpha
+from measure import (
+    COLUMN_COLUMNS,
+    COLUMN_FACTOR_COLUMNS,
+    DIMENSION_COLUMNS,
+    FACTOR_PAIR_COLUMNS,
+    Measurer,
+    fitAlpha,
+)
 from mixedbench.registry.row import Row
 from schema import REGISTRY
 
@@ -207,6 +214,27 @@ def test_a_rank_deficient_design_has_an_infinite_condition_index(herds, rows):
     dimension = Measurer(pounds, parsed(alone)).dimensions()[0]
     assert dimension['condition_doc'] < np.inf
     assert dimension['condition_all'] == np.inf
+
+
+def measuredDimensions(table: pd.DataFrame, cells: dict) -> pd.DataFrame:
+    """The dimensions.csv rows of one registry row, by factor; a statistic left out is blank."""
+    dimensions = Measurer(table, parsed(cells)).dimensions()
+    return pd.DataFrame(dimensions, columns=DIMENSION_COLUMNS).set_index('factor')
+
+
+def test_no_condition_index_where_the_contract_builds_no_problem(herds, rows):
+    """The contract refuses a categorical response, so neither design exists. A column missing
+    on every measured row leaves no row complete in every column, and an undeclared column of
+    strings and numbers has no level order (#105): only the documented design exists."""
+    refused = rows[1] | {'response': 'breed', 'response_type': 'categorical', 'trials': '', 'covariates': 'weight'}  # fmt: skip
+    conditions = measuredDimensions(herds, refused)[['condition_doc', 'condition_all']]
+    assert conditions.isna().all().all()
+    empty = pd.Categorical([None] * len(herds), categories=['low', 'high'], ordered=True)
+    depth = pd.Series(['>1m', 0.7, 1] * 4 + ['>1m', 0.7], dtype=object)
+    for edited in (herds.assign(empty=empty), herds.assign(depth=depth)):
+        herd = measuredDimensions(edited, rows[1]).loc['herd']
+        assert herd['condition_doc'] >= 1
+        assert pd.isna(herd['condition_all'])
 
 
 def test_a_continuous_columns_moments(herds, rows):
