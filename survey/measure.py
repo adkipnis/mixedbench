@@ -11,12 +11,13 @@ after it, from the repo root:
 from __future__ import annotations
 
 import argparse
+import dataclasses
 from itertools import combinations
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
-from mixedbench.contract import columnType, withComposites
+from mixedbench.contract import Problem, columnType, withComposites
 from mixedbench.datasets import Loader
 from mixedbench.registry.row import Row, parts, readCsv, writeCsv
 from sources import readFrame
@@ -29,7 +30,7 @@ IDENTITY = ('source', 'object', 'model_index', 'tier')
 DIMENSION_COLUMNS = (
     *IDENTITY, 'factor', 'n_factors', 'relation', 'd_doc', 'd_all', 'n_obs', 'n_groups',
     'group_size_min', 'group_size_p10', 'group_size_p50', 'group_size_p90', 'group_size_max',
-    'singleton_share', 'cv', 'alpha',
+    'singleton_share', 'cv', 'alpha', 'condition_doc', 'condition_all',
 )  # fmt: skip
 COLUMN_COLUMNS = (
     *IDENTITY, 'column', 'type', 'K', 'level', 'constant_within', 'missing_share', 'in_model',
@@ -105,7 +106,8 @@ class Measurer:
         return [self.identity | {'column': c} | self.describe(c) | {'max_abs_rho': rho[c]} for c in self.columnNames]  # fmt: skip
 
     def dimensions(self) -> list[dict]:
-        shared = {'n_factors': len(self.factors), 'relation': self.relation()} | self.design()
+        shared = {'n_factors': len(self.factors), 'relation': self.relation()}
+        shared |= self.design() | self.measureConditions()
         return [self.identity | {'factor': f} | shared | self.groupSizes(f) for f in self.factors]  # fmt: skip
 
     def columnFactors(self) -> list[dict]:
@@ -404,6 +406,33 @@ class Measurer:
         if column['type'] in ('categorical', 'ordered'):
             return column['K'] - 1
         return 1
+
+    def measureConditions(self) -> dict:
+        """The condition index of the contract's design, of the documented model and of every
+        measured column with the documented interactions; the contract codes, types and drops
+        incomplete rows alike for both."""
+        documented = Problem.build(self.row, self.table)
+        everything = dataclasses.replace(self.row, covariates=tuple(self.columnNames))
+        measured = Problem.build(everything, self.table)
+        return {
+            'condition_doc': self.computeConditionIndex(documented),
+            'condition_all': self.computeConditionIndex(measured),
+        }
+
+    @staticmethod
+    def computeConditionIndex(problem: Problem) -> float:
+        """Belsley, Kuh and Welsch's (1980) σ_max / σ_min of the standardized full-regime design,
+        intercept included, each column scaled to unit length; inf when rank-deficient."""
+        design = problem.standardized()[list(problem.design)]
+        scaled = (design / np.sqrt((design**2).sum())).to_numpy()
+        # a constant continuous column standardizes to 0/0, and an interaction's empty cell
+        # gives a column of zeros, which scales to 0/0: both leave the design rank-deficient
+        if not np.isfinite(scaled).all():
+            return float('inf')
+        if np.linalg.matrix_rank(scaled) < scaled.shape[1]:
+            return float('inf')
+        singular = np.linalg.svd(scaled, compute_uv=False)
+        return round(float(singular[0] / singular[-1]), 4)
 
 
 # =====================================================================================
