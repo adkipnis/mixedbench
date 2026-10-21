@@ -259,7 +259,7 @@ Every column against every grouping factor of its registry row.
 
 | statistic | n | min | p5 | p10 | p50 | p90 | p95 | max |
 |---|---|---|---|---|---|---|---|---|
-| between_group_share | 4134 | -1.6916 | -0.0909 | -0.0128 | 0.2457 | 1 | 1 | 1 |
+| between_group_share | 4132 | -1.6916 | -0.0909 | -0.0128 | 0.2443 | 1 | 1 | 1 |
 | group_level_r2 | 2124 | -29.5505 | -2.3385 | -0.1949 | 0.0117 | 1 | 1 | 1 |
 | absent_level_share | 2944 | 0 | 0 | 0 | 0.4091 | 0.8333 | 0.9513 | 0.9983 |
 | size_rho | 3330 | -1 | -0.8208 | -0.4588 | 0.0294 | 0.5338 | 0.8 | 1 |
