@@ -247,12 +247,13 @@ class Measurer:
         return partners.max().round(4).reindex(self.columnNames)
 
     def codeColumn(self, column: str, kind: str) -> pd.Series:
-        """A continuous column as loaded, a binary or ordered one by its levels' codes in loaded
-        order; a missing value stays missing."""
+        """A continuous column as loaded, a binary or ordered one by the codes of the levels its
+        measured rows hold, in loaded order; a missing value stays missing."""
         values = self.table[column]
         if kind == 'continuous':
             return values.astype(float)
-        codes = pd.Series(pd.Categorical(values).codes, index=values.index)
+        levels = pd.Categorical(values).remove_unused_categories()
+        codes = pd.Series(levels.codes, index=values.index)
         return codes.where(codes >= 0)  # -1 codes a missing value
 
     def describe(self, column: str) -> dict:
