@@ -12,7 +12,13 @@ from string import Template
 
 import pandas as pd
 import yaml
-from measure import COLUMN_FACTOR_STATISTICS, COLUMN_STATISTICS, observed
+from measure import (
+    COLUMN_FACTOR_STATISTICS,
+    COLUMN_STATISTICS,
+    CONDITIONS,
+    FACTOR_PAIR_STATISTICS,
+    observed,
+)
 from mixedbench.registry.row import readCsv
 from schema import TIERS
 
@@ -45,9 +51,6 @@ FACTOR_AXES = (
     'group_size_max', 'singleton_share', 'cv', 'alpha',
 )  # fmt: skip
 ROW_AXES = {'n_obs': 'n_obs', 'n_grouping_factors': 'n_factors', 'd_doc': 'd_doc', 'd_all': 'd_all'}  # fmt: skip
-# The quirk statistics of the other keys: per crossed factor pair, and per registry row.
-PAIR_STATISTICS = ('empty_cell_share',)
-CONDITIONS = ('condition_doc', 'condition_all')
 CATEGORICAL_TYPES = ('categorical', 'ordered')
 TERMS = (9, 14)  # the practice survey's p90 and p95 of fixed-effect terms (envelope rule 4)
 K_TAIL = 10  # the summary's K table pools the levels above this (the columns rule's integer cap)
@@ -66,7 +69,7 @@ class Summarizer:
         self.columns = self.numeric(readCsv(self.root / 'columns.csv'), ('K', *COLUMN_STATISTICS))
         columnFactors = readCsv(self.root / 'column_factors.csv')
         self.columnFactors = self.numeric(columnFactors, COLUMN_FACTOR_STATISTICS)
-        self.pairs = self.numeric(readCsv(self.root / 'factor_pairs.csv'), PAIR_STATISTICS)
+        self.pairs = self.numeric(readCsv(self.root / 'factor_pairs.csv'), FACTOR_PAIR_STATISTICS)
         self.rows = self.dimensions.drop_duplicates(['source', 'object', 'model_index'])
         self.modeled = self.columns[self.columns['in_model'] == 'yes']
         self.categoricals = self.modeled[self.modeled['type'].isin(CATEGORICAL_TYPES)]
@@ -90,7 +93,7 @@ class Summarizer:
         axes['K'] = self.axis(self.categoricals, 'K')
         axes |= {axis: self.axis(self.columns, axis) for axis in COLUMN_STATISTICS}
         axes |= {axis: self.axis(self.columnFactors, axis) for axis in COLUMN_FACTOR_STATISTICS}
-        axes |= {axis: self.axis(self.pairs, axis) for axis in PAIR_STATISTICS}
+        axes |= {axis: self.axis(self.pairs, axis) for axis in FACTOR_PAIR_STATISTICS}
         axes |= {axis: self.axis(self.rows, axis) for axis in CONDITIONS}
         return {
             'n_rows': len(self.registry),
@@ -195,7 +198,7 @@ class Summarizer:
             'table_conditions': self.statisticTable(CONDITIONS, axes),
             'table_column_statistics': self.statisticTable(COLUMN_STATISTICS, axes),
             'table_column_factor_statistics': self.statisticTable(COLUMN_FACTOR_STATISTICS, axes),
-            'table_pair_statistics': self.statisticTable(PAIR_STATISTICS, axes),
+            'table_pair_statistics': self.statisticTable(FACTOR_PAIR_STATISTICS, axes),
             'table_pair_relation': self.shareTable(self.pairs['relation'], 'pair relation'),
             'table_superior': self.shareTable(self.superiorSides(), 'superior'),
             'table_relation': self.shareTable(self.dimensions['relation'], 'relation'),
@@ -245,25 +248,25 @@ class Summarizer:
         rows |= {f'tier {t}': q for t, q in block['tiers'].items()}
         rows['without agridat'] = block['without_agridat']
         last = {'pooled': Summarizer.cell(Summarizer.practiceP90(axis, practice))}
-        lines = [
-            f'| {name} | '
-            + ' | '.join(Summarizer.cell(q[k]) for k in QUANTILE_KEYS)
-            + f' | {last.get(name, "")} |'
-            for name, q in rows.items()
-        ]
-        return '\n'.join([head, '|' + '---|' * (len(QUANTILE_KEYS) + 2), *lines])
+        lines = [head, '|' + '---|' * (len(QUANTILE_KEYS) + 2)]
+        for name, q in rows.items():
+            cells = Summarizer.quantileCells(q)
+            lines.append(f'| {name} | {cells} | {last.get(name, "")} |')
+        return '\n'.join(lines)
+
+    @staticmethod
+    def quantileCells(quantiles: dict) -> str:
+        return ' | '.join(Summarizer.cell(quantiles[k]) for k in QUANTILE_KEYS)
 
     @staticmethod
     def statisticTable(statistics: tuple[str, ...], axes: dict) -> str:
         """One row per statistic, its pooled quantiles as columns."""
         head = '| statistic | ' + ' | '.join(QUANTILE_KEYS) + ' |'
-        lines = [
-            f'| {statistic} | '
-            + ' | '.join(Summarizer.cell(axes[statistic]['pooled'][k]) for k in QUANTILE_KEYS)
-            + ' |'
-            for statistic in statistics
-        ]
-        return '\n'.join([head, '|' + '---|' * (len(QUANTILE_KEYS) + 1), *lines])
+        lines = [head, '|' + '---|' * (len(QUANTILE_KEYS) + 1)]
+        for statistic in statistics:
+            cells = Summarizer.quantileCells(axes[statistic]['pooled'])
+            lines.append(f'| {statistic} | {cells} |')
+        return '\n'.join(lines)
 
     @staticmethod
     def practiceP90(axis: str, practice: dict) -> int | float | None:
