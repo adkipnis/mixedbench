@@ -113,38 +113,22 @@ class Measurer:
         }
         self.groupLevel = self.findGroupLevel()
 
-    def columns(self) -> list[dict]:
-        rho = self.maxAbsRho()
-        columns = []
-        for column in self.columnNames:
-            key = {'column': column}
-            measured = self.describe(column) | {'max_abs_rho': rho[column]}
-            columns.append(self.identity | key | measured)
-        return columns
+    def findGroupLevel(self) -> dict[str, list[str]]:
+        """Each factor's group-level columns, those constant within each of its groups."""
+        groupLevel = {}
+        for factor in self.factors:
+            grouped = self.table.groupby(factor, observed=True)
+            groupLevel[factor] = [c for c in self.columnNames if grouped[c].nunique().max() <= 1]
+        return groupLevel
 
+    # ---------------------------------------------------------------------------------
+    # dimensions.csv: relation -> design columns -> condition indexes -> group sizes
+    # ---------------------------------------------------------------------------------
     def dimensions(self) -> list[dict]:
         shared = {'n_factors': len(self.factors), 'relation': self.relation()}
         shared |= self.design() | self.measureConditions()
         return [self.identity | {'factor': f} | shared | self.groupSizes(f) for f in self.factors]  # fmt: skip
 
-    def columnFactors(self) -> list[dict]:
-        columnFactors = []
-        for column in self.columnNames:
-            for factor in self.factors:
-                key = {'column': column, 'factor': factor}
-                columnFactors.append(self.identity | key | self.relate(column, factor))
-        return columnFactors
-
-    def factorPairs(self) -> list[dict]:
-        pairs = []
-        for a, b in combinations(self.factors, 2):
-            key = {'factor_a': a, 'factor_b': b}
-            pairs.append(self.identity | key | self.relateFactors(a, b))
-        return pairs
-
-    # ---------------------------------------------------------------------------------
-    # relation
-    # ---------------------------------------------------------------------------------
     def relation(self) -> str:
         """The practice survey's single / nested / crossed / mixed, computed from the data:
         a pair is nested when every level of one factor lies in one level of the other."""
@@ -173,29 +157,54 @@ class Measurer:
         parents = levels.groupby(child, observed=True)[parent].nunique()
         return bool(parents.max() == 1)
 
-    def relateFactors(self, a: str, b: str) -> dict:
-        """A nested pair's superior factor, blank when each holds the other's groups; a crossed
-        pair's share of empty group × group cells."""
-        holders = self.findHolders(a, b)
-        if not holders:
-            empty = self.measureEmptyCells(self.table[[a, b]])
-            return {'relation': 'crossed', 'empty_cell_share': empty}
-        if len(holders) == 2:
-            return {'relation': 'nested'}
-        return {'relation': 'nested', 'superior': holders[0]}
+    def design(self) -> dict:
+        """d_doc expands the documented model, d_all every covariate column plus the documented
+        interactions, so that d_all is never below d_doc (envelope rule 4): continuous and
+        binary count 1, categorical k − 1, an interaction the product."""
+        width = {c: self.width(*self.columnTypes[c]) for c in self.columnNames}
+        interactions = self.row.interactions
+        dInteractions = sum(np.prod([width[c] for c in parts(term)]) for term in interactions)
+        dDoc = sum(width[c] for c in self.row.covariates) + dInteractions
+        dAll = sum(width.values()) + dInteractions
+        return {'d_doc': int(dDoc), 'd_all': int(dAll)}
 
     @staticmethod
-    def measureEmptyCells(pairs: pd.DataFrame) -> float:
-        """The share of the m × k cells of two columns' levels that hold no row, over the rows
-        that observe both."""
-        cells = pairs.dropna().drop_duplicates()
-        first, second = cells.columns
-        m, k = cells[first].nunique(), cells[second].nunique()
-        return round(1 - len(cells) / (m * k), 4)
+    def width(kind: str, levels: int | str) -> int:
+        if kind in ('categorical', 'ordered'):
+            return levels - 1
+        return 1
 
-    # ---------------------------------------------------------------------------------
-    # group sizes
-    # ---------------------------------------------------------------------------------
+    def measureConditions(self) -> dict:
+        """The condition index of the contract's design, of the documented model and of every
+        measured column with the documented interactions; the contract codes, types and drops
+        incomplete rows alike for both. Blank where the contract builds no problem."""
+        try:
+            documented = Problem.build(self.row, self.table)
+        except Refused:
+            return {}
+        conditions = {'condition_doc': self.computeConditionIndex(documented)}
+        everything = dataclasses.replace(self.row, covariates=tuple(self.columnNames))
+        try:
+            measured = Problem.build(everything, self.table)
+        except (Refused, TypeError):  # no complete row, or a column of strings and numbers (#105)
+            return conditions
+        return conditions | {'condition_all': self.computeConditionIndex(measured)}
+
+    @staticmethod
+    def computeConditionIndex(problem: Problem) -> float:
+        """Belsley, Kuh and Welsch's (1980) σ_max / σ_min of the standardized full-regime design,
+        intercept included, each column scaled to unit length; inf when rank-deficient."""
+        design = problem.standardized()[list(problem.design)]
+        scaled = (design / np.sqrt((design**2).sum())).to_numpy()
+        # a constant continuous column standardizes to 0/0, and an interaction's empty cell
+        # gives a column of zeros, which scales to 0/0: set to zeros, either leaves the design
+        # rank-deficient
+        scaled = np.nan_to_num(scaled)
+        if np.linalg.matrix_rank(scaled) < scaled.shape[1]:
+            return float('inf')
+        singular = np.linalg.svd(scaled, compute_uv=False)
+        return round(float(singular[0] / singular[-1]), 4)
+
     def groupSizes(self, factor: str) -> dict:
         sizes = self.table[factor].value_counts()
         sizes = sizes[sizes > 0]  # a categorical may carry unused levels
@@ -213,8 +222,39 @@ class Measurer:
         }
 
     # ---------------------------------------------------------------------------------
-    # covariate columns
+    # columns.csv: rank correlations -> type, level and missing share -> quirk statistics
     # ---------------------------------------------------------------------------------
+    def columns(self) -> list[dict]:
+        rho = self.maxAbsRho()
+        columns = []
+        for column in self.columnNames:
+            key = {'column': column}
+            measured = self.describe(column) | {'max_abs_rho': rho[column]}
+            columns.append(self.identity | key | measured)
+        return columns
+
+    def maxAbsRho(self) -> pd.Series:
+        """Each column's largest |Spearman| with another, over the rows where both are observed:
+        continuous columns as loaded, binary and ordered ones by their levels in loaded order.
+        Blank with no partner, or when every partner or the column is constant on those rows."""
+        ranked = {}
+        for column in self.columnNames:
+            kind, _ = self.columnTypes[column]
+            if kind != 'categorical':
+                ranked[column] = self.codeColumn(column, kind)
+        rho = pd.DataFrame(ranked, index=self.table.index).corr(method='spearman').abs()
+        partners = rho.where(~np.eye(len(rho), dtype=bool))
+        return partners.max().round(4).reindex(self.columnNames)
+
+    def codeColumn(self, column: str, kind: str) -> pd.Series:
+        """A continuous column as loaded, a binary or ordered one by its levels' codes in loaded
+        order; a missing value stays missing."""
+        values = self.table[column]
+        if kind == 'continuous':
+            return values.astype(float)
+        codes = pd.Series(pd.Categorical(values).codes, index=values.index)
+        return codes.where(codes >= 0)  # -1 codes a missing value
+
     def describe(self, column: str) -> dict:
         values = self.table[column]
         kind, levels = self.columnTypes[column]
@@ -227,14 +267,6 @@ class Measurer:
             'missing_share': round(float(values.isna().mean()), 4),
             'in_model': 'yes' if column in self.row.covariates else 'no',
         } | self.shape(values.dropna(), kind)
-
-    def findGroupLevel(self) -> dict[str, list[str]]:
-        """Each factor's group-level columns, those constant within each of its groups."""
-        groupLevel = {}
-        for factor in self.factors:
-            grouped = self.table.groupby(factor, observed=True)
-            groupLevel[factor] = [c for c in self.columnNames if grouped[c].nunique().max() <= 1]
-        return groupLevel
 
     def shape(self, values: pd.Series, kind: str) -> dict:
         """The quirk statistics that the column's kind defines, over its non-missing values;
@@ -279,33 +311,16 @@ class Measurer:
         return bounds
 
     # ---------------------------------------------------------------------------------
-    # dependence between covariate columns
+    # column_factors.csv: absent levels -> between groups -> sizes -> spreads -> group level
     # ---------------------------------------------------------------------------------
-    def maxAbsRho(self) -> pd.Series:
-        """Each column's largest |Spearman| with another, over the rows where both are observed:
-        continuous columns as loaded, binary and ordered ones by their levels in loaded order.
-        Blank with no partner, or when every partner or the column is constant on those rows."""
-        ranked = {}
+    def columnFactors(self) -> list[dict]:
+        columnFactors = []
         for column in self.columnNames:
-            kind, _ = self.columnTypes[column]
-            if kind != 'categorical':
-                ranked[column] = self.codeColumn(column, kind)
-        rho = pd.DataFrame(ranked, index=self.table.index).corr(method='spearman').abs()
-        partners = rho.where(~np.eye(len(rho), dtype=bool))
-        return partners.max().round(4).reindex(self.columnNames)
+            for factor in self.factors:
+                key = {'column': column, 'factor': factor}
+                columnFactors.append(self.identity | key | self.relate(column, factor))
+        return columnFactors
 
-    def codeColumn(self, column: str, kind: str) -> pd.Series:
-        """A continuous column as loaded, a binary or ordered one by its levels' codes in loaded
-        order; a missing value stays missing."""
-        values = self.table[column]
-        if kind == 'continuous':
-            return values.astype(float)
-        codes = pd.Series(pd.Categorical(values).codes, index=values.index)
-        return codes.where(codes >= 0)  # -1 codes a missing value
-
-    # ---------------------------------------------------------------------------------
-    # columns against grouping factors
-    # ---------------------------------------------------------------------------------
     def relate(self, column: str, factor: str) -> dict:
         """The quirk statistics of a column against a factor's groups, over the rows that observe
         both; a statistic left out is blank in column_factors.csv."""
@@ -323,6 +338,15 @@ class Measurer:
             statistics |= self.betweenGroupShare(values, groups) | self.sizeRho(values, groups)
             statistics |= self.withinSdCv(values, groups) | self.groupLevelR2(column, factor, kind)
         return statistics
+
+    @staticmethod
+    def measureEmptyCells(pairs: pd.DataFrame) -> float:
+        """The share of the m × k cells of two columns' levels that hold no row, over the rows
+        that observe both."""
+        cells = pairs.dropna().drop_duplicates()
+        first, second = cells.columns
+        m, k = cells[first].nunique(), cells[second].nunique()
+        return round(1 - len(cells) / (m * k), 4)
 
     @staticmethod
     def betweenGroupShare(values: pd.Series, groups: pd.Series) -> dict:
@@ -398,55 +422,25 @@ class Measurer:
         return pd.concat(coded, axis=1).to_numpy()
 
     # ---------------------------------------------------------------------------------
-    # design columns
+    # factor_pairs.csv: holders -> superior or empty cells
     # ---------------------------------------------------------------------------------
-    def design(self) -> dict:
-        """d_doc expands the documented model, d_all every covariate column plus the documented
-        interactions, so that d_all is never below d_doc (envelope rule 4): continuous and
-        binary count 1, categorical k − 1, an interaction the product."""
-        width = {c: self.width(*self.columnTypes[c]) for c in self.columnNames}
-        interactions = self.row.interactions
-        dInteractions = sum(np.prod([width[c] for c in parts(term)]) for term in interactions)
-        dDoc = sum(width[c] for c in self.row.covariates) + dInteractions
-        dAll = sum(width.values()) + dInteractions
-        return {'d_doc': int(dDoc), 'd_all': int(dAll)}
+    def factorPairs(self) -> list[dict]:
+        pairs = []
+        for a, b in combinations(self.factors, 2):
+            key = {'factor_a': a, 'factor_b': b}
+            pairs.append(self.identity | key | self.relateFactors(a, b))
+        return pairs
 
-    @staticmethod
-    def width(kind: str, levels: int | str) -> int:
-        if kind in ('categorical', 'ordered'):
-            return levels - 1
-        return 1
-
-    def measureConditions(self) -> dict:
-        """The condition index of the contract's design, of the documented model and of every
-        measured column with the documented interactions; the contract codes, types and drops
-        incomplete rows alike for both. Blank where the contract builds no problem."""
-        try:
-            documented = Problem.build(self.row, self.table)
-        except Refused:
-            return {}
-        conditions = {'condition_doc': self.computeConditionIndex(documented)}
-        everything = dataclasses.replace(self.row, covariates=tuple(self.columnNames))
-        try:
-            measured = Problem.build(everything, self.table)
-        except (Refused, TypeError):  # no complete row, or a column of strings and numbers (#105)
-            return conditions
-        return conditions | {'condition_all': self.computeConditionIndex(measured)}
-
-    @staticmethod
-    def computeConditionIndex(problem: Problem) -> float:
-        """Belsley, Kuh and Welsch's (1980) σ_max / σ_min of the standardized full-regime design,
-        intercept included, each column scaled to unit length; inf when rank-deficient."""
-        design = problem.standardized()[list(problem.design)]
-        scaled = (design / np.sqrt((design**2).sum())).to_numpy()
-        # a constant continuous column standardizes to 0/0, and an interaction's empty cell
-        # gives a column of zeros, which scales to 0/0: set to zeros, either leaves the design
-        # rank-deficient
-        scaled = np.nan_to_num(scaled)
-        if np.linalg.matrix_rank(scaled) < scaled.shape[1]:
-            return float('inf')
-        singular = np.linalg.svd(scaled, compute_uv=False)
-        return round(float(singular[0] / singular[-1]), 4)
+    def relateFactors(self, a: str, b: str) -> dict:
+        """A nested pair's superior factor, blank when each holds the other's groups; a crossed
+        pair's share of empty group × group cells."""
+        holders = self.findHolders(a, b)
+        if not holders:
+            empty = self.measureEmptyCells(self.table[[a, b]])
+            return {'relation': 'crossed', 'empty_cell_share': empty}
+        if len(holders) == 2:
+            return {'relation': 'nested'}
+        return {'relation': 'nested', 'superior': holders[0]}
 
 
 # =====================================================================================
