@@ -8,7 +8,7 @@ import pytest
 from conftest import FIXTURES, readRows
 from hypothesis import given, settings
 from hypothesis import strategies as st
-from measure import COLUMN_COLUMNS, COLUMN_FACTOR_COLUMNS, Measurer, fitAlpha
+from measure import COLUMN_COLUMNS, COLUMN_FACTOR_COLUMNS, FACTOR_PAIR_COLUMNS, Measurer, fitAlpha
 from mixedbench.registry.row import Row
 from schema import REGISTRY
 
@@ -399,6 +399,27 @@ def test_a_column_missing_on_every_measured_row_relates_to_no_factor(herds, rows
     pairs = measuredColumnFactors(herds.assign(empty=empty), rows[1]).loc['empty']
     statistics = COLUMN_FACTOR_COLUMNS[COLUMN_FACTOR_COLUMNS.index('factor') + 1 :]
     assert pairs[list(statistics)].isna().all().all()
+
+
+def measuredFactorPairs(table: pd.DataFrame, cells: dict) -> pd.DataFrame:
+    """The factor_pairs.csv rows of one registry row, by pair of factors; a statistic left out
+    is blank."""
+    pairs = Measurer(table, parsed(cells)).factorPairs()
+    return pd.DataFrame(pairs, columns=FACTOR_PAIR_COLUMNS).set_index(['factor_a', 'factor_b'])
+
+
+def test_a_nested_pairs_superior_holds_whole_groups_of_the_other(herds, rows):
+    """Each herd lies in one region, so region is superior in either order, and the nested pair
+    has no empty-cell share. Model 2's one factor makes no pair."""
+    pairs = Measurer(herds, parsed(rows[0])).factorPairs()
+    assert [(p['factor_a'], p['factor_b']) for p in pairs] == [('region', 'herd')]
+    assert (pairs[0]['source'], pairs[0]['model_index'], pairs[0]['tier']) == ('herds', 1, 'D')
+    pair = measuredFactorPairs(herds, rows[0]).loc[('region', 'herd')]
+    assert (pair['relation'], pair['superior']) == ('nested', 'region')
+    assert pd.isna(pair['empty_cell_share'])
+    reversed = rows[0] | {'grouping_factors': 'herd;region'}
+    assert measuredFactorPairs(herds, reversed).loc[('herd', 'region'), 'superior'] == 'region'
+    assert Measurer(herds, parsed(rows[1])).factorPairs() == []
 
 
 SHARES = ('outlier_share', 'zero_share', 'min_share', 'max_share', 'unique_share', 'rare_level_share', 'max_abs_rho')  # fmt: skip
