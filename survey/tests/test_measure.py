@@ -1,6 +1,6 @@
-"""Measuring one loaded table against its registry row (#18): group sizes per factor, the
-Dirichlet α, the relation between factors, column types and levels, d_doc and d_all, every
-expected value computed by hand from `fixtures/herds.csv`."""
+"""Measuring one loaded table against its registry row: its rows of the four measured files
+from `fixtures/herds.csv`, each expected value worked by hand or by scipy, statsmodels or numpy,
+and the statistics' ranges over generated tables."""
 
 import numpy as np
 import pandas as pd
@@ -11,6 +11,8 @@ from hypothesis import strategies as st
 from measure import (
     COLUMN_COLUMNS,
     COLUMN_FACTOR_COLUMNS,
+    COLUMN_FACTOR_STATISTICS,
+    COLUMN_STATISTICS,
     DIMENSION_COLUMNS,
     FACTOR_PAIR_COLUMNS,
     Measurer,
@@ -316,8 +318,7 @@ def test_unique_and_rare_level_shares(herds, rows):
 def test_a_column_missing_on_every_measured_row_has_no_statistic(herds, rows):
     """Eight columns of the registry are missing wherever the response is measured."""
     empty = measuredColumns(herds.assign(empty=float('nan')), rows[1]).loc['empty']
-    statistics = COLUMN_COLUMNS[COLUMN_COLUMNS.index('in_model') + 1 :]
-    assert empty[list(statistics)].isna().all()
+    assert empty[list(COLUMN_STATISTICS)].isna().all()
 
 
 def test_max_abs_rho_ranks_continuous_binary_and_ordered_columns(herds, rows):
@@ -464,8 +465,7 @@ def test_a_column_missing_on_every_measured_row_relates_to_no_factor(herds, rows
     they have no groups and no levels to relate."""
     empty = pd.Categorical([None] * len(herds), categories=['low', 'high'], ordered=True)
     pairs = measuredColumnFactors(herds.assign(empty=empty), rows[1]).loc['empty']
-    statistics = COLUMN_FACTOR_COLUMNS[COLUMN_FACTOR_COLUMNS.index('factor') + 1 :]
-    assert pairs[list(statistics)].isna().all().all()
+    assert pairs[list(COLUMN_FACTOR_STATISTICS)].isna().all().all()
 
 
 def measuredFactorPairs(table: pd.DataFrame, cells: dict) -> pd.DataFrame:
