@@ -389,11 +389,15 @@ class Measurer:
         return {'within_sd_cv': round(float(sds.std(ddof=0) / sds.mean()), 4)}
 
     def groupLevelR2(self, column: str, factor: str, kind: str) -> dict:
-        """The row-level R² of the column on the factor's other group-level columns, adjusted by
-        the group count m and the design's rank p, 1 − (1 − R²)(m − 1) / (m − p − 1), over the
-        rows that observe them all. Blank when the partners span nothing beyond the intercept,
-        leave no degree of freedom, or the column is constant on those rows."""
-        partners = [c for c in self.groupLevel[factor] if c != column]
+        """The row-level R² of the column on the factor's other group-level columns that hold a
+        value, adjusted by the group count m and the design's rank p,
+        1 − (1 − R²)(m − 1) / (m − p − 1), over the rows that observe them all.
+        Blank when the partners span nothing beyond the intercept, leave no degree of freedom,
+        or the column is constant on those rows."""
+        # a column with no observed value is constant within groups, but would complete no row
+        partners = [
+            c for c in self.groupLevel[factor] if c != column and self.table[c].notna().any()
+        ]
         complete = self.table[[column, factor, *partners]].dropna().index
         y = self.codeColumn(column, kind)[complete].to_numpy(float)
         design = self.codeDesign(partners, complete)
