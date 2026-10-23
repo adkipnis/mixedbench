@@ -462,6 +462,18 @@ reading's open disagreements, four to eight per tier.
   refused rows are unchanged. It is a patch, 1.0.7, as for #57: no suite is frozen before
   release 1.1.
 
+## Fits pass (#111, 2026-10-24)
+
+- The 620 registry rows with a continuous, binary or count response were fitted on the cluster's
+  CPU nodes, one task each, with R 4.6.1 and lme4 2.0-6 (`survey/fits.sbatch`), and collected
+  into `registry/fits.csv`, `quantiles.yaml` and `SUMMARY.md`. `registry.csv` and the
+  top-level keys of `quantiles.yaml` are unchanged.
+- Statuses: 334 `ok`, 88 `warning`, 53 `singular`, 119 `error`, 26 `no_formula`, no `timeout`.
+- 83 tasks ended without a record on the first array, 23 of them because R could not create its
+  temporary directory on the node, the rest in the loader (a missing archive member or an empty
+  file), whose cause is not diagnosed. They fitted on a rerun of their indices, four of them on
+  a third.
+
 ## Reading rulings (m3#22 to #15)
 
 The rulings [`prompts/read.md`](prompts/read.md) does not carry, from the agents' `RULE GAP` notes and Alex's checks, each with an example
