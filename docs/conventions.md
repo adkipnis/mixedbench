@@ -281,6 +281,8 @@ The words are [`CONTEXT.md`](../CONTEXT.md)'s.
 | `references/handoff.py` | what passes between a problem and `run.R`: the aliased table, the model and a level's settings out; the draws under the contract's names and the diagnostics back | `runner.py` |
 | `references/run.R` | one level's fit by brms through cmdstanr: the variables kept or summarized, the files written back | `runner.py`, as a subprocess |
 | `references/runner.py` | a problem's reference run: the pinned R stack, the ladder, the bar and the cap, the run's directory and its record | `references`, through it `suite/drive.py` |
+| `frequentist/lme4.py` | a mixed model's fit by lme4: the table and model handed to `lme4.R`, the fit read back, lme4's pin, the statuses | `frequentist`, through it `survey/fits.py` |
+| `frequentist/lme4.R` | one fit within its time limit: how it ended, the estimates, the variance components | `lme4.py`, as a subprocess |
 | `suite/drive.py` | suite 1.1's reference runs: one candidate by id or index, every record collected into `references.csv` | run as a script, by `suite/drive.sbatch` |
 
 ### Changing code
