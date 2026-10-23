@@ -32,7 +32,6 @@ dependencies = [
 Repository = "https://github.com/adkipnis/mixedbench"
 Issues = "https://github.com/adkipnis/mixedbench/issues"
 Demo = "https://github.com/adkipnis/mixedbench/blob/main/examples/demo.ipynb"
-Planned = "https://github.com/adkipnis/mixedbench#planned"
 
 [dependency-groups]
 dev = [
