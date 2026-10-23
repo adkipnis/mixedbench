@@ -16,6 +16,12 @@ from schema import ALLOWED, CANDIDATE_COLUMNS, SCREENS, TABLES
 HERE = Path(__file__).resolve().parents[1]
 README = (HERE / 'README.md').read_text()
 PROMPT = (HERE / 'prompts' / 'read.md').read_text()
+MEASURED_COLUMNS = {
+    'dimensions': DIMENSION_COLUMNS,
+    'columns': COLUMN_COLUMNS,
+    'column_factors': COLUMN_FACTOR_COLUMNS,
+    'factor_pairs': FACTOR_PAIR_COLUMNS,
+}
 
 
 @pytest.mark.parametrize('table', list(TABLES))
@@ -24,10 +30,10 @@ def test_readme_documents_every_column(table):
         assert re.search(rf'`{column}`', README), f'{table}.{column} undocumented'
 
 
-@pytest.mark.parametrize('columns', [DIMENSION_COLUMNS, COLUMN_COLUMNS, COLUMN_FACTOR_COLUMNS, FACTOR_PAIR_COLUMNS], ids=['dimensions', 'columns', 'column_factors', 'factor_pairs'])  # fmt: skip
-def test_readme_documents_every_measured_column(columns):
-    for column in columns:
-        assert re.search(rf'`{column}`', README), f'{column} undocumented'
+@pytest.mark.parametrize('file', list(MEASURED_COLUMNS))
+def test_readme_documents_every_measured_column(file):
+    for column in MEASURED_COLUMNS[file]:
+        assert re.search(rf'`{column}`', README), f'{file}.{column} undocumented'
 
 
 @pytest.mark.parametrize('table', list(TABLES))
