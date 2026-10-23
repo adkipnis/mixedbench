@@ -9,7 +9,9 @@ from typing import get_args
 import pytest
 from columns import COLUMN_COLUMNS
 from dimensions import DIMENSION_COLUMNS
+from fits import FIT_COLUMNS
 from groups import COLUMN_FACTOR_COLUMNS
+from mixedbench.frequentist import Status
 from mixedbench.registry.row import Family, ResponseType, Verified
 from pairs import FACTOR_PAIR_COLUMNS
 from schema import ALLOWED, CANDIDATE_COLUMNS, SCREENS, TABLES
@@ -24,6 +26,7 @@ MEASURED_COLUMNS = {
     'columns': COLUMN_COLUMNS,
     'column_factors': COLUMN_FACTOR_COLUMNS,
     'factor_pairs': FACTOR_PAIR_COLUMNS,
+    'fits': FIT_COLUMNS,
 }
 
 
@@ -47,8 +50,9 @@ def test_docs_document_every_allowed_value(table):
 
 
 def test_registry_doc_documents_the_row_vocabularies():
-    """The registry's vocabularies are the package's row grammar, not schema.py's (#48)."""
-    values = (*get_args(ResponseType), *get_args(Family), *get_args(Verified))
+    """The registry's vocabularies are the package's row grammar and fit statuses, not
+    schema.py's (#48)."""
+    values = (*get_args(ResponseType), *get_args(Family), *get_args(Verified), *get_args(Status))
     for value in values:
         assert f'`{value}`' in REGISTRY, f'registry value {value!r} undocumented'
 
