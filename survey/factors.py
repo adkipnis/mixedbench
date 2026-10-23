@@ -46,7 +46,8 @@ def measure(measurer: Measurer) -> list[dict]:
 
 
 def measureColumnFactor(measurer: Measurer, column: str, factor: str) -> dict:
-    """The statistics of a column against a factor, over the rows that observe both."""
+    """The statistics of a column against a factor. Each is taken over the rows where the
+    column and the factor are both observed."""
     table = measurer.table
     both = table[column].notna() & table[factor].notna()
     if not both.any():

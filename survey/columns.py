@@ -46,8 +46,8 @@ def measure(measurer: Measurer) -> list[dict]:
 
 
 def measureMaxAbsRho(measurer: Measurer) -> pd.Series:
-    """Each column's largest |Spearman| with another, pairwise complete; categorical columns
-    take no part. Blank with no partner or when constant."""
+    """Each column's largest |Spearman| with another, pairwise complete. A categorical column
+    has no order to rank, so it takes no part. Blank with no partner or when constant."""
     ranked = {}
     for column in measurer.column_names:
         kind, _ = measurer.column_types[column]
