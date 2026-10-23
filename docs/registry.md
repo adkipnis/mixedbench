@@ -165,6 +165,43 @@ Per registry object the file it loads from, with its sha256 and size; written by
     decimals; blank for a nested pair.
 
 
+## `fits.csv`
+
+- The documented model of each registry row with a `continuous`, `binary` or `count` response:
+  its `formula` as written, offsets and transforms included, fitted by lme4 on the loaded table
+  with the contract's family, `gaussian` by `lmer` (REML), `bernoulli` (logit) and `poisson`
+  (log) by `glmer`. `survey/fits.py` runs the pass on a cluster; a merge leaves the file as it is.
+- Key `source`, `object`, `model_index`, `factor`, with `tier`; a row per grouping factor of the
+  fit, the per-row fields repeated. `factor` is the registry's grouping factor that groups the
+  rows alike, else lme4's name (`factor(year)`, an observation-level `INDEX`); a fit without
+  estimates keeps a row per grouping factor of its registry row.
+- Per row:
+  - `status`, the worst that applies of `ok`, `singular` (lme4's `isSingular`), `warning`,
+    `timeout` (after one hour), `error` and `no_formula` (no `|` term, a model documented in
+    words, not fitted); `message`, every warning and the error joined by `; ` on one line.
+  - `seconds`; `n_obs`, the rows the fit used; `family`, the contract's; `family_doc`, the
+    registry's `family`, blank where none.
+  - The variance components on the link scale (Nakagawa, Johnson and Schielzeth 2017), blank
+    unless `status` is `ok`, `singular` or `warning`:
+    - `sigma2_fixed`: the variance over rows of Xβ̂, by n − 1 as performance takes it.
+    - `sigma2_random`: the sum of `sigma2` over the fit's factors.
+    - `sigma2_residual`: σ̂² of a gaussian fit, blank otherwise.
+    - `sigma2_distribution`: 0 for `gaussian`, π²/3 for `bernoulli`, ln(1 + 1/λ) for `poisson`
+      with λ = exp(β̂₀ + σ²₀ / 2) of the model with an intercept and the same random effects,
+      σ²₀ the sum of its random-intercept variances, as performance computes it.
+    - `sd_eta`: the sd over rows of the linear predictor, with the random effects and offsets.
+    - `r2_marginal`, `sigma2_fixed` over the total of the four components; `r2_conditional`,
+      `sigma2_fixed` and `sigma2_random` over the total.
+- Per factor:
+  - `q`: the columns of its random terms, over every term of the factor.
+  - `sigma2`: the mean over rows of z'Σz over its terms (Johnson 2014).
+  - `icc`: `sigma2` over the total; `icc_adjusted`: over the total without `sigma2_fixed`.
+- Four decimals, negatives and `inf` kept, blank where undefined.
+- Unlike performance 0.17.1, `sigma2_random` keeps every term of a factor (performance keeps the
+  first of an uncorrelated `(1 + x || g)`) and the observation-level ones (it moves them into
+  the residual).
+
+
 ## `quantiles.yaml` and `SUMMARY.md`
 
 - Per axis `n`, `min`, `p5`, `p10`, `p50`, `p90`, `p95`, `max`, pooled, per tier and without
@@ -173,8 +210,11 @@ Per registry object the file it loads from, with its sha256 and size; written by
   `d_all` once per registry row; `K` once per documented categorical covariate.
 - A quirk statistic is an axis named as its column, after `K`, counted once per row of its file
   that defines it; `inf` kept.
+- A fit statistic of `fits.csv` is an axis named as its column, after the quirk statistics, a
+  per-row one counted once per registry row and a per-factor one once per row of the file.
 - `shares`: `pair_relation` over the rows of `factor_pairs.csv`; `superior` over its nested
-  pairs, `factor_a` or `factor_b` for the side that holds the superior, `none` when neither does.
+  pairs, `factor_a` or `factor_b` for the side that holds the superior, `none` when neither does;
+  `status` over the registry rows of `fits.csv`.
 - `implied_columns`: the expected design columns of a 9- and a 14-term model (the practice
   survey's p90 and p95 of terms) under the observed categorical share and mean K − 1.
 
