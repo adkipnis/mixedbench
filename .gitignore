@@ -17,6 +17,8 @@ examples/cache/
 # the reference runs' directories and logs, published apart (suite/drive.py)
 # the leading / anchors it, so src/mixedbench/references/ stays tracked
 /references
+# the fits pass's run directories and logs (survey/fits.py)
+/fits
 # the lab notes, private
 /lab/
 # an experiment's per-problem runs
