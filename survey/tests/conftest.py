@@ -33,7 +33,7 @@ import columns
 import groups
 from columns import COLUMN_COLUMNS
 from groups import COLUMN_FACTOR_COLUMNS
-from measure import Measurer
+from measure import Measurer, measureRegistry
 from merge import Merger
 from mixedbench.datasets import Loader
 from mixedbench.registry.row import Row, readCsv, writeCsv
@@ -80,7 +80,7 @@ def mergeShard(merger: Merger, shard: Path) -> Merger:
     merger.upsert()
     merger.supersede()
     merger.reconcile()
-    merger.measure()
+    measureRegistry(merger.registry, merger.loader)
     merger.writeManifest()
     Summarizer(merger.registry, merger.survey).flush()
     merger.report()
