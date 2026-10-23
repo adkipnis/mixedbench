@@ -92,8 +92,7 @@ ${table_d_doc}
 
 ${table_d_all}
 
-The condition index of the documented design and of the design over every column, intercept
-included and every column scaled to unit length; infinite when the design is rank-deficient.
+The condition index of the documented design and of the design over every column.
 
 ${table_conditions}
 

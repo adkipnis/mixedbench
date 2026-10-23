@@ -228,8 +228,7 @@ its levels less one, an interaction the product.
 | tier O | 13 | 2 | 2 | 2 | 19 | 79 | 23759 | 23759 |  |
 | without agridat | 666 | 0 | 0 | 1 | 5 | 20 | 51 | 23759 |  |
 
-The condition index of the documented design and of the design over every column, intercept
-included and every column scaled to unit length; infinite when the design is rank-deficient.
+The condition index of the documented design and of the design over every column.
 
 | statistic | n | min | p5 | p10 | p50 | p90 | p95 | max |
 |---|---|---|---|---|---|---|---|---|
