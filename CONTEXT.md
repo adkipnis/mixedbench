@@ -130,6 +130,11 @@ design's conditioning. Recorded per column, per column × grouping factor, per f
 per registry row, under the name TabDGP's glossary gives the property.
 _Avoid_: feature, descriptor, metric (a score), quirk (the property itself, TabDGP's word)
 
+**Superior**:
+Of a nested pair of grouping factors, the one whose groups each hold whole groups of the
+other; neither when each holds the other's, since the two then partition the rows alike.
+_Avoid_: outer factor, parent, higher level
+
 ### References and results
 
 **Reference posterior**:
