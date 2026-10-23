@@ -15,6 +15,7 @@ import sys
 import tarfile
 import tempfile
 import zipfile
+from functools import partial
 from pathlib import Path
 
 import numpy as np
@@ -184,14 +185,18 @@ GENERATED = readRows(FIXTURES / 'registry_herds.csv')[0] | {
 }  # fmt: skip
 
 
+def roundedFloats() -> st.SearchStrategy[float]:
+    """Floats as a real column holds them, four decimals: a tiny value would underflow when
+    squared and leave a nearly constant column with no mean squares to share."""
+    return st.floats(-100, 100).map(partial(round, ndigits=4))
+
+
 @st.composite
 def tables(draw: st.DrawFn) -> pd.DataFrame:
     """A table of one to thirty rows whose covariate columns take any kind the typing rule
     gives them: ties, gaps, a single value or two."""
     n = draw(st.integers(1, 30))
-    number = st.one_of(
-        st.floats(-100, 100, allow_subnormal=False), st.sampled_from([0.0, 1.0]), st.none()
-    )
+    number = st.one_of(roundedFloats(), st.sampled_from([0.0, 1.0]), st.none())
     word = st.sampled_from(['lo', 'mid', 'hi', None])
     words = draw(st.lists(word, min_size=n, max_size=n))
     return pd.DataFrame({
