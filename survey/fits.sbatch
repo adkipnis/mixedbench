@@ -1,0 +1,16 @@
+#!/bin/bash
+# one fit of the fits pass per array task: the task's index among the rows fitted (survey/fits.py),
+# n the registry rows with a continuous, binary or count response.
+# submit from the repo root, the cache warm and the log directory made, the site's partition and
+# QOS on the command line:
+#   mkdir -p fits/logs
+#   sbatch -p <partition> -q <qos> --array=0-$(( n - 1 )) survey/fits.sbatch
+# then, once the array has ended: uv run python survey/fits.py collect
+# a CPU per fit; twice the hour of fits.TIMEOUT, a backstop for a fit R cannot interrupt
+#SBATCH --job-name=fits
+#SBATCH --cpus-per-task=1
+#SBATCH --mem=16G
+#SBATCH --time=2:00:00
+#SBATCH --output=fits/logs/%A_%a.log
+
+uv run python survey/fits.py run "$SLURM_ARRAY_TASK_ID"
