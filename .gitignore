@@ -23,3 +23,5 @@ examples/cache/
 /experiments/*/work
 # local agent instructions (docs/conventions.md is the public part)
 CLAUDE.md
+# the session handoff, private
+next.md
