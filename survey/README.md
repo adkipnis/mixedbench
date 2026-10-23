@@ -215,15 +215,15 @@ rows that named a nested `a:b` by a `b` whose codes repeat across `a` through
     its values leave one undefined:
     - `skewness` and `excess_kurtosis`: the sample-adjusted G1 and G2 pandas computes;
       `outlier_share`: the share with |z| > 4 under the mean and sample sd. Continuous columns,
-      blank when constant.
+      blank when constant, `skewness` also under three values and `excess_kurtosis` under four.
     - `zero_share`, `min_share`, `max_share`: the share at zero, at the minimum, at the maximum.
       Continuous and ordered columns, an ordered one by its levels in order, its zero a level
       loaded as the number 0.
     - `unique_share`: distinct values over values. Every column.
     - `rare_level_share`: the smallest present level's share. Binary, categorical and ordered.
     - `max_abs_rho`: the largest |Spearman| with another column of the row, on the rows both
-      observe; continuous columns as loaded, binary ones as 0/1, ordered ones as their codes.
-      Blank without a partner or when constant on those rows.
+      observe; continuous columns as loaded, binary ones as 0/1, ordered ones as their codes, a
+      categorical one takes no part. Blank without a partner or when constant on those rows.
 - `column_factors.csv`: key `source`, `object`, `model_index`, `column`, `factor`, with `tier`;
   a row per row of `columns.csv` and grouping factor of its registry row, in that order. Over
   the rows that observe the column and the factor, to four decimals with negatives kept, blank
