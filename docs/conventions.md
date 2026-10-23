@@ -290,8 +290,8 @@ The words are [`CONTEXT.md`](../CONTEXT.md)'s.
 
 ### Names
 
-- Other names have one home each: registry columns in the
-  [file contracts](../survey/README.md#file-contracts); problem ids in `CONTEXT.md`; table
+- Other names have one home each: registry columns in
+  [`docs/registry.md`](registry.md); problem ids in `CONTEXT.md`; table
   columns and parameter names in `contract/problem.py`; the cache layout in `loader.py` and
   `materialized.py`; the draw files' directory in `references/runner.py`, their names and
   columns in `references/handoff.py`; versions and suite folders in

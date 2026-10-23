@@ -2,8 +2,8 @@
 
 *The registry's build record, kept for provenance.*
 
-What each pass of the dimension survey did and found, as dated bullets. The living method and
-rules are in [`README.md`](README.md), the current counts in [`SUMMARY.md`](../registry/SUMMARY.md). `m3#` is an issue of
+What each pass of the dimension survey did and found, as dated bullets. The method is in
+[`README.md`](README.md), the files in [`docs/registry.md`](../docs/registry.md), the current counts in [`SUMMARY.md`](../registry/SUMMARY.md). `m3#` is an issue of
 metabeta-v3, a private repository where the survey ran until 2026-10-08 (spec m3#14, tickets m3#15–m3#27); `#` is an
 issue of this repository. The finished scripts named here (`deposits.py`, `resolve.py`,
 `net.py`, `verify.py`) and the files only they wrote were in `archive/`, reproducible at tag
@@ -461,3 +461,88 @@ reading's open disagreements, four to eight per tier.
 - `suite/admit.py`'s rerun moved the contract hashes of 49 candidates, in the hash alone; the
   refused rows are unchanged. It is a patch, 1.0.7, as for #57: no suite is frozen before
   release 1.1.
+
+## Reading rulings (m3#22 to #15)
+
+The rulings [`prompts/read.md`](prompts/read.md) does not carry, from the agents' `RULE GAP` notes and Alex's checks, each with an example
+object and the deciding issue.
+
+**Grouping factors**
+
+- Counted: a cluster that repeats even when the source treats rows as independent (Tier O's
+  hospitals, ROS; m3#24, m3#25); a month or observer with enough levels and rows (Squid,
+  Sparrows; m3#25); a repeating dyad the book fits (Crofoot; m3#25); a design level the first
+  reading missed (lawn's `machine:speed`; m3#23); a genotype-by-environment term fitted as
+  random (salmon.bunt; m3#22).
+- Not counted: strata and waves modeled as fixed (CES11; m3#23); field coordinates
+  (connolly.potato; m3#22), though a Latin square's rows and columns are blocks (OrchardSprays;
+  m3#23); a factor that classifies rather than clusters (singer; m3#23); a dyad with one row
+  per pair (Monks; m3#25).
+- A term `a:b` has no level where a part is missing (m3#24). Where a column is both a grouping
+  factor and a covariate, the grouping stands and the fixed term stays in the formula
+  (Cultivation; #12).
+- An area factor with many levels groups; one with a handful is a covariate (LGAclaims,
+  infmort; m3#23).
+- A random intercept on the matched pair (amlxray; m3#23), the GEE cluster (geepack; m3#22), a
+  frontier inefficiency term (xtfrontier1; m3#24); a single-level conditional logit is excluded
+  (travel2; m3#25).
+
+**Response**
+
+- Totals are `count`, 1–5 ratings `ordinal`, non-integer abundances `continuous`, a bounded
+  score without trials `count` (eggprod, InstEval; m3#22–m3#26); a float-coded nominal stays
+  `ordinal` (antibiotics; #11).
+- A documented normalized score is its own column (jsp_728; m3#25).
+- Survival: `continuous`, the event indicator in `ignore` and `Surv(time, event)` in the
+  formula (catheter; m3#24). Discrete-time hazard: the indicator is the response, `PERIOD` a
+  categorical covariate (cigarette; m3#25).
+
+**Covariates and model rows**
+
+- A baseline is a covariate, not a response (dietox; m3#22). Polynomial and derived terms name
+  their column once (muscatine; m3#22).
+- An interaction is carried only when fitted (prt; m3#22). The source document beats recall
+  (Stata manuals; m3#24). The final model's terms count, not the candidates; subset fits and
+  contrasts are named in the formula (m3#26).
+- A variant with one row per extra level is the same model (SASmixed, melanoma; m3#22, m3#24).
+  posteriordb's ladders render the richest grouping (radon; m3#24).
+- `published_model` is `no` for all of Tier O (m3#24).
+- Priors in deposit files the page lists are filed (verberk; #10).
+
+**Code against prose** (#15)
+
+- Code not deposited: the paper stands at `medium`.
+- An evident bug files the intended model (voorspoels); where a package version changed a fit,
+  the published output decides (sequestro).
+- A subset fit stays on the whole object, the subset in `notes` (szollosi).
+- A fixed scale, sum-to-zero, structured covariance or location-scale correlation keeps the
+  grouping and is named in the formula (rugby, gumundsdottir).
+
+**Exclusions**
+
+- `simulated data` only where the source says so (Stata's chicken, hox SocsLong; m3#24, #12);
+  a guessed "constructed" stays (SASmixed Animal; m3#22).
+- `no grouping structure`: wide repeated-measures tables (nitrofen), replication without a
+  replicate column (faraway rats), a uniformity trial without a random term, coordinates as the
+  only grouping (besag.checks); m3#22, m3#23. A fixed-effects fit over blocks is rendered with
+  random blocks at `low` (mead.germination; m3#22).
+- `derived or duplicated table`: a subset with its own model (wages_small_pp), a
+  multiple-membership reshape (star_mm), Stan's censored and uncensored halves, read as the
+  modal one (BUGS kidney); m3#24, m3#25.
+- Stan: pure GP, time-series, CAR and mixture posteriors have no grouping; a GP beside random
+  intercepts stays (m3#24).
+- Kept: ARM's raw tables of an early chapter, with a later chapter's multilevel fit at `medium`
+  when the grouping column is in the table (m3#24).
+
+## Columns filled by script (#6 to #15)
+
+- `random_slopes` and `verified` came in by the header-only `shards/registry_schema_2.csv`;
+  the archived `verified.py` filled `verified` once through `shards/registry_verified.csv`;
+  the archived `slopes.py` filled `random_slopes` through `shards/registry_slopes.csv`, Alex's
+  decisions on the rows it reported through `shards/registry_slopes_decisions.csv`.
+  A later row fills both in its own shard. The archived `factors.py` regrouped the
+  rows that named a nested `a:b` by a `b` whose codes repeat across `a` through
+  `shards/registry_factors.csv`; Wafer's slopes, waiting on that, followed in
+  `shards/registry_slopes_wafer.csv`.
+- The re-pulled `candidates.csv` and pre-screen shard of #9 and #14 are not merged: the merge
+  would overwrite readers' reasons with `unreadable format`.

@@ -1,6 +1,6 @@
 """The frame of the dimension survey: `sources.yaml` read into labeled pinned sources with
-their tier and cap, in frame order. Documented for humans in README.md; the pull and the merge
-both read it."""
+their tier and cap, in frame order. Documented for humans in `docs/registry.md`; the pull and the
+merge both read it."""
 
 from __future__ import annotations
 

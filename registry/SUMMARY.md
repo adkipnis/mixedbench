@@ -1,7 +1,7 @@
 # Dimension survey — summary
 
-Public grouped datasets measured by script from [`registry.csv`](registry.csv); frame, method
-and reading rules in [`README.md`](../survey/README.md). Evidence for the envelope in metabeta's
+Public grouped datasets measured by script from [`registry.csv`](registry.csv); the files in
+[`docs/registry.md`](../docs/registry.md), the method in [`README.md`](../survey/README.md). Evidence for the envelope in metabeta's
 design docs, not the envelope itself.
 
 How to read the tables:
@@ -16,7 +16,7 @@ How to read the tables:
 - A quirk statistic counts once per row of its file that defines it: a column, a column and
   grouping factor, a crossed pair of factors or a registry row. Its table shows the pooled
   quantiles, `quantiles.yaml` also those per tier and without agridat. Definitions are in the
-  [file contracts](../survey/README.md#file-contracts).
+  [`docs/registry.md`](../docs/registry.md).
 - The last column of an axis table, `practice`, is the practice survey's upper decile, the
   maximum over the v1 families in [`practice_quantiles.yaml`](../survey/practice_quantiles.yaml)
   (the minimum for the smallest group size), read at merge time; `–` where the practice survey

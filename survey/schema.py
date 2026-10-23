@@ -2,7 +2,7 @@
 `excluded.csv`, `duplicates.csv` and `dropped.csv` (agent and script columns, allowed values,
 row keys) and the shape of `sources.yaml`. The registry row's dialect, columns, vocabularies
 and grammars are the package's (`mixedbench.registry.row`). The merge script enforces it;
-agents write shards with exactly the agent columns. Documented for humans in README.md.
+agents write shards with exactly the agent columns. Documented for humans in `docs/registry.md` and `README.md`.
 """
 
 from __future__ import annotations
