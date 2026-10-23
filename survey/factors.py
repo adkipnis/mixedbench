@@ -46,9 +46,7 @@ def measure(measurer: Measurer) -> list[dict]:
 
 
 def measureColumnFactor(measurer: Measurer, column: str, factor: str) -> dict:
-    """The quirk statistics of a column against a factor's groups,
-    over the rows that observe both.
-    A statistic left out is blank in column_factors.csv."""
+    """The statistics of a column against a factor, over the rows that observe both."""
     table = measurer.table
     both = table[column].notna() & table[factor].notna()
     if not both.any():
@@ -71,10 +69,9 @@ def measureColumnFactor(measurer: Measurer, column: str, factor: str) -> dict:
 
 
 def measureBetweenGroupShare(values: pd.Series, groups: pd.Series) -> dict:
-    """The adjusted ICC(1) of a one-way analysis of variance,
-    (MSB − MSW) / (MSB + (k₀ − 1) MSW) with k₀ = (n − Σ nⱼ² / n) / (m − 1)
-    (Snijders & Bosker 2012, section 3.3.1).
-    Blank with one group or when every group is a singleton."""
+    """The adjusted ICC(1), (MSB − MSW) / (MSB + (k₀ − 1) MSW) with
+    k₀ = (n − Σ nⱼ² / n) / (m − 1) (Snijders & Bosker 2012, section 3.3.1).
+    Blank with one group or all singletons."""
     grouped = values.groupby(groups, observed=True)
     sizes = grouped.size()
     n, m = int(sizes.sum()), len(sizes)
@@ -98,8 +95,8 @@ def measureSizeRho(values: pd.Series, groups: pd.Series) -> dict:
 
 
 def measureWithinSdCv(values: pd.Series, groups: pd.Series) -> dict:
-    """The population coefficient of variation of the groups' sample standard deviations,
-    over the groups of two or more rows. Blank with fewer than two or a zero mean."""
+    """The population CV of the within-group sample sds over the groups of two or more rows.
+    Blank with fewer than two or a zero mean."""
     grouped = values.groupby(groups, observed=True)
     sds = grouped.std()[grouped.size() >= 2]
     if len(sds) < 2 or sds.mean() == 0:
@@ -108,12 +105,9 @@ def measureWithinSdCv(values: pd.Series, groups: pd.Series) -> dict:
 
 
 def measureGroupLevelR2(measurer: Measurer, column: str, factor: str, kind: str) -> dict:
-    """The row-level R² of the column on the factor's other group-level columns
-    that hold a value, over the rows that observe them all,
-    adjusted by the group count m and the design's rank p:
-    1 − (1 − R²)(m − 1) / (m − p − 1).
-    Blank when the partners span nothing beyond the intercept, leave no degree of freedom,
-    or the column is constant on those rows."""
+    """The adjusted R² of the column on the factor's other group-level columns,
+    1 − (1 − R²)(m − 1) / (m − p − 1) with p the design's rank beyond the intercept.
+    Blank when p = 0, m − p − 1 ≤ 0 or the column is constant."""
     table = measurer.table
     # a column with no observed value is constant within groups, but would complete no row
     partners = [c for c in measurer.group_level[factor] if c != column and table[c].notna().any()]
@@ -133,9 +127,7 @@ def measureGroupLevelR2(measurer: Measurer, column: str, factor: str, kind: str)
 
 
 def codeDesign(measurer: Measurer, columns: list[str], rows: pd.Index) -> np.ndarray:
-    """An intercept, then each column as the contract's design spans it:
-    a continuous one raw, any other by its levels' indicators but the first.
-    R² and rank depend only on the span, not on which level is the reference."""
+    """An intercept, a continuous column raw, any other by its level indicators but the first."""
     coded = [pd.DataFrame({'intercept': 1.0}, index=rows)]
     for column in columns:
         values = measurer.table.loc[rows, column]

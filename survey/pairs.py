@@ -38,8 +38,7 @@ def measure(measurer: Measurer) -> list[dict]:
 
 
 def measureFactorPair(measurer: Measurer, a: str, b: str) -> dict:
-    """A nested pair's superior factor, blank when each holds the other's groups,
-    or a crossed pair's share of empty group × group cells."""
+    """A nested pair's superior, blank when each holds the other; a crossed pair's empty cells."""
     holders = measurer.findHolders(a, b)
     if not holders:
         empty = measurer.measureEmptyCells(measurer.table[[a, b]])

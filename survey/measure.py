@@ -63,9 +63,8 @@ class Measurer:
         return group_level
 
     def codeColumn(self, column: str, kind: str) -> pd.Series:
-        """A continuous column as loaded,
-        a binary or ordered one by the codes of the levels its measured rows hold, in loaded order.
-        A missing value stays missing."""
+        """A continuous column as loaded, a binary or ordered one by the codes of its present
+        levels. A missing value stays missing."""
         values = self.table[column]
         if kind == 'continuous':
             return values.astype(float)
@@ -74,8 +73,8 @@ class Measurer:
         return codes.where(codes >= 0)  # -1 codes a missing value
 
     def findHolders(self, a: str, b: str) -> list[str]:
-        """The factors whose groups each hold whole groups of the other:
-        none when the two cross, both when they partition the rows alike."""
+        """The factors whose groups hold whole groups of the other: none when the two cross,
+        both when they partition the rows alike."""
         levels = self.table[[a, b]].drop_duplicates()
         holders = []
         if self.hasOneParent(levels, b, a):
@@ -91,8 +90,7 @@ class Measurer:
 
     @staticmethod
     def measureEmptyCells(pairs: pd.DataFrame) -> float:
-        """The share of the m × k cells of two columns' levels that hold no row,
-        over the rows that observe both."""
+        """The share of the two columns' level × level cells that hold no row."""
         cells = pairs.dropna().drop_duplicates()
         first, second = cells.columns
         m, k = cells[first].nunique(), cells[second].nunique()

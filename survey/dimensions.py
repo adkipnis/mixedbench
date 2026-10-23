@@ -3,9 +3,9 @@
 pipeline:
 ---------
 a measurer
--> the factors' relation                      classifyRelation
+-> the factors' relation                       classifyRelation
 -> the documented and the full design's width  countDesignColumns
--> both designs' condition indexes             measureConditions
+-> both designs' condition indexes             measureConditionIndexes
 -> each factor's group sizes                   measureGroupSizes
 """
 
@@ -36,10 +36,8 @@ DIMENSION_COLUMNS = (
 
 
 def fitAlpha(sizes: pd.Series) -> float:
-    """Concentration of a symmetric Dirichlet fitted by moment matching to the group-size
-    proportions: Var(p) = (1 − 1/m) / (m (m α + 1)) solved for α,
-    with the variance taken around the known mean 1/m.
-    A balanced allocation has zero variance, hence infinite α."""
+    """The concentration of a symmetric Dirichlet matched to the group-size proportions by
+    their variance, Var(p) = (1 − 1/m) / (m (m α + 1)) solved for α. Balanced sizes give inf."""
     m = len(sizes)
     p = sizes / sizes.sum()
     variance = float(((p - 1 / m) ** 2).mean())
@@ -59,7 +57,7 @@ def pickObserved(values: pd.Series, q: float) -> int | float:
 # =====================================================================================
 def measure(measurer: Measurer) -> list[dict]:
     shared = {'n_factors': len(measurer.factors), 'relation': classifyRelation(measurer)}
-    shared |= countDesignColumns(measurer) | measureConditions(measurer)
+    shared |= countDesignColumns(measurer) | measureConditionIndexes(measurer)
     dimensions = []
     for factor in measurer.factors:
         sizes = measureGroupSizes(measurer, factor)
@@ -68,8 +66,8 @@ def measure(measurer: Measurer) -> list[dict]:
 
 
 def classifyRelation(measurer: Measurer) -> str:
-    """The practice survey's single / nested / crossed / mixed, computed from the data.
-    A pair is nested when every level of one factor lies in one level of the other."""
+    """single, nested, crossed or mixed.
+    A pair is nested when every group of one factor lies in one group of the other."""
     if len(measurer.factors) == 1:
         return 'single'
     nested = {bool(measurer.findHolders(a, b)) for a, b in combinations(measurer.factors, 2)}
@@ -81,9 +79,9 @@ def classifyRelation(measurer: Measurer) -> str:
 
 
 def countDesignColumns(measurer: Measurer) -> dict:
-    """d_doc expands the documented model, d_all every covariate column plus the documented
-    interactions, so that d_all is never below d_doc (envelope rule 4).
-    Continuous and binary count 1, categorical k − 1, an interaction the product."""
+    """d_doc counts the documented model's columns, d_all every covariate column plus the
+    documented interactions. Continuous and binary count 1, categorical k − 1, an interaction
+    the product."""
     width = {c: countWidth(*measurer.column_types[c]) for c in measurer.column_names}
     interactions = measurer.row.interactions
     d_interactions = sum(np.prod([width[c] for c in parts(term)]) for term in interactions)
@@ -98,11 +96,9 @@ def countWidth(kind: str, levels: int | str) -> int:
     return 1
 
 
-def measureConditions(measurer: Measurer) -> dict:
-    """The condition index of the contract's design, of the documented model
-    and of every measured column with the documented interactions.
-    The contract codes, types and drops incomplete rows alike for both.
-    Blank where the contract builds no problem."""
+def measureConditionIndexes(measurer: Measurer) -> dict:
+    """The condition index of the documented design and of the design over every column, both
+    built by the contract. Blank where the contract refuses the row."""
     try:
         documented = Problem.build(measurer.row, measurer.table)
     except Refused:
@@ -117,17 +113,11 @@ def measureConditions(measurer: Measurer) -> dict:
 
 
 def computeConditionIndex(problem: Problem) -> float:
-    """The condition index σ_max / σ_min of the standardized full-regime design,
-    intercept included, each column scaled to unit length as Belsley, Kuh and Welsch (1980)
-    scale it, inf when rank-deficient.
-    Unlike their index, it is taken after the contract centers the continuous columns,
-    so their collinearity with the intercept does not count."""
+    """σ_max / σ_min of the standardized design with each column scaled to unit length
+    (Belsley, Kuh and Welsch 1980), inf when rank-deficient."""
     design = problem.standardized()[list(problem.design)]
     scaled = (design / np.sqrt((design**2).sum())).to_numpy()
-    # a constant continuous column standardizes to 0/0, and an interaction's empty cell
-    # gives a column of zeros, which scales to 0/0: set to zeros, either leaves the design
-    # rank-deficient
-    scaled = np.nan_to_num(scaled)
+    scaled = np.nan_to_num(scaled)  # a constant or empty-cell column scales to 0/0: zeros
     if np.linalg.matrix_rank(scaled) < scaled.shape[1]:
         return float('inf')
     singular = np.linalg.svd(scaled, compute_uv=False)

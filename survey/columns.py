@@ -46,9 +46,8 @@ def measure(measurer: Measurer) -> list[dict]:
 
 
 def measureMaxAbsRho(measurer: Measurer) -> pd.Series:
-    """Each column's largest |Spearman| with another, over the rows where both are observed.
-    Continuous columns go in as loaded, binary and ordered ones by their levels in loaded order.
-    Blank with no partner, or when every partner or the column is constant on those rows."""
+    """Each column's largest |Spearman| with another, pairwise complete; categorical columns
+    take no part. Blank with no partner or when constant."""
     ranked = {}
     for column in measurer.column_names:
         kind, _ = measurer.column_types[column]
@@ -74,8 +73,7 @@ def measureColumn(measurer: Measurer, column: str) -> dict:
 
 
 def measureShape(values: pd.Series, kind: str) -> dict:
-    """The quirk statistics that the column's kind defines, over its non-missing values.
-    A statistic left out is blank in columns.csv."""
+    """The statistics the column's kind defines, over its present values."""
     if values.empty:
         return {}
     shape = {'unique_share': round(values.nunique() / len(values), 4)}
@@ -91,8 +89,8 @@ def measureShape(values: pd.Series, kind: str) -> dict:
 
 
 def measureMoments(values: pd.Series) -> dict:
-    """Fisher's G1 and G2 as pandas computes them,
-    and the share beyond four sample standard deviations. None for a constant column."""
+    """Fisher's G1 and G2 and the share beyond four sample standard deviations.
+    None for a constant column."""
     if values.nunique() < 2:
         return {}
     z = (values - values.mean()) / values.std()
@@ -104,9 +102,7 @@ def measureMoments(values: pd.Series) -> dict:
 
 
 def measureBounds(values: pd.Series, kind: str) -> dict:
-    """The shares at the lowest value, at the highest and at zero.
-    An ordered column's values are its levels in order,
-    its zero a level loaded as the number zero."""
+    """The shares at the minimum, the maximum and zero; zero only for numeric values or levels."""
     bounds = {
         'min_share': round(float((values == values.min()).mean()), 4),
         'max_share': round(float((values == values.max()).mean()), 4),
