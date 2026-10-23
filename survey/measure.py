@@ -61,8 +61,9 @@ FACTOR_PAIR_COLUMNS = (
 
 def fitAlpha(sizes: pd.Series) -> float:
     """Concentration of a symmetric Dirichlet fitted by moment matching to the group-size
-    proportions: Var(p) = (1 − 1/m) / (m (m α + 1)) solved for α; the variance is around the
-    known mean 1/m. A balanced allocation has zero variance, hence infinite α (spec #14)."""
+    proportions: Var(p) = (1 − 1/m) / (m (m α + 1)) solved for α,
+    with the variance taken around the known mean 1/m.
+    A balanced allocation has zero variance, hence infinite α."""
     m = len(sizes)
     p = sizes / sizes.sum()
     variance = float(((p - 1 / m) ** 2).mean())
@@ -71,7 +72,7 @@ def fitAlpha(sizes: pd.Series) -> float:
     return ((1 - 1 / m) / (m * variance) - 1) / m
 
 
-def observed(values: pd.Series, q: float) -> int | float:
+def pickObserved(values: pd.Series, q: float) -> int | float:
     """The observed value at or below the level under p50, at or above from p50 on."""
     v = values.quantile(q, interpolation='higher' if q >= 0.5 else 'lower')
     return int(v) if float(v).is_integer() else float(v)
@@ -82,18 +83,20 @@ def observed(values: pd.Series, q: float) -> int | float:
 # =====================================================================================
 def measureRegistry(root: Path, loader: Loader) -> None:
     frame = readFrame(root)
-    dimensions, columns, columnFactors, factorPairs = [], [], [], []
+    dimensions, columns, column_factors, factor_pairs = [], [], [], []
     for row in registry.rows(root / 'registry.csv'):
         table = loader.load(frame.sources[row.source], row.object, row.types)
         measurer = Measurer(table, row)
-        dimensions += measurer.dimensions()
-        columns += measurer.columns()
-        columnFactors += measurer.columnFactors()
-        factorPairs += measurer.factorPairs()
+        dimensions += measurer.measureDimensions()
+        columns += measurer.measureColumns()
+        column_factors += measurer.measureColumnFactors()
+        factor_pairs += measurer.measureFactorPairs()
     writeCsv(pd.DataFrame(dimensions, columns=DIMENSION_COLUMNS), root / 'dimensions.csv')
     writeCsv(pd.DataFrame(columns, columns=COLUMN_COLUMNS), root / 'columns.csv')
-    writeCsv(pd.DataFrame(columnFactors, columns=COLUMN_FACTOR_COLUMNS), root / 'column_factors.csv')  # fmt: skip
-    writeCsv(pd.DataFrame(factorPairs, columns=FACTOR_PAIR_COLUMNS), root / 'factor_pairs.csv')
+    writeCsv(
+        pd.DataFrame(column_factors, columns=COLUMN_FACTOR_COLUMNS), root / 'column_factors.csv'
+    )
+    writeCsv(pd.DataFrame(factor_pairs, columns=FACTOR_PAIR_COLUMNS), root / 'factor_pairs.csv')
 
 
 # =====================================================================================
@@ -107,29 +110,33 @@ class Measurer:
         self.table = withComposites(measured, self.factors)
         self.identity = {k: getattr(row, k) for k in IDENTITY}
         taken = {row.response, row.trials, *self.factors, *row.ignore}
-        self.columnNames = [c for c in table.columns if c not in taken]
-        self.columnTypes = {c: columnType(self.table[c]) for c in self.columnNames}
-        self.groupLevel = self.findGroupLevel()
+        self.column_names = [c for c in table.columns if c not in taken]
+        self.column_types = {c: columnType(self.table[c]) for c in self.column_names}
+        self.group_level = self.findGroupLevel()
 
     def findGroupLevel(self) -> dict[str, list[str]]:
         """Each factor's group-level columns, those constant within each of its groups."""
-        groupLevel = {}
+        group_level = {}
         for factor in self.factors:
             grouped = self.table.groupby(factor, observed=True)
-            groupLevel[factor] = [c for c in self.columnNames if grouped[c].nunique().max() <= 1]
-        return groupLevel
+            group_level[factor] = [c for c in self.column_names if grouped[c].nunique().max() <= 1]
+        return group_level
 
     # ---------------------------------------------------------------------------------
     # dimensions.csv: relation -> design columns -> condition indexes -> group sizes
     # ---------------------------------------------------------------------------------
-    def dimensions(self) -> list[dict]:
-        shared = {'n_factors': len(self.factors), 'relation': self.relation()}
-        shared |= self.design() | self.measureConditions()
-        return [self.identity | {'factor': f} | shared | self.groupSizes(f) for f in self.factors]  # fmt: skip
+    def measureDimensions(self) -> list[dict]:
+        shared = {'n_factors': len(self.factors), 'relation': self.classifyRelation()}
+        shared |= self.countDesignColumns() | self.measureConditions()
+        dimensions = []
+        for factor in self.factors:
+            sizes = self.measureGroupSizes(factor)
+            dimensions.append(self.identity | {'factor': factor} | shared | sizes)
+        return dimensions
 
-    def relation(self) -> str:
-        """The practice survey's single / nested / crossed / mixed, computed from the data:
-        a pair is nested when every level of one factor lies in one level of the other."""
+    def classifyRelation(self) -> str:
+        """The practice survey's single / nested / crossed / mixed, computed from the data.
+        A pair is nested when every level of one factor lies in one level of the other."""
         if len(self.factors) == 1:
             return 'single'
         nested = {bool(self.findHolders(a, b)) for a, b in combinations(self.factors, 2)}
@@ -140,48 +147,49 @@ class Measurer:
         return 'mixed'
 
     def findHolders(self, a: str, b: str) -> list[str]:
-        """The factors whose groups each hold whole groups of the other: none when the two
-        cross, both when they partition the rows alike."""
+        """The factors whose groups each hold whole groups of the other:
+        none when the two cross, both when they partition the rows alike."""
         levels = self.table[[a, b]].drop_duplicates()
         holders = []
-        if self.oneParentEach(levels, b, a):
+        if self.hasOneParent(levels, b, a):
             holders.append(a)
-        if self.oneParentEach(levels, a, b):
+        if self.hasOneParent(levels, a, b):
             holders.append(b)
         return holders
 
     @staticmethod
-    def oneParentEach(levels: pd.DataFrame, child: str, parent: str) -> bool:
+    def hasOneParent(levels: pd.DataFrame, child: str, parent: str) -> bool:
         parents = levels.groupby(child, observed=True)[parent].nunique()
         return bool(parents.max() == 1)
 
-    def design(self) -> dict:
+    def countDesignColumns(self) -> dict:
         """d_doc expands the documented model, d_all every covariate column plus the documented
-        interactions, so that d_all is never below d_doc (envelope rule 4): continuous and
-        binary count 1, categorical k − 1, an interaction the product."""
-        width = {c: self.width(*self.columnTypes[c]) for c in self.columnNames}
+        interactions, so that d_all is never below d_doc (envelope rule 4).
+        Continuous and binary count 1, categorical k − 1, an interaction the product."""
+        width = {c: self.countWidth(*self.column_types[c]) for c in self.column_names}
         interactions = self.row.interactions
-        dInteractions = sum(np.prod([width[c] for c in parts(term)]) for term in interactions)
-        dDoc = sum(width[c] for c in self.row.covariates) + dInteractions
-        dAll = sum(width.values()) + dInteractions
-        return {'d_doc': int(dDoc), 'd_all': int(dAll)}
+        d_interactions = sum(np.prod([width[c] for c in parts(term)]) for term in interactions)
+        d_doc = sum(width[c] for c in self.row.covariates) + d_interactions
+        d_all = sum(width.values()) + d_interactions
+        return {'d_doc': int(d_doc), 'd_all': int(d_all)}
 
     @staticmethod
-    def width(kind: str, levels: int | str) -> int:
+    def countWidth(kind: str, levels: int | str) -> int:
         if kind in ('categorical', 'ordered'):
             return levels - 1
         return 1
 
     def measureConditions(self) -> dict:
-        """The condition index of the contract's design, of the documented model and of every
-        measured column with the documented interactions; the contract codes, types and drops
-        incomplete rows alike for both. Blank where the contract builds no problem."""
+        """The condition index of the contract's design, of the documented model
+        and of every measured column with the documented interactions.
+        The contract codes, types and drops incomplete rows alike for both.
+        Blank where the contract builds no problem."""
         try:
             documented = Problem.build(self.row, self.table)
         except Refused:
             return {}
         conditions = {'condition_doc': self.computeConditionIndex(documented)}
-        everything = dataclasses.replace(self.row, covariates=tuple(self.columnNames))
+        everything = dataclasses.replace(self.row, covariates=tuple(self.column_names))
         try:
             measured = Problem.build(everything, self.table)
         except (Refused, TypeError):  # no complete row, or a column of strings and numbers (#105)
@@ -190,10 +198,11 @@ class Measurer:
 
     @staticmethod
     def computeConditionIndex(problem: Problem) -> float:
-        """The condition index σ_max / σ_min of the standardized full-regime design, intercept
-        included, each column scaled to unit length as Belsley, Kuh and Welsch (1980) scale it;
-        inf when rank-deficient. Unlike their index, it is taken after the contract centers the
-        continuous columns, so their collinearity with the intercept does not count."""
+        """The condition index σ_max / σ_min of the standardized full-regime design,
+        intercept included, each column scaled to unit length as Belsley, Kuh and Welsch (1980)
+        scale it, inf when rank-deficient.
+        Unlike their index, it is taken after the contract centers the continuous columns,
+        so their collinearity with the intercept does not count."""
         design = problem.standardized()[list(problem.design)]
         scaled = (design / np.sqrt((design**2).sum())).to_numpy()
         # a constant continuous column standardizes to 0/0, and an interaction's empty cell
@@ -205,16 +214,16 @@ class Measurer:
         singular = np.linalg.svd(scaled, compute_uv=False)
         return round(float(singular[0] / singular[-1]), 4)
 
-    def groupSizes(self, factor: str) -> dict:
+    def measureGroupSizes(self, factor: str) -> dict:
         sizes = self.table[factor].value_counts()
         sizes = sizes[sizes > 0]  # a categorical may carry unused levels
         return {
             'n_obs': int(sizes.sum()),
             'n_groups': len(sizes),
             'group_size_min': int(sizes.min()),
-            'group_size_p10': observed(sizes, 0.1),
-            'group_size_p50': observed(sizes, 0.5),
-            'group_size_p90': observed(sizes, 0.9),
+            'group_size_p10': pickObserved(sizes, 0.1),
+            'group_size_p50': pickObserved(sizes, 0.5),
+            'group_size_p90': pickObserved(sizes, 0.9),
             'group_size_max': int(sizes.max()),
             'singleton_share': round(float((sizes == 1).mean()), 4),
             'cv': round(float(np.std(sizes) / np.mean(sizes)), 4),
@@ -224,31 +233,32 @@ class Measurer:
     # ---------------------------------------------------------------------------------
     # columns.csv: rank correlations -> type, level and missing share -> quirk statistics
     # ---------------------------------------------------------------------------------
-    def columns(self) -> list[dict]:
-        rho = self.maxAbsRho()
+    def measureColumns(self) -> list[dict]:
+        rho = self.measureMaxAbsRho()
         columns = []
-        for column in self.columnNames:
+        for column in self.column_names:
             key = {'column': column}
-            measured = self.describe(column) | {'max_abs_rho': rho[column]}
+            measured = self.measureColumn(column) | {'max_abs_rho': rho[column]}
             columns.append(self.identity | key | measured)
         return columns
 
-    def maxAbsRho(self) -> pd.Series:
-        """Each column's largest |Spearman| with another, over the rows where both are observed:
-        continuous columns as loaded, binary and ordered ones by their levels in loaded order.
+    def measureMaxAbsRho(self) -> pd.Series:
+        """Each column's largest |Spearman| with another, over the rows where both are observed.
+        Continuous columns go in as loaded, binary and ordered ones by their levels in loaded order.
         Blank with no partner, or when every partner or the column is constant on those rows."""
         ranked = {}
-        for column in self.columnNames:
-            kind, _ = self.columnTypes[column]
+        for column in self.column_names:
+            kind, _ = self.column_types[column]
             if kind != 'categorical':
                 ranked[column] = self.codeColumn(column, kind)
         rho = pd.DataFrame(ranked, index=self.table.index).corr(method='spearman').abs()
         partners = rho.where(~np.eye(len(rho), dtype=bool))
-        return partners.max().round(4).reindex(self.columnNames)
+        return partners.max().round(4).reindex(self.column_names)
 
     def codeColumn(self, column: str, kind: str) -> pd.Series:
-        """A continuous column as loaded, a binary or ordered one by the codes of the levels its
-        measured rows hold, in loaded order; a missing value stays missing."""
+        """A continuous column as loaded,
+        a binary or ordered one by the codes of the levels its measured rows hold, in loaded order.
+        A missing value stays missing."""
         values = self.table[column]
         if kind == 'continuous':
             return values.astype(float)
@@ -256,29 +266,29 @@ class Measurer:
         codes = pd.Series(levels.codes, index=values.index)
         return codes.where(codes >= 0)  # -1 codes a missing value
 
-    def describe(self, column: str) -> dict:
+    def measureColumn(self, column: str) -> dict:
         values = self.table[column]
-        kind, levels = self.columnTypes[column]
-        constantWithin = [f for f in self.factors if column in self.groupLevel[f]]
+        kind, levels = self.column_types[column]
+        constant_within = [f for f in self.factors if column in self.group_level[f]]
         return {
             'type': kind,
             'K': levels,
-            'level': 'group' if constantWithin else 'within',
-            'constant_within': ';'.join(constantWithin),
+            'level': 'group' if constant_within else 'within',
+            'constant_within': ';'.join(constant_within),
             'missing_share': round(float(values.isna().mean()), 4),
             'in_model': 'yes' if column in self.row.covariates else 'no',
-        } | self.shape(values.dropna(), kind)
+        } | self.measureShape(values.dropna(), kind)
 
-    def shape(self, values: pd.Series, kind: str) -> dict:
-        """The quirk statistics that the column's kind defines, over its non-missing values;
-        a statistic left out is blank in columns.csv."""
+    def measureShape(self, values: pd.Series, kind: str) -> dict:
+        """The quirk statistics that the column's kind defines, over its non-missing values.
+        A statistic left out is blank in columns.csv."""
         if values.empty:
             return {}
         shape = {'unique_share': round(values.nunique() / len(values), 4)}
         if kind == 'continuous':
-            shape |= self.moments(values)
+            shape |= self.measureMoments(values)
         if kind in ('continuous', 'ordered'):
-            shape |= self.bounds(values, kind)
+            shape |= self.measureBounds(values, kind)
         if kind != 'continuous':
             counts = values.value_counts()
             present = counts[counts > 0]  # a categorical may carry unused levels
@@ -286,9 +296,9 @@ class Measurer:
         return shape
 
     @staticmethod
-    def moments(values: pd.Series) -> dict:
-        """Fisher's G1 and G2 as pandas computes them, and the share beyond four sample
-        standard deviations; none for a constant column."""
+    def measureMoments(values: pd.Series) -> dict:
+        """Fisher's G1 and G2 as pandas computes them,
+        and the share beyond four sample standard deviations. None for a constant column."""
         if values.nunique() < 2:
             return {}
         z = (values - values.mean()) / values.std()
@@ -299,9 +309,10 @@ class Measurer:
         }
 
     @staticmethod
-    def bounds(values: pd.Series, kind: str) -> dict:
-        """The shares at the lowest value, at the highest and at zero: an ordered column's values
-        are its levels in order, its zero a level loaded as the number zero."""
+    def measureBounds(values: pd.Series, kind: str) -> dict:
+        """The shares at the lowest value, at the highest and at zero.
+        An ordered column's values are its levels in order,
+        its zero a level loaded as the number zero."""
         bounds = {
             'min_share': round(float((values == values.min()).mean()), 4),
             'max_share': round(float((values == values.max()).mean()), 4),
@@ -314,21 +325,24 @@ class Measurer:
     # ---------------------------------------------------------------------------------
     # column_factors.csv: absent levels -> between groups -> sizes -> spreads -> group level
     # ---------------------------------------------------------------------------------
-    def columnFactors(self) -> list[dict]:
-        columnFactors = []
-        for column in self.columnNames:
+    def measureColumnFactors(self) -> list[dict]:
+        column_factors = []
+        for column in self.column_names:
             for factor in self.factors:
                 key = {'column': column, 'factor': factor}
-                columnFactors.append(self.identity | key | self.relate(column, factor))
-        return columnFactors
+                column_factors.append(
+                    self.identity | key | self.measureColumnFactor(column, factor)
+                )
+        return column_factors
 
-    def relate(self, column: str, factor: str) -> dict:
-        """The quirk statistics of a column against a factor's groups, over the rows that observe
-        both; a statistic left out is blank in column_factors.csv."""
+    def measureColumnFactor(self, column: str, factor: str) -> dict:
+        """The quirk statistics of a column against a factor's groups,
+        over the rows that observe both.
+        A statistic left out is blank in column_factors.csv."""
         both = self.table[column].notna() & self.table[factor].notna()
         if not both.any():
             return {}
-        kind, _ = self.columnTypes[column]
+        kind, _ = self.column_types[column]
         groups = self.table.loc[both, factor]
         statistics = {}
         if kind != 'continuous':
@@ -339,25 +353,29 @@ class Measurer:
         values = self.codeColumn(column, kind)[both]
         if values.nunique() < 2:  # a constant column has nothing to share, rank, spread or explain
             return statistics
-        statistics |= self.betweenGroupShare(values, groups) | self.sizeRho(values, groups)
-        statistics |= self.withinSdCv(values, groups) | self.groupLevelR2(column, factor, kind)
+        statistics |= self.measureBetweenGroupShare(values, groups) | self.measureSizeRho(
+            values, groups
+        )
+        statistics |= self.measureWithinSdCv(values, groups) | self.measureGroupLevelR2(
+            column, factor, kind
+        )
         return statistics
 
     @staticmethod
     def measureEmptyCells(pairs: pd.DataFrame) -> float:
-        """The share of the m × k cells of two columns' levels that hold no row, over the rows
-        that observe both."""
+        """The share of the m × k cells of two columns' levels that hold no row,
+        over the rows that observe both."""
         cells = pairs.dropna().drop_duplicates()
         first, second = cells.columns
         m, k = cells[first].nunique(), cells[second].nunique()
         return round(1 - len(cells) / (m * k), 4)
 
     @staticmethod
-    def betweenGroupShare(values: pd.Series, groups: pd.Series) -> dict:
+    def measureBetweenGroupShare(values: pd.Series, groups: pd.Series) -> dict:
         """The adjusted ICC(1) of a one-way analysis of variance,
         (MSB − MSW) / (MSB + (k₀ − 1) MSW) with k₀ = (n − Σ nⱼ² / n) / (m − 1)
         (Snijders & Bosker 2012, section 3.3.1).
-        None with one group or when every group is a singleton."""
+        Blank with one group or when every group is a singleton."""
         grouped = values.groupby(groups, observed=True)
         sizes = grouped.size()
         n, m = int(sizes.sum()), len(sizes)
@@ -370,8 +388,8 @@ class Measurer:
         return {'between_group_share': round((msb - msw) / (msb + (k0 - 1) * msw), 4)}
 
     @staticmethod
-    def sizeRho(values: pd.Series, groups: pd.Series) -> dict:
-        """Spearman's ρ of the groups' sizes with their means; blank when either is constant."""
+    def measureSizeRho(values: pd.Series, groups: pd.Series) -> dict:
+        """Spearman's ρ of the groups' sizes with their means. Blank when either is constant."""
         grouped = values.groupby(groups, observed=True)
         sizes, means = grouped.size(), grouped.mean()
         if sizes.nunique() < 2 or means.nunique() < 2:
@@ -380,24 +398,25 @@ class Measurer:
         return {'size_rho': round(float(rho), 4)}
 
     @staticmethod
-    def withinSdCv(values: pd.Series, groups: pd.Series) -> dict:
+    def measureWithinSdCv(values: pd.Series, groups: pd.Series) -> dict:
         """The population coefficient of variation of the groups' sample standard deviations,
-        over the groups of two or more rows; blank with fewer than two or a zero mean."""
+        over the groups of two or more rows. Blank with fewer than two or a zero mean."""
         grouped = values.groupby(groups, observed=True)
         sds = grouped.std()[grouped.size() >= 2]
         if len(sds) < 2 or sds.mean() == 0:
             return {}
         return {'within_sd_cv': round(float(sds.std(ddof=0) / sds.mean()), 4)}
 
-    def groupLevelR2(self, column: str, factor: str, kind: str) -> dict:
-        """The row-level R² of the column on the factor's other group-level columns that hold a
-        value, adjusted by the group count m and the design's rank p,
-        1 − (1 − R²)(m − 1) / (m − p − 1), over the rows that observe them all.
+    def measureGroupLevelR2(self, column: str, factor: str, kind: str) -> dict:
+        """The row-level R² of the column on the factor's other group-level columns
+        that hold a value, over the rows that observe them all,
+        adjusted by the group count m and the design's rank p:
+        1 − (1 − R²)(m − 1) / (m − p − 1).
         Blank when the partners span nothing beyond the intercept, leave no degree of freedom,
         or the column is constant on those rows."""
         # a column with no observed value is constant within groups, but would complete no row
         partners = [
-            c for c in self.groupLevel[factor] if c != column and self.table[c].notna().any()
+            c for c in self.group_level[factor] if c != column and self.table[c].notna().any()
         ]
         complete = self.table[[column, factor, *partners]].dropna().index
         y = self.codeColumn(column, kind)[complete].to_numpy(float)
@@ -414,13 +433,13 @@ class Measurer:
         return {'group_level_r2': round(float(1 - (1 - r2) * (m - 1) / (m - p - 1)), 4)}
 
     def codeDesign(self, columns: list[str], rows: pd.Index) -> np.ndarray:
-        """An intercept, then each column as the contract's design spans it: a continuous one
-        raw, any other by its levels' indicators but the first. R² and rank depend only on the
-        span, not on which level is the reference."""
+        """An intercept, then each column as the contract's design spans it:
+        a continuous one raw, any other by its levels' indicators but the first.
+        R² and rank depend only on the span, not on which level is the reference."""
         coded = [pd.DataFrame({'intercept': 1.0}, index=rows)]
         for column in columns:
             values = self.table.loc[rows, column]
-            kind, _ = self.columnTypes[column]
+            kind, _ = self.column_types[column]
             if kind == 'continuous':
                 coded.append(values.astype(float).to_frame())
             else:
@@ -430,16 +449,16 @@ class Measurer:
     # ---------------------------------------------------------------------------------
     # factor_pairs.csv: holders -> superior or empty cells
     # ---------------------------------------------------------------------------------
-    def factorPairs(self) -> list[dict]:
+    def measureFactorPairs(self) -> list[dict]:
         pairs = []
         for a, b in combinations(self.factors, 2):
             key = {'factor_a': a, 'factor_b': b}
-            pairs.append(self.identity | key | self.relateFactors(a, b))
+            pairs.append(self.identity | key | self.measureFactorPair(a, b))
         return pairs
 
-    def relateFactors(self, a: str, b: str) -> dict:
-        """A nested pair's superior factor, blank when each holds the other's groups; a crossed
-        pair's share of empty group × group cells."""
+    def measureFactorPair(self, a: str, b: str) -> dict:
+        """A nested pair's superior factor, blank when each holds the other's groups,
+        or a crossed pair's share of empty group × group cells."""
         holders = self.findHolders(a, b)
         if not holders:
             empty = self.measureEmptyCells(self.table[[a, b]])

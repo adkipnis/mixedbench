@@ -17,7 +17,7 @@ from measure import (
     COLUMN_STATISTICS,
     CONDITIONS,
     FACTOR_PAIR_STATISTICS,
-    observed,
+    pickObserved,
 )
 from mixedbench.registry.row import readCsv
 from schema import TIERS
@@ -138,7 +138,7 @@ class Summarizer:
 
     @staticmethod
     def quantile(values: pd.Series, q: float) -> int | float:
-        v = observed(values, q)
+        v = pickObserved(values, q)
         return v if isinstance(v, int) else round(v, 4)
 
     def balancedShare(self) -> float:
