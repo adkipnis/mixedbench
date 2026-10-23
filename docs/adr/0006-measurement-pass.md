@@ -29,32 +29,19 @@ be computed here, from the cached tables, and shipped in a pinned release. Grill
 - Why: filtering to the documented covariates is the consumer's one-line choice; the reverse
   is a rerun.
 
-**The statistics.**
+**The statistics.** Defined, with their blanks, in [`docs/registry.md`](../registry.md).
 
-- Per column: `skewness`, `excess_kurtosis` and `outlier_share` (|z| > 4) for continuous
-  columns; `zero_share`, `min_share` and `max_share` for continuous and ordered columns;
-  `unique_share` for every type; `rare_level_share` (the smallest level's share) for binary,
-  categorical and ordered columns; `max_abs_rho`, the largest |Spearman| with another measured
-  column over continuous, binary and ordered codes, pairwise-complete rows.
+- Per column: `skewness`, `excess_kurtosis` and `outlier_share` for continuous columns;
+  `zero_share`, `min_share` and `max_share` for continuous and ordered columns; `unique_share`
+  for every type; `rare_level_share` for binary, categorical and ordered columns; `max_abs_rho`,
+  the largest |Spearman| with another measured column.
 - Per column × factor, every pair uniformly, group-level columns included:
-  `between_group_share`, the adjusted ICC(1) of one-way analysis of variance,
-  (MSB − MSW) / (MSB + (k₀ − 1) MSW) with k₀ = (n − Σ nⱼ² / n) / (m − 1) (Snijders & Bosker
-  2012, section 3.3.1), negatives kept; `group_level_r2`, the row-level R² of the column on
-  the factor's group-level columns coded as the contract codes them, adjusted by the
-  group-level degrees of freedom, 1 − (1 − R²)(m − 1) / (m − p − 1) with p the rank of that
-  design, blank when m − p − 1 ≤ 0; `absent_level_share`, the share of group × level cells
-  with no rows; `size_rho`, the Spearman correlation of group size with the column's group
-  mean; `within_sd_cv`, the coefficient of variation of the within-group standard deviations
-  over groups with two or more rows.
-- Per factor pair: `relation` (`nested` or `crossed`, by the test `dimensions.csv` uses),
-  `superior` for a nested pair, `empty_cell_share` of the m_a × m_b cells for a crossed one.
-- Per row: `condition_doc` and `condition_all`, the condition index σ_max / σ_min of the
-  contract's design with the intercept, every column scaled to unit length as Belsley, Kuh and
-  Welsch (1980) scale it, inf when rank-deficient. Unlike their index, it is taken after the
-  contract centers the continuous columns, so their collinearity with the intercept does not
-  count. `condition_doc` over the documented model's design from `Problem.standardized`,
-  `condition_all` over the same coding of every measured column plus the documented
-  interactions; blank for a row the contract refuses.
+  `between_group_share`, the adjusted ICC(1); `group_level_r2`, the adjusted R² of the column
+  on the factor's group-level columns; `absent_level_share`; `size_rho`; `within_sd_cv`.
+- Per factor pair: `relation`, `superior` for a nested pair, `empty_cell_share` for a crossed
+  one.
+- Per row: `condition_doc` and `condition_all`, the condition index of the contract's design,
+  documented and over every measured column.
 - Why the adjustments: raw η² tends to 1 as the groups approach the rows, and a group-level
   categorical with many levels fakes a full R²; adjusting both by the group count puts the
   gap between them, the share a latent group-level cause must supply, on one scale.
