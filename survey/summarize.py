@@ -1,6 +1,6 @@
 """Quantiles and summary of the dimension survey from the measured files (#18):
-`quantiles.yaml` from `registry.csv` and the four measured files, every axis pooled, per tier
-and with agridat removed; `SUMMARY.md` from the digit-free template, the practice
+`quantiles.yaml` from `registry.csv` and the four measured files, every axis pooled,
+per tier and with agridat removed; `SUMMARY.md` from the digit-free template, the practice
 survey's p90 read at merge time from `practice_quantiles.yaml`, a snapshot of the practice
 survey's `quantiles.yaml`, which stays in metabeta-v3.
 """
@@ -25,7 +25,7 @@ from schema import TIERS
 HERE = Path(__file__).parent
 TEMPLATE = HERE / 'SUMMARY.template.md'
 PRACTICE = HERE / 'practice_quantiles.yaml'
-# The v1 families of the stage table (metabeta-v3's packages/glmm/docs/design/stages.md): the
+# the v1 families of the stage table (metabeta-v3's packages/glmm/docs/design/stages.md): the
 # practice column takes the maximum of their p90 (envelope rule 1), the minimum for the smallest
 # group size.
 PRACTICE_FAMILIES = ('Normal', 'Bernoulli', 'Poisson', 'negative binomial', 'binomial', 'Gamma', 'log-normal')  # fmt: skip
@@ -42,7 +42,7 @@ QUANTILE_KEYS = ('n', 'min', 'p5', 'p10', 'p50', 'p90', 'p95', 'max')
 PLACEHOLDERS = {'group_size_p10': 'group_size_lower', 'group_size_p50': 'group_size_median', 'group_size_p90': 'group_size_upper'}  # fmt: skip
 HEAVY_SOURCE = 'agridat'  # the one capped census source large enough to pull the quantiles
 LEVELS = {'p5': 0.05, 'p10': 0.1, 'p50': 0.5, 'p90': 0.9, 'p95': 0.95}
-# Per-factor axes count once per grouping factor, dataset axes once per registry row.
+# per-factor axes count once per grouping factor, dataset axes once per registry row.
 FACTOR_AXES = (
     'n_groups', 'group_size_min', 'group_size_p10', 'group_size_p50', 'group_size_p90',
     'group_size_max', 'singleton_share', 'cv', 'alpha',
@@ -64,8 +64,8 @@ class Summarizer:
         measured = FACTOR_AXES + tuple(ROW_AXES.values()) + CONDITIONS
         self.dimensions = self.numeric(readCsv(self.root / 'dimensions.csv'), measured)
         self.columns = self.numeric(readCsv(self.root / 'columns.csv'), ('K', *COLUMN_STATISTICS))
-        columnFactors = readCsv(self.root / 'column_factors.csv')
-        self.columnFactors = self.numeric(columnFactors, COLUMN_FACTOR_STATISTICS)
+        column_factors = readCsv(self.root / 'column_factors.csv')
+        self.column_factors = self.numeric(column_factors, COLUMN_FACTOR_STATISTICS)
         self.pairs = self.numeric(readCsv(self.root / 'factor_pairs.csv'), FACTOR_PAIR_STATISTICS)
         self.rows = self.dimensions.drop_duplicates(['source', 'object', 'model_index'])
         self.modeled = self.columns[self.columns['in_model'] == 'yes']
@@ -89,7 +89,7 @@ class Summarizer:
         axes |= {axis: self.axis(self.rows, column) for axis, column in ROW_AXES.items()}
         axes['K'] = self.axis(self.categoricals, 'K')
         axes |= {axis: self.axis(self.columns, axis) for axis in COLUMN_STATISTICS}
-        axes |= {axis: self.axis(self.columnFactors, axis) for axis in COLUMN_FACTOR_STATISTICS}
+        axes |= {axis: self.axis(self.column_factors, axis) for axis in COLUMN_FACTOR_STATISTICS}
         axes |= {axis: self.axis(self.pairs, axis) for axis in FACTOR_PAIR_STATISTICS}
         axes |= {axis: self.axis(self.rows, axis) for axis in CONDITIONS}
         return {
@@ -143,8 +143,8 @@ class Summarizer:
         return round(float((self.dimensions['alpha'] == float('inf')).mean()), 3)
 
     def superiorSides(self) -> pd.Series:
-        """Which factor of each nested pair holds whole groups of the other: `factor_a`,
-        `factor_b`, or `none` when the two partition the rows alike."""
+        """Which factor of each nested pair holds whole groups of the other:
+        `factor_a`, `factor_b`, or `none` when the two partition the rows alike."""
         nested = self.pairs[self.pairs['relation'] == 'nested']
         sides = pd.Series('none', index=nested.index)
         sides[nested['superior'] == nested['factor_a']] = 'factor_a'
@@ -160,12 +160,12 @@ class Summarizer:
         """Expected design columns of a model with T terms under the observed categorical share c
         and mean k − 1: T (c (k − 1) + (1 − c)), one column per non-categorical term."""
         share = float(self.modeled['type'].isin(CATEGORICAL_TYPES).mean())
-        perCategorical = float((self.categoricals['K'] - 1).mean())
-        perTerm = share * perCategorical + (1 - share)
+        per_categorical = float((self.categoricals['K'] - 1).mean())
+        per_term = share * per_categorical + (1 - share)
         return {
             'categorical_share': round(share, 3),
-            'mean_columns_per_categorical': round(perCategorical, 3),
-            **{f'terms_{t}': round(t * perTerm, 2) for t in TERMS},
+            'mean_columns_per_categorical': round(per_categorical, 3),
+            **{f'terms_{t}': round(t * per_term, 2) for t in TERMS},
         }
 
     # ---------------------------------------------------------------------------------
@@ -174,7 +174,7 @@ class Summarizer:
     def summary(self, quantiles: dict) -> str:
         practice = yaml.safe_load(PRACTICE.read_text())['families']
         implied = quantiles['implied_columns']
-        impliedText = ', '.join(f'{t} terms {implied[f"terms_{t}"]} columns' for t in TERMS)
+        implied_text = ', '.join(f'{t} terms {implied[f"terms_{t}"]} columns' for t in TERMS)
         fields = {
             'n_rows': quantiles['n_rows'],
             'n_objects': quantiles['n_objects'],
@@ -185,7 +185,7 @@ class Summarizer:
             'balanced_share': quantiles['imbalance']['balanced_share'],
             'categorical_share': implied['categorical_share'],
             'mean_columns_per_categorical': implied['mean_columns_per_categorical'],
-            'implied_columns': impliedText,
+            'implied_columns': implied_text,
         }
         axes = quantiles['axes']
         for axis in (*FACTOR_AXES, *ROW_AXES, 'K'):
