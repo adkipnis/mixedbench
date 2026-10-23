@@ -369,8 +369,8 @@ def test_every_merge_writes_the_measured_headers_and_a_left_out_statistic_as_bla
     the two condition numbers after d_all. The nested region and herd pair has no empty-cell
     share, written as a blank cell (#99, #100)."""
     mergeShard(merger, FIXTURES / 'registry_herds.csv')
-    columnFactors = readRows(merger.registry / 'column_factors.csv')
-    assert list(columnFactors[0]) == [
+    column_factors = readRows(merger.registry / 'column_factors.csv')
+    assert list(column_factors[0]) == [
         'source', 'object', 'model_index', 'tier', 'column', 'factor', 'between_group_share',
         'group_level_r2', 'absent_level_share', 'size_rho', 'within_sd_cv',
     ]  # fmt: skip
