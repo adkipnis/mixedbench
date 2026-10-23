@@ -14,7 +14,7 @@ import pandas as pd
 import yaml
 from columns import COLUMN_STATISTICS
 from dimensions import CONDITIONS, pickObserved
-from factors import COLUMN_FACTOR_STATISTICS
+from groups import COLUMN_FACTOR_STATISTICS
 from mixedbench.registry.row import readCsv
 from pairs import FACTOR_PAIR_STATISTICS
 from schema import TIERS

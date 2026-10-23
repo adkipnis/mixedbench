@@ -1,7 +1,7 @@
 """measure.py runs the measurement pass: the dimension survey's numbers that no agent types,
 measured on each registry row's loaded table and written to the four measured files.
 The Measurer holds what the four share: the rows with a response, the covariate columns
-with their types, each factor's group-level columns, a column's codes, two factors' holders
+with their types, each grouping factor's group-level columns, a column's codes, two factors' holders
 and the empty cells of two columns' levels.
 
 pipeline:
@@ -10,7 +10,7 @@ registry.csv and each row's loaded table
 -> one row's table and what the measured files share  Measurer
 -> a row per grouping factor                         dimensions.measure
 -> a row per covariate column                        columns.measure
--> a row per covariate column and grouping factor    factors.measure
+-> a row per covariate column and grouping factor    groups.measure
 -> a row per pair of grouping factors                pairs.measure
 -> the four measured files                           measureRegistry
 
@@ -26,7 +26,7 @@ from pathlib import Path
 
 import columns
 import dimensions
-import factors
+import groups
 import pairs
 import pandas as pd
 from mixedbench import registry
@@ -45,21 +45,23 @@ HERE = Path(__file__).parent
 class Measurer:
     def __init__(self, table: pd.DataFrame, row: Row) -> None:
         self.row = row
-        self.factors = row.grouping_factors
+        self.grouping_factors = row.grouping_factors
         measured = table[table[row.response].notna()]  # a PK table's dosing rows carry no response
-        self.table = withComposites(measured, self.factors)
+        self.table = withComposites(measured, self.grouping_factors)
         self.identity = {k: getattr(row, k) for k in IDENTITY}
-        taken = {row.response, row.trials, *self.factors, *row.ignore}
+        taken = {row.response, row.trials, *self.grouping_factors, *row.ignore}
         self.column_names = [c for c in table.columns if c not in taken]
         self.column_types = {c: columnType(self.table[c]) for c in self.column_names}
         self.group_level = self.findGroupLevel()
 
     def findGroupLevel(self) -> dict[str, list[str]]:
-        """Each factor's group-level columns, those constant within each of its groups."""
+        """Each grouping factor's group-level columns, those constant within its groups."""
         group_level = {}
-        for factor in self.factors:
-            grouped = self.table.groupby(factor, observed=True)
-            group_level[factor] = [c for c in self.column_names if grouped[c].nunique().max() <= 1]
+        for grouping_factor in self.grouping_factors:
+            grouped = self.table.groupby(grouping_factor, observed=True)
+            group_level[grouping_factor] = [
+                c for c in self.column_names if grouped[c].nunique().max() <= 1
+            ]
         return group_level
 
     def codeColumn(self, column: str, kind: str) -> pd.Series:
@@ -108,12 +110,12 @@ def measureRegistry(root: Path, loader: Loader) -> None:
         measurer = Measurer(table, row)
         measured['dimensions'] += dimensions.measure(measurer)
         measured['columns'] += columns.measure(measurer)
-        measured['column_factors'] += factors.measure(measurer)
+        measured['column_factors'] += groups.measure(measurer)
         measured['factor_pairs'] += pairs.measure(measurer)
     headers = {
         'dimensions': dimensions.DIMENSION_COLUMNS,
         'columns': columns.COLUMN_COLUMNS,
-        'column_factors': factors.COLUMN_FACTOR_COLUMNS,
+        'column_factors': groups.COLUMN_FACTOR_COLUMNS,
         'factor_pairs': pairs.FACTOR_PAIR_COLUMNS,
     }
     for name, rows in measured.items():

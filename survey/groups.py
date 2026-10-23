@@ -1,10 +1,10 @@
-"""factors.py measures column_factors.csv: a row per covariate column and grouping factor of a
+"""groups.py measures column_factors.csv: a row per covariate column and grouping factor of a
 registry row.
 
 pipeline:
 ---------
 a measurer
--> the rows that observe the column and the factor  measureColumnFactor
+-> the rows that observe the column and the factor  measureColumnGroups
 -> the share of absent group × level cells          Measurer.measureEmptyCells
 -> the between-group share                          measureBetweenGroupShare
 -> the size-mean rank correlation                   measureSizeRho
@@ -38,25 +38,25 @@ COLUMN_FACTOR_COLUMNS = (*IDENTITY, 'column', 'factor', *COLUMN_FACTOR_STATISTIC
 def measure(measurer: Measurer) -> list[dict]:
     column_factors = []
     for column in measurer.column_names:
-        for factor in measurer.factors:
-            key = {'column': column, 'factor': factor}
-            statistics = measureColumnFactor(measurer, column, factor)
+        for grouping_factor in measurer.grouping_factors:
+            key = {'column': column, 'factor': grouping_factor}
+            statistics = measureColumnGroups(measurer, column, grouping_factor)
             column_factors.append(measurer.identity | key | statistics)
     return column_factors
 
 
-def measureColumnFactor(measurer: Measurer, column: str, factor: str) -> dict:
-    """The statistics of a column against a factor. Each is taken over the rows where the
-    column and the factor are both observed."""
+def measureColumnGroups(measurer: Measurer, column: str, grouping_factor: str) -> dict:
+    """The statistics of a column against a grouping factor's groups. Each is taken over the
+    rows where the column and the grouping factor are both observed."""
     table = measurer.table
-    both = table[column].notna() & table[factor].notna()
+    both = table[column].notna() & table[grouping_factor].notna()
     if not both.any():
         return {}
     kind, _ = measurer.column_types[column]
-    groups = table.loc[both, factor]
+    groups = table.loc[both, grouping_factor]
     statistics = {}
     if kind != 'continuous':
-        absent = measurer.measureEmptyCells(table.loc[both, [factor, column]])
+        absent = measurer.measureEmptyCells(table.loc[both, [grouping_factor, column]])
         statistics['absent_level_share'] = absent
     if kind == 'categorical':
         return statistics
@@ -65,7 +65,7 @@ def measureColumnFactor(measurer: Measurer, column: str, factor: str) -> dict:
         return statistics
     statistics |= measureBetweenGroupShare(values, groups) | measureSizeRho(values, groups)
     statistics |= measureWithinSdCv(values, groups)
-    statistics |= measureGroupLevelR2(measurer, column, factor, kind)
+    statistics |= measureGroupLevelR2(measurer, column, grouping_factor, kind)
     return statistics
 
 
@@ -105,17 +105,19 @@ def measureWithinSdCv(values: pd.Series, groups: pd.Series) -> dict:
     return {'within_sd_cv': round(float(sds.std(ddof=0) / sds.mean()), 4)}
 
 
-def measureGroupLevelR2(measurer: Measurer, column: str, factor: str, kind: str) -> dict:
+def measureGroupLevelR2(measurer: Measurer, column: str, grouping_factor: str, kind: str) -> dict:
     """The adjusted R² of the column on the factor's other group-level columns,
     1 − (1 − R²)(m − 1) / (m − p − 1) with p the design's rank beyond the intercept.
     Blank when p = 0, m − p − 1 ≤ 0 or the column is constant."""
     table = measurer.table
     # a column with no observed value is constant within groups, but would complete no row
-    partners = [c for c in measurer.group_level[factor] if c != column and table[c].notna().any()]
-    complete = table[[column, factor, *partners]].dropna().index
+    partners = [
+        c for c in measurer.group_level[grouping_factor] if c != column and table[c].notna().any()
+    ]
+    complete = table[[column, grouping_factor, *partners]].dropna().index
     y = measurer.codeColumn(column, kind)[complete].to_numpy(float)
     design = codeDesign(measurer, partners, complete)
-    m = table.loc[complete, factor].nunique()
+    m = table.loc[complete, grouping_factor].nunique()
     coefficients, _, rank, _ = np.linalg.lstsq(design, y)
     p = rank - 1
     if p == 0 or m - p - 1 <= 0:

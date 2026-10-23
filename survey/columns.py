@@ -61,7 +61,7 @@ def measureMaxAbsRho(measurer: Measurer) -> pd.Series:
 def measureColumn(measurer: Measurer, column: str) -> dict:
     values = measurer.table[column]
     kind, levels = measurer.column_types[column]
-    constant_within = [f for f in measurer.factors if column in measurer.group_level[f]]
+    constant_within = [g for g in measurer.grouping_factors if column in measurer.group_level[g]]
     return {
         'type': kind,
         'K': levels,

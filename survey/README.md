@@ -28,7 +28,7 @@ by script.
 | `shards/<table>_<label>.csv` | agents, `pull.py` | one shard per reading run; `table` ∈ `registry`, `excluded`, `duplicates`, `dropped` |
 | `prompts/read.md` | | the reading agent's brief |
 | `schema.py`, `sources.py`, `help.py`, `summarize.py` | | file contract, frame, help pages, summary |
-| `measure.py`, `dimensions.py`, `columns.py`, `factors.py`, `pairs.py` | | the measurement pass: the Measurer and the runner, then one module per measured file |
+| `measure.py`, `dimensions.py`, `columns.py`, `groups.py`, `pairs.py` | | the measurement pass: the Measurer and the runner, then one module per measured file |
 | [`archive/`](https://github.com/adkipnis/mixedbench/tree/survey-archive-3/survey/archive) | | finished scripts and their outputs, kept at tag `survey-archive-3` and reproducible at tags `survey-archive` and `survey-archive-2` ([README](https://github.com/adkipnis/mixedbench/blob/survey-archive-3/survey/archive/README.md)) |
 | `tests/` | | `uv run pytest survey/tests`, by hand; the root run never recurses here |
 

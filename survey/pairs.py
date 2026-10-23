@@ -4,7 +4,7 @@ pipeline:
 ---------
 a measurer
 -> each pair's holders                              Measurer.findHolders
--> a nested pair's superior, a crossed pair's empty cells  measureFactorPair
+-> a nested pair's superior, a crossed pair's empty cells  measurePair
 """
 
 from __future__ import annotations
@@ -31,13 +31,13 @@ FACTOR_PAIR_COLUMNS = (
 # =====================================================================================
 def measure(measurer: Measurer) -> list[dict]:
     pairs = []
-    for a, b in combinations(measurer.factors, 2):
+    for a, b in combinations(measurer.grouping_factors, 2):
         key = {'factor_a': a, 'factor_b': b}
-        pairs.append(measurer.identity | key | measureFactorPair(measurer, a, b))
+        pairs.append(measurer.identity | key | measurePair(measurer, a, b))
     return pairs
 
 
-def measureFactorPair(measurer: Measurer, a: str, b: str) -> dict:
+def measurePair(measurer: Measurer, a: str, b: str) -> dict:
     """A nested pair's superior, blank when each holds the other; a crossed pair's empty cells."""
     holders = measurer.findHolders(a, b)
     if not holders:

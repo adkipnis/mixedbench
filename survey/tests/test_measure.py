@@ -10,11 +10,11 @@ from hypothesis import given, settings
 from hypothesis import strategies as st
 import columns
 import dimensions
-import factors
+import groups
 import pairs
 from columns import COLUMN_COLUMNS, COLUMN_STATISTICS
 from dimensions import DIMENSION_COLUMNS, fitAlpha
-from factors import COLUMN_FACTOR_COLUMNS, COLUMN_FACTOR_STATISTICS
+from groups import COLUMN_FACTOR_COLUMNS, COLUMN_FACTOR_STATISTICS
 from measure import Measurer
 from pairs import FACTOR_PAIR_COLUMNS
 from mixedbench.registry.row import Row
@@ -351,14 +351,14 @@ def test_max_abs_rho_pairs_over_the_rows_both_columns_observe(herds, rows):
 def measuredColumnFactors(table: pd.DataFrame, cells: dict) -> pd.DataFrame:
     """The column_factors.csv rows of one registry row, by column and factor; a statistic left
     out is blank."""
-    pairs = factors.measure(Measurer(table, parsed(cells)))
+    pairs = groups.measure(Measurer(table, parsed(cells)))
     return pd.DataFrame(pairs, columns=COLUMN_FACTOR_COLUMNS).set_index(['column', 'factor'])
 
 
 def test_one_row_per_column_and_grouping_factor(herds, rows):
     """Model 1 measures its four columns against region and herd: eight rows, in the order of
     columns.csv and then of the row's factors, each under the registry row's key."""
-    pairs = factors.measure(Measurer(herds, parsed(rows[0])))
+    pairs = groups.measure(Measurer(herds, parsed(rows[0])))
     assert [(p['column'], p['factor']) for p in pairs] == [
         ('breed', 'region'), ('breed', 'herd'), ('feed', 'region'), ('feed', 'herd'),
         ('parity', 'region'), ('parity', 'herd'), ('sick', 'region'), ('sick', 'herd'),

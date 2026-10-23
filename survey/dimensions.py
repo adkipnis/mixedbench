@@ -3,10 +3,10 @@
 pipeline:
 ---------
 a measurer
--> the factors' relation                       classifyRelation
+-> the grouping factors' relation              classifyRelation
 -> the documented and the full design's width  countDesignColumns
 -> both designs' condition indexes             measureConditionIndexes
--> each factor's group sizes                   measureGroupSizes
+-> each grouping factor's group sizes          measureGroupSizes
 """
 
 from __future__ import annotations
@@ -56,21 +56,23 @@ def pickObserved(values: pd.Series, q: float) -> int | float:
 # dimensions.csv: relation -> design columns -> condition indexes -> group sizes
 # =====================================================================================
 def measure(measurer: Measurer) -> list[dict]:
-    shared = {'n_factors': len(measurer.factors), 'relation': classifyRelation(measurer)}
+    shared = {'n_factors': len(measurer.grouping_factors), 'relation': classifyRelation(measurer)}
     shared |= countDesignColumns(measurer) | measureConditionIndexes(measurer)
     dimensions = []
-    for factor in measurer.factors:
-        sizes = measureGroupSizes(measurer, factor)
-        dimensions.append(measurer.identity | {'factor': factor} | shared | sizes)
+    for grouping_factor in measurer.grouping_factors:
+        sizes = measureGroupSizes(measurer, grouping_factor)
+        dimensions.append(measurer.identity | {'factor': grouping_factor} | shared | sizes)
     return dimensions
 
 
 def classifyRelation(measurer: Measurer) -> str:
     """single, nested, crossed or mixed.
     A pair is nested when every group of one factor lies in one group of the other."""
-    if len(measurer.factors) == 1:
+    if len(measurer.grouping_factors) == 1:
         return 'single'
-    nested = {bool(measurer.findHolders(a, b)) for a, b in combinations(measurer.factors, 2)}
+    nested = {
+        bool(measurer.findHolders(a, b)) for a, b in combinations(measurer.grouping_factors, 2)
+    }
     if nested == {True}:
         return 'nested'
     if nested == {False}:
@@ -124,8 +126,8 @@ def computeConditionIndex(problem: Problem) -> float:
     return round(float(singular[0] / singular[-1]), 4)
 
 
-def measureGroupSizes(measurer: Measurer, factor: str) -> dict:
-    sizes = measurer.table[factor].value_counts()
+def measureGroupSizes(measurer: Measurer, grouping_factor: str) -> dict:
+    sizes = measurer.table[grouping_factor].value_counts()
     sizes = sizes[sizes > 0]  # a categorical may carry unused levels
     return {
         'n_obs': int(sizes.sum()),

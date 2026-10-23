@@ -8,7 +8,7 @@ from typing import get_args
 import pytest
 from columns import COLUMN_COLUMNS
 from dimensions import DIMENSION_COLUMNS
-from factors import COLUMN_FACTOR_COLUMNS
+from groups import COLUMN_FACTOR_COLUMNS
 from mixedbench.registry.row import Family, ResponseType, Verified
 from pairs import FACTOR_PAIR_COLUMNS
 from schema import ALLOWED, CANDIDATE_COLUMNS, SCREENS, TABLES
