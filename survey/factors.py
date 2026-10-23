@@ -1,0 +1,147 @@
+"""factors.py measures column_factors.csv: a row per covariate column and grouping factor of a
+registry row.
+
+pipeline:
+---------
+a measurer
+-> the rows that observe the column and the factor  measureColumnFactor
+-> the share of absent group × level cells          Measurer.measureEmptyCells
+-> the between-group share                          measureBetweenGroupShare
+-> the size-mean rank correlation                   measureSizeRho
+-> the spread of the within-group spreads           measureWithinSdCv
+-> the fit on the factor's group-level columns      measureGroupLevelR2
+"""
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+import numpy as np
+import pandas as pd
+from schema import IDENTITY
+
+if TYPE_CHECKING:  # only a type: measure.py imports this module
+    from measure import Measurer
+
+# =====================================================================================
+# globals
+# =====================================================================================
+COLUMN_FACTOR_STATISTICS = (
+    'between_group_share', 'group_level_r2', 'absent_level_share', 'size_rho', 'within_sd_cv',
+)  # fmt: skip
+COLUMN_FACTOR_COLUMNS = (*IDENTITY, 'column', 'factor', *COLUMN_FACTOR_STATISTICS)
+
+
+# =====================================================================================
+# column_factors.csv: absent levels -> between groups -> sizes -> spreads -> group level
+# =====================================================================================
+def measure(measurer: Measurer) -> list[dict]:
+    column_factors = []
+    for column in measurer.column_names:
+        for factor in measurer.factors:
+            key = {'column': column, 'factor': factor}
+            statistics = measureColumnFactor(measurer, column, factor)
+            column_factors.append(measurer.identity | key | statistics)
+    return column_factors
+
+
+def measureColumnFactor(measurer: Measurer, column: str, factor: str) -> dict:
+    """The quirk statistics of a column against a factor's groups,
+    over the rows that observe both.
+    A statistic left out is blank in column_factors.csv."""
+    table = measurer.table
+    both = table[column].notna() & table[factor].notna()
+    if not both.any():
+        return {}
+    kind, _ = measurer.column_types[column]
+    groups = table.loc[both, factor]
+    statistics = {}
+    if kind != 'continuous':
+        absent = measurer.measureEmptyCells(table.loc[both, [factor, column]])
+        statistics['absent_level_share'] = absent
+    if kind == 'categorical':
+        return statistics
+    values = measurer.codeColumn(column, kind)[both]
+    if values.nunique() < 2:  # a constant column has nothing to share, rank, spread or explain
+        return statistics
+    statistics |= measureBetweenGroupShare(values, groups) | measureSizeRho(values, groups)
+    statistics |= measureWithinSdCv(values, groups)
+    statistics |= measureGroupLevelR2(measurer, column, factor, kind)
+    return statistics
+
+
+def measureBetweenGroupShare(values: pd.Series, groups: pd.Series) -> dict:
+    """The adjusted ICC(1) of a one-way analysis of variance,
+    (MSB − MSW) / (MSB + (k₀ − 1) MSW) with k₀ = (n − Σ nⱼ² / n) / (m − 1)
+    (Snijders & Bosker 2012, section 3.3.1).
+    Blank with one group or when every group is a singleton."""
+    grouped = values.groupby(groups, observed=True)
+    sizes = grouped.size()
+    n, m = int(sizes.sum()), len(sizes)
+    if m < 2 or n == m:
+        return {}
+    between = float((sizes * (grouped.mean() - values.mean()) ** 2).sum())
+    within = float(((values - grouped.transform('mean')) ** 2).sum())
+    msb, msw = between / (m - 1), within / (n - m)
+    k0 = (n - float((sizes**2).sum()) / n) / (m - 1)
+    return {'between_group_share': round((msb - msw) / (msb + (k0 - 1) * msw), 4)}
+
+
+def measureSizeRho(values: pd.Series, groups: pd.Series) -> dict:
+    """Spearman's ρ of the groups' sizes with their means. Blank when either is constant."""
+    grouped = values.groupby(groups, observed=True)
+    sizes, means = grouped.size(), grouped.mean()
+    if sizes.nunique() < 2 or means.nunique() < 2:
+        return {}
+    rho = sizes.rank().corr(means.rank())  # by hand: Series.corr's Spearman needs scipy
+    return {'size_rho': round(float(rho), 4)}
+
+
+def measureWithinSdCv(values: pd.Series, groups: pd.Series) -> dict:
+    """The population coefficient of variation of the groups' sample standard deviations,
+    over the groups of two or more rows. Blank with fewer than two or a zero mean."""
+    grouped = values.groupby(groups, observed=True)
+    sds = grouped.std()[grouped.size() >= 2]
+    if len(sds) < 2 or sds.mean() == 0:
+        return {}
+    return {'within_sd_cv': round(float(sds.std(ddof=0) / sds.mean()), 4)}
+
+
+def measureGroupLevelR2(measurer: Measurer, column: str, factor: str, kind: str) -> dict:
+    """The row-level R² of the column on the factor's other group-level columns
+    that hold a value, over the rows that observe them all,
+    adjusted by the group count m and the design's rank p:
+    1 − (1 − R²)(m − 1) / (m − p − 1).
+    Blank when the partners span nothing beyond the intercept, leave no degree of freedom,
+    or the column is constant on those rows."""
+    table = measurer.table
+    # a column with no observed value is constant within groups, but would complete no row
+    partners = [c for c in measurer.group_level[factor] if c != column and table[c].notna().any()]
+    complete = table[[column, factor, *partners]].dropna().index
+    y = measurer.codeColumn(column, kind)[complete].to_numpy(float)
+    design = codeDesign(measurer, partners, complete)
+    m = table.loc[complete, factor].nunique()
+    coefficients, _, rank, _ = np.linalg.lstsq(design, y)
+    p = rank - 1
+    if p == 0 or m - p - 1 <= 0:
+        return {}
+    if len(np.unique(y)) < 2:  # a constant column has no variance to explain
+        return {}
+    total = float(((y - y.mean()) ** 2).sum())
+    r2 = 1 - float(((y - design @ coefficients) ** 2).sum()) / total
+    return {'group_level_r2': round(float(1 - (1 - r2) * (m - 1) / (m - p - 1)), 4)}
+
+
+def codeDesign(measurer: Measurer, columns: list[str], rows: pd.Index) -> np.ndarray:
+    """An intercept, then each column as the contract's design spans it:
+    a continuous one raw, any other by its levels' indicators but the first.
+    R² and rank depend only on the span, not on which level is the reference."""
+    coded = [pd.DataFrame({'intercept': 1.0}, index=rows)]
+    for column in columns:
+        values = measurer.table.loc[rows, column]
+        kind, _ = measurer.column_types[column]
+        if kind == 'continuous':
+            coded.append(values.astype(float).to_frame())
+        else:
+            coded.append(pd.get_dummies(values, drop_first=True, dtype=float))
+    return pd.concat(coded, axis=1).to_numpy()

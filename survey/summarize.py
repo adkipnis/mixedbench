@@ -12,14 +12,11 @@ from string import Template
 
 import pandas as pd
 import yaml
-from measure import (
-    COLUMN_FACTOR_STATISTICS,
-    COLUMN_STATISTICS,
-    CONDITIONS,
-    FACTOR_PAIR_STATISTICS,
-    pickObserved,
-)
+from columns import COLUMN_STATISTICS
+from dimensions import CONDITIONS, pickObserved
+from factors import COLUMN_FACTOR_STATISTICS
 from mixedbench.registry.row import readCsv
+from pairs import FACTOR_PAIR_STATISTICS
 from schema import TIERS
 
 # =====================================================================================

@@ -6,8 +6,11 @@ from pathlib import Path
 from typing import get_args
 
 import pytest
-from measure import COLUMN_COLUMNS, COLUMN_FACTOR_COLUMNS, DIMENSION_COLUMNS, FACTOR_PAIR_COLUMNS
+from columns import COLUMN_COLUMNS
+from dimensions import DIMENSION_COLUMNS
+from factors import COLUMN_FACTOR_COLUMNS
 from mixedbench.registry.row import Family, ResponseType, Verified
+from pairs import FACTOR_PAIR_COLUMNS
 from schema import ALLOWED, CANDIDATE_COLUMNS, SCREENS, TABLES
 
 HERE = Path(__file__).resolve().parents[1]

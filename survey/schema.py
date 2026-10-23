@@ -62,6 +62,12 @@ DROPPED = Table(
 )
 
 TABLES = {t.name: t for t in (REGISTRY, EXCLUDED, DUPLICATES, DROPPED)}
+IDENTITY = (
+    'source',
+    'object',
+    'model_index',
+    'tier',
+)  # a measured file's key: the registry row's, with its tier
 
 # One row per data object the pull script enumerates in a kept source. `screen` is the
 # mechanical pre-screen's verdict; `capped` is `yes` for the passing objects a source's cap

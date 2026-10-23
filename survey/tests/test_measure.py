@@ -8,16 +8,15 @@ import pytest
 from conftest import FIXTURES, readRows
 from hypothesis import given, settings
 from hypothesis import strategies as st
-from measure import (
-    COLUMN_COLUMNS,
-    COLUMN_FACTOR_COLUMNS,
-    COLUMN_FACTOR_STATISTICS,
-    COLUMN_STATISTICS,
-    DIMENSION_COLUMNS,
-    FACTOR_PAIR_COLUMNS,
-    Measurer,
-    fitAlpha,
-)
+import columns
+import dimensions
+import factors
+import pairs
+from columns import COLUMN_COLUMNS, COLUMN_STATISTICS
+from dimensions import DIMENSION_COLUMNS, fitAlpha
+from factors import COLUMN_FACTOR_COLUMNS, COLUMN_FACTOR_STATISTICS
+from measure import Measurer
+from pairs import FACTOR_PAIR_COLUMNS
 from mixedbench.registry.row import Row
 from schema import REGISTRY
 
@@ -47,17 +46,17 @@ def parsed(cells: dict) -> Row:
 
 def measuredColumns(table: pd.DataFrame, cells: dict) -> pd.DataFrame:
     """The columns.csv rows of one registry row, by column; a statistic left out is blank."""
-    columns = Measurer(table, parsed(cells)).measureColumns()
-    return pd.DataFrame(columns, columns=COLUMN_COLUMNS).set_index('column')
+    measured = columns.measure(Measurer(table, parsed(cells)))
+    return pd.DataFrame(measured, columns=COLUMN_COLUMNS).set_index('column')
 
 
 def test_group_sizes_per_factor(herds, rows):
     """Region holds 5, 5 and 4 rows; herd holds 3, 2, 4, 1 and 4, so h4 is a singleton.
     Quantiles are observed sizes (at or below the level under p50, at or above from p50 on);
     the coefficient of variation uses the population standard deviation."""
-    dimensions = Measurer(herds, parsed(rows[0])).measureDimensions()
-    assert [d['factor'] for d in dimensions] == ['region', 'herd']
-    region, herd = dimensions
+    measured = dimensions.measure(Measurer(herds, parsed(rows[0])))
+    assert [d['factor'] for d in measured] == ['region', 'herd']
+    region, herd = measured
     assert (region['source'], region['object'], region['model_index'], region['tier']) == ('herds', 'herds.csv', 1, 'D')  # fmt: skip
     assert region['n_obs'] == 14 and herd['n_obs'] == 14
     assert (region['n_groups'], herd['n_groups']) == (3, 5)
@@ -75,7 +74,7 @@ def test_rows_without_a_measured_response_are_not_observations(herds, rows):
     weight is missing, so north holds 4 and h1 2."""
     unmeasured = herds.copy()
     unmeasured.loc[0, 'weight'] = float('nan')
-    region, herd = Measurer(unmeasured, parsed(rows[0])).measureDimensions()
+    region, herd = dimensions.measure(Measurer(unmeasured, parsed(rows[0])))
     assert (region['n_obs'], herd['n_obs']) == (13, 13)
     assert (region['group_size_min'], herd['group_size_min']) == (4, 1)
     assert herd['group_size_p50'] == 2
@@ -84,7 +83,7 @@ def test_rows_without_a_measured_response_are_not_observations(herds, rows):
 def test_alpha_by_moment_matching(herds, rows):
     """Region sizes 5, 5, 4 give α = 65 exactly ((1 − 1/m) / (m s²) = 196); herd sizes
     3, 2, 4, 1, 4 give 4.41. A balanced allocation has zero variance, so α is infinite."""
-    region, herd = Measurer(herds, parsed(rows[0])).measureDimensions()
+    region, herd = dimensions.measure(Measurer(herds, parsed(rows[0])))
     assert region['alpha'] == pytest.approx(65.0, abs=1e-3)
     assert herd['alpha'] == pytest.approx(4.4118, abs=1e-3)
     assert fitAlpha(pd.Series([10, 10, 10, 10])) == float('inf')
@@ -113,9 +112,9 @@ def test_relation_between_grouping_factors_is_computed_from_the_data(
     herds, rows, factors, relation
 ):
     row = rows[0] | {'grouping_factors': factors, 'covariates': ''}  # breed may be a factor here
-    dimensions = Measurer(herds, parsed(row)).measureDimensions()
-    assert {d['relation'] for d in dimensions} == {relation}
-    assert {d['n_factors'] for d in dimensions} == {len(dimensions)}
+    measured = dimensions.measure(Measurer(herds, parsed(row)))
+    assert {d['relation'] for d in measured} == {relation}
+    assert {d['n_factors'] for d in measured} == {len(measured)}
 
 
 def test_a_composite_grouping_factor_is_built_from_its_parts(herds, rows):
@@ -125,12 +124,12 @@ def test_a_composite_grouping_factor_is_built_from_its_parts(herds, rows):
     a factor, are covariate columns; the composite does not appear in columns.csv."""
     row = rows[0] | {'grouping_factors': 'region;region:breed'}
     measurer = Measurer(herds, parsed(row))
-    region, pairs = measurer.measureDimensions()
+    region, pairs = dimensions.measure(measurer)
     assert pairs['factor'] == 'region:breed'
     assert (pairs['n_groups'], pairs['group_size_min'], pairs['group_size_max']) == (12, 1, 2)
     assert pairs['singleton_share'] == pytest.approx(10 / 12, abs=1e-4)
     assert (region['relation'], pairs['relation']) == ('nested', 'nested')
-    assert [c['column'] for c in measurer.measureColumns()] == ['herd', 'breed', 'feed', 'parity', 'sick']  # fmt: skip
+    assert [c['column'] for c in columns.measure(measurer)] == ['herd', 'breed', 'feed', 'parity', 'sick']  # fmt: skip
 
 
 def test_column_types_and_levels_by_the_one_rule(herds, rows):
@@ -139,15 +138,15 @@ def test_column_types_and_levels_by_the_one_rule(herds, rows):
     integer with four distinct values, continuous all the same (#108); sick has two values,
     hence binary.
     feed is constant within every herd, so group-level there, but varies within region."""
-    columns = Measurer(herds, parsed(rows[0])).measureColumns()
-    assert [c['column'] for c in columns] == ['breed', 'feed', 'parity', 'sick']
+    measured = columns.measure(Measurer(herds, parsed(rows[0])))
+    assert [c['column'] for c in measured] == ['breed', 'feed', 'parity', 'sick']
     typed = lambda c: (c['type'], c['K'], c['level'], c['constant_within'], c['in_model'])
-    assert typed(columns[0]) == ('categorical', 4, 'within', '', 'yes')
-    assert typed(columns[1]) == ('categorical', 3, 'group', 'herd', 'yes')
-    assert typed(columns[2]) == ('continuous', '', 'within', '', 'no')
-    assert typed(columns[3]) == ('binary', 2, 'within', '', 'no')
-    assert columns[0]['tier'] == 'D' and columns[0]['model_index'] == 1
-    assert {c['missing_share'] for c in columns} == {0}
+    assert typed(measured[0]) == ('categorical', 4, 'within', '', 'yes')
+    assert typed(measured[1]) == ('categorical', 3, 'group', 'herd', 'yes')
+    assert typed(measured[2]) == ('continuous', '', 'within', '', 'no')
+    assert typed(measured[3]) == ('binary', 2, 'within', '', 'no')
+    assert measured[0]['tier'] == 'D' and measured[0]['model_index'] == 1
+    assert {c['missing_share'] for c in measured} == {0}
 
 
 def test_ordered_and_missing_values(herds, rows):
@@ -155,11 +154,11 @@ def test_ordered_and_missing_values(herds, rows):
     varied = herds.assign(parity=herds['parity'].astype(pd.CategoricalDtype([1, 2, 3, 4], ordered=True)))  # fmt: skip
     varied.loc[0, 'weight'] = float('nan')
     row = rows[0] | {'response': 'sick', 'covariates': 'weight', 'ignore': 'id;cases;trials'}  # fmt: skip
-    columns = {c['column']: c for c in Measurer(varied, parsed(row)).measureColumns()}
-    assert set(columns) == {'breed', 'feed', 'parity', 'weight'}
-    assert (columns['parity']['type'], columns['parity']['K']) == ('ordered', 4)
-    assert (columns['weight']['type'], columns['weight']['K']) == ('continuous', '')
-    assert columns['weight']['missing_share'] == pytest.approx(1 / 14, abs=1e-4)
+    measured = {c['column']: c for c in columns.measure(Measurer(varied, parsed(row)))}
+    assert set(measured) == {'breed', 'feed', 'parity', 'weight'}
+    assert (measured['parity']['type'], measured['parity']['K']) == ('ordered', 4)
+    assert (measured['weight']['type'], measured['weight']['K']) == ('continuous', '')
+    assert measured['weight']['missing_share'] == pytest.approx(1 / 14, abs=1e-4)
 
 
 def test_design_columns_of_the_documented_model_and_of_the_whole_table(herds, rows):
@@ -167,13 +166,13 @@ def test_design_columns_of_the_documented_model_and_of_the_whole_table(herds, ro
     sick (binary) bring d_all to 7; an interaction breed:feed adds 3 × 2 to both, so d_all is
     never below d_doc. Model 2 names only breed, and the region column, no longer a factor,
     counts 2 in its d_all."""
-    dimensions = Measurer(herds, parsed(rows[0])).measureDimensions()
-    assert {(d['d_doc'], d['d_all']) for d in dimensions} == {(5, 7)}
+    measured = dimensions.measure(Measurer(herds, parsed(rows[0])))
+    assert {(d['d_doc'], d['d_all']) for d in measured} == {(5, 7)}
     interacting = rows[0] | {'interactions': 'breed:feed'}
-    interacted = Measurer(herds, parsed(interacting)).measureDimensions()[0]
+    interacted = dimensions.measure(Measurer(herds, parsed(interacting)))[0]
     assert (interacted['d_doc'], interacted['d_all']) == (11, 13)
-    assert Measurer(herds, parsed(rows[1])).measureDimensions()[0]['d_doc'] == 3
-    assert Measurer(herds, parsed(rows[1])).measureDimensions()[0]['d_all'] == 10
+    assert dimensions.measure(Measurer(herds, parsed(rows[1])))[0]['d_doc'] == 3
+    assert dimensions.measure(Measurer(herds, parsed(rows[1])))[0]['d_all'] == 10
 
 
 def unitLength(design: np.ndarray) -> np.ndarray:
@@ -193,10 +192,10 @@ def test_the_condition_index_of_the_documented_design(herds, rows):
         breed == 'hereford', breed == 'holstein', breed == 'jersey',
     ]).astype(float)  # fmt: skip
     singular = np.linalg.svd(unitLength(design), compute_uv=False)
-    dimension = Measurer(herds, parsed(weighed)).measureDimensions()[0]
+    dimension = dimensions.measure(Measurer(herds, parsed(weighed)))[0]
     assert dimension['condition_doc'] == round(singular[0] / singular[-1], 4)
     alone = weighed | {'ignore': 'id;region;feed;parity;sick'}
-    dimension = Measurer(herds, parsed(alone)).measureDimensions()[0]
+    dimension = dimensions.measure(Measurer(herds, parsed(alone)))[0]
     assert dimension['condition_all'] == dimension['condition_doc']
 
 
@@ -205,20 +204,20 @@ def test_a_rank_deficient_design_has_an_infinite_condition_index(herds, rows):
     never varies is collinear with the intercept, though the contract standardizes it to 0/0;
     weight in pounds repeats weight in kilograms, among every measured column only."""
     interacting = rows[0] | {'interactions': 'breed:feed'}
-    assert Measurer(herds, parsed(interacting)).measureDimensions()[0]['condition_doc'] == np.inf
+    assert dimensions.measure(Measurer(herds, parsed(interacting)))[0]['condition_doc'] == np.inf
     dosed = rows[1] | {'covariates': 'breed;dose'}
-    assert Measurer(herds.assign(dose=2.5), parsed(dosed)).measureDimensions()[0]['condition_doc'] == np.inf  # fmt: skip
+    assert dimensions.measure(Measurer(herds.assign(dose=2.5), parsed(dosed)))[0]['condition_doc'] == np.inf  # fmt: skip
     pounds = herds.assign(pounds=herds['weight'] * 2.2046)
     alone = rows[1] | {'covariates': 'weight;breed', 'ignore': 'id;region;feed;parity;sick'}
-    dimension = Measurer(pounds, parsed(alone)).measureDimensions()[0]
+    dimension = dimensions.measure(Measurer(pounds, parsed(alone)))[0]
     assert dimension['condition_doc'] < np.inf
     assert dimension['condition_all'] == np.inf
 
 
 def measuredDimensions(table: pd.DataFrame, cells: dict) -> pd.DataFrame:
     """The dimensions.csv rows of one registry row, by factor; a statistic left out is blank."""
-    dimensions = Measurer(table, parsed(cells)).measureDimensions()
-    return pd.DataFrame(dimensions, columns=DIMENSION_COLUMNS).set_index('factor')
+    measured = dimensions.measure(Measurer(table, parsed(cells)))
+    return pd.DataFrame(measured, columns=DIMENSION_COLUMNS).set_index('factor')
 
 
 def test_no_condition_index_where_the_contract_builds_no_problem(herds, rows):
@@ -352,14 +351,14 @@ def test_max_abs_rho_pairs_over_the_rows_both_columns_observe(herds, rows):
 def measuredColumnFactors(table: pd.DataFrame, cells: dict) -> pd.DataFrame:
     """The column_factors.csv rows of one registry row, by column and factor; a statistic left
     out is blank."""
-    pairs = Measurer(table, parsed(cells)).measureColumnFactors()
+    pairs = factors.measure(Measurer(table, parsed(cells)))
     return pd.DataFrame(pairs, columns=COLUMN_FACTOR_COLUMNS).set_index(['column', 'factor'])
 
 
 def test_one_row_per_column_and_grouping_factor(herds, rows):
     """Model 1 measures its four columns against region and herd: eight rows, in the order of
     columns.csv and then of the row's factors, each under the registry row's key."""
-    pairs = Measurer(herds, parsed(rows[0])).measureColumnFactors()
+    pairs = factors.measure(Measurer(herds, parsed(rows[0])))
     assert [(p['column'], p['factor']) for p in pairs] == [
         ('breed', 'region'), ('breed', 'herd'), ('feed', 'region'), ('feed', 'herd'),
         ('parity', 'region'), ('parity', 'herd'), ('sick', 'region'), ('sick', 'herd'),
@@ -503,22 +502,26 @@ def test_a_level_no_measured_row_holds_leaves_no_gap_in_the_codes(herds, rows):
 def measuredFactorPairs(table: pd.DataFrame, cells: dict) -> pd.DataFrame:
     """The factor_pairs.csv rows of one registry row, by pair of factors; a statistic left out
     is blank."""
-    pairs = Measurer(table, parsed(cells)).measureFactorPairs()
-    return pd.DataFrame(pairs, columns=FACTOR_PAIR_COLUMNS).set_index(['factor_a', 'factor_b'])
+    measured = pairs.measure(Measurer(table, parsed(cells)))
+    return pd.DataFrame(measured, columns=FACTOR_PAIR_COLUMNS).set_index(['factor_a', 'factor_b'])
 
 
 def test_a_nested_pairs_superior_holds_whole_groups_of_the_other(herds, rows):
     """Each herd lies in one region, so region is superior in either order, and the nested pair
     has no empty-cell share. Model 2's one factor makes no pair."""
-    pairs = Measurer(herds, parsed(rows[0])).measureFactorPairs()
-    assert [(p['factor_a'], p['factor_b']) for p in pairs] == [('region', 'herd')]
-    assert (pairs[0]['source'], pairs[0]['model_index'], pairs[0]['tier']) == ('herds', 1, 'D')
+    measured = pairs.measure(Measurer(herds, parsed(rows[0])))
+    assert [(p['factor_a'], p['factor_b']) for p in measured] == [('region', 'herd')]
+    assert (measured[0]['source'], measured[0]['model_index'], measured[0]['tier']) == (
+        'herds',
+        1,
+        'D',
+    )
     pair = measuredFactorPairs(herds, rows[0]).loc[('region', 'herd')]
     assert (pair['relation'], pair['superior']) == ('nested', 'region')
     assert pd.isna(pair['empty_cell_share'])
     reversed = rows[0] | {'grouping_factors': 'herd;region'}
     assert measuredFactorPairs(herds, reversed).loc[('herd', 'region'), 'superior'] == 'region'
-    assert Measurer(herds, parsed(rows[1])).measureFactorPairs() == []
+    assert pairs.measure(Measurer(herds, parsed(rows[1]))) == []
 
 
 def test_a_crossed_pairs_empty_cells(herds, rows):
@@ -554,7 +557,9 @@ def tables(draw: st.DrawFn) -> pd.DataFrame:
     """A table of one to thirty rows whose covariate columns take any kind the typing rule
     gives them: ties, gaps, a single value or two."""
     n = draw(st.integers(1, 30))
-    number = st.one_of(st.floats(-100, 100), st.sampled_from([0.0, 1.0]), st.none())
+    number = st.one_of(
+        st.floats(-100, 100, allow_subnormal=False), st.sampled_from([0.0, 1.0]), st.none()
+    )
     word = st.sampled_from(['lo', 'mid', 'hi', None])
     words = draw(st.lists(word, min_size=n, max_size=n))
     return pd.DataFrame({
