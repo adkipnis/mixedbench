@@ -97,11 +97,18 @@ def test_factor_pairs_share_their_relation_and_the_side_of_their_superior(merger
     assert (pooled['n'], pooled['min'], pooled['max']) == (1, 0.35, 0.35)
 
 
-def tableRows(text: str, header: str) -> list[list[str]]:
-    """The cells of the first Markdown table in the text whose header line starts with `header`,
-    one list per body row."""
-    table = text[text.index(header) :].split('\n\n', 1)[0]
-    return [line.strip('| ').split(' | ') for line in table.splitlines()[2:]]
+def tableRows(text: str, *starts: str) -> list[list[str]]:
+    """The cells of the first Markdown table at or after the last of `starts`, section headings
+    or a table's header line found one after the other, one list per body row."""
+    for start in starts:
+        text = text[text.index(start) :]
+    rows = []
+    for line in text.splitlines():
+        if line.startswith('|'):
+            rows.append(line.strip('| ').split(' | '))
+        elif rows:
+            break
+    return rows[2:]
 
 
 def practiceP90s(axis: str) -> list[int | float]:
@@ -116,17 +123,18 @@ def test_summary_shows_one_pooled_table_per_measured_file(merger):
     shares their statistic (#101)."""
     mergeShard(merger, FIXTURES / 'registry_herds.csv')
     summary = (merger.registry / 'SUMMARY.md').read_text()
-    columns = summary.split('## Quirk statistics per column\n', 1)[1]
-    assert [row[0] for row in tableRows(columns, '| statistic |')] == list(COLUMN_AXES)
-    columnFactors = summary.split('## Quirk statistics per column and grouping factor\n', 1)[1]
-    assert [row[0] for row in tableRows(columnFactors, '| statistic |')] == list(COLUMN_FACTOR_AXES)
-    pairs = summary.split('## Quirk statistics per factor pair\n', 1)[1]
-    assert [row[0] for row in tableRows(pairs, '| statistic |')] == list(FACTOR_PAIR_AXES)
-    design = summary.split('## Design columns\n', 1)[1]
-    assert tableRows(design, '| statistic |') == [
+    statistics = {
+        '## Quirk statistics per column\n': COLUMN_AXES,
+        '## Quirk statistics per column and grouping factor\n': COLUMN_FACTOR_AXES,
+        '## Quirk statistics per factor pair\n': FACTOR_PAIR_AXES,
+    }
+    for heading, axes in statistics.items():
+        assert [row[0] for row in tableRows(summary, heading)] == list(axes)
+    assert tableRows(summary, '## Design columns\n', '| statistic |') == [
         ['condition_doc', '2', '3.452', '3.452', '3.452', '6.5784', '6.5784', '6.5784', '6.5784'],
         ['condition_all', '2', '10.2274', '10.2274', '10.2274', '34.2099', '34.2099', '34.2099', '34.2099'],
     ]  # fmt: skip
+    pairs = summary.split('## Quirk statistics per factor pair\n', 1)[1]
     assert '| pair relation | n | share |' in pairs and '| superior | n | share |' in pairs
 
 
