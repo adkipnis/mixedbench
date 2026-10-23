@@ -320,7 +320,7 @@ def test_the_census_lands_in_the_registry_and_the_bookkeeping_in_the_survey(spli
     mergeShard(merger, FIXTURES / 'registry_cattle.csv')  # flags the pair with herds
     registryFiles = sorted(p.name for p in merger.registry.iterdir() if p.is_file())
     surveyFiles = sorted(p.name for p in merger.survey.iterdir() if p.is_file())
-    assert registryFiles == ['SUMMARY.md', 'column_factors.csv', 'columns.csv', 'dimensions.csv', 'excluded.csv', 'factor_pairs.csv', 'manifest.csv', 'quantiles.yaml', 'registry.csv', 'sources.yaml']  # fmt: skip
+    assert registryFiles == ['SUMMARY.md', 'column_factors.csv', 'columns.csv', 'dimensions.csv', 'excluded.csv', 'factor_pairs.csv', 'fits.csv', 'manifest.csv', 'quantiles.yaml', 'registry.csv', 'sources.yaml']  # fmt: skip
     assert surveyFiles == ['dropped.csv', 'duplicates.csv']
 
 
@@ -383,6 +383,14 @@ def test_every_merge_writes_the_measured_headers_and_a_left_out_statistic_as_bla
     columns = list(readRows(merger.registry / 'dimensions.csv')[0])
     after = columns.index('d_all') + 1
     assert columns[after : after + 2] == ['condition_doc', 'condition_all']
+
+
+def test_a_merge_leaves_fits_csv_as_the_last_fits_pass_wrote_it(merger):
+    """The fits run on a cluster, apart from the merge (ADR 0006)."""
+    fits = (FIXTURES / 'fits.csv').read_bytes()
+    (merger.registry / 'fits.csv').write_bytes(fits)
+    mergeShard(merger, FIXTURES / 'registry_herds.csv')
+    assert (merger.registry / 'fits.csv').read_bytes() == fits
 
 
 def test_the_measure_script_writes_what_the_merge_writes(merger):
