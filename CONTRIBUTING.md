@@ -17,7 +17,7 @@ the approach first.
 
 ## Set up
 
-You need [uv](https://docs.astral.sh/uv/); R only for the reference fits. Fork the repository on
+You need [uv](https://docs.astral.sh/uv/); R only for the brms and lme4 fits. Fork the repository on
 GitHub, then clone your fork:
 
 ```
@@ -27,6 +27,7 @@ uv sync
 uv run pytest               # the offline tests, about ten seconds
 uv run pytest -m network    # the tests that download sources, as CI runs them
 uv run pytest -m brms       # the reference fits, with R, brms and CmdStan at their pins
+uv run pytest -m lme4       # the frequentist fits, with R and lme4 at its pin
 ```
 
 ## Find your way
@@ -38,6 +39,7 @@ src/mixedbench/
   contract/     the rules that turn a registry row and its table into a problem
   suite/        a problem by its id, built on first use and checked against its suite
   references/   a problem's reference posterior, fitted by brms in R
+  frequentist/  a mixed model's fit by lme4 in R, with its variance components
 registry/       the registry files (docs/registry.md), written by survey/merge.py, summarized in SUMMARY.md
 suite/          the admission and reference-run scripts; per suite its candidates.csv and refused.csv
 survey/         the pipeline that built the registry
