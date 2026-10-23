@@ -21,6 +21,10 @@ COLUMN_FACTOR_AXES = ('between_group_share', 'group_level_r2', 'absent_level_sha
 FACTOR_PAIR_AXES = ('empty_cell_share',)
 CONDITION_AXES = ('condition_doc', 'condition_all')
 QUIRK_AXES = (*COLUMN_AXES, *COLUMN_FACTOR_AXES, *FACTOR_PAIR_AXES, *CONDITION_AXES)
+FIT_AXES = (
+    'sigma2_fixed', 'sigma2_random', 'sigma2_residual', 'sigma2_distribution', 'sd_eta',
+    'r2_marginal', 'r2_conditional', 'q', 'sigma2', 'icc', 'icc_adjusted',
+)  # fmt: skip
 
 
 def test_quantiles_carry_every_axis_pooled_per_tier_and_without_agridat(merger):
@@ -31,11 +35,11 @@ def test_quantiles_carry_every_axis_pooled_per_tier_and_without_agridat(merger):
     quantiles = yaml.safe_load((merger.registry / 'quantiles.yaml').read_text())
     assert (quantiles['n_rows'], quantiles['n_objects'], quantiles['n_factor_rows']) == (2, 1, 3)
     axes = quantiles['axes']
-    assert set(axes) == set(FACTOR_AXES) | set(ROW_AXES) | {'K'} | set(QUIRK_AXES)
+    assert set(axes) == set(FACTOR_AXES) | set(ROW_AXES) | {'K'} | set(QUIRK_AXES) | set(FIT_AXES)
     for axis in axes.values():
         assert set(axis) == {'pooled', 'tiers', 'without_agridat'}
         assert set(axis['pooled']) == set(QUANTILE_KEYS)
-        assert set(axis['tiers']) == {'D'}
+        assert set(axis['tiers']) <= {'D'}  # the scratch registry's fits.csv holds no row yet
     assert axes['n_groups']['pooled'] == {'n': 3, 'min': 3, 'p5': 3, 'p10': 3, 'p50': 5, 'p90': 5, 'p95': 5, 'max': 5}  # fmt: skip
     assert axes['n_grouping_factors']['pooled'] == {'n': 2, 'min': 1, 'p5': 1, 'p10': 1, 'p50': 2, 'p90': 2, 'p95': 2, 'max': 2}  # fmt: skip
     assert axes['alpha']['pooled']['min'] == pytest.approx(4.4118, abs=1e-3)
@@ -69,7 +73,7 @@ def test_quirk_statistics_follow_the_released_axes_counted_once_per_their_key(me
     quantiles = yaml.safe_load((merger.registry / 'quantiles.yaml').read_text())
     assert list(quantiles) == ['n_rows', 'n_objects', 'n_factor_rows', 'axes', 'imbalance', 'shares', 'k_distribution', 'implied_columns']  # fmt: skip
     axes = quantiles['axes']
-    assert tuple(axes)[-len(QUIRK_AXES) :] == QUIRK_AXES
+    assert tuple(axes)[-len(QUIRK_AXES + FIT_AXES) :] == QUIRK_AXES + FIT_AXES
     counts = {axis: axes[axis]['pooled']['n'] for axis in QUIRK_AXES}
     assert counts == {
         'skewness': 2, 'excess_kurtosis': 2, 'outlier_share': 2, 'zero_share': 3, 'min_share': 3,
@@ -95,6 +99,21 @@ def test_factor_pairs_share_their_relation_and_the_side_of_their_superior(merger
     assert quantiles['shares']['superior'] == {'factor_a': 0.5, 'factor_b': 0.5}
     pooled = quantiles['axes']['empty_cell_share']['pooled']
     assert (pooled['n'], pooled['min'], pooled['max']) == (1, 0.35, 0.35)
+
+
+def test_fit_statistics_count_once_per_registry_row_or_factor_and_status_is_a_share(merger):
+    """The pilot's fits.csv, which the merge leaves as it is: 20 registry rows, 17 of them fitted
+    with estimates (8 gaussian, with a residual) over 21 factors; the statuses share the 20 rows."""
+    (merger.registry / 'fits.csv').write_bytes((FIXTURES / 'fits.csv').read_bytes())
+    mergeShard(merger, FIXTURES / 'registry_herds.csv')
+    quantiles = yaml.safe_load((merger.registry / 'quantiles.yaml').read_text())
+    counts = {axis: quantiles['axes'][axis]['pooled']['n'] for axis in FIT_AXES}
+    assert counts == {
+        'sigma2_fixed': 17, 'sigma2_random': 17, 'sigma2_residual': 8, 'sigma2_distribution': 17,
+        'sd_eta': 17, 'r2_marginal': 17, 'r2_conditional': 17, 'q': 21, 'sigma2': 21, 'icc': 21,
+        'icc_adjusted': 21,
+    }  # fmt: skip
+    assert quantiles['shares']['status'] == {'ok': 0.6, 'singular': 0.2, 'error': 0.1, 'warning': 0.05, 'no_formula': 0.05}  # fmt: skip
 
 
 def tableRows(text: str, *starts: str) -> list[list[str]]:
@@ -136,6 +155,10 @@ def test_summary_shows_one_pooled_table_per_measured_file(merger):
     ]  # fmt: skip
     pairs = summary.split('## Quirk statistics per factor pair\n', 1)[1]
     assert '| pair relation | n | share |' in pairs and '| superior | n | share |' in pairs
+    assert [row[0] for row in tableRows(summary, '## Fits of the documented models\n')] == list(
+        FIT_AXES
+    )
+    assert '| status | n | share |' in summary.split('## Fits of the documented models\n', 1)[1]
 
 
 def test_summary_template_has_no_hand_typed_digits():
