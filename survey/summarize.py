@@ -103,7 +103,7 @@ class Summarizer:
                 'level': self.shares(self.modeled['level']),
                 'relation': self.shares(self.dimensions['relation']),
                 'pair_relation': self.shares(self.pairs['relation']),
-                'superior': self.shares(self.superiorSides()),
+                'superior': self.shares(self.findSuperiorSides()),
                 'response_type': self.shares(self.registry['response_type']),
                 'reader': self.shares(self.registry['reader']),
                 'published_model': self.shares(self.registry['published_model']),
@@ -142,7 +142,7 @@ class Summarizer:
         """Share of grouping factors whose allocation is balanced (α infinite)."""
         return round(float((self.dimensions['alpha'] == float('inf')).mean()), 3)
 
-    def superiorSides(self) -> pd.Series:
+    def findSuperiorSides(self) -> pd.Series:
         """Which factor of each nested pair holds whole groups of the other:
         `factor_a`, `factor_b`, or `none` when the two partition the rows alike."""
         nested = self.pairs[self.pairs['relation'] == 'nested']
@@ -190,21 +190,27 @@ class Summarizer:
         axes = quantiles['axes']
         for axis in (*FACTOR_AXES, *ROW_AXES, 'K'):
             placeholder = f'table_{PLACEHOLDERS.get(axis, axis)}'
-            fields[placeholder] = self.axisTable(axis, axes[axis], practice)
+            fields[placeholder] = self.renderAxisTable(axis, axes[axis], practice)
         fields |= {
-            'table_conditions': self.statisticTable(CONDITIONS, axes),
-            'table_column_statistics': self.statisticTable(COLUMN_STATISTICS, axes),
-            'table_column_factor_statistics': self.statisticTable(COLUMN_FACTOR_STATISTICS, axes),
-            'table_pair_statistics': self.statisticTable(FACTOR_PAIR_STATISTICS, axes),
-            'table_pair_relation': self.shareTable(self.pairs['relation'], 'pair relation'),
-            'table_superior': self.shareTable(self.superiorSides(), 'superior'),
-            'table_relation': self.shareTable(self.dimensions['relation'], 'relation'),
-            'table_covariate_type': self.shareTable(self.modeled['type'], 'covariate type'),
-            'table_level': self.shareTable(self.modeled['level'], 'level'),
-            'table_k_distribution': self.shareTable(self.kBucketed(), 'K'),
-            'table_response_type': self.shareTable(self.registry['response_type'], 'response type'),
-            'table_reader': self.shareTable(self.registry['reader'], 'reader'),
-            'table_published_model': self.shareTable(self.registry['published_model'], 'published'),
+            'table_conditions': self.renderStatisticTable(CONDITIONS, axes),
+            'table_column_statistics': self.renderStatisticTable(COLUMN_STATISTICS, axes),
+            'table_column_factor_statistics': self.renderStatisticTable(
+                COLUMN_FACTOR_STATISTICS, axes
+            ),
+            'table_pair_statistics': self.renderStatisticTable(FACTOR_PAIR_STATISTICS, axes),
+            'table_pair_relation': self.renderShareTable(self.pairs['relation'], 'pair relation'),
+            'table_superior': self.renderShareTable(self.findSuperiorSides(), 'superior'),
+            'table_relation': self.renderShareTable(self.dimensions['relation'], 'relation'),
+            'table_covariate_type': self.renderShareTable(self.modeled['type'], 'covariate type'),
+            'table_level': self.renderShareTable(self.modeled['level'], 'level'),
+            'table_k_distribution': self.renderShareTable(self.kBucketed(), 'K'),
+            'table_response_type': self.renderShareTable(
+                self.registry['response_type'], 'response type'
+            ),
+            'table_reader': self.renderShareTable(self.registry['reader'], 'reader'),
+            'table_published_model': self.renderShareTable(
+                self.registry['published_model'], 'published'
+            ),
             'tier_d': self.tierD(),
         }
         return Template(TEMPLATE.read_text()).substitute(fields)
@@ -238,7 +244,7 @@ class Summarizer:
         ])  # fmt: skip
 
     @staticmethod
-    def axisTable(axis: str, block: dict, practice: dict) -> str:
+    def renderAxisTable(axis: str, block: dict, practice: dict) -> str:
         """Rows pooled, per tier and without agridat; the pooled row ends with the practice column."""
         head = f'| {axis} | ' + ' | '.join(QUANTILE_KEYS) + ' | practice |'
         rows = {'pooled': block['pooled']}
@@ -247,21 +253,21 @@ class Summarizer:
         last = {'pooled': Summarizer.cell(Summarizer.practiceP90(axis, practice))}
         lines = [head, '|' + '---|' * (len(QUANTILE_KEYS) + 2)]
         for name, q in rows.items():
-            cells = Summarizer.quantileCells(q)
+            cells = Summarizer.renderQuantileCells(q)
             lines.append(f'| {name} | {cells} | {last.get(name, "")} |')
         return '\n'.join(lines)
 
     @staticmethod
-    def quantileCells(quantiles: dict) -> str:
+    def renderQuantileCells(quantiles: dict) -> str:
         return ' | '.join(Summarizer.cell(quantiles[k]) for k in QUANTILE_KEYS)
 
     @staticmethod
-    def statisticTable(statistics: tuple[str, ...], axes: dict) -> str:
+    def renderStatisticTable(statistics: tuple[str, ...], axes: dict) -> str:
         """One row per statistic, its pooled quantiles as columns."""
         head = '| statistic | ' + ' | '.join(QUANTILE_KEYS) + ' |'
         lines = [head, '|' + '---|' * (len(QUANTILE_KEYS) + 1)]
         for statistic in statistics:
-            cells = Summarizer.quantileCells(axes[statistic]['pooled'])
+            cells = Summarizer.renderQuantileCells(axes[statistic]['pooled'])
             lines.append(f'| {statistic} | {cells} |')
         return '\n'.join(lines)
 
@@ -276,7 +282,7 @@ class Summarizer:
         return max(values)
 
     @staticmethod
-    def shareTable(values: pd.Series, label: str) -> str:
+    def renderShareTable(values: pd.Series, label: str) -> str:
         counts = values.value_counts()
         rows = [f'| {k} | {n} | {n / len(values):.0%} |' for k, n in counts.items()]
         return '\n'.join([f'| {label} | n | share |', '|---|---|---|', *rows])
