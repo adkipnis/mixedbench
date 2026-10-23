@@ -22,7 +22,7 @@ from itertools import combinations
 from pathlib import Path
 
 import pandas as pd
-from measure import COLUMN_COLUMNS, DIMENSION_COLUMNS, Measurer
+from measure import measureRegistry
 from mixedbench.contract import withComposites
 from mixedbench.datasets import DataObject, Loader
 from mixedbench.registry.row import (
@@ -469,22 +469,6 @@ class Merger:
         return (len(table), tuple(sorted(table.nunique())))
 
     # ---------------------------------------------------------------------------------
-    # measure: registry rows -> dimensions.csv, columns.csv
-    # ---------------------------------------------------------------------------------
-    def measure(self) -> None:
-        """Every merge measures the whole registry from the loaded tables; nothing is typed."""
-        registry = self.canonical(TABLES['registry'])
-        dimensions, columns = [], []
-        for cells in registry.to_dict('records'):
-            row = Row.parse(cells)
-            table = self.loader.load(self.frame.sources[row.source], row.object, row.types)
-            measurer = Measurer(table, row)
-            dimensions += measurer.dimensions()
-            columns += measurer.columns()
-        writeCsv(pd.DataFrame(dimensions, columns=DIMENSION_COLUMNS), self.registry / 'dimensions.csv')  # fmt: skip
-        writeCsv(pd.DataFrame(columns, columns=COLUMN_COLUMNS), self.registry / 'columns.csv')
-
-    # ---------------------------------------------------------------------------------
     # manifest: registry objects -> manifest.csv
     # ---------------------------------------------------------------------------------
     def writeManifest(self) -> None:
@@ -528,7 +512,7 @@ if __name__ == '__main__':
     merger.upsert()
     merger.supersede()
     merger.reconcile()
-    merger.measure()
+    measureRegistry(merger.registry, merger.loader)
     merger.writeManifest()
     Summarizer(args.registry, args.survey).flush()
     merger.report()

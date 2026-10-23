@@ -36,25 +36,6 @@ problem = suite.load('lme4/sleepstudy/1', Path('cache'))
 
 Check out the [demo](https://colab.research.google.com/github/adkipnis/mixedbench/blob/main/examples/demo.ipynb) for a friendly introduction.
 
-## Contents
-
-- The package `mixedbench`: `suite` (a problem by its id, in one call), `registry` (the registry files, summarized in
-  [`SUMMARY.md`](https://github.com/adkipnis/mixedbench/blob/main/registry/SUMMARY.md)), `datasets` (the loader) and `contract`
-  (`Problem`, `materialize`, `load`).
-- [`suite/1.1/candidates.csv`](https://github.com/adkipnis/mixedbench/blob/main/suite/1.1/candidates.csv): the candidate problems of
-  suite 1.1 with their contract hashes;
-  [`refused.csv`](https://github.com/adkipnis/mixedbench/blob/main/suite/1.1/refused.csv): the rows left out, each with its reason.
-- [`survey/`](https://github.com/adkipnis/mixedbench/blob/main/survey/README.md): the pipeline that built the registry and its record;
-  provenance, not needed to use the package.
-
-## Planned
-
-- Release 1.1: suite 1.1 with reference posteriors, the metrics that score a method against them, and the scores of standard methods.
-- Release 1.2: references for the oracle and predictive tracks, more families, and the retirement of sources that went offline.
-- Later: an R loader, an "as published" prior track, and a mirror fallback for sources that go offline.
-
-Progress is tracked in the [issues](https://github.com/adkipnis/mixedbench/issues).
-
 ## Contributing
 
 Interested in becoming part of `mixedbench`? Check out [`CONTRIBUTING.md`](https://github.com/adkipnis/mixedbench/blob/main/CONTRIBUTING.md).

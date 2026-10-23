@@ -1,18 +1,22 @@
 # Dimension survey — summary
 
-Public grouped datasets measured by script from [`registry.csv`](registry.csv); frame, method
-and reading rules in [`README.md`](../survey/README.md). Evidence for the envelope in metabeta's
+Public grouped datasets measured by script from [`registry.csv`](registry.csv); the files in
+[`docs/registry.md`](../docs/registry.md), the method in [`README.md`](../survey/README.md). Evidence for the envelope in metabeta's
 design docs, not the envelope itself.
 
 How to read the tables:
 
-- Every number is filled by `merge.py` from `dimensions.csv` and `columns.csv` on each merge;
-  edit `SUMMARY.template.md`, never this file.
+- Every number is filled from the measured files by `merge.py` on each merge, or by
+  `measure.py`; edit `SUMMARY.template.md`, never this file.
 - Quantiles are observed values, never interpolated: below the median the nearest value at
   or below the level, from the median on the nearest value at or above it.
 - Per-factor axes (groups, group sizes, imbalance) count a dataset once per grouping factor;
   dataset axes (observations, grouping factors, design columns) once per registry row; `K`
   once per categorical covariate of a documented model.
+- A quirk statistic counts once per row of its file that defines it: a column, a column and
+  grouping factor, a crossed pair of factors or a registry row. Its table shows the pooled
+  quantiles, `quantiles.yaml` also those per tier and without agridat. Definitions are in the
+  [`docs/registry.md`](../docs/registry.md).
 - The last column of an axis table, `practice`, is the practice survey's upper decile, the
   maximum over the v1 families in [`practice_quantiles.yaml`](../survey/practice_quantiles.yaml)
   (the minimum for the smallest group size), read at merge time; `–` where the practice survey
@@ -87,6 +91,33 @@ its levels less one, an interaction the product.
 ${table_d_doc}
 
 ${table_d_all}
+
+The condition index of the documented design and of the design over every column.
+
+${table_conditions}
+
+## Quirk statistics per column
+
+Every column of `columns.csv`, documented or not, by the statistics its type defines.
+
+${table_column_statistics}
+
+## Quirk statistics per column and grouping factor
+
+Every column against every grouping factor of its registry row.
+
+${table_column_factor_statistics}
+
+## Quirk statistics per factor pair
+
+Every pair of grouping factors of a registry row: the empty cells over the crossed pairs, and
+which factor of a nested pair is the superior, the one listed first, second or neither.
+
+${table_pair_statistics}
+
+${table_pair_relation}
+
+${table_superior}
 
 ## Response, reader and published model
 

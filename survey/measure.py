@@ -1,147 +1,138 @@
-"""Measure one loaded table against its registry row: the dimension survey's numbers that no
-agent types (spec #14, ticket #18). `Measurer(table, row).dimensions()` gives one row per grouping
-factor, `.columns()` one row per covariate column; the merge script writes them to
-`dimensions.csv` and `columns.csv`.
+"""measure.py runs the measurement pass: the dimension survey's numbers that no agent types,
+measured on each registry row's loaded table and written to the four measured files.
+The Measurer holds what the four share: the rows with a response, the covariate columns
+with their types, each grouping factor's group-level columns, a column's codes, two factors' holders
+and the empty cells of two columns' levels.
+
+pipeline:
+---------
+registry.csv and each row's loaded table
+-> one row's table and what the measured files share  Measurer
+-> a row per grouping factor                         dimensions.measure
+-> a row per covariate column                        columns.measure
+-> a row per covariate column and grouping factor    groups.measure
+-> a row per pair of grouping factors                pairs.measure
+-> the four measured files                           measureRegistry
+
+Every merge runs the pass; run it alone, and the summary after it, from the repo root:
+
+    uv run python survey/measure.py
 """
 
 from __future__ import annotations
 
-from itertools import combinations
+import argparse
+from pathlib import Path
 
-import numpy as np
+import columns
+import dimensions
+import groups
+import pairs
 import pandas as pd
+from mixedbench import registry
 from mixedbench.contract import columnType, withComposites
-from mixedbench.registry.row import Row, parts
+from mixedbench.datasets import Loader
+from mixedbench.registry.row import Row, writeCsv
+from schema import IDENTITY
+from sources import readFrame
 
-# =====================================================================================
-# globals
-# =====================================================================================
-IDENTITY = ('source', 'object', 'model_index', 'tier')
-DIMENSION_COLUMNS = (
-    *IDENTITY, 'factor', 'n_factors', 'relation', 'd_doc', 'd_all', 'n_obs', 'n_groups',
-    'group_size_min', 'group_size_p10', 'group_size_p50', 'group_size_p90', 'group_size_max',
-    'singleton_share', 'cv', 'alpha',
-)  # fmt: skip
-COLUMN_COLUMNS = (*IDENTITY, 'column', 'type', 'K', 'level', 'constant_within', 'missing_share', 'in_model')  # fmt: skip
-
-
-def fitAlpha(sizes: pd.Series) -> float:
-    """Concentration of a symmetric Dirichlet fitted by moment matching to the group-size
-    proportions: Var(p) = (1 − 1/m) / (m (m α + 1)) solved for α; the variance is around the
-    known mean 1/m. A balanced allocation has zero variance, hence infinite α (spec #14)."""
-    m = len(sizes)
-    p = sizes / sizes.sum()
-    variance = float(((p - 1 / m) ** 2).mean())
-    if variance == 0:
-        return float('inf')
-    return ((1 - 1 / m) / (m * variance) - 1) / m
-
-
-def observed(values: pd.Series, q: float) -> int | float:
-    """The observed value at or below the level under p50, at or above from p50 on."""
-    v = values.quantile(q, interpolation='higher' if q >= 0.5 else 'lower')
-    return int(v) if float(v).is_integer() else float(v)
+HERE = Path(__file__).parent
 
 
 # =====================================================================================
-# pipeline: registry row -> relation -> group sizes per factor -> covariate columns -> d
+# measurer: one registry row's table and what the measured files share
 # =====================================================================================
 class Measurer:
     def __init__(self, table: pd.DataFrame, row: Row) -> None:
         self.row = row
-        self.factors = row.grouping_factors
+        self.grouping_factors = row.grouping_factors
         measured = table[table[row.response].notna()]  # a PK table's dosing rows carry no response
-        self.table = withComposites(measured, self.factors)
+        self.table = withComposites(measured, self.grouping_factors)
         self.identity = {k: getattr(row, k) for k in IDENTITY}
-        taken = {row.response, row.trials, *self.factors, *row.ignore}
-        self.columnNames = [c for c in table.columns if c not in taken]
+        taken = {row.response, row.trials, *self.grouping_factors, *row.ignore}
+        self.column_names = [c for c in table.columns if c not in taken]
+        self.column_types = {c: columnType(self.table[c]) for c in self.column_names}
+        self.group_level = self.findGroupLevel()
 
-    def columns(self) -> list[dict]:
-        return [self.identity | {'column': c} | self.describe(c) for c in self.columnNames]
+    def findGroupLevel(self) -> dict[str, list[str]]:
+        """Each grouping factor's group-level columns, those constant within its groups."""
+        group_level = {}
+        for grouping_factor in self.grouping_factors:
+            grouped = self.table.groupby(grouping_factor, observed=True)
+            group_level[grouping_factor] = [
+                c for c in self.column_names if grouped[c].nunique().max() <= 1
+            ]
+        return group_level
 
-    def dimensions(self) -> list[dict]:
-        shared = {'n_factors': len(self.factors), 'relation': self.relation()} | self.design()
-        return [self.identity | {'factor': f} | shared | self.groupSizes(f) for f in self.factors]  # fmt: skip
+    def codeColumn(self, column: str, kind: str) -> pd.Series:
+        """A continuous column as loaded, a binary or ordered one by the codes of its present
+        levels. A missing value stays missing."""
+        values = self.table[column]
+        if kind == 'continuous':
+            return values.astype(float)
+        levels = pd.Categorical(values).remove_unused_categories()
+        codes = pd.Series(levels.codes, index=values.index)
+        return codes.where(codes >= 0)  # -1 codes a missing value
 
-    # ---------------------------------------------------------------------------------
-    # relation
-    # ---------------------------------------------------------------------------------
-    def relation(self) -> str:
-        """The practice survey's single / nested / crossed / mixed, computed from the data:
-        a pair is nested when every level of one factor lies in one level of the other."""
-        if len(self.factors) == 1:
-            return 'single'
-        nested = {self.nested(a, b) for a, b in combinations(self.factors, 2)}
-        if nested == {True}:
-            return 'nested'
-        if nested == {False}:
-            return 'crossed'
-        return 'mixed'
-
-    def nested(self, a: str, b: str) -> bool:
+    def findHolders(self, a: str, b: str) -> list[str]:
+        """The factors whose groups hold whole groups of the other: none when the two cross,
+        both when they partition the rows alike."""
         levels = self.table[[a, b]].drop_duplicates()
-        return self.oneParentEach(levels, a, b) or self.oneParentEach(levels, b, a)
+        holders = []
+        if self.hasOneParent(levels, b, a):
+            holders.append(a)
+        if self.hasOneParent(levels, a, b):
+            holders.append(b)
+        return holders
 
     @staticmethod
-    def oneParentEach(levels: pd.DataFrame, child: str, parent: str) -> bool:
+    def hasOneParent(levels: pd.DataFrame, child: str, parent: str) -> bool:
         parents = levels.groupby(child, observed=True)[parent].nunique()
         return bool(parents.max() == 1)
 
-    # ---------------------------------------------------------------------------------
-    # group sizes
-    # ---------------------------------------------------------------------------------
-    def groupSizes(self, factor: str) -> dict:
-        sizes = self.table[factor].value_counts()
-        sizes = sizes[sizes > 0]  # a categorical may carry unused levels
-        return {
-            'n_obs': int(sizes.sum()),
-            'n_groups': len(sizes),
-            'group_size_min': int(sizes.min()),
-            'group_size_p10': observed(sizes, 0.1),
-            'group_size_p50': observed(sizes, 0.5),
-            'group_size_p90': observed(sizes, 0.9),
-            'group_size_max': int(sizes.max()),
-            'singleton_share': round(float((sizes == 1).mean()), 4),
-            'cv': round(float(np.std(sizes) / np.mean(sizes)), 4),
-            'alpha': round(fitAlpha(sizes), 4),
-        }
-
-    # ---------------------------------------------------------------------------------
-    # covariate columns
-    # ---------------------------------------------------------------------------------
-    def describe(self, column: str) -> dict:
-        values = self.table[column]
-        kind, levels = columnType(values)
-        constantWithin = [f for f in self.factors if self.constantWithin(column, f)]
-        return {
-            'type': kind,
-            'K': levels,
-            'level': 'group' if constantWithin else 'within',
-            'constant_within': ';'.join(constantWithin),
-            'missing_share': round(float(values.isna().mean()), 4),
-            'in_model': 'yes' if column in self.row.covariates else 'no',
-        }
-
-    def constantWithin(self, column: str, factor: str) -> bool:
-        distinct = self.table.groupby(factor, observed=True)[column].nunique()
-        return bool(distinct.max() <= 1)
-
-    # ---------------------------------------------------------------------------------
-    # design columns
-    # ---------------------------------------------------------------------------------
-    def design(self) -> dict:
-        """d_doc expands the documented model, d_all every covariate column plus the documented
-        interactions, so that d_all is never below d_doc (envelope rule 4): continuous and
-        binary count 1, categorical k − 1, an interaction the product."""
-        width = {c['column']: self.width(c) for c in self.columns()}
-        interactions = self.row.interactions
-        dInteractions = sum(np.prod([width[c] for c in parts(term)]) for term in interactions)
-        dDoc = sum(width[c] for c in self.row.covariates) + dInteractions
-        dAll = sum(width.values()) + dInteractions
-        return {'d_doc': int(dDoc), 'd_all': int(dAll)}
-
     @staticmethod
-    def width(column: dict) -> int:
-        if column['type'] in ('categorical', 'ordered'):
-            return column['K'] - 1
-        return 1
+    def measureEmptyCells(pairs: pd.DataFrame) -> float:
+        """The share of the two columns' level × level cells that hold no row."""
+        cells = pairs.dropna().drop_duplicates()
+        first, second = cells.columns
+        m, k = cells[first].nunique(), cells[second].nunique()
+        return round(1 - len(cells) / (m * k), 4)
+
+
+# =====================================================================================
+# pass: registry.csv -> each row's loaded table -> the four measured files
+# =====================================================================================
+def measureRegistry(root: Path, loader: Loader) -> None:
+    frame = readFrame(root)
+    measured = {'dimensions': [], 'columns': [], 'column_factors': [], 'factor_pairs': []}
+    for row in registry.rows(root / 'registry.csv'):
+        table = loader.load(frame.sources[row.source], row.object, row.types)
+        measurer = Measurer(table, row)
+        measured['dimensions'] += dimensions.measure(measurer)
+        measured['columns'] += columns.measure(measurer)
+        measured['column_factors'] += groups.measure(measurer)
+        measured['factor_pairs'] += pairs.measure(measurer)
+    headers = {
+        'dimensions': dimensions.DIMENSION_COLUMNS,
+        'columns': columns.COLUMN_COLUMNS,
+        'column_factors': groups.COLUMN_FACTOR_COLUMNS,
+        'factor_pairs': pairs.FACTOR_PAIR_COLUMNS,
+    }
+    for name, rows in measured.items():
+        writeCsv(pd.DataFrame(rows, columns=headers[name]), root / f'{name}.csv')
+
+
+# =====================================================================================
+# main
+# =====================================================================================
+if __name__ == '__main__':
+    from summarize import Summarizer  # imported here: summarize imports the measured modules
+
+    # fmt: off
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument('--registry', type=Path, default=HERE.parent / 'registry', help='folder holding sources.yaml and the census tables')
+    parser.add_argument('--survey', type=Path, default=HERE, help='folder holding the duplicates and dropped tables')
+    args = parser.parse_args()
+    # fmt: on
+    measureRegistry(args.registry, Loader(args.registry / 'cache'))
+    Summarizer(args.registry, args.survey).flush()

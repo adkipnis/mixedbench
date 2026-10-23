@@ -9,8 +9,8 @@ Thank you for your interest. mixedbench is early stage and help is welcome.
   files are written by script, so we add it in the next survey pass.
 - **A bug in the loader or the contract.** Open an issue with the smallest example that shows
   it, or a pull request with a failing test and the fix.
-- **A method to benchmark.** Scoring arrives with suite 1.1 (see the [plan](README.md#planned));
-  until then, open an issue describing the method.
+- **A method to benchmark.** Scoring arrives with suite 1.1; until then, open an issue
+  describing the method.
 
 For anything bigger than a small fix, open an issue before writing code, so we can agree on
 the approach first.
@@ -38,8 +38,8 @@ src/mixedbench/
   contract/     the rules that turn a registry row and its table into a problem
   suite/        a problem by its id, built on first use and checked against its suite
   references/   a problem's reference posterior, fitted by brms in R
-registry/       the registry files, written by survey/merge.py
-suite/          the admission and reference-run scripts, each suite's candidate list
+registry/       the registry files (docs/registry.md), written by survey/merge.py, summarized in SUMMARY.md
+suite/          the admission and reference-run scripts; per suite its candidates.csv and refused.csv
 survey/         the pipeline that built the registry
 tests/          mirrors src/
 docs/adr/       the design decisions and why they were taken

@@ -52,6 +52,12 @@ harder to understand or change; it accrues one small edit at a time.
   change and closes its issue. The branch keeps the steps: the failing test, the code, the fixes.
 - A change to behavior or to an interface starts as an issue: the problem, the decision and the
   check that closes it, in a few lines.
+- An issue holds only what a contributor needs: the problem, the decision, the check and the
+  issues that block it. Who works it, with which tool, model or budget, is planning and stays
+  out of the tracker.
+- A spec of several tickets closes with two more: an automated simplification and code-review
+  pass over the branch (the debloat), then a guided manual review, one file per session, with
+  small refactors. Only then is the branch merged.
 - A release is a `vX.Y.Z` tag on `main` with release notes.
 
 ## Names
@@ -203,6 +209,8 @@ a model specification
   (`test_<what_holds>`), fixtures in a `fixtures/` beside them.
 - Each test says in a sentence or two why it exists, unless obvious. Bind the object under test,
   then call it; small named helpers, not lambdas or repeated comprehensions.
+- Cases of one check are one parametrized table, each case's reason in its id, not one test
+  per case.
 - Names listed in two modules (a `Literal`, a catalog, a table's columns) are checked against
   each other by a test; the code checks nothing at import.
 - No coverage gate.
@@ -220,6 +228,9 @@ Markdown meets the same bar as code: simple, and read top to bottom.
 ## Data
 
 - Never overwrite raw data.
+- A default, an edge or a share is read off the data collections and surveys already at hand
+  (a registry, a practice survey) before it is guessed, and cites its witness. Where no witness
+  exists and one pays off, gather the data first.
 - Stream or lazily load data that would not fit in memory.
 - Figures are PDFs, never PNG or JPG. Existing vector files convert to SVG; a PDF is never
   rasterized.
@@ -279,8 +290,8 @@ The words are [`CONTEXT.md`](../CONTEXT.md)'s.
 
 ### Names
 
-- Other names have one home each: registry columns in the
-  [file contracts](../survey/README.md#file-contracts); problem ids in `CONTEXT.md`; table
+- Other names have one home each: registry columns in
+  [`docs/registry.md`](registry.md); problem ids in `CONTEXT.md`; table
   columns and parameter names in `contract/problem.py`; the cache layout in `loader.py` and
   `materialized.py`; the draw files' directory in `references/runner.py`, their names and
   columns in `references/handoff.py`; versions and suite folders in
@@ -303,8 +314,8 @@ The words are [`CONTEXT.md`](../CONTEXT.md)'s.
 
 ### Docs
 
-- `README.md`: badges, a short what and why, install, one quickstart box, contents,
-  contributing, citing, license.
+- `README.md`: badges, a short what and why, install, one quickstart box, contributing,
+  citing, license.
 - Counts live in `SUMMARY.md`; the one exception, the README's dataset count, is pinned by an
   offline test against `quantiles.yaml`.
 

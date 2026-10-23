@@ -8,7 +8,7 @@ tell. Vocabulary follows `CONTEXT.md`.
 ## Input
 
 Per object: its `candidates.csv` row and its help page `registry/help/<source>/<object>.txt`.
-Columns and allowed values are in `README.md` and `schema.py`; the merge refuses a value
+Columns and allowed values are in `docs/registry.md` and `schema.py`; the merge refuses a value
 outside them or a column the table lacks.
 
 ## Exclude when

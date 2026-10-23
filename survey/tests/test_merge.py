@@ -1,6 +1,8 @@
 """The merge script at its file seams: shard in, canonical CSVs and refusals out (#17)."""
 
 import hashlib
+import subprocess
+import sys
 from pathlib import Path
 
 import pandas as pd
@@ -12,6 +14,8 @@ from mixedbench.registry.row import readCsv, writeCsv
 from sources import readFrame
 
 RENAMED_TYPES = 'area=categorical;farm=categorical;type=categorical;diet=categorical'
+SURVEY = Path(__file__).resolve().parents[1]
+MEASURED = ('dimensions.csv', 'columns.csv', 'column_factors.csv', 'factor_pairs.csv')
 
 
 def test_passing_registry_shard_merges_with_tier_and_reader_filled_in(merger):
@@ -316,7 +320,7 @@ def test_the_census_lands_in_the_registry_and_the_bookkeeping_in_the_survey(spli
     mergeShard(merger, FIXTURES / 'registry_cattle.csv')  # flags the pair with herds
     registryFiles = sorted(p.name for p in merger.registry.iterdir() if p.is_file())
     surveyFiles = sorted(p.name for p in merger.survey.iterdir() if p.is_file())
-    assert registryFiles == ['SUMMARY.md', 'columns.csv', 'dimensions.csv', 'excluded.csv', 'manifest.csv', 'quantiles.yaml', 'registry.csv', 'sources.yaml']  # fmt: skip
+    assert registryFiles == ['SUMMARY.md', 'column_factors.csv', 'columns.csv', 'dimensions.csv', 'excluded.csv', 'factor_pairs.csv', 'manifest.csv', 'quantiles.yaml', 'registry.csv', 'sources.yaml']  # fmt: skip
     assert surveyFiles == ['dropped.csv', 'duplicates.csv']
 
 
@@ -358,6 +362,40 @@ def test_every_merge_measures_the_registry_into_dimensions_and_columns(merger):
     mergeShard(merger, FIXTURES / 'excluded_cattle.csv')
     after = {p.name: p.read_bytes() for p in merger.registry.glob('*.csv')}
     assert after == before | {'excluded.csv': after['excluded.csv']}
+
+
+def test_every_merge_writes_the_measured_headers_and_a_left_out_statistic_as_blank(merger):
+    """column_factors.csv and factor_pairs.csv carry their released headers, and dimensions.csv
+    the two condition numbers after d_all. The nested region and herd pair has no empty-cell
+    share, written as a blank cell (#99, #100)."""
+    mergeShard(merger, FIXTURES / 'registry_herds.csv')
+    column_factors = readRows(merger.registry / 'column_factors.csv')
+    assert list(column_factors[0]) == [
+        'source', 'object', 'model_index', 'tier', 'column', 'factor', 'between_group_share',
+        'group_level_r2', 'absent_level_share', 'size_rho', 'within_sd_cv',
+    ]  # fmt: skip
+    pairs = readRows(merger.registry / 'factor_pairs.csv')
+    assert list(pairs[0]) == [
+        'source', 'object', 'model_index', 'tier', 'factor_a', 'factor_b', 'relation', 'superior',
+        'empty_cell_share',
+    ]  # fmt: skip
+    assert pairs[0]['empty_cell_share'] == ''
+    columns = list(readRows(merger.registry / 'dimensions.csv')[0])
+    after = columns.index('d_all') + 1
+    assert columns[after : after + 2] == ['condition_doc', 'condition_all']
+
+
+def test_the_measure_script_writes_what_the_merge_writes(merger):
+    """`measure.py` reruns the merge's measure pass without a shard to merge, so a changed
+    statistic reaches the whole registry in one run (#98). It loads from the cache the merge
+    filled, so the run is offline."""
+    mergeShard(merger, FIXTURES / 'registry_herds.csv')
+    merged = {name: (merger.registry / name).read_bytes() for name in MEASURED}
+    for name in MEASURED:
+        (merger.registry / name).unlink()
+    command = [sys.executable, SURVEY / 'measure.py', '--registry', merger.registry, '--survey', merger.survey]  # fmt: skip
+    subprocess.run(command, check=True)
+    assert {name: (merger.registry / name).read_bytes() for name in MEASURED} == merged
 
 
 def test_every_merge_names_each_registry_objects_file_in_the_manifest(merger):

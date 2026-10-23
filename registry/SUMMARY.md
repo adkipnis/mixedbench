@@ -1,18 +1,22 @@
 # Dimension survey — summary
 
-Public grouped datasets measured by script from [`registry.csv`](registry.csv); frame, method
-and reading rules in [`README.md`](../survey/README.md). Evidence for the envelope in metabeta's
+Public grouped datasets measured by script from [`registry.csv`](registry.csv); the files in
+[`docs/registry.md`](../docs/registry.md), the method in [`README.md`](../survey/README.md). Evidence for the envelope in metabeta's
 design docs, not the envelope itself.
 
 How to read the tables:
 
-- Every number is filled by `merge.py` from `dimensions.csv` and `columns.csv` on each merge;
-  edit `SUMMARY.template.md`, never this file.
+- Every number is filled from the measured files by `merge.py` on each merge, or by
+  `measure.py`; edit `SUMMARY.template.md`, never this file.
 - Quantiles are observed values, never interpolated: below the median the nearest value at
   or below the level, from the median on the nearest value at or above it.
 - Per-factor axes (groups, group sizes, imbalance) count a dataset once per grouping factor;
   dataset axes (observations, grouping factors, design columns) once per registry row; `K`
   once per categorical covariate of a documented model.
+- A quirk statistic counts once per row of its file that defines it: a column, a column and
+  grouping factor, a crossed pair of factors or a registry row. Its table shows the pooled
+  quantiles, `quantiles.yaml` also those per tier and without agridat. Definitions are in the
+  [`docs/registry.md`](../docs/registry.md).
 - The last column of an axis table, `practice`, is the practice survey's upper decile, the
   maximum over the v1 families in [`practice_quantiles.yaml`](../survey/practice_quantiles.yaml)
   (the minimum for the smallest group size), read at merge time; `–` where the practice survey
@@ -223,6 +227,60 @@ its levels less one, an interaction the product.
 | tier D | 104 | 1 | 2 | 3 | 10 | 156 | 163 | 4580 |  |
 | tier O | 13 | 2 | 2 | 2 | 19 | 79 | 23759 | 23759 |  |
 | without agridat | 666 | 0 | 0 | 1 | 5 | 20 | 51 | 23759 |  |
+
+The condition index of the documented design and of the design over every column.
+
+| statistic | n | min | p5 | p10 | p50 | p90 | p95 | max |
+|---|---|---|---|---|---|---|---|---|
+| condition_doc | 673 | 1 | 1 | 1 | 3.1463 | 12.4094 | 21.752 | inf |
+| condition_all | 668 | 1 | 1 | 1 | 4.0813 | 111097380.4825 | inf | inf |
+
+## Quirk statistics per column
+
+Every column of `columns.csv`, documented or not, by the statistics its type defines.
+
+| statistic | n | min | p5 | p10 | p50 | p90 | p95 | max |
+|---|---|---|---|---|---|---|---|---|
+| skewness | 2204 | -6.4268 | -0.7521 | -0.4887 | 0.2066 | 2.3649 | 3.8416 | 22.8556 |
+| excess_kurtosis | 2204 | -2.0022 | -1.3374 | -1.2042 | -0.2617 | 8.5473 | 20.5597 | 1191.6867 |
+| outlier_share | 2204 | 0 | 0 | 0 | 0 | 0.0092 | 0.0143 | 0.04 |
+| zero_share | 2219 | 0 | 0 | 0 | 0 | 0.1541 | 0.4361 | 1 |
+| min_share | 2386 | 0 | 0.0004 | 0.0012 | 0.0404 | 0.5125 | 0.6661 | 1 |
+| max_share | 2386 | 0 | 0.0002 | 0.0005 | 0.0159 | 0.2196 | 0.3315 | 1 |
+| unique_share | 4026 | 0 | 0.0001 | 0.0004 | 0.0117 | 0.3625 | 0.8095 | 1 |
+| rare_level_share | 1810 | 0 | 0.0014 | 0.0031 | 0.2152 | 0.496 | 0.5 | 1 |
+| max_abs_rho | 3232 | 0 | 0.0082 | 0.0372 | 0.4183 | 0.8955 | 0.978 | 1 |
+
+## Quirk statistics per column and grouping factor
+
+Every column against every grouping factor of its registry row.
+
+| statistic | n | min | p5 | p10 | p50 | p90 | p95 | max |
+|---|---|---|---|---|---|---|---|---|
+| between_group_share | 4505 | -1.6916 | -0.1111 | -0.0141 | 0.2642 | 1 | 1 | 1 |
+| group_level_r2 | 2421 | -29.5505 | -1.9349 | -0.2105 | 0.0024 | 1 | 1 | 1 |
+| absent_level_share | 2559 | 0 | 0 | 0 | 0.3436 | 0.8333 | 0.9583 | 0.9983 |
+| size_rho | 3485 | -1 | -0.8208 | -0.4617 | 0.0288 | 0.5431 | 0.8 | 1 |
+| within_sd_cv | 3288 | 0 | 0 | 0.0001 | 0.2665 | 1.4184 | 2.5194 | 129.5068 |
+
+## Quirk statistics per factor pair
+
+Every pair of grouping factors of a registry row: the empty cells over the crossed pairs, and
+which factor of a nested pair is the superior, the one listed first, second or neither.
+
+| statistic | n | min | p5 | p10 | p50 | p90 | p95 | max |
+|---|---|---|---|---|---|---|---|---|
+| empty_cell_share | 155 | 0 | 0 | 0 | 0.0727 | 0.8964 | 0.9523 | 0.9992 |
+
+| pair relation | n | share |
+|---|---|---|
+| crossed | 155 | 56% |
+| nested | 123 | 44% |
+
+| superior | n | share |
+|---|---|---|
+| factor_a | 103 | 84% |
+| factor_b | 20 | 16% |
 
 ## Response, reader and published model
 

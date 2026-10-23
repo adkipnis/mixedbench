@@ -3,7 +3,9 @@ in the editable install and in the wheel alike."""
 
 from __future__ import annotations
 
+import tomllib
 import typing
+from pathlib import Path
 
 import pandas as pd
 import yaml
@@ -33,6 +35,16 @@ def test_the_directory_holds_exactly_the_registry_files() -> None:
     entries = list(registry.path().iterdir())
     assert sorted(p.name for p in entries) == sorted(FILES)
     assert all(p.is_file() for p in entries)
+
+
+def test_pyproject_ships_exactly_the_registry_files() -> None:
+    """The wheel's force-include and the sdist's only-include name the registry files one by
+    one; a file added to the literal without them would be missing from the package."""
+    pyproject = tomllib.loads(Path('pyproject.toml').read_text())
+    build = pyproject['tool']['hatch']['build']['targets']
+    wheel = [Path(src).name for src in build['wheel']['force-include'] if src.startswith('registry/')]  # fmt: skip
+    sdist = [Path(src).name for src in build['sdist']['only-include'] if src.startswith('registry/')]  # fmt: skip
+    assert wheel == sdist == list(FILES)
 
 
 def test_quantiles_parse_with_the_keys_metabeta_asserts() -> None:

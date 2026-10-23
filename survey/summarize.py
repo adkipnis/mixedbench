@@ -1,5 +1,5 @@
 """Quantiles and summary of the dimension survey from the measured files (#18):
-`quantiles.yaml` from `dimensions.csv`, `columns.csv` and `registry.csv`, every axis pooled,
+`quantiles.yaml` from `registry.csv` and the four measured files, every axis pooled,
 per tier and with agridat removed; `SUMMARY.md` from the digit-free template, the practice
 survey's p90 read at merge time from `practice_quantiles.yaml`, a snapshot of the practice
 survey's `quantiles.yaml`, which stays in metabeta-v3.
@@ -12,8 +12,11 @@ from string import Template
 
 import pandas as pd
 import yaml
-from measure import observed
+from columns import COLUMN_STATISTICS
+from dimensions import CONDITIONS, pickObserved
+from groups import COLUMN_FACTOR_STATISTICS
 from mixedbench.registry.row import readCsv
+from pairs import FACTOR_PAIR_STATISTICS
 from schema import TIERS
 
 # =====================================================================================
@@ -22,7 +25,7 @@ from schema import TIERS
 HERE = Path(__file__).parent
 TEMPLATE = HERE / 'SUMMARY.template.md'
 PRACTICE = HERE / 'practice_quantiles.yaml'
-# The v1 families of the stage table (metabeta-v3's packages/glmm/docs/design/stages.md): the
+# the v1 families of the stage table (metabeta-v3's packages/glmm/docs/design/stages.md): the
 # practice column takes the maximum of their p90 (envelope rule 1), the minimum for the smallest
 # group size.
 PRACTICE_FAMILIES = ('Normal', 'Bernoulli', 'Poisson', 'negative binomial', 'binomial', 'Gamma', 'log-normal')  # fmt: skip
@@ -39,7 +42,7 @@ QUANTILE_KEYS = ('n', 'min', 'p5', 'p10', 'p50', 'p90', 'p95', 'max')
 PLACEHOLDERS = {'group_size_p10': 'group_size_lower', 'group_size_p50': 'group_size_median', 'group_size_p90': 'group_size_upper'}  # fmt: skip
 HEAVY_SOURCE = 'agridat'  # the one capped census source large enough to pull the quantiles
 LEVELS = {'p5': 0.05, 'p10': 0.1, 'p50': 0.5, 'p90': 0.9, 'p95': 0.95}
-# Per-factor axes count once per grouping factor, dataset axes once per registry row.
+# per-factor axes count once per grouping factor, dataset axes once per registry row.
 FACTOR_AXES = (
     'n_groups', 'group_size_min', 'group_size_p10', 'group_size_p50', 'group_size_p90',
     'group_size_max', 'singleton_share', 'cv', 'alpha',
@@ -58,9 +61,12 @@ class Summarizer:
         self.root, self.survey = Path(root), Path(survey)  # the registry folder, the survey's
         self.registry = readCsv(self.root / 'registry.csv')
         self.excluded = readCsv(self.root / 'excluded.csv')
-        measured = FACTOR_AXES + tuple(ROW_AXES.values())
+        measured = FACTOR_AXES + tuple(ROW_AXES.values()) + CONDITIONS
         self.dimensions = self.numeric(readCsv(self.root / 'dimensions.csv'), measured)
-        self.columns = self.numeric(readCsv(self.root / 'columns.csv'), ('K',))
+        self.columns = self.numeric(readCsv(self.root / 'columns.csv'), ('K', *COLUMN_STATISTICS))
+        column_factors = readCsv(self.root / 'column_factors.csv')
+        self.column_factors = self.numeric(column_factors, COLUMN_FACTOR_STATISTICS)
+        self.pairs = self.numeric(readCsv(self.root / 'factor_pairs.csv'), FACTOR_PAIR_STATISTICS)
         self.rows = self.dimensions.drop_duplicates(['source', 'object', 'model_index'])
         self.modeled = self.columns[self.columns['in_model'] == 'yes']
         self.categoricals = self.modeled[self.modeled['type'].isin(CATEGORICAL_TYPES)]
@@ -82,6 +88,10 @@ class Summarizer:
         axes = {axis: self.axis(self.dimensions, axis) for axis in FACTOR_AXES}
         axes |= {axis: self.axis(self.rows, column) for axis, column in ROW_AXES.items()}
         axes['K'] = self.axis(self.categoricals, 'K')
+        axes |= {axis: self.axis(self.columns, axis) for axis in COLUMN_STATISTICS}
+        axes |= {axis: self.axis(self.column_factors, axis) for axis in COLUMN_FACTOR_STATISTICS}
+        axes |= {axis: self.axis(self.pairs, axis) for axis in FACTOR_PAIR_STATISTICS}
+        axes |= {axis: self.axis(self.rows, axis) for axis in CONDITIONS}
         return {
             'n_rows': len(self.registry),
             'n_objects': len(self.registry.drop_duplicates(['source', 'object'])),
@@ -92,6 +102,8 @@ class Summarizer:
                 'covariate_type': self.shares(self.modeled['type']),
                 'level': self.shares(self.modeled['level']),
                 'relation': self.shares(self.dimensions['relation']),
+                'pair_relation': self.shares(self.pairs['relation']),
+                'superior': self.shares(self.findSuperiorSides()),
                 'response_type': self.shares(self.registry['response_type']),
                 'reader': self.shares(self.registry['reader']),
                 'published_model': self.shares(self.registry['published_model']),
@@ -123,12 +135,21 @@ class Summarizer:
 
     @staticmethod
     def quantile(values: pd.Series, q: float) -> int | float:
-        v = observed(values, q)
+        v = pickObserved(values, q)
         return v if isinstance(v, int) else round(v, 4)
 
     def balancedShare(self) -> float:
         """Share of grouping factors whose allocation is balanced (α infinite)."""
         return round(float((self.dimensions['alpha'] == float('inf')).mean()), 3)
+
+    def findSuperiorSides(self) -> pd.Series:
+        """Which factor of each nested pair holds whole groups of the other:
+        `factor_a`, `factor_b`, or `none` when the two partition the rows alike."""
+        nested = self.pairs[self.pairs['relation'] == 'nested']
+        sides = pd.Series('none', index=nested.index)
+        sides[nested['superior'] == nested['factor_a']] = 'factor_a'
+        sides[nested['superior'] == nested['factor_b']] = 'factor_b'
+        return sides
 
     @staticmethod
     def shares(values: pd.Series) -> dict:
@@ -139,12 +160,12 @@ class Summarizer:
         """Expected design columns of a model with T terms under the observed categorical share c
         and mean k − 1: T (c (k − 1) + (1 − c)), one column per non-categorical term."""
         share = float(self.modeled['type'].isin(CATEGORICAL_TYPES).mean())
-        perCategorical = float((self.categoricals['K'] - 1).mean())
-        perTerm = share * perCategorical + (1 - share)
+        per_categorical = float((self.categoricals['K'] - 1).mean())
+        per_term = share * per_categorical + (1 - share)
         return {
             'categorical_share': round(share, 3),
-            'mean_columns_per_categorical': round(perCategorical, 3),
-            **{f'terms_{t}': round(t * perTerm, 2) for t in TERMS},
+            'mean_columns_per_categorical': round(per_categorical, 3),
+            **{f'terms_{t}': round(t * per_term, 2) for t in TERMS},
         }
 
     # ---------------------------------------------------------------------------------
@@ -153,7 +174,7 @@ class Summarizer:
     def summary(self, quantiles: dict) -> str:
         practice = yaml.safe_load(PRACTICE.read_text())['families']
         implied = quantiles['implied_columns']
-        impliedText = ', '.join(f'{t} terms {implied[f"terms_{t}"]} columns' for t in TERMS)
+        implied_text = ', '.join(f'{t} terms {implied[f"terms_{t}"]} columns' for t in TERMS)
         fields = {
             'n_rows': quantiles['n_rows'],
             'n_objects': quantiles['n_objects'],
@@ -164,18 +185,32 @@ class Summarizer:
             'balanced_share': quantiles['imbalance']['balanced_share'],
             'categorical_share': implied['categorical_share'],
             'mean_columns_per_categorical': implied['mean_columns_per_categorical'],
-            'implied_columns': impliedText,
+            'implied_columns': implied_text,
         }
-        for axis, block in quantiles['axes'].items():
-            fields[f'table_{PLACEHOLDERS.get(axis, axis)}'] = self.axisTable(axis, block, practice)
+        axes = quantiles['axes']
+        for axis in (*FACTOR_AXES, *ROW_AXES, 'K'):
+            placeholder = f'table_{PLACEHOLDERS.get(axis, axis)}'
+            fields[placeholder] = self.renderAxisTable(axis, axes[axis], practice)
         fields |= {
-            'table_relation': self.shareTable(self.dimensions['relation'], 'relation'),
-            'table_covariate_type': self.shareTable(self.modeled['type'], 'covariate type'),
-            'table_level': self.shareTable(self.modeled['level'], 'level'),
-            'table_k_distribution': self.shareTable(self.kBucketed(), 'K'),
-            'table_response_type': self.shareTable(self.registry['response_type'], 'response type'),
-            'table_reader': self.shareTable(self.registry['reader'], 'reader'),
-            'table_published_model': self.shareTable(self.registry['published_model'], 'published'),
+            'table_conditions': self.renderStatisticTable(CONDITIONS, axes),
+            'table_column_statistics': self.renderStatisticTable(COLUMN_STATISTICS, axes),
+            'table_column_factor_statistics': self.renderStatisticTable(
+                COLUMN_FACTOR_STATISTICS, axes
+            ),
+            'table_pair_statistics': self.renderStatisticTable(FACTOR_PAIR_STATISTICS, axes),
+            'table_pair_relation': self.renderShareTable(self.pairs['relation'], 'pair relation'),
+            'table_superior': self.renderShareTable(self.findSuperiorSides(), 'superior'),
+            'table_relation': self.renderShareTable(self.dimensions['relation'], 'relation'),
+            'table_covariate_type': self.renderShareTable(self.modeled['type'], 'covariate type'),
+            'table_level': self.renderShareTable(self.modeled['level'], 'level'),
+            'table_k_distribution': self.renderShareTable(self.kBucketed(), 'K'),
+            'table_response_type': self.renderShareTable(
+                self.registry['response_type'], 'response type'
+            ),
+            'table_reader': self.renderShareTable(self.registry['reader'], 'reader'),
+            'table_published_model': self.renderShareTable(
+                self.registry['published_model'], 'published'
+            ),
             'tier_d': self.tierD(),
         }
         return Template(TEMPLATE.read_text()).substitute(fields)
@@ -209,20 +244,32 @@ class Summarizer:
         ])  # fmt: skip
 
     @staticmethod
-    def axisTable(axis: str, block: dict, practice: dict) -> str:
+    def renderAxisTable(axis: str, block: dict, practice: dict) -> str:
         """Rows pooled, per tier and without agridat; the pooled row ends with the practice column."""
         head = f'| {axis} | ' + ' | '.join(QUANTILE_KEYS) + ' | practice |'
         rows = {'pooled': block['pooled']}
         rows |= {f'tier {t}': q for t, q in block['tiers'].items()}
         rows['without agridat'] = block['without_agridat']
         last = {'pooled': Summarizer.cell(Summarizer.practiceP90(axis, practice))}
-        lines = [
-            f'| {name} | '
-            + ' | '.join(Summarizer.cell(q[k]) for k in QUANTILE_KEYS)
-            + f' | {last.get(name, "")} |'
-            for name, q in rows.items()
-        ]
-        return '\n'.join([head, '|' + '---|' * (len(QUANTILE_KEYS) + 2), *lines])
+        lines = [head, '|' + '---|' * (len(QUANTILE_KEYS) + 2)]
+        for name, q in rows.items():
+            cells = Summarizer.renderQuantileCells(q)
+            lines.append(f'| {name} | {cells} | {last.get(name, "")} |')
+        return '\n'.join(lines)
+
+    @staticmethod
+    def renderQuantileCells(quantiles: dict) -> str:
+        return ' | '.join(Summarizer.cell(quantiles[k]) for k in QUANTILE_KEYS)
+
+    @staticmethod
+    def renderStatisticTable(statistics: tuple[str, ...], axes: dict) -> str:
+        """One row per statistic, its pooled quantiles as columns."""
+        head = '| statistic | ' + ' | '.join(QUANTILE_KEYS) + ' |'
+        lines = [head, '|' + '---|' * (len(QUANTILE_KEYS) + 1)]
+        for statistic in statistics:
+            cells = Summarizer.renderQuantileCells(axes[statistic]['pooled'])
+            lines.append(f'| {statistic} | {cells} |')
+        return '\n'.join(lines)
 
     @staticmethod
     def practiceP90(axis: str, practice: dict) -> int | float | None:
@@ -235,7 +282,7 @@ class Summarizer:
         return max(values)
 
     @staticmethod
-    def shareTable(values: pd.Series, label: str) -> str:
+    def renderShareTable(values: pd.Series, label: str) -> str:
         counts = values.value_counts()
         rows = [f'| {k} | {n} | {n / len(values):.0%} |' for k, n in counts.items()]
         return '\n'.join([f'| {label} | n | share |', '|---|---|---|', *rows])

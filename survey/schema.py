@@ -2,7 +2,7 @@
 `excluded.csv`, `duplicates.csv` and `dropped.csv` (agent and script columns, allowed values,
 row keys) and the shape of `sources.yaml`. The registry row's dialect, columns, vocabularies
 and grammars are the package's (`mixedbench.registry.row`). The merge script enforces it;
-agents write shards with exactly the agent columns. Documented for humans in README.md.
+agents write shards with exactly the agent columns. Documented for humans in `docs/registry.md` and `README.md`.
 """
 
 from __future__ import annotations
@@ -62,6 +62,12 @@ DROPPED = Table(
 )
 
 TABLES = {t.name: t for t in (REGISTRY, EXCLUDED, DUPLICATES, DROPPED)}
+IDENTITY = (
+    'source',
+    'object',
+    'model_index',
+    'tier',
+)  # a measured file's key: the registry row's, with its tier
 
 # One row per data object the pull script enumerates in a kept source. `screen` is the
 # mechanical pre-screen's verdict; `capped` is `yes` for the passing objects a source's cap
