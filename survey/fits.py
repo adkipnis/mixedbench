@@ -58,8 +58,10 @@ FIT_COLUMNS = (
     *FIT_STATISTICS,
 )  # fmt: skip
 # fits_preparation.csv: a row whose source fits a subset (a pandas query) or repeats each row by
-# a frequency weight (its column), and why
-PREPARATION_COLUMNS = ('source', 'object', 'model_index', 'subset', 'frequency', 'reason')
+# a frequency weight (its column), the factor whose groups a weight counts, and why
+PREPARATION_COLUMNS = (
+    'source', 'object', 'model_index', 'subset', 'frequency', 'frequency_factor', 'reason',
+)  # fmt: skip
 
 
 # =====================================================================================
@@ -97,7 +99,8 @@ class Fitter:
         (dir / 'records.json').write_text(json.dumps(records, indent=2))
 
     def prepareTable(self, row: Row, table: pd.DataFrame) -> pd.DataFrame:
-        """The rows the source fitted: its subset, each row repeated by its frequency weight."""
+        """The rows the source fitted: its subset, each row repeated by its frequency weight.
+        A weight that counts a factor's groups makes each copy of a group a group of its own."""
         preparation = self.preparations.get(row.id)
         if preparation is None:
             return table
@@ -106,6 +109,11 @@ class Fitter:
         if preparation['frequency']:
             repeats = table[preparation['frequency']].astype(int)
             table = table.loc[table.index.repeat(repeats)]
+        if preparation['frequency_factor']:
+            factor = preparation['frequency_factor']
+            copies = table.groupby(level=0).cumcount()  # per row of the table, 0 to its weight - 1
+            labels = table[factor].astype(str) + ':' + copies.astype(str)
+            table = table.assign(**{factor: labels})
         return table.reset_index(drop=True)
 
     def collect(self) -> None:
