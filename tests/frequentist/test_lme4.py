@@ -132,10 +132,10 @@ def test_a_fit_ends_with_the_worst_status_that_applies_and_its_message(
     fitted = fit(table(), formula, 'gaussian', tmp_path, timeout)
 
     assert (fitted.status, fitted.message) == (status, message)
-    assert fitted.seconds >= timeout if status == 'timeout' else fitted.seconds < timeout
-    assert (fitted.n_obs is not None, bool(fitted.fixed), fitted.sd_eta is not None) == (
-        estimated,
-    ) * 3
+    assert (fitted.seconds >= timeout) == (status == 'timeout')
+    assert (fitted.n_obs is not None) == estimated
+    assert bool(fitted.fixed) == estimated
+    assert (fitted.sd_eta is not None) == estimated
 
 
 def test_a_formula_without_a_random_term_is_recorded_without_a_fit(tmp_path):
