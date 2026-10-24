@@ -1,5 +1,5 @@
 """Quantiles and summary of the dimension survey from the measured files (#18):
-`quantiles.yaml` from `registry.csv` and the five measured files, every axis pooled,
+`quantiles.yaml` from `registry.csv` and the measured files, every axis pooled,
 per tier and with agridat removed; `SUMMARY.md` from the digit-free template, the practice
 survey's p90 read at merge time from `practice_quantiles.yaml`, a snapshot of the practice
 survey's `quantiles.yaml`, which stays in metabeta-v3.
@@ -14,7 +14,7 @@ import pandas as pd
 import yaml
 from columns import COLUMN_STATISTICS
 from dimensions import CONDITIONS, pickObserved
-from fits import FACTOR_STATISTICS, ROW_STATISTICS
+from fits import FACTOR_STATISTICS, FIT_STATISTICS, ROW_STATISTICS
 from groups import COLUMN_FACTOR_STATISTICS
 from mixedbench.registry.row import readCsv
 from pairs import FACTOR_PAIR_STATISTICS
@@ -68,8 +68,7 @@ class Summarizer:
         column_factors = readCsv(self.root / 'column_factors.csv')
         self.column_factors = self.numeric(column_factors, COLUMN_FACTOR_STATISTICS)
         self.pairs = self.numeric(readCsv(self.root / 'factor_pairs.csv'), FACTOR_PAIR_STATISTICS)
-        fit_statistics = ROW_STATISTICS + FACTOR_STATISTICS
-        self.fits = self.numeric(readCsv(self.root / 'fits.csv'), fit_statistics)
+        self.fits = self.numeric(readCsv(self.root / 'fits.csv'), FIT_STATISTICS)
         self.fitted = self.fits.drop_duplicates(['source', 'object', 'model_index'])  # per row
         self.rows = self.dimensions.drop_duplicates(['source', 'object', 'model_index'])
         self.modeled = self.columns[self.columns['in_model'] == 'yes']
@@ -205,9 +204,7 @@ class Summarizer:
                 COLUMN_FACTOR_STATISTICS, axes
             ),
             'table_pair_statistics': self.renderStatisticTable(FACTOR_PAIR_STATISTICS, axes),
-            'table_fit_statistics': self.renderStatisticTable(
-                ROW_STATISTICS + FACTOR_STATISTICS, axes
-            ),
+            'table_fit_statistics': self.renderStatisticTable(FIT_STATISTICS, axes),
             'table_status': self.renderShareTable(self.fitted['status'], 'status'),
             'table_pair_relation': self.renderShareTable(self.pairs['relation'], 'pair relation'),
             'table_superior': self.renderShareTable(self.findSuperiorSides(), 'superior'),
