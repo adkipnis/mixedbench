@@ -2,20 +2,22 @@
 
 import math
 import subprocess
+from typing import get_args
 
 import numpy as np
 import pandas as pd
 import pytest
 from conftest import FIXTURES, mergeShard, parsed, readRows
 from fits import (
-    FACTOR_STATISTICS,
     FIT_COLUMNS,
+    FIT_STATISTICS,
     PREPARATION_COLUMNS,
-    ROW_STATISTICS,
+    RESPONSE_TYPES,
     Fitter,
-    measure,
+    measureFit,
 )
-from mixedbench.frequentist import Fit, Term, fit
+from mixedbench.contract import FAMILY
+from mixedbench.frequentist import Family, Fit, Term, fit
 from mixedbench.registry.row import readCsv, writeCsv
 
 
@@ -62,7 +64,7 @@ def test_a_fit_shares_its_variance_between_fixed_part_factors_and_residual(
     The contract's family rule names the family, the registry's departure rides beside it."""
     row = parsed(rows[0] | response)
 
-    first, second = measure(row, fit, herds)
+    first, second = measureFit(row, fit, herds)
 
     every = {
         'source': 'herds', 'object': 'herds.csv', 'model_index': 1, 'tier': 'D', 'status': 'ok',
@@ -83,7 +85,7 @@ def test_a_fit_shares_its_variance_between_fixed_part_factors_and_residual(
 )  # fmt: skip
 def test_a_fit_without_estimates_keeps_a_blank_row_per_registry_factor(herds, rows, fit):
     """Nothing is skipped: the consumer filters on `status`."""
-    region, herd = measure(parsed(rows[0]), fit, herds)
+    region, herd = measureFit(parsed(rows[0]), fit, herds)
 
     assert (region['factor'], herd['factor']) == ('region', 'herd')
     assert (herd['status'], herd['message'], herd['seconds']) == (
@@ -92,12 +94,21 @@ def test_a_fit_without_estimates_keeps_a_blank_row_per_registry_factor(herds, ro
         fit.seconds,
     )
     assert herd['family'] == 'gaussian'
-    assert [herd.get(c) for c in ('n_obs', *ROW_STATISTICS, *FACTOR_STATISTICS)] == [None] * 12
+    blanks = ('n_obs', *FIT_STATISTICS)
+    assert [herd.get(c) for c in blanks] == [None] * len(blanks)
 
 
-def single(factor: str, terms: tuple[Term, ...] = ()) -> Fit:
-    """A fit of one factor, its variance 1 over one intercept unless `terms` say otherwise."""
-    return nested(variances={factor: 1.0}, terms=terms or intercepts({factor: 1.0}))
+def test_the_fitted_response_types_take_the_families_lme4_fits():
+    """fits.py picks the rows it fits by response type, the contract's family rule names their
+    families, and lme4.py lists the families it fits: the two lists agree."""
+    families = {FAMILY[response_type][0] for response_type in RESPONSE_TYPES}
+
+    assert families == set(get_args(Family))
+
+
+def single(factor: str) -> Fit:
+    """A fit of one factor, its variance 1 over one intercept."""
+    return nested(variances={factor: 1.0}, terms=intercepts({factor: 1.0}))
 
 
 @pytest.mark.parametrize(
@@ -118,7 +129,7 @@ def test_a_fitted_factor_takes_the_name_of_the_registry_factor_that_groups_alike
     for index, label in relabeled.items():
         table.loc[index, 'herd'] = label
 
-    [record] = measure(parsed(rows[0]), single(fitted), table)
+    [record] = measureFit(parsed(rows[0]), single(fitted), table)
 
     assert record['factor'] == named
 
@@ -130,7 +141,9 @@ def test_a_factor_counts_the_columns_of_every_term_it_has(herds, rows):
         Term('herd', ('feedgrass',), (0.4,), ((1.0,),)),
     )
 
-    [record] = measure(parsed(rows[0]), single('herd', terms), herds)
+    fitted = nested(variances={'herd': 1.0}, terms=terms)
+
+    [record] = measureFit(parsed(rows[0]), fitted, herds)
 
     assert (record['factor'], record['q'], record['sigma2']) == ('herd', 2, 1.0)
 
@@ -192,17 +205,19 @@ def test_r2_matches_performance_on_the_same_fit(tmp_path, rows, response_type, f
         'response': 'y', 'response_type': response_type, 'grouping_factors': 'g;h',
         'covariates': 'x', 'types': '', 'formula': formula,
     })  # fmt: skip
-    family = {'continuous': 'gaussian', 'binary': 'bernoulli', 'count': 'poisson'}[response_type]
+    family = FAMILY[response_type][0]
 
-    [record, _] = measure(row, fit(table, formula, family, tmp_path, 60), table)
+    [record, _] = measureFit(row, fit(table, formula, family, tmp_path, 60), table)
 
     assert record['status'] == 'ok'
     expected = nakagawa(tmp_path, formula, response_type)
     assert (record['r2_marginal'], record['r2_conditional']) == pytest.approx(expected, abs=1e-4)
 
 
-def mergedHerds(merger, formula: str, counted: str = '', preparations: tuple[dict, ...] = ()):
-    """The scratch registry of the herds rows, the gaussian one's formula replaced: a fitter over
+def mergedHerds(
+    merger, formula: str, counted: str = '', preparations: tuple[dict, ...] = ()
+) -> Fitter:
+    """A fitter over the scratch registry of the herds rows, the gaussian one's formula replaced:
     it fits that row and not the binomial one, unless `counted` names a formula for its cases
     as a count. The survey lists `preparations`."""
     rows = readRows(FIXTURES / 'registry_herds.csv')
@@ -214,19 +229,18 @@ def mergedHerds(merger, formula: str, counted: str = '', preparations: tuple[dic
     mergeShard(merger, shard)
     listed = pd.DataFrame(list(preparations), columns=PREPARATION_COLUMNS)
     writeCsv(listed, merger.survey / 'fits_preparation.csv')
-    return merger
+    return Fitter(merger.registry, merger.survey, merger.loader, merger.survey / 'fits')
 
 
-def test_the_pass_collects_a_row_per_factor_of_every_row_it_fits(merger, tmp_path):
+def test_the_pass_collects_a_row_per_factor_of_every_row_it_fits(merger):
     """One run per row with a continuous, binary or count response, its records in a directory
     of its own until the collect writes them into fits.csv in registry order."""
-    registry = mergedHerds(merger, 'weight by breed, a herd nested in its region').registry
-    fitter = Fitter(registry, merger.survey, merger.loader, tmp_path / 'fits')
+    fitter = mergedHerds(merger, 'weight by breed, a herd nested in its region')
 
     fitter.run(0)
     fitter.collect()
 
-    fits = readCsv(registry / 'fits.csv')
+    fits = readCsv(fitter.root / 'fits.csv')
     assert list(fits.columns) == list(FIT_COLUMNS)
     assert fits[['model_index', 'factor', 'status', 'family']].values.tolist() == [
         ['1', 'region', 'no_formula', 'gaussian'],
@@ -234,27 +248,26 @@ def test_the_pass_collects_a_row_per_factor_of_every_row_it_fits(merger, tmp_pat
     ]
 
 
-def test_the_collect_refuses_a_row_never_run(merger, tmp_path):
+def test_the_collect_refuses_a_row_never_run(merger):
     """Every row the pass fits is accounted for: a missing run is no row to leave out."""
-    registry = mergedHerds(merger, 'weight by breed, a herd nested in its region').registry
+    fitter = mergedHerds(merger, 'weight by breed, a herd nested in its region')
 
     with pytest.raises(FileNotFoundError):
-        Fitter(registry, merger.survey, merger.loader, tmp_path / 'fits').collect()
+        fitter.collect()
 
 
 @pytest.mark.lme4
-def test_a_run_fits_the_rows_loaded_table_by_its_formula_and_family(merger, tmp_path):
+def test_a_run_fits_the_rows_loaded_table_by_its_formula_and_family(merger):
     """The herds row's own `(1 | region/herd)` on its 14 loaded rows, beside a count row
     documented in words: the counts stay integers beside the blanks."""
     formula = 'weight ~ breed + feed + (1 | region/herd)'
-    registry = mergedHerds(merger, formula, counted='cases by breed within herds').registry
-    fitter = Fitter(registry, merger.survey, merger.loader, tmp_path / 'fits')
+    fitter = mergedHerds(merger, formula, counted='cases by breed within herds')
 
     fitter.run(0)
     fitter.run(1)
     fitter.collect()
 
-    fits = readCsv(registry / 'fits.csv')
+    fits = readCsv(fitter.root / 'fits.csv')
     assert fits[['model_index', 'factor', 'n_obs', 'family', 'q']].values.tolist() == [
         ['1', 'herd', '14', 'gaussian', '1'],
         ['1', 'region', '14', 'gaussian', '1'],
@@ -263,7 +276,7 @@ def test_a_run_fits_the_rows_loaded_table_by_its_formula_and_family(merger, tmp_
 
 
 @pytest.mark.lme4
-def test_a_run_fits_the_rows_its_source_fitted(merger, tmp_path):
+def test_a_run_fits_the_rows_its_source_fitted(merger):
     """A source fits a subset of the table or weights its rows by frequency:
     the seven rows without grass feed, repeated by their cases, are 27."""
     preparation = {
@@ -275,11 +288,25 @@ def test_a_run_fits_the_rows_its_source_fitted(merger, tmp_path):
         'reason': 'the grain and mixed herds, one row per case',
     }
     formula = 'weight ~ feed + (1 | herd)'
-    registry = mergedHerds(merger, formula, preparations=(preparation,)).registry
-    fitter = Fitter(registry, merger.survey, merger.loader, tmp_path / 'fits')
+    fitter = mergedHerds(merger, formula, preparations=(preparation,))
 
     fitter.run(0)
     fitter.collect()
 
-    fits = readCsv(registry / 'fits.csv')
+    fits = readCsv(fitter.root / 'fits.csv')
     assert fits[['factor', 'n_obs']].values.tolist() == [['herd', '27']]
+
+
+def test_a_preparation_names_a_row_the_pass_fits(merger):
+    """A preparation of a row no fit takes, mistyped or of a binomial row, would go unused."""
+    preparation = {
+        'source': 'herds',
+        'object': 'herds.csv',
+        'model_index': '2',
+        'subset': "feed != 'grass'",
+        'frequency': '',
+        'reason': 'the binomial row, which lme4 does not fit here',
+    }
+
+    with pytest.raises(ValueError, match='herds/herds.csv/2'):
+        mergedHerds(merger, 'weight ~ feed + (1 | herd)', preparations=(preparation,))
