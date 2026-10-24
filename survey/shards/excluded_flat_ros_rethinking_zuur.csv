@@ -1,0 +1,4 @@
+"source","object","reason","detail"
+"ros","Peacekeeping/data/pk&pkept_old.dta","derived or duplicated table","An older, wider release of Peacekeeping/data/pk&pkept.dta: the same time-varying spells per ceasefire id under conflict clusters (cluster, clust2), with the Cox fit's predicted hazards and Schoenfeld and Pearson residuals appended; the current release is re-filed into the registry."
+"ros","Peacekeeping/minidata.csv","derived or duplicated table","A ceasefire-level reduction of Peacekeeping/data/pk&pkept.dta (the same cfdate and faildate as day counts, delay in years, badness an index), one row per ceasefire with the conflict name (Unnamed: 0) repeating across a conflict's ceasefires; ROS plots it and fits no model on it."
+"ros","beauty","derived or duplicated table","identical to ros:Beauty/data/beauty.csv, which the registry holds"
