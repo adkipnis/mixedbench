@@ -106,6 +106,10 @@ be computed here, from the cached tables, and shipped in a pinned release. Grill
   (`I(age - 12)`, `ave(IQ, class)`), so that the cell is the model lme4 fits. A model part lme4
   cannot express (a residual structure, a censored or zero-inflated likelihood, a pedigree)
   stays in the cell, and its fit is recorded as it fails.
-- Why: the first pass ended 54 fits on a remark or a name, not on their model.
-- Decision: 1.0.8 carries these 54 rows, in `formula` and `notes` alone. The contract never
+- Why: the first pass ended 54 fits on a remark or a name, not on their model, and 13 more
+  cells needed a date, a principal component or a scaling written out.
+- Decision: a subset the source fits, or a frequency weight it repeats rows by, is listed in
+  `survey/fits_preparation.csv` and applied before the fit, since a formula cannot carry it.
+  The registry keeps its columns, and the contract its whole table.
+- Decision: 1.0.8 carries these 67 rows, in `formula` and `notes` alone. The contract never
   reads `formula`, so no hash moves.
