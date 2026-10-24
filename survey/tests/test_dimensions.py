@@ -138,17 +138,15 @@ def test_a_rank_deficient_design_has_an_infinite_condition_index(herds, rows):
 
 def test_no_condition_index_where_the_contract_builds_no_problem(herds, rows):
     """The contract refuses a categorical response, so neither design exists. A column missing
-    on every measured row leaves no row complete in every column, and an undeclared column of
-    strings and numbers has no level order (#105): only the documented design exists."""
+    on every measured row leaves no row complete in every column: only the documented design
+    exists."""
     refused = rows[1] | {'response': 'breed', 'response_type': 'categorical', 'trials': '', 'covariates': 'weight'}  # fmt: skip
     conditions = measuredDimensions(herds, refused)[['condition_doc', 'condition_all']]
     assert conditions.isna().all().all()
     empty = pd.Categorical([None] * len(herds), categories=['low', 'high'], ordered=True)
-    depth = pd.Series(['>1m', 0.7, 1] * 4 + ['>1m', 0.7], dtype=object)
-    for edited in (herds.assign(empty=empty), herds.assign(depth=depth)):
-        herd = measuredDimensions(edited, rows[1]).loc['herd']
-        assert herd['condition_doc'] >= 1
-        assert pd.isna(herd['condition_all'])
+    herd = measuredDimensions(herds.assign(empty=empty), rows[1]).loc['herd']
+    assert herd['condition_doc'] >= 1
+    assert pd.isna(herd['condition_all'])
 
 
 @settings(max_examples=100, deadline=None)

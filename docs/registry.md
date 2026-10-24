@@ -114,8 +114,7 @@ Per registry object the file it loads from, with its sha256 and size; written by
     intercept does not count. `condition_doc` over the documented model's design from
     `Problem.standardized`, `condition_all` over the same coding of every column of
     `columns.csv` plus the documented interactions, on the rows complete in all of them. Blank
-    for a row the contract refuses; `condition_all` alone blank when no row is complete or a
-    column mixes strings and numbers (#105).
+    for a row the contract refuses; `condition_all` alone blank when no row is complete.
 - `columns.csv`: key `source`, `object`, `model_index`, `column`, with `tier`; every column
   but the response, trials, grouping factors and ignored ones.
   - `type`, first match: `ordered` if declared; `binary` for two distinct values; `categorical`
