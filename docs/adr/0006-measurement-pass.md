@@ -98,3 +98,14 @@ be computed here, from the cached tables, and shipped in a pinned release. Grill
   `fits.csv` as it is, and `survey/HISTORY.md` dates each pass with its R and lme4 versions.
 - Rejected: fitting the prose rows by hand-written nonlinear models (typed, and the
   decomposition assumes a linear predictor); `sd_eta_fixed`, the root of `sigma2_fixed`.
+
+## Amendment 2026-10-24: the formula cell holds the formula alone
+
+- Decision: a remark in the `formula` cell moves to `notes`, a column is named as the table
+  names it, and a variable the source derives from columns is written as its expression
+  (`I(age - 12)`, `ave(IQ, class)`), so that the cell is the model lme4 fits. A model part lme4
+  cannot express (a residual structure, a censored or zero-inflated likelihood, a pedigree)
+  stays in the cell, and its fit is recorded as it fails.
+- Why: the first pass ended 54 fits on a remark or a name, not on their model.
+- Decision: 1.0.8 carries these 54 rows, in `formula` and `notes` alone. The contract never
+  reads `formula`, so no hash moves.
