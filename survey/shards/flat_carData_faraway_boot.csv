@@ -10,7 +10,7 @@
 "carData","Ericksen","flat","One row per city or state; city is a fixed two-level type (city, state) and the documented model is a single-level regression of undercount."
 "carData","Florida","flat","One row per county; GORE to PHILLIPS split the county's Total vote by candidate, a contingency row, not repeated measures of a unit."
 "carData","Friendly","flat","One row per subject; condition (Before, Meshed, SFR) is a fixed between-subjects design factor."
-"carData","GSSvocab","hidden grouping","year indexes the GSS survey wave (""Data are included from the GSS for each of these years""), each wave holding many respondents; the page lists it as a factor of the observational study."
+"carData","GSSvocab","hidden grouping","year indexes the GSS survey wave (""Data are included from the GSS for each of these years""), each holding many respondents, but Fox and Weisberg (2019, chapter 4) fit lm(vocab ~ year + educGroup + gender + nativeBorn*ageGroup), the wave fixed, so it stays excluded."
 "carData","Guyer","flat","One row per four-person group (""The observations are"" the groups); condition and sex are fixed design factors and cooperation sums the group's choices."
 "carData","Highway1","flat","One row per highway segment; htype is a fixed road-type attribute and the documented analysis regresses rate on design variables."
 "carData","Leinhardt","flat","One row per nation; region is a fixed four-level continent and oil a two-level attribute."

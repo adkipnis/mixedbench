@@ -6,7 +6,7 @@
 "agridat","gregory.cotton","flat","year has two levels (Y1, Y2, the seasons 1929-1930 and 1930-1931), a design factor beside the fixed nitrogen, date, water and spacing factors; the rows are treatment means and no model on the page has a random effect."
 "agridat","khan.brassica.uniformity","flat","field has two levels (""Field, F1 or F2""), a design factor; row and col are plot coordinates, each plot appears once and the page fits no model."
 "agridat","lander.multi.uniformity","hidden grouping","""The same land was used for 4 consecutive crops"": each plot, row:col, repeats once per year, and year is a wave holding every plot."
-"agridat","lehmann.rice.uniformity","hidden grouping","""The plots were the same year-over-year"": each plot, plot:range, repeats once in each of the three years."
+"agridat","lehmann.rice.uniformity","hidden grouping","""The plots were the same year-over-year"": each plot, plot:range, repeats once in each of the years 1905 to 1908 that observed it (the page says three years)."
 "agridat","roemer.sugarbeet.uniformity","hidden grouping","1916 and 1918 used ""one and the same"" field (Cochran: two sets, 1916 and 1918), so each plot, row:col, repeats once per year."
 "MASS","Aids2","flat","One row per patient; state is a ""grouped state of origin"" (NSW includes ACT, other pools WA, SA, NT and TAS), a coarse classification, not a unit; the page fits no model."
 "MASS","Insurance","flat","One row per District x Group x Age cell; all three are fixed factors of the documented glm(Claims ~ District + Group + Age + offset(log(Holders)), family = poisson)."
