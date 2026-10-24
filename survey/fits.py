@@ -10,7 +10,7 @@ pipeline:
 a registry row and its loaded table                    Fitter.run
 -> the rows its source fitted                          Fitter.prepareTable
 -> its formula fitted as written                       frequentist.fit
--> the variance components, R² and ICC per factor      measure
+-> the variance components, R² and ICC per factor      measureFit
 -> each factor named as the registry names it          nameFactor
 -> the row's records in its run directory              Fitter.run
 -> fits.csv, in registry order                         Fitter.collect
@@ -52,9 +52,10 @@ ROW_STATISTICS = (
     'r2_marginal', 'r2_conditional',
 )  # fmt: skip
 FACTOR_STATISTICS = ('q', 'sigma2', 'icc', 'icc_adjusted')
+FIT_STATISTICS = ROW_STATISTICS + FACTOR_STATISTICS
 FIT_COLUMNS = (
     *IDENTITY, 'factor', 'status', 'message', 'seconds', 'n_obs', 'family', 'family_doc',
-    *ROW_STATISTICS, *FACTOR_STATISTICS,
+    *FIT_STATISTICS,
 )  # fmt: skip
 # fits_preparation.csv: a row whose source fits a subset (a pandas query) or repeats each row by
 # a frequency weight (its column), and why
@@ -74,9 +75,12 @@ class Fitter:
         self.sources = readFrame(root).sources
         rows = registry.rows(root / 'registry.csv')
         self.rows = [row for row in rows if row.response_type in RESPONSE_TYPES]
+        fitted = {row.id for row in self.rows}
         self.preparations = {}
         for preparation in readCsv(survey / 'fits_preparation.csv').to_dict('records'):
             id = f'{preparation["source"]}/{preparation["object"]}/{preparation["model_index"]}'
+            if id not in fitted:
+                raise ValueError(f'fits_preparation.csv prepares {id}, which no fit takes')
             self.preparations[id] = preparation
 
     def run(self, index: int) -> None:
@@ -89,7 +93,7 @@ class Fitter:
         loaded = self.loader.load(self.sources[row.source], row.object, row.types)
         table = self.prepareTable(row, loaded)
         fitted = fit(table, row.formula, FAMILY[row.response_type][0], dir, TIMEOUT)
-        records = measure(row, fitted, table)
+        records = measureFit(row, fitted, table)
         (dir / 'records.json').write_text(json.dumps(records, indent=2))
 
     def prepareTable(self, row: Row, table: pd.DataFrame) -> pd.DataFrame:
@@ -109,9 +113,9 @@ class Fitter:
         fits = []
         for row in self.rows:
             fits += json.loads((self.findDir(row) / 'records.json').read_text())
-        table = pd.DataFrame(fits, columns=FIT_COLUMNS)
-        counts = table.astype({'n_obs': 'Int64', 'q': 'Int64'})  # a blank would make them floats
-        writeCsv(counts, self.root / 'fits.csv')
+        # Int64: a blank would make the counts floats
+        table = pd.DataFrame(fits, columns=FIT_COLUMNS).astype({'n_obs': 'Int64', 'q': 'Int64'})
+        writeCsv(table, self.root / 'fits.csv')
 
     def findDir(self, row: Row) -> Path:
         """An id may hold `/`, `!` and spaces, so the directory is named by its hash."""
@@ -122,44 +126,44 @@ class Fitter:
 # =====================================================================================
 # fits.csv: a fit -> its components -> a row per factor
 # =====================================================================================
-def measure(row: Row, fit: Fit, table: pd.DataFrame) -> list[dict]:
+def measureFit(row: Row, fitted: Fit, table: pd.DataFrame) -> list[dict]:
     """A row per factor of the fit (Nakagawa, Johnson and Schielzeth 2017):
     R² and the ICCs over σ²_f + Σ σ²_g + σ²_ε + σ²_d, the adjusted ICC without σ²_f.
     A fit without estimates leaves a row per registry factor, its statistics blank."""
     identity = {k: getattr(row, k) for k in IDENTITY}
     shared = {
-        'status': fit.status,
-        'message': fit.message,
-        'seconds': None if fit.seconds is None else round(fit.seconds, 4),
-        'n_obs': fit.n_obs,
+        'status': fitted.status,
+        'message': fitted.message,
+        'seconds': None if fitted.seconds is None else round(fitted.seconds, 4),
+        'n_obs': fitted.n_obs,
         'family': FAMILY[row.response_type][0],
         'family_doc': row.family,
     }
-    if fit.status not in ESTIMATED:
+    if fitted.status not in ESTIMATED:
         return [identity | {'factor': factor} | shared for factor in row.grouping_factors]
-    residual = None if fit.sigma is None else fit.sigma**2
-    random = sum(fit.variances.values())
-    total = fit.sigma2_fixed + random + (residual or 0) + fit.sigma2_distribution
+    residual = None if fitted.sigma is None else fitted.sigma**2
+    random = sum(fitted.variances.values())
+    total = fitted.sigma2_fixed + random + (residual or 0) + fitted.sigma2_distribution
     shared |= {
-        'sigma2_fixed': round(fit.sigma2_fixed, 4),
+        'sigma2_fixed': round(fitted.sigma2_fixed, 4),
         'sigma2_random': round(random, 4),
         'sigma2_residual': None if residual is None else round(residual, 4),
-        'sigma2_distribution': round(fit.sigma2_distribution, 4),
-        'sd_eta': round(fit.sd_eta, 4),
-        'r2_marginal': round(fit.sigma2_fixed / total, 4),
-        'r2_conditional': round((fit.sigma2_fixed + random) / total, 4),
+        'sigma2_distribution': round(fitted.sigma2_distribution, 4),
+        'sd_eta': round(fitted.sd_eta, 4),
+        'r2_marginal': round(fitted.sigma2_fixed / total, 4),
+        'r2_conditional': round((fitted.sigma2_fixed + random) / total, 4),
     }
     widths = {}
-    for term in fit.terms:
+    for term in fitted.terms:
         widths[term.factor] = widths.get(term.factor, 0) + len(term.columns)
     fits = []
-    for factor, sigma2 in fit.variances.items():
+    for factor, sigma2 in fitted.variances.items():
         per_factor = {
             'factor': nameFactor(factor, row, table),
             'q': widths[factor],
             'sigma2': round(sigma2, 4),
             'icc': round(sigma2 / total, 4),
-            'icc_adjusted': round(sigma2 / (total - fit.sigma2_fixed), 4),
+            'icc_adjusted': round(sigma2 / (total - fitted.sigma2_fixed), 4),
         }
         fits.append(identity | shared | per_factor)
     return fits
@@ -171,8 +175,10 @@ def nameFactor(fitted: str, row: Row, table: pd.DataFrame) -> str:
     `(1 | region/herd)`, which groups the rows as `herd` does where every herd lies in one region."""
     if not set(parts(fitted)) <= set(table.columns):  # an expression, such as `factor(year)`
         return fitted
-    alike = [factor for factor in row.grouping_factors if groupsAlike(table, factor, fitted)]
-    return alike[0] if alike else fitted
+    for factor in row.grouping_factors:
+        if groupsAlike(table, factor, fitted):
+            return factor
+    return fitted
 
 
 def groupsAlike(table: pd.DataFrame, a: str, b: str) -> bool:
