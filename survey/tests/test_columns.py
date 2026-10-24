@@ -52,6 +52,16 @@ def test_ordered_and_missing_values(herds, rows):
     assert measured['weight']['missing_share'] == pytest.approx(1 / 14, abs=1e-4)
 
 
+def test_the_missing_share_comes_with_the_shape_and_the_shape_counts_present_values(herds):
+    """The flat pass measures tables that have no registry row, so one column's missing share
+    and shape need no Measurer. One weight missing in fourteen; the thirteen present weights
+    are all distinct, a unique share of 1, not 13/14."""
+    weight = herds['weight'].copy()
+    weight[0] = float('nan')
+    shape = columns.measureShape(weight, 'continuous')
+    assert (shape['missing_share'], shape['unique_share']) == (0.0714, 1)
+
+
 def test_a_continuous_columns_moments(herds, rows):
     """Weight under model 2 against scipy.stats.skew and kurtosis with bias=False, the
     sample-adjusted G1 and G2. Fourteen rows cannot hold |z| > 4 (at most 13/√14 ≈ 3.47)."""
