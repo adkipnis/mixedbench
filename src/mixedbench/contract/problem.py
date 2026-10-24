@@ -482,11 +482,11 @@ class _Builder:
 
     @staticmethod
     def _orderLevels(values: pd.Series) -> tuple:
-        """Returns the loaded level order."""
-        if isinstance(values.dtype, pd.CategoricalDtype):
-            return tuple(values.cat.remove_unused_categories().cat.categories)
-        # a plain column declared categorical
-        return tuple(sorted(values.dropna().unique()))
+        """Returns the loaded level order.
+        A plain column orders as the loader orders a declared one."""
+        if not isinstance(values.dtype, pd.CategoricalDtype):
+            values = values.astype('category')
+        return tuple(values.cat.remove_unused_categories().cat.categories)
 
 
 # =====================================================================================
