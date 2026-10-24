@@ -7,7 +7,14 @@ import numpy as np
 import pandas as pd
 import pytest
 from conftest import FIXTURES, mergeShard, parsed, readRows
-from fits import FACTOR_STATISTICS, FIT_COLUMNS, ROW_STATISTICS, Fitter, measure
+from fits import (
+    FACTOR_STATISTICS,
+    FIT_COLUMNS,
+    PREPARATION_COLUMNS,
+    ROW_STATISTICS,
+    Fitter,
+    measure,
+)
 from mixedbench.frequentist import Fit, Term, fit
 from mixedbench.registry.row import readCsv, writeCsv
 
@@ -194,10 +201,10 @@ def test_r2_matches_performance_on_the_same_fit(tmp_path, rows, response_type, f
     assert (record['r2_marginal'], record['r2_conditional']) == pytest.approx(expected, abs=1e-4)
 
 
-def mergedHerds(merger, formula: str, counted: str = ''):
+def mergedHerds(merger, formula: str, counted: str = '', preparations: tuple[dict, ...] = ()):
     """The scratch registry of the herds rows, the gaussian one's formula replaced: a fitter over
     it fits that row and not the binomial one, unless `counted` names a formula for its cases
-    as a count."""
+    as a count. The survey lists `preparations`."""
     rows = readRows(FIXTURES / 'registry_herds.csv')
     rows[0]['formula'] = formula
     if counted:
@@ -205,6 +212,8 @@ def mergedHerds(merger, formula: str, counted: str = ''):
     shard = merger.survey / 'shards' / 'registry_fits.csv'
     writeCsv(pd.DataFrame(rows), shard)
     mergeShard(merger, shard)
+    listed = pd.DataFrame(list(preparations), columns=PREPARATION_COLUMNS)
+    writeCsv(listed, merger.survey / 'fits_preparation.csv')
     return merger
 
 
@@ -212,7 +221,7 @@ def test_the_pass_collects_a_row_per_factor_of_every_row_it_fits(merger, tmp_pat
     """One run per row with a continuous, binary or count response, its records in a directory
     of its own until the collect writes them into fits.csv in registry order."""
     registry = mergedHerds(merger, 'weight by breed, a herd nested in its region').registry
-    fitter = Fitter(registry, merger.loader, tmp_path / 'fits')
+    fitter = Fitter(registry, merger.survey, merger.loader, tmp_path / 'fits')
 
     fitter.run(0)
     fitter.collect()
@@ -230,7 +239,7 @@ def test_the_collect_refuses_a_row_never_run(merger, tmp_path):
     registry = mergedHerds(merger, 'weight by breed, a herd nested in its region').registry
 
     with pytest.raises(FileNotFoundError):
-        Fitter(registry, merger.loader, tmp_path / 'fits').collect()
+        Fitter(registry, merger.survey, merger.loader, tmp_path / 'fits').collect()
 
 
 @pytest.mark.lme4
@@ -239,7 +248,7 @@ def test_a_run_fits_the_rows_loaded_table_by_its_formula_and_family(merger, tmp_
     documented in words: the counts stay integers beside the blanks."""
     formula = 'weight ~ breed + feed + (1 | region/herd)'
     registry = mergedHerds(merger, formula, counted='cases by breed within herds').registry
-    fitter = Fitter(registry, merger.loader, tmp_path / 'fits')
+    fitter = Fitter(registry, merger.survey, merger.loader, tmp_path / 'fits')
 
     fitter.run(0)
     fitter.run(1)
@@ -251,3 +260,26 @@ def test_a_run_fits_the_rows_loaded_table_by_its_formula_and_family(merger, tmp_
         ['1', 'region', '14', 'gaussian', '1'],
         ['2', 'herd', '', 'poisson', ''],
     ]
+
+
+@pytest.mark.lme4
+def test_a_run_fits_the_rows_its_source_fitted(merger, tmp_path):
+    """A source fits a subset of the table or weights its rows by frequency:
+    the seven rows without grass feed, repeated by their cases, are 27."""
+    preparation = {
+        'source': 'herds',
+        'object': 'herds.csv',
+        'model_index': '1',
+        'subset': "feed != 'grass'",
+        'frequency': 'cases',
+        'reason': 'the grain and mixed herds, one row per case',
+    }
+    formula = 'weight ~ feed + (1 | herd)'
+    registry = mergedHerds(merger, formula, preparations=(preparation,)).registry
+    fitter = Fitter(registry, merger.survey, merger.loader, tmp_path / 'fits')
+
+    fitter.run(0)
+    fitter.collect()
+
+    fits = readCsv(registry / 'fits.csv')
+    assert fits[['factor', 'n_obs']].values.tolist() == [['herd', '27']]
