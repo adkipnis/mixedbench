@@ -13,4 +13,7 @@
 #SBATCH --time=2:00:00
 #SBATCH --output=fits/logs/%A_%a.log
 
+# no sync per task, which concurrent tasks would race on in the shared .venv: run `uv sync` once
+# through Slurm first
+export UV_NO_SYNC=1
 uv run python survey/fits.py run "$SLURM_ARRAY_TASK_ID"
