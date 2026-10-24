@@ -520,8 +520,9 @@ object and the deciding issue.
   hospitals, ROS; m3#24, m3#25); a month or observer with enough levels and rows (Squid,
   Sparrows; m3#25); a repeating dyad the book fits (Crofoot; m3#25); a design level the first
   reading missed (lawn's `machine:speed`; m3#23); a genotype-by-environment term fitted as
-  random (salmon.bunt; m3#22).
-- Not counted: strata and waves modeled as fixed (CES11; m3#23); field coordinates
+  random (salmon.bunt; m3#22); a survey wave no documented model fits (Vocab; #118).
+- Not counted: strata and waves a documented model fits as fixed or per wave (CES11,
+  GSSvocab, NES; m3#23, #118); field coordinates
   (connolly.potato; m3#22), though a Latin square's rows and columns are blocks (OrchardSprays;
   m3#23); a factor that classifies rather than clusters (singer; m3#23); a dyad with one row
   per pair (Monks; m3#25).
