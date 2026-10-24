@@ -121,7 +121,9 @@ def computeConditionIndex(design: pd.DataFrame) -> float:
     (Belsley, Kuh and Welsch 1980), inf when rank-deficient."""
     scaled = (design / np.sqrt((design**2).sum())).to_numpy()
     scaled = np.nan_to_num(scaled)  # a constant or empty-cell column scales to 0/0: zeros
-    if np.linalg.matrix_rank(scaled) < scaled.shape[1]:
+    n, d = scaled.shape
+    # more columns than rows are dependent, and the decomposition of so wide a design takes hours
+    if d > n or np.linalg.matrix_rank(scaled) < d:
         return float('inf')
     singular = np.linalg.svd(scaled, compute_uv=False)
     return round(float(singular[0] / singular[-1]), 4)
