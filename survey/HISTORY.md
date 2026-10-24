@@ -466,13 +466,29 @@ reading's open disagreements, four to eight per tier.
 
 - The 620 registry rows with a continuous, binary or count response were fitted on the cluster's
   CPU nodes, one task each, with R 4.6.1 and lme4 2.0-6 (`survey/fits.sbatch`), and collected
-  into `registry/fits.csv`, `quantiles.yaml` and `SUMMARY.md`. `registry.csv` and the
-  top-level keys of `quantiles.yaml` are unchanged.
-- Statuses: 334 `ok`, 88 `warning`, 53 `singular`, 119 `error`, 26 `no_formula`, no `timeout`.
-- 83 tasks ended without a record on the first array, 23 of them because R could not create its
-  temporary directory on the node, the rest in the loader (a missing archive member or an empty
-  file), whose cause is not diagnosed. They fitted on a rerun of their indices, four of them on
-  a third.
+  into `registry/fits.csv`, `quantiles.yaml` and `SUMMARY.md`. The top-level keys of
+  `quantiles.yaml` are unchanged.
+- The first pass ended 119 fits in `error`. By cause:
+  - 54 formula cells failed on a remark after the formula, a column named otherwise than in the
+    table, or a variable the source derives from columns. `shards/registry_fits.csv` rewrote them
+    in `formula` and `notes` alone (ADR 0006, amended 2026-10-24). Police still fails: one of its
+    900 rows, outside the documented subset `crime == 1`, has no arrest, so its offset is −Inf.
+  - 2 fitter bugs. `mmList` ordered a fit's terms by the columns as loaded, where an integer
+    `a:b` is R's sequence, so a slope term met another term's covariance (veneer), and 17 fits
+    warned "numerical expression has N elements"; `lme4.R` now reads each term's columns off
+    Zt. glmer refused a `Y`/`N` response (Beavers2). A third, a model without fixed effects,
+    surfaced in the rewritten cells (PrussianHorses).
+  - 2 fits lme4 ends on valid input (LGAclaims, depression_pp).
+  - 61 documented models lme4 refuses (survival, censored, heteroscedastic, nonlinear, smooth,
+    zero-inflated or structured-covariance models) or that need what the table lacks (a principal
+    component, a date string, a phylogeny, the log of a zero), recorded as they fail.
+- 83 tasks of the first array ended without a record. 23 ran on one node whose `/tmp` R could
+  not use, and `fits.sbatch` now sets `TMPDIR` beside the run directories. The rest listed a
+  cache tree or read a file another task was still writing, and the loader now renames both into
+  place whole.
+- The second pass refitted all 620 rows, every task with its record: 388 `ok`, 77 `warning`,
+  65 `singular`, 64 `error`, 26 `no_formula`, no `timeout`. No σ², ICC or R² of a row estimated
+  in both passes moved.
 
 ## Reading rulings (m3#22 to #15)
 
