@@ -277,3 +277,4 @@
 "pymc_examples","examples/data/rugby.csv","2","E","away_team","home_team","crossed","","0.1667"
 "mlmRev","ScotsSec","2","R","primary","second","crossed","","0.8922"
 "mlmRev","ScotsSec","3","R","primary","second","crossed","","0.8922"
+"stan_arm","ARM/Ch.10/ideo2.dat","1","E","stgj:cd","year","crossed","","0.1708"
