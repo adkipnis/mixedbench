@@ -170,6 +170,20 @@ def test_a_generalized_fit_has_no_residual_sd_and_adds_the_family_variance(
 
 
 @pytest.mark.lme4
+def test_a_binary_response_of_text_fits_as_its_0_1_coding(tmp_path):
+    """A source may store a binary response as `N` and `Y`, which glmer takes only as a factor."""
+    coded = generalized('bernoulli')
+    text = coded.assign(y=coded['y'].map({0: 'N', 1: 'Y'}))
+
+    expected = fit(coded, 'y ~ x + (1 | g)', 'bernoulli', tmp_path / 'coded', TIMEOUT)
+    fitted = fit(text, 'y ~ x + (1 | g)', 'bernoulli', tmp_path / 'text', TIMEOUT)
+
+    assert fitted.status == 'ok'
+    assert fitted.fixed['x'] == pytest.approx(expected.fixed['x'], rel=1e-9)
+    assert fitted.variances == pytest.approx(expected.variances, rel=1e-9)
+
+
+@pytest.mark.lme4
 def test_a_fit_by_another_lme4_than_the_pin_raises(tmp_path, monkeypatch):
     """A pass mixing lme4 versions would mix their optimizers' estimates."""
     monkeypatch.setattr(lme4, 'LME4', '0.0.0')
@@ -196,6 +210,33 @@ def test_a_factor_of_several_terms_carries_the_variance_of_each(tmp_path):
     assert (intercept.factor, slope.factor, slope.columns) == ('g', 'g', ('x',))
     expected = intercept.variances[0] + slope.variances[0] * (table['x'] ** 2).mean()
     assert fitted.variances == pytest.approx({'g': expected}, rel=1e-9)
+
+
+@pytest.mark.lme4
+def test_each_factor_carries_its_own_terms_whatever_order_lme4_fits_them_in(tmp_path):
+    """lme4 fits the factor of more levels first, here `site:plot` before `site`,
+    and its integer columns compose by level, not as R's sequence `site:plot`.
+    The slope term stays with `site`: τ₀² + 2 τ₀₁ mean(x) + τ₁² mean(x²) (Johnson 2014)."""
+    rng = np.random.default_rng(5)
+    site = np.repeat(np.arange(5), 40)
+    plot = np.tile(np.repeat(np.arange(4), 10), 5)  # 0 to 3 within each site
+    x = rng.normal(1, 1, len(site))
+    u = rng.normal(0, 1, (5, 2))[site]  # (n, 2)
+    v = rng.normal(0, 0.7, 20)[site * 4 + plot]
+    y = 1 + x + u[:, 0] + u[:, 1] * x + v + rng.normal(0, 0.5, len(site))
+    table = pd.DataFrame({'site': site, 'plot': plot, 'x': x, 'y': y})
+
+    fitted = fit(table, 'y ~ x + (1 + x | site) + (1 | site:plot)', 'gaussian', tmp_path, TIMEOUT)
+
+    assert (fitted.status, fitted.message) == ('ok', '')
+    composite, slopes = fitted.terms
+    assert (composite.factor, slopes.factor) == ('site:plot', 'site')
+    tau0, tau1 = slopes.variances
+    tau01 = slopes.correlations[0][1] * np.sqrt(tau0 * tau1)
+    expected = tau0 + 2 * tau01 * table['x'].mean() + tau1 * (table['x'] ** 2).mean()
+    assert fitted.variances == pytest.approx(
+        {'site:plot': composite.variances[0], 'site': expected}, rel=1e-9
+    )
 
 
 @pytest.mark.lme4
