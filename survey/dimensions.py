@@ -105,19 +105,20 @@ def measureConditionIndexes(measurer: Measurer) -> dict:
         documented = Problem.build(measurer.row, measurer.table)
     except Refused:
         return {}
-    conditions = {'condition_doc': computeConditionIndex(documented)}
+    design = documented.standardized()[list(documented.design)]
+    conditions = {'condition_doc': computeConditionIndex(design)}
     everything = dataclasses.replace(measurer.row, covariates=tuple(measurer.column_names))
     try:
         measured = Problem.build(everything, measurer.table)
     except Refused:  # no complete row
         return conditions
-    return conditions | {'condition_all': computeConditionIndex(measured)}
+    design = measured.standardized()[list(measured.design)]
+    return conditions | {'condition_all': computeConditionIndex(design)}
 
 
-def computeConditionIndex(problem: Problem) -> float:
-    """σ_max / σ_min of the standardized design with each column scaled to unit length
+def computeConditionIndex(design: pd.DataFrame) -> float:
+    """σ_max / σ_min of a standardized design with each column scaled to unit length
     (Belsley, Kuh and Welsch 1980), inf when rank-deficient."""
-    design = problem.standardized()[list(problem.design)]
     scaled = (design / np.sqrt((design**2).sum())).to_numpy()
     scaled = np.nan_to_num(scaled)  # a constant or empty-cell column scales to 0/0: zeros
     if np.linalg.matrix_rank(scaled) < scaled.shape[1]:
