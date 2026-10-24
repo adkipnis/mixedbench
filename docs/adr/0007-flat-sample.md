@@ -98,3 +98,15 @@ the registry. Grilled on 2026-10-24 ([#72](https://github.com/adkipnis/mixedbenc
   columns. Rejected: a cap on that table, a rule with no witness.
 - Decision: the sample ships as a registry patch release, with the re-filed rows and their fits,
   before a generator's flat case is matched to it.
+
+## Amendment 2026-10-24: the screen's rules ([#72](https://github.com/adkipnis/mixedbench/issues/72))
+
+- Decision: the mechanical screen flags a read table on two rules, a filing line that says wide,
+  repeated, occasion or visit, or a column with repeated values and an id-like name; a column of
+  many repeated integer levels flags nothing. The tables only that rule would have flagged are a
+  stratum of the hand sample of 50, so the sample tests the rule; a share under the bar brings
+  the rule back and its tables get the second reading.
+- Why: a prototype of the three rules over the 842 read tables flagged 219 by the filing line, 211
+  by an id-like name, 362 by either, and 572 by the integer rule alone, which caught field
+  coordinates (`row`, `col`) and counts; with it the targeted second reading would be a second
+  pass over 677 tables.
