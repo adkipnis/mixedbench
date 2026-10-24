@@ -85,14 +85,53 @@ PAGES = {
 }  # fmt: skip
 DOI = re.compile(r'10\.\d{4,}/\S+')  # a DOI anywhere in a deposit's link
 HELP_CHARACTERS = 20_000  # a help page can hold a whole table, which would drown a handoff
-HANDOFF_HEAD = """# Hand sample 2, batch {batch}
+# a batch's handoff opens with a prompt that a checker who knows neither the survey nor the
+# repository can act on
+HANDOFF_HEAD = """# Grouped tables, hand check, batch {batch}
 
-{n} rows of the second seeded hand sample (#61). Per row, open the page and the
-download, find the documented model in the source and answer with bullets: `stands`, or the
-corrected fields with a one-line reason. The fields: the response, its type and binomial trials;
-the grouping factors; the covariates and interactions; the random slopes; the formula as
-documented; published_model, whether the source fits or states this model. The help page is the
-one the reader saw.
+You check {n} rows of a registry of public tables with a grouping structure.
+Each row is a table and the mixed model a language model read for it from the documentation.
+Open each row's page and download, find the documented model in the source, and check the
+reading field by field.
+
+## Fields
+
+- **response, response_type, trials:** the response column; what it holds (`continuous`,
+  `binary`, `count`, `binomial`, `ordinal` or `categorical`), not the family; the trials column
+  of a `binomial` response.
+- **grouping_factors:** the columns whose levels index random effects, `;`-separated, `a:b`
+  for a factor on two columns.
+- **covariates, interactions:** the main-effect columns; the `a:b` interaction terms.
+- **random_slopes:** `x|g` for a slope correlated with the intercept of `g`, `x||g` for an
+  uncorrelated one; blank for intercepts only.
+- **formula:** the documented model in lme4 syntax, its columns named as the table names them
+  and a derived variable written as its expression (`I(age - 12)`).
+- **published_model:** `yes` when the source fits or states this model, else `no`.
+- **notes:** what the reader read; `RESPONSE INFERRED:` where no documented model names the
+  response.
+
+Four rules settle what groups:
+
+- **Levels:** a grouping factor no documented model fits needs at least five levels sampled
+  from a larger population (Harrison et al. 2018; Bolker et al. 2009). Fewer levels, or a few
+  exhaustive ones (a city's boroughs, a country's regions), make a design factor.
+- **Plots:** coordinates that identify one plot observed on several occasions on the same land
+  group as `row:col`, even where some plots are observed once.
+- **Waves:** a wave that a documented model fits as fixed, or separately per wave, groups
+  nothing.
+- **Wide:** grouped data stored wide, its repeated measures as columns, has no row, whether or
+  not a column also groups its rows.
+
+## Answer
+
+One bullet per row in this order, nothing else:
+
+- `<n> · <source> · <object> · model <k>: stands — <the source's model in one line>`
+- `<n> · <source> · <object> · model <k>: <field> <corrected value>; … — <the reason>`
+- `<n> · <source> · <object> · model <k>: no grouping, flat or wide — <the reason>`
+
+Take the evidence from the source, not from the reading or its notes alone.
+The help page is the one the reader saw.
 """
 
 
