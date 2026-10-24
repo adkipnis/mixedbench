@@ -111,9 +111,20 @@ class Puller:
         if table.shape[1] < MIN_COLS:
             return 'one column'
         for column in table.columns:
-            if Puller._canGroup(table[column]):
+            if Puller.canGroup(table[column]):
                 return 'pass'
         return 'no repeated column'
+
+    @staticmethod
+    def canGroup(values: pd.Series) -> bool:
+        """Whether a column's values could index groups: not fractional (R stores integer codes
+        as doubles), two or more distinct values, and some value repeated."""
+        if pd.api.types.is_float_dtype(values):
+            present = values.dropna()
+            if len(present) == 0 or not (present == present.round()).all():
+                return False
+        distinct = values.nunique(dropna=True)
+        return 2 <= distinct < len(values)
 
     # ---------------------------------------------------------------------------------
     # pipeline: deposit pages -> object -> row -> draw -> kept rows -> shard row -> csv
@@ -170,17 +181,6 @@ class Puller:
             else:
                 counts['n_other'] += 1
         return counts
-
-    @staticmethod
-    def _canGroup(values: pd.Series) -> bool:
-        """Whether a column's values could index groups: not fractional (R stores integer codes
-        as doubles), two or more distinct values, and some value repeated."""
-        if pd.api.types.is_float_dtype(values):
-            present = values.dropna()
-            if len(present) == 0 or not (present == present.round()).all():
-                return False
-        distinct = values.nunique(dropna=True)
-        return 2 <= distinct < len(values)
 
     @staticmethod
     def _firstRows(table: pd.DataFrame) -> str:
