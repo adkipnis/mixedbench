@@ -113,8 +113,9 @@ def _write(table: pd.DataFrame, formula: str, family: Family, dir: Path, timeout
 
 def _read(dir: Path) -> Fit:
     output = json.loads((dir / 'output.json').read_text())
-    if output['lme4'] != LME4:
-        raise RuntimeError(f'lme4 {output["lme4"]} differs from the pin {LME4}')
+    lme4 = output.pop('lme4')
+    if lme4 != LME4:
+        raise RuntimeError(f'lme4 {lme4} differs from the pin {LME4}')
     terms = []
     for term in output['terms']:
         correlations = tuple(tuple(row) for row in term['correlations'])
@@ -122,16 +123,4 @@ def _read(dir: Path) -> Fit:
             Term(term['factor'], tuple(term['columns']), tuple(term['variances']), correlations)
         )
     fixed = {name: tuple(estimate) for name, estimate in output['fixed'].items()}
-    return Fit(
-        status=output['status'],
-        seconds=output['seconds'],
-        message=output['message'],
-        n_obs=output['n_obs'],
-        fixed=fixed,
-        terms=tuple(terms),
-        sigma=output['sigma'],
-        variances=output['variances'],
-        sigma2_fixed=output['sigma2_fixed'],
-        sd_eta=output['sd_eta'],
-        sigma2_distribution=output['sigma2_distribution'],
-    )
+    return Fit(**output | {'fixed': fixed, 'terms': tuple(terms)})
