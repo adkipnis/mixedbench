@@ -501,6 +501,13 @@ reading's open disagreements, four to eight per tier.
   pilots.dat (an aggregate the Ch.19 row carries), depression_pp (fails rescaled too).
 - Their 17 rows refitted: 398 `ok`, 79 `warning`, 67 `singular`, 52 `error`, 24 `no_formula`.
   No σ², ICC or R² of another row moved.
+- The debloat found twin_hay fitted on its 40 response patterns, every component 0:
+  `fits_preparation.csv` lacked the `freq` weight that `suite/admit.py` applies. `freq` counts
+  twin pairs and stands on both members of a pair, so `frequency_factor` makes each copy of a pair
+  a pair of its own. Refitted on 7,614 rows over 3,807 pairs, twin_hay is `ok` with an ICC of
+  0.29, and no other row of `fits.csv` moved.
+- A one-off check before the merge found every run on its row's current formula and every
+  prepared row's run on the table its preparation makes now.
 
 ## Reading rulings (m3#22 to #15)
 
