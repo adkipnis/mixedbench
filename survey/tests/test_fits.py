@@ -285,6 +285,7 @@ def test_a_run_fits_the_rows_its_source_fitted(merger):
         'model_index': '1',
         'subset': "feed != 'grass'",
         'frequency': 'cases',
+        'frequency_factor': '',
         'reason': 'the grain and mixed herds, one row per case',
     }
     formula = 'weight ~ feed + (1 | herd)'
@@ -297,6 +298,27 @@ def test_a_run_fits_the_rows_its_source_fitted(merger):
     assert fits[['factor', 'n_obs']].values.tolist() == [['herd', '27']]
 
 
+def test_a_weight_of_a_group_repeats_the_group_each_copy_a_group_of_its_own(merger):
+    """twin_hay weights each twin pair's response pattern, its weight on both members:
+    repeated alone, the rows of a pattern's pairs would fall into one group of 2 × weight twins."""
+    preparation = {
+        'source': 'herds',
+        'object': 'herds.csv',
+        'model_index': '1',
+        'subset': '',
+        'frequency': 'freq',
+        'frequency_factor': 'pair',
+        'reason': 'freq counts the pairs of each pattern',
+    }
+    fitter = mergedHerds(merger, 'h ~ 1 + (1 | pair)', preparations=(preparation,))
+    patterns = pd.DataFrame({'pair': [1, 1, 2, 2], 'h': [0, 1, 1, 1], 'freq': [3, 3, 2, 2]})
+
+    table = fitter.prepareTable(fitter.rows[0], patterns)
+
+    members = table.groupby('pair')['h'].apply(list).to_dict()
+    assert members == {'1:0': [0, 1], '1:1': [0, 1], '1:2': [0, 1], '2:0': [1, 1], '2:1': [1, 1]}
+
+
 def test_a_preparation_names_a_row_the_pass_fits(merger):
     """A preparation of a row no fit takes, mistyped or of a binomial row, would go unused."""
     preparation = {
@@ -305,6 +327,7 @@ def test_a_preparation_names_a_row_the_pass_fits(merger):
         'model_index': '2',
         'subset': "feed != 'grass'",
         'frequency': '',
+        'frequency_factor': '',
         'reason': 'the binomial row, which lme4 does not fit here',
     }
 
