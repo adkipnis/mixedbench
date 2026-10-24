@@ -173,7 +173,9 @@ Per registry object the file it loads from, with its sha256 and size; written by
   (log) by `glmer`. `survey/fits.py` runs the pass on a cluster; a merge leaves the file as it is.
 - A row whose source fits a subset of the table, or repeats each row by a frequency weight, is
   listed in `survey/fits_preparation.csv` (the subset as a pandas query, the weight's column,
-  the reason); the fit takes those rows, and `n_obs` counts them.
+  the reason); the fit takes those rows, and `n_obs` counts them. A weight that counts the
+  groups of a factor (`frequency_factor`, twin_hay's `pair`) makes each copy of a group a group
+  of its own.
 - Key `source`, `object`, `model_index`, `factor`, with `tier`; a row per grouping factor of the
   fit, the per-row fields repeated. `factor` is the registry's grouping factor that groups the
   rows alike, else lme4's name (`factor(year)`, an observation-level `INDEX`); a fit without
