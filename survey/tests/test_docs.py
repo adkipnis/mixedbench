@@ -1,6 +1,6 @@
 """The contract is documented where agents and readers look: docs/registry.md names every column
 and allowed value of the registry's files, README.md those of the survey's own, and the read
-prompt speaks the glossary (CONTEXT.md)."""
+and flat prompts speak the glossary (CONTEXT.md)."""
 
 import re
 from pathlib import Path
@@ -10,6 +10,7 @@ import pytest
 from columns import COLUMN_COLUMNS
 from dimensions import DIMENSION_COLUMNS
 from fits import FIT_COLUMNS
+from flat import SCREEN_COLUMNS
 from groups import COLUMN_FACTOR_COLUMNS
 from mixedbench.frequentist import Status
 from mixedbench.registry.row import Family, ResponseType, Verified
@@ -20,7 +21,14 @@ HERE = Path(__file__).resolve().parents[1]
 README = (HERE / 'README.md').read_text()
 REGISTRY = (HERE.parent / 'docs' / 'registry.md').read_text()
 PROMPT = (HERE / 'prompts' / 'read.md').read_text()
-HOME = {'registry': REGISTRY, 'excluded': REGISTRY, 'duplicates': README, 'dropped': README}
+FLAT_PROMPT = (HERE / 'prompts' / 'flat.md').read_text()
+HOME = {
+    'registry': REGISTRY,
+    'excluded': REGISTRY,
+    'duplicates': README,
+    'dropped': README,
+    'flat_verdicts': REGISTRY,  # beside the flat files a verdict decides membership of
+}
 MEASURED_COLUMNS = {
     'dimensions': DIMENSION_COLUMNS,
     'columns': COLUMN_COLUMNS,
@@ -74,3 +82,26 @@ def test_read_prompt_uses_the_glossary_and_forbids_measured_numbers():
     for avoided in ('cluster variable', 'multilevel', 'hierarchical model'):
         assert avoided not in PROMPT
     assert 'never' in PROMPT and 'registry.csv' in PROMPT
+
+
+def test_readme_documents_the_flat_screen():
+    for column in SCREEN_COLUMNS:
+        assert re.search(rf'`{column}`', README), f'flat_screen.{column} undocumented'
+
+
+def test_flat_prompt_uses_the_glossary_and_forbids_measured_numbers():
+    """The second reading's brief speaks of flat tables and the three verdicts in the
+    glossary's words, and a hidden grouping re-files through the read prompt's shards."""
+    for term in ('flat table', 'grouping factor', *ALLOWED['flat_verdicts']['verdict']):
+        assert term in FLAT_PROMPT
+    for avoided in (
+        'i.i.d.',
+        'unclustered',
+        'cluster variable',
+        'multilevel',
+        'hierarchical model',
+    ):
+        assert avoided not in FLAT_PROMPT
+    for shard in ('shards/flat_', 'shards/dropped_', 'shards/registry_'):
+        assert shard in FLAT_PROMPT
+    assert 'never type a measured number' in FLAT_PROMPT
