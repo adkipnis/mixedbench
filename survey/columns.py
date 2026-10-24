@@ -62,9 +62,11 @@ def measureMaxAbsRho(table: pd.DataFrame, column_types: dict[str, tuple]) -> pd.
     for column, (kind, _) in column_types.items():
         if kind != 'categorical':
             ranked[column] = codeColumn(table[column], kind)
-    rho = pd.DataFrame(ranked, index=table.index).corr(method='spearman').abs()
-    partners = rho.where(~np.eye(len(rho), dtype=bool))
-    return partners.max().round(4).reindex(list(column_types))
+    # one d × d copy beside pandas' own, since a flat table's d reaches the tens of thousands
+    rho = np.abs(pd.DataFrame(ranked, index=table.index).corr(method='spearman').to_numpy())
+    np.fill_diagonal(rho, np.nan)  # a column is no partner of itself
+    largest = np.fmax.reduce(rho, axis=0, initial=np.nan)  # (d,), nan only without a partner
+    return pd.Series(largest, index=list(ranked)).round(4).reindex(list(column_types))
 
 
 def measureColumn(measurer: Measurer, column: str) -> dict:
