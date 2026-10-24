@@ -25,17 +25,19 @@ documentation's words for them.
 
 - `wide`: grouped data stored wide, its repeated measures as columns (`y1` to `y4` for four
   visits, one column per year), whether or not the source also holds its long form, which the
-  evidence then names.
+  evidence then names, and whether or not a column also groups its rows.
 - `hidden grouping`: a column indexes a unit the rows repeat within, a subject, plot, school,
   site or wave with two or more rows each, whether or not the documentation fits a model with
   it. It is a grouping factor the first reading missed. A grouping factor the documentation
   does not fit needs at least five levels (Harrison et al. 2018) sampled from a larger
   population (Bolker et al. 2009); fewer levels, or a few exhaustive ones (a city's boroughs,
-  a country's regions), make a design factor.
+  a country's regions), make a design factor. Field coordinates that identify one plot
+  observed on several occasions on the same land are a grouping factor (`row:col`), even
+  where some plots are observed once.
 - `flat`: everything else. No documented model fits the table with a random effect and no
   column indexes a unit the rows repeat within. A design factor of fixed levels (treatment,
-  dose, sex), a field coordinate, a count and an id with one row per unit are no grouping
-  factor.
+  dose, sex), a field coordinate that each plot holds once, a count and an id with one row per
+  unit are no grouping factor.
 
 The screen's flag is a reason to look, never evidence: a flagged column `trials` that counts
 trials is no grouping factor.
@@ -53,6 +55,10 @@ shards named by the run's label:
   dropped row.
 
 They merge after the verdict shard.
+
+A hidden grouping whose only repeated unit is a wave that a documented model fits as fixed or
+separately per wave keeps its filing, with no re-file shard; the verdict keeps it out of the
+sample. A wave that no documented model fits groups.
 
 ## Output — shards only
 
