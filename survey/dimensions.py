@@ -109,7 +109,7 @@ def measureConditionIndexes(measurer: Measurer) -> dict:
     everything = dataclasses.replace(measurer.row, covariates=tuple(measurer.column_names))
     try:
         measured = Problem.build(everything, measurer.table)
-    except (Refused, TypeError):  # no complete row, or a column of strings and numbers (#105)
+    except Refused:  # no complete row
         return conditions
     return conditions | {'condition_all': computeConditionIndex(measured)}
 

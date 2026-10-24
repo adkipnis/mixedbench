@@ -104,6 +104,16 @@ def test_an_integer_covariate_is_continuous_unless_it_arrives_as_a_categorical()
     assert coded.design == ('Intercept', 'x', 'rating[3]', 'rating[5]')
 
 
+def test_an_undeclared_column_mixing_numbers_and_strings_orders_its_numbers_first() -> None:
+    """A plain column orders its levels as the loader orders a declared one (#105):
+    numbers first, then strings, as a depth column holding `'>1m'` among its numbers."""
+    depth = pd.Series([0.7, '>1m', 1] * 4 + [0.7, 1], dtype=object)
+    row = fixtureRow(covariates=('x', 'depth'), interactions=())
+    problem = Problem.build(row, fixtureTable().assign(depth=depth))
+    assert problem.levels['depth'] == (0.7, 1, '>1m')
+    assert problem.design == ('Intercept', 'x', 'depth[1]', 'depth[>1m]')
+
+
 def test_a_grouping_factor_is_integer_coded_with_its_levels_listed() -> None:
     """A factor column holds 0-based codes in the loaded level order and `levels` says which
     level each code is; the composite `block:plot` is built from its parts, its levels the
