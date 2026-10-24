@@ -6,8 +6,8 @@ validates the shard against the table it returns, refuses a failing shard printi
 offending rows, and otherwise upserts on the table's row key, so merging the same shard twice
 changes nothing and a corrected shard replaces its earlier rows. Every merge then folds
 confirmed duplicates, measures the whole registry and rewrites the manifest and the summary.
-The census tables land in `registry/`, the survey's bookkeeping tables (duplicates, dropped)
-in `survey/`. Run from the repo root:
+The census tables land in `registry/`, the survey's bookkeeping tables (duplicates, dropped,
+flat verdicts) in `survey/`. Run from the repo root:
 
     uv run python survey/merge.py survey/shards/registry_lme4.csv
 """
@@ -39,6 +39,7 @@ from schema import (
     MAX_MODELS_PER_OBJECT,
     MAX_ORDINAL_LEVELS,
     REQUIRED,
+    SHARDS,
     TABLES,
     Table,
 )
@@ -51,15 +52,17 @@ from summarize import Summarizer
 HERE = Path(__file__).parent
 # An object is in the registry or in the exclusions, never both: the second shard is refused.
 RIVALS = {'registry': 'excluded', 'excluded': 'registry'}
+ON_CENSUS = ('dropped', 'flat_verdicts')  # shards about an object the census must hold
 # A dropped object leaves both files; re-filing it leaves dropped.csv. The later merge wins.
 SUPERSEDES = {
     'registry': ('dropped',),
     'excluded': ('dropped',),
     'dropped': ('registry', 'excluded'),
     'duplicates': (),
+    'flat_verdicts': (),
 }
 RECONCILED = ('registry', 'duplicates', 'dropped')  # merges that can change the duplicate fold
-CENSUS = ('registry', 'excluded')  # shard tables in registry/; duplicates, dropped in survey/
+CENSUS = ('registry', 'excluded')  # shard tables in registry/; the others in survey/
 MANIFEST_COLUMNS = ['source', 'object', 'file', 'sha256', 'size']
 
 
@@ -88,7 +91,7 @@ class Merger:
     # ---------------------------------------------------------------------------------
     def load(self, shard: Path) -> None:
         shard = Path(shard)
-        self.table = TABLES[shard.stem.split('_')[0]]
+        self.table = SHARDS[shard.stem.split('_')[0]]
         self.shard = readCsv(shard)
         self.shard.columns = [c.strip() for c in self.shard.columns]
         self.shard = self.shard.apply(lambda col: col.str.strip())
@@ -118,7 +121,7 @@ class Merger:
             problems += self.licenseProblems()
         if self.table.name in RIVALS:
             problems += self.rivalProblems()
-        if self.table.name == 'dropped':
+        if self.table.name in ON_CENSUS:
             problems += self.unknownObjects()
         self.refuse(problems)
 
@@ -203,7 +206,7 @@ class Merger:
         return self.flag(self.keysOf(self.shard).isin(taken), 'object', f'also in {rival.name}.csv')
 
     def unknownObjects(self) -> list[dict]:
-        """A dropped object must be somewhere to drop it from."""
+        """An object is dropped or given a verdict only where the census holds it."""
         known = self.objectsIn(TABLES['registry']) | self.objectsIn(TABLES['excluded'])
         unknown = ~self.keysOf(self.shard).isin(known)
         return self.flag(unknown, 'object', 'not in registry.csv or excluded.csv')
