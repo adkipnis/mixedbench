@@ -4,14 +4,10 @@ and the mixed model's generalized least squares give the same fixed effects."""
 
 from __future__ import annotations
 
-import functools
-import shutil
-import subprocess
 from dataclasses import replace
 
 import numpy as np
 import pandas as pd
-import pytest
 from mixedbench.contract import Problem
 from mixedbench.registry.row import Row, SlopeTerm
 
@@ -36,28 +32,6 @@ def fixtureProblem(row: Row = ROW) -> Problem:
     y = 1 + 0.5 * x + 2 * sex + intercepts + rng.normal(0, 1, len(x))
     table = pd.DataFrame({'block': block, 'x': x, 'sex': np.array(['f', 'm'])[sex], 'y': y})
     return Problem.build(row, table)
-
-
-def pytest_runtest_setup(item: pytest.Item) -> None:
-    """Skips a `brms` test where R or CmdStan is absent (CI's runners have R, not cmdstanr),
-    before its fixtures fit anything."""
-    if item.get_closest_marker('brms') is None:
-        return
-    missing = _probeRStack()
-    if missing:
-        pytest.skip(missing)
-
-
-@functools.cache
-def _probeRStack() -> str:
-    """What of R and CmdStan is absent, empty where both are there."""
-    rscript = shutil.which('Rscript')
-    if rscript is None:
-        return 'no Rscript'
-    probe = subprocess.run([rscript, '-e', 'cmdstanr::cmdstan_version()'], capture_output=True)
-    if probe.returncode != 0:
-        return 'no cmdstanr or CmdStan'
-    return ''
 
 
 # ==============================================================================================
