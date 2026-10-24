@@ -44,6 +44,7 @@ uv run python survey/mirror.py --tag mirror-<n>
 |---|---|
 | `pull.py`, `merge.py`, `measure.py`, `mirror.py` | the scripts: the pull, the merge, the measurement pass, a mirror tag for the loader's fallback copies |
 | `fits.py`, `fits.sbatch` | the fits pass and its cluster array |
+| `fits_preparation.csv` | the rows a source fitted where they are not the whole table: a subset or a frequency weight, read by `fits.py` |
 | `schema.py`, `sources.py`, `help.py`, `summarize.py` | the survey's file contract, the frame, the help pages, the summary |
 | `dimensions.py`, `columns.py`, `groups.py`, `pairs.py` | one module per measured file |
 | `SUMMARY.template.md` | the digit-free template of `registry/SUMMARY.md` |
