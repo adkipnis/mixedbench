@@ -39,12 +39,14 @@ UNFITTED <- list(
 # =====================================================================================
 
 # a categorical column is read as text, then coded by its levels;
-# a value that is no level would be lost as a missing value
+# a value that is no level would be lost as a missing value.
+# Other text is read as a factor, as a formula's terms take it: glmer takes a text response only so
 readTable <- function(dir, input) {
   columns <- names(input$levels)
   classes <- setNames(rep("character", length(columns)), columns)
   table <- read.csv(
-    file.path(dir, "table.csv"), check.names = FALSE, colClasses = classes, na.strings = ""
+    file.path(dir, "table.csv"), check.names = FALSE, colClasses = classes, na.strings = "",
+    stringsAsFactors = TRUE
   )
   for (column in columns) {
     levels <- unlist(input$levels[[column]])
@@ -128,14 +130,22 @@ describeTerms <- function(model) {
   described
 }
 
-# Johnson (2014): per factor, its terms' variance on the linear predictor, averaged over rows
+# Johnson (2014): per factor, its terms' variance on the linear predictor, averaged over rows.
+# A term's columns per row are read off Z, in the order lme4 fits the terms:
+# mmList orders them by the columns as loaded, where an integer `a:b` is a sequence, not a factor
 randomVariances <- function(model) {
   factors <- names(model@cnms)
   covariances <- VarCorr(model)  # per term, in the order of cnms
-  z <- getME(model, "mmList")  # per term, its columns' values per row
+  zt <- getME(model, "Zt")  # Z's transpose: per term in turn, per level its columns
+  starts <- getME(model, "Gp")  # where each term's rows start in zt
   variances <- list()
   for (i in seq_along(factors)) {
-    v <- mean(rowSums((z[[i]] %*% covariances[[i]]) * z[[i]]))
+    columns <- length(model@cnms[[i]])
+    block <- zt[(starts[i] + 1):starts[i + 1], , drop = FALSE]
+    levels <- nrow(block) / columns
+    # a row lies in one level, so the sum over levels leaves the row's own columns
+    z <- as.matrix(t(block) %*% kronecker(matrix(1, levels, 1), diag(columns)))
+    v <- mean(rowSums((z %*% covariances[[i]]) * z))
     factor <- factors[i]
     variances[[factor]] <- if (is.null(variances[[factor]])) v else variances[[factor]] + v
   }
