@@ -1,8 +1,9 @@
-"""The flat module at its seams: the merged files in, the frame and `flat_screen.csv` out, and
-the screen rule on hand-made tables (#116)."""
+"""The flat module at its seams: the merged files in; the frame, `flat_screen.csv`, the two flat
+files and the hand sample's files out; the screen rule and the measurer on hand-made tables."""
 
 import io
 import zipfile
+from collections import Counter
 from pathlib import Path
 
 import dimensions
@@ -11,7 +12,7 @@ import pytest
 import yaml
 from columns import COLUMN_STATISTICS
 from conftest import asOrdered, measuredColumns, parsed, readRows, scratchMerger, sha
-from flat import FlatPass
+from flat import SAMPLE_COLUMNS, FlatPass
 from measure import Measurer
 from mixedbench.datasets import Loader
 from mixedbench.registry.row import writeCsv
@@ -222,11 +223,15 @@ def zippedFiles(folder: str, files: dict[str, str]) -> bytes:
 
 @pytest.fixture
 def plots(tmp_path: Path) -> FlatPass:
+    return plotsPass(tmp_path, PLOTS)
+
+
+def plotsPass(tmp_path: Path, files: dict[str, str]) -> FlatPass:
     """A flat pass over the scratch registry and survey with one more url source, `plots`
-    (Tier O), served from memory: every table the scratch sources pin has a repeated column
-    named like an id, so none would pass the screen unflagged."""
+    (Tier O), serving `files` from memory: every table the scratch sources pin has a repeated
+    column named like an id, so none would pass the screen unflagged."""
     merger = scratchMerger(tmp_path / 'registry', tmp_path / 'survey')
-    archive = zippedFiles('plots', PLOTS)
+    archive = zippedFiles('plots', files)
     pinned = {'kind': 'url', 'name': PLOTS_URL, 'pin': sha(archive), 'license': 'CC0 1.0 Universal'}  # fmt: skip
     sources = yaml.safe_load((merger.registry / 'sources.yaml').read_text())
     sources['tiers']['O'] = {'plots': pinned}
@@ -311,3 +316,206 @@ def test_the_pass_writes_a_row_per_sample_table_and_a_row_per_its_column(plots):
         ('plain.csv', 'dose'), ('plain.csv', 'response'), ('distinct.csv', 'x'),
         ('distinct.csv', 'y'),
     ]  # fmt: skip
+
+
+# ---------------------------------------------------------------------------------
+# the hand sample: the sample drawn, a batch handed off, the share that stood
+# ---------------------------------------------------------------------------------
+# a repeated integer column of eleven levels, which only the dropped integer rule would flag
+INTEGER = 'count,rate\n' + ''.join(f'{c},{c + 0.5}\n' for c in [*range(11), 0])
+# per stratum of the hand sample, its tables' size, file, filing line and verdict ('' for none)
+STRATA = [
+    ('prescreened', 13, DISTINCT, 'no repeated column', ''),
+    ('read/unflagged', 22, PLAIN, 'one row per plot', ''),
+    ('read/flagged', 18, HERDED, 'one row per cow', 'flat'),
+    ('read/integer', 27, INTEGER, 'one row per survey', ''),
+]
+
+
+def strataPass(tmp_path: Path) -> FlatPass:
+    """A flat sample of 80 tables over the four strata, and a flagged table judged wide."""
+    files, survey, verdicts = {'stored.csv': HERDED}, [], []
+    for stratum, size, text, detail, verdict in STRATA:
+        screen = 'no repeated column' if stratum == 'prescreened' else 'pass'
+        for i in range(size):
+            object = f'{stratum.replace("/", "_")}_{i}.csv'
+            files[object] = text
+            survey.append(('plots', object, screen, NO_GROUPING, detail))
+            if verdict != '':
+                verdicts.append(('plots', object, verdict, 'herd names the farm, once each'))
+    survey.append(('plots', 'stored.csv', 'pass', NO_GROUPING, 'one row per cow'))
+    verdicts.append(('plots', 'stored.csv', 'wide', 'four visits as columns'))
+    flat = plotsPass(tmp_path, files)
+    writeSurvey(flat, survey)
+    writeVerdicts(flat, verdicts)
+    return flat
+
+
+def test_draw_allocates_fifty_sample_tables_over_four_strata_in_two_batches(tmp_path):
+    """The hand sample is 50 tables of the flat sample, proportional over its four strata.
+    Worked by hand: 50/80 of 13, 22, 18 and 27 is 8.125, 13.75, 11.25 and 16.875, the two
+    tables left over going to the largest remainders, read/integer's and read/unflagged's: 8,
+    14, 11 and 17. A table judged wide is out of the sample, so never drawn. The draw is a
+    function of the files and the seed, so drawing again writes the same file."""
+    flat = strataPass(tmp_path)
+    flat.draw()
+    path = flat.survey / 'flat_sample.csv'
+    sample = readRows(path)
+    assert list(sample[0]) == [
+        'source', 'object', 'tier', 'file', 'stratum', 'batch', 'basis', 'evidence', 'detail',
+        'words', 'id_columns', 'integer_columns',
+    ]  # fmt: skip
+    assert Counter(row['stratum'] for row in sample) == {
+        'prescreened': 8,
+        'read/unflagged': 14,
+        'read/flagged': 11,
+        'read/integer': 17,
+    }
+    assert [row['batch'] for row in sample] == ['1'] * 25 + ['2'] * 25
+    drawn = path.read_text()
+    flat.draw()
+    assert path.read_text() == drawn
+
+
+ZEROS = '0' * 64
+# one drawn table per kind of source; a row's columns as SAMPLE_COLUMNS orders them
+DRAWN = [
+    ('pens', 'herds', 'R', 'data/herds.rda', 'read/unflagged', '1', 'first reading',
+     'one row per cow', 'one row per cow', '', '', 'parity'),
+    ('ros', 'Beauty/data/beauty.csv', 'T', 'Beauty/data/beauty.csv', 'read/flagged', '1',
+     'second reading', 'prof names one instructor, once each', 'one row per course',
+     'repeated', 'prof', ''),
+    ('rabe_hesketh', 'pig.dta', 'T', 'pig.dta', 'prescreened', '1', 'prescreen',
+     'no repeated column', 'no repeated column', '', '', ''),
+    ('arriero_2017_dryad', 'voles.xlsx', 'D', 'voles.xlsx', 'read/integer', '1',
+     'first reading', 'one row per vole', 'one row per vole', '', '', 'trap'),
+    ('leder_2020_osf', 'data.csv', 'D', 'data.csv', 'read/unflagged', '1', 'first reading',
+     'one row per participant', 'one row per participant', '', '', ''),
+    ('pens', 'sows', 'R', 'data/sows.rda', 'read/unflagged', '2', 'first reading',
+     'one row per sow', 'one row per sow', '', '', ''),
+]  # fmt: skip
+
+
+def handoffPass(tmp_path: Path) -> FlatPass:
+    """A drawn sample with one table per kind of source, a CRAN package, a git tree, a url
+    archive and two Tier D deposits, and the help pages of the first two."""
+    registry, survey = tmp_path / 'registry', tmp_path / 'survey'
+    registry.mkdir()
+    survey.mkdir()
+    (registry / 'sources.yaml').write_text(
+        'seed: 0\n'
+        'tiers:\n'
+        '  R:\n'
+        "    pens: {kind: cran, pin: '1.0'}\n"
+        '  T:\n'
+        '    ros: {kind: git, name: https://github.com/avehtari/ROS-Examples, pin: abc123}\n'
+        f'    rabe_hesketh: {{kind: url, name: https://www.stata-press.com/data/mlmus4/mlmus4.zip, pin: {ZEROS}}}\n'
+        '  D:\n'
+        f'    arriero_2017_dryad: {{kind: url, name: https://datadryad.org/api/v2/files/51526/download, pin: {ZEROS}}}\n'
+        f'    leder_2020_osf: {{kind: url, name: https://osf.io/download/znb6c/, pin: {ZEROS}}}\n'
+    )
+    (survey / 'deposit_files.csv').write_text(
+        'label,link\n,osf.io/unlabelled\narriero_2017_dryad,10.5061/dryad.110pk\n'
+        'leder_2020_osf,osf.io/txb9c\n'
+    )
+    writeCsv(pd.DataFrame(DRAWN, columns=SAMPLE_COLUMNS), survey / 'flat_sample.csv')
+    pages = {
+        'pens/herds.txt': '\\name{herds}\n\\title{Weights of pigs by herd}\n',
+        'ros/Beauty/data/beauty.csv.txt': '# first rows (of 463)\neval: float64\n',
+    }
+    for path, text in pages.items():
+        (registry / 'help' / path).parent.mkdir(parents=True, exist_ok=True)
+        (registry / 'help' / path).write_text(text)
+    return FlatPass(registry, survey)
+
+
+def test_handoff_names_each_tables_page_and_download_and_no_local_path(tmp_path):
+    """The batch is checked in the browser against the source itself, so every table carries
+    its page and its download at the pin, its filing line, the screen's reason, the second
+    reading where one exists and the help page where one exists, and no path of the checkout.
+    A Tier D page is its deposit's, at doi.org where the link is a DOI."""
+    flat = handoffPass(tmp_path)
+
+    text = flat.handoff(1)
+
+    urls = [
+        'https://cran.r-project.org/package=pens',
+        'https://github.com/cran/pens/blob/1.0/data/herds.rda',
+        'https://github.com/avehtari/ROS-Examples/tree/abc123/Beauty/data',
+        'https://github.com/avehtari/ROS-Examples/blob/abc123/Beauty/data/beauty.csv',
+        'https://www.stata-press.com/data/mlmus4.html',
+        'https://www.stata-press.com/data/mlmus4/mlmus4.zip',
+        'https://doi.org/10.5061/dryad.110pk',
+        'https://datadryad.org/api/v2/files/51526/download',
+        'https://osf.io/txb9c',
+        'https://osf.io/download/znb6c/',
+    ]
+    assert [url for url in urls if url not in text] == []
+    assert 'filing: one row per course' in text
+    assert 'second reading: prof names one instructor, once each' in text
+    assert '`prof`' in text and '`parity`' in text and '`trap`' in text
+    assert '\\title{Weights of pigs by herd}' in text
+    assert 'eval: float64' in text
+    assert text.count('<details>') == 2  # the prescreened table and the deposits have no page
+    assert 'sows' not in text  # batch 2
+    assert str(tmp_path) not in text
+    assert 'registry/' not in text
+    assert 'cache' not in text
+
+
+def test_handoff_cuts_a_help_page_longer_than_twenty_thousand_characters(tmp_path):
+    """A help page can hold a whole table, one in the frame 20 MB of it, which would drown the
+    prompt, so it is cut and says where."""
+    flat = handoffPass(tmp_path)
+    (flat.registry / 'help' / 'pens' / 'herds.txt').write_text('x' * 20_000 + 'y')
+
+    text = flat.handoff(1)
+
+    assert 'x' * 20_000 + '\n[cut at 20,000 characters]' in text
+    assert 'xy' not in text
+
+
+def test_agree_gives_the_share_of_drawn_tables_still_in_the_sample_per_stratum_and_overall(
+    tmp_path,
+):
+    """A drawn table stood when the hand check left it in the flat sample. One re-filed into
+    the registry has left the frame, and one judged wide or a hidden grouping has left the
+    sample: neither stood."""
+    flat = plotsPass(tmp_path, {
+        'plain_0.csv': PLAIN, 'plain_1.csv': PLAIN, 'herded_0.csv': HERDED,
+        'distinct_0.csv': DISTINCT, 'distinct_1.csv': DISTINCT, 'integer_0.csv': INTEGER,
+    })  # fmt: skip
+    writeSurvey(flat, [
+        ('plots', 'plain_0.csv', 'pass', NO_GROUPING, 'one row per plot'),
+        ('plots', 'plain_1.csv', 'pass', NO_GROUPING, 'one row per plot'),
+        ('plots', 'herded_0.csv', 'pass', NO_GROUPING, 'one row per cow'),
+        ('plots', 'distinct_0.csv', 'no repeated column', NO_GROUPING, 'no repeated column'),
+        ('plots', 'distinct_1.csv', 'no repeated column', 'derived or duplicated table', 'a copy'),
+        ('plots', 'integer_0.csv', 'pass', NO_GROUPING, 'one row per survey'),
+    ])  # fmt: skip
+    writeVerdicts(flat, [
+        ('plots', 'herded_0.csv', 'flat', 'herd names the farm, once each'),
+        ('plots', 'plain_1.csv', 'wide', 'two plots per row'),
+        ('plots', 'integer_0.csv', 'hidden grouping', 'counts repeat within surveys'),
+    ])  # fmt: skip
+    drawn = [
+        ('plain_0.csv', 'read/unflagged'), ('plain_1.csv', 'read/unflagged'),
+        ('herded_0.csv', 'read/flagged'), ('distinct_0.csv', 'prescreened'),
+        ('distinct_1.csv', 'prescreened'), ('integer_0.csv', 'read/integer'),
+    ]  # fmt: skip
+    sample = pd.DataFrame(
+        [{'source': 'plots', 'object': o, 'stratum': s, 'batch': '1'} for o, s in drawn]
+    )
+    writeCsv(sample.reindex(columns=SAMPLE_COLUMNS, fill_value=''), flat.survey / 'flat_sample.csv')
+
+    flat.agree()
+
+    rows = readRows(flat.survey / 'flat_agreement.csv')
+    assert [list(row.values()) for row in rows] == [
+        ['prescreened', '2', '0.5'],
+        ['read/unflagged', '2', '0.5'],
+        ['read/flagged', '1', '1.0'],
+        ['read/integer', '1', '0.0'],
+        ['all', '6', '0.5'],
+    ]
+    assert list(rows[0]) == ['stratum', 'tables', 'stood']
