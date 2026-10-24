@@ -135,6 +135,18 @@ Of a nested pair of grouping factors, the one whose groups each hold whole group
 other; neither when each holds the other's, since the two then partition the rows alike.
 _Avoid_: outer factor, parent, higher level
 
+**Flat table**:
+A table of the survey's frame that no documented model fits with a random effect and in which
+no column indexes a unit the rows repeat within. Grouped data stored wide, with repeated
+measures as columns, is not flat; it is grouped data the registry lacks a long form of.
+_Avoid_: i.i.d. table, unclustered, exclusion (the bookkeeping entry)
+
+**Flat sample**:
+Every flat table of the survey's frame, measured by script with the registry's per-column
+statistics; beside the registry, never in it. The reference for a generator's flat case, and
+the comparison that shows where grouped tables differ beyond the grouping factor.
+_Avoid_: control group, negative sample, flat registry
+
 ### References and results
 
 **Reference posterior**:
