@@ -187,13 +187,16 @@ def test_one_loader_checks_each_file_against_its_digest_once(tmp_path, monkeypat
 
 def test_an_extraction_cut_short_leaves_no_tree_for_the_next_load(tmp_path):
     """Cluster tasks share one cache, and a task that listed a tree another was still extracting
-    missed objects. A tree appears whole or not at all, so the next load fails the same way."""
+    missed objects. A tree appears whole or not at all, so the next load fails the same way,
+    and no partial copy stays in the cache."""
     cut = Server({CURRENT: TARBALL[: len(TARBALL) // 2]})
     with pytest.raises(EOFError):
         Loader(tmp_path, fetch=cut).objects(FIXTURE)
 
     with pytest.raises(EOFError):
         Loader(tmp_path, fetch=cut).objects(FIXTURE)
+    cached = [path.relative_to(tmp_path).as_posix() for path in tmp_path.rglob('*')]
+    assert sorted(cached) == ['cran', 'cran/fixture_1.0', 'cran/fixture_1.0/fixture_1.0.tar.gz']
 
 
 def test_second_loader_over_the_same_cache_fetches_nothing(tmp_path):
