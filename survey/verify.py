@@ -26,6 +26,7 @@ from __future__ import annotations
 import argparse
 import csv
 import posixpath
+import re
 from pathlib import Path
 from urllib.parse import quote
 
@@ -34,7 +35,6 @@ import pandas as pd
 from schema import REGISTRY
 from sources import readFrame
 
-from mixedbench.datasets import Source
 from mixedbench.registry.row import (
     COLUMN_LIST_COLUMNS,
     TERM_COLUMNS,
@@ -56,8 +56,10 @@ SEED = 1  # the first hand sample's was 0
 # the fields the agreement step compares, recorded at draw time
 COMPARED = ('response', 'response_type', 'trials', 'grouping_factors', 'covariates', 'interactions', 'random_slopes', 'formula', 'published_model')  # fmt: skip
 SAMPLE_COLUMNS = ('source', 'object', 'model_index', 'stratum', 'batch', *COMPARED)
-# the agreement table's rows: strata, then each tier pooled, each `verified` pooled, then all
-POOLS = (*(f'{t}/{v}' for t in TIERS for v in VERIFIED), *TIERS, *VERIFIED, 'all')
+# the strata in the order their ties are allocated, then the agreement table's rows: the
+# strata, each tier pooled, each `verified` pooled, then all
+STRATA = tuple(f'{t}/{v}' for t in TIERS for v in VERIFIED)
+POOLS = (*STRATA, *TIERS, *VERIFIED, 'all')
 # the reading a handoff shows per row
 READING = (*COMPARED, 'confidence', 'notes')
 # The page of a url source, by label prefix: `sources.yaml` names only the download. `{rest}`
@@ -81,6 +83,8 @@ PAGES = {
     'openml_': 'https://www.openml.org/d/{rest}',
     'uci_': 'https://archive.ics.uci.edu/dataset/{rest}',
 }  # fmt: skip
+DOI = re.compile(r'10\.\d{4,}/\S+')  # a DOI anywhere in a deposit's link
+HELP_CHARACTERS = 20_000  # a help page can hold a whole table, which would drown a handoff
 HANDOFF_HEAD = """# Hand sample 2, batch {batch}
 
 {n} rows of the second seeded hand sample (#61). Per row, open the page and the
@@ -90,6 +94,91 @@ the grouping factors; the covariates and interactions; the random slopes; the fo
 documented; published_model, whether the source fits or states this model. The help page is the
 one the reader saw.
 """
+
+
+# =====================================================================================
+# the stratified draw, shared with the flat pass's hand sample
+# =====================================================================================
+def drawSample(
+    population: pd.DataFrame, strata: tuple[str, ...], size: int, seed: int
+) -> pd.DataFrame:
+    """`size` rows of `population` in batches of `BATCH_SIZE`, in proportion to the size of each
+    stratum. Each stratum takes its first rows in one permutation, so the batches mix strata."""
+    quotas = _allocate(population['stratum'].value_counts().to_dict(), strata, size)
+    order = np.random.default_rng(seed).permutation(len(population))
+    shuffled = population.iloc[order]
+    rank = shuffled.groupby('stratum').cumcount()
+    picked = shuffled[rank < shuffled['stratum'].map(quotas)]
+    return picked.assign(batch=np.arange(len(picked)) // BATCH_SIZE + 1)
+
+
+def _allocate(sizes: dict[str, int], strata: tuple[str, ...], size: int) -> dict[str, int]:
+    """`size` rows in proportion to stratum size by largest remainder (Hamilton's method), ties
+    to the order of `strata`."""
+    present = [s for s in strata if s in sizes]
+    total = sum(sizes.values())
+    quotas = {s: size * sizes[s] // total for s in present}
+    remainders = {s: size * sizes[s] % total for s in present}
+    left = size - sum(quotas.values())
+    largest = sorted(present, key=remainders.get, reverse=True)  # stable: ties keep their order
+    for stratum in largest[:left]:
+        quotas[stratum] += 1
+    return quotas
+
+
+# =====================================================================================
+# the links and help pages, shared with the flat pass's handoff
+# =====================================================================================
+class Links:
+    """The page and the download of an object at its source's pin, to open in the browser."""
+
+    def __init__(self, registry: Path, survey: Path) -> None:
+        self.sources = readFrame(registry).sources
+        deposits = readCsv(survey / 'deposit_files.csv')
+        labelled = deposits[deposits['label'] != '']
+        self.deposits = dict(zip(labelled['label'], labelled['link']))  # Tier D's labels
+
+    def resolveUrls(self, label: str, object: str, file: str) -> tuple[str, str]:
+        """GitHub's CRAN mirror tags every package version; base R's objects sit in the R
+        source tarball under src/library/datasets."""
+        source = self.sources[label]
+        if source.kind == 'cran' and source.name == 'datasets':
+            page = f'https://stat.ethz.ch/R-manual/R-patched/library/datasets/html/{object}.html'
+            major = source.pin.split('.')[0]
+            return page, f'https://cran.r-project.org/src/base/R-{major}/R-{source.pin}.tar.gz'
+        if source.kind == 'cran':
+            page = f'https://cran.r-project.org/package={source.name}'
+            return page, f'https://github.com/cran/{source.name}/blob/{source.pin}/{quote(file)}'
+        if source.kind == 'git':
+            tree = f'{source.name}/tree/{source.pin}/{quote(posixpath.dirname(file))}'
+            return tree, f'{source.name}/blob/{source.pin}/{quote(file)}'
+        return self._resolvePage(label), source.name
+
+    def _resolvePage(self, label: str) -> str:
+        """A url source's page: a Tier D deposit's, at doi.org where its link holds a DOI, else
+        the page its label's prefix names."""
+        if label in self.deposits:
+            link = self.deposits[label]
+            doi = DOI.search(link)
+            if doi is not None:
+                return f'https://doi.org/{doi.group()}'
+            return f'https://{link}'
+        prefixes = [prefix for prefix in PAGES if label.startswith(prefix)]
+        if not prefixes:
+            raise KeyError(f'url source {label!r} has no page; add its prefix to PAGES')
+        prefix = prefixes[0]
+        return PAGES[prefix].format(rest=label.removeprefix(prefix))
+
+
+def renderHelpPage(registry: Path, label: str, object: str) -> str:
+    """The help page the reader saw, folded; empty where the object has none."""
+    path = registry / 'help' / label / f'{object}.txt'
+    if not path.exists():
+        return ''
+    text = path.read_text()
+    if len(text) > HELP_CHARACTERS:
+        text = f'{text[:HELP_CHARACTERS]}\n[cut at {HELP_CHARACTERS:,} characters]'
+    return f'<details><summary>help page</summary>\n\n~~~~\n{text}\n~~~~\n\n</details>\n'
 
 
 # =====================================================================================
@@ -108,13 +197,7 @@ class Verifier:
     def draw(self) -> None:
         """Each stratum takes its first rows in one permutation, so the batches mix strata."""
         unchecked = self._listUnchecked()
-        quotas = self._allocate(unchecked['stratum'].value_counts().to_dict())
-        order = np.random.default_rng(SEED).permutation(len(unchecked))
-        shuffled = unchecked.iloc[order]
-        rank = shuffled.groupby('stratum').cumcount()
-        picked = shuffled[rank < shuffled['stratum'].map(quotas)]
-        batch = np.arange(len(picked)) // BATCH_SIZE + 1
-        sample = picked.assign(batch=batch)[list(SAMPLE_COLUMNS)]
+        sample = drawSample(unchecked, STRATA, SAMPLE_SIZE, SEED)[list(SAMPLE_COLUMNS)]
         sample.to_csv(self.survey / 'sample.csv', index=False, quoting=csv.QUOTE_ALL)
         print(f'draw: {len(sample)} rows of {len(unchecked)}, seed {SEED}')
 
@@ -126,20 +209,6 @@ class Verifier:
         unchecked = rows[candidate & (rows['verified'] != 'hand')]
         return unchecked.assign(stratum=unchecked['tier'] + '/' + unchecked['verified'])
 
-    @staticmethod
-    def _allocate(sizes: dict[str, int]) -> dict[str, int]:
-        """`SAMPLE_SIZE` rows in proportion to stratum size by largest remainder (Hamilton's
-        method), ties to frame order."""
-        strata = [f'{t}/{v}' for t in TIERS for v in VERIFIED if f'{t}/{v}' in sizes]
-        total = sum(sizes.values())
-        quotas = {s: SAMPLE_SIZE * sizes[s] // total for s in strata}
-        remainders = {s: SAMPLE_SIZE * sizes[s] % total for s in strata}
-        left = SAMPLE_SIZE - sum(quotas.values())
-        largest = sorted(strata, key=remainders.get, reverse=True)  # stable: frame order on ties
-        for stratum in largest[:left]:
-            quotas[stratum] += 1
-        return quotas
-
     # ---------------------------------------------------------------------------------
     # handoff: a batch -> its rows -> one section per row
     # ---------------------------------------------------------------------------------
@@ -147,10 +216,10 @@ class Verifier:
         """One batch as Markdown for Alex's check in the browser: page and download URLs, never
         a local path."""
         rows = self._readBatch(batch)
-        sources = readFrame(self.registry).sources
+        links = Links(self.registry, HERE)  # the survey's deposits, whichever --survey
         sections = []
         for number, row in enumerate(rows, start=1):
-            sections.append(self._renderSection(number, row, sources[row['source']]))
+            sections.append(self._renderSection(number, row, links))
         return HANDOFF_HEAD.format(batch=batch, n=len(sections)) + ''.join(sections)
 
     def _readBatch(self, batch: int) -> list[dict]:
@@ -164,44 +233,15 @@ class Verifier:
         with_files = rows.merge(manifest, on=['source', 'object'], validate='many_to_one')
         return with_files.to_dict('records')
 
-    def _renderSection(self, number: int, row: dict, source: Source) -> str:
-        page, download = self._resolveUrls(row, source)
+    def _renderSection(self, number: int, row: dict, links: Links) -> str:
+        page, download = links.resolveUrls(row['source'], row['object'], row['file'])
         heading = (
             f'{row["source"]} · {row["object"]} · model {row["model_index"]} ({row["stratum"]})'
         )
         reading = ''.join(f'- {field}: {row[field] or "—"}\n' for field in READING)
-        help_page = (self.registry / 'help' / row['source'] / f'{row["object"]}.txt').read_text()
-        details = (
-            f'<details><summary>help page</summary>\n\n~~~~\n{help_page}\n~~~~\n\n</details>\n'
-        )
-        links = f'- page: {page}\n- download: {download} (file `{row["file"]}`)\n'
-        return f'\n## {number}. {heading}\n\n{links}{reading}\n{details}'
-
-    @staticmethod
-    def _resolveUrls(row: dict, source: Source) -> tuple[str, str]:
-        """The source's page and the object's file at the pin. GitHub's CRAN mirror tags every
-        package version; base R's objects sit in the R source tarball under
-        src/library/datasets."""
-        file = row['file']
-        if source.kind == 'cran' and source.name == 'datasets':
-            page = f'https://stat.ethz.ch/R-manual/R-patched/library/datasets/html/{row["object"]}.html'
-            major = source.pin.split('.')[0]
-            return page, f'https://cran.r-project.org/src/base/R-{major}/R-{source.pin}.tar.gz'
-        if source.kind == 'cran':
-            page = f'https://cran.r-project.org/package={source.name}'
-            return page, f'https://github.com/cran/{source.name}/blob/{source.pin}/{quote(file)}'
-        if source.kind == 'git':
-            tree = f'{source.name}/tree/{source.pin}/{quote(posixpath.dirname(file))}'
-            return tree, f'{source.name}/blob/{source.pin}/{quote(file)}'
-        return Verifier._resolvePage(row['source']), source.name
-
-    @staticmethod
-    def _resolvePage(label: str) -> str:
-        prefixes = [prefix for prefix in PAGES if label.startswith(prefix)]
-        if not prefixes:
-            raise KeyError(f'url source {label!r} has no page; add its prefix to PAGES')
-        prefix = prefixes[0]
-        return PAGES[prefix].format(rest=label.removeprefix(prefix))
+        details = renderHelpPage(self.registry, row['source'], row['object'])
+        urls = f'- page: {page}\n- download: {download} (file `{row["file"]}`)\n'
+        return f'\n## {number}. {heading}\n\n{urls}{reading}\n{details}'
 
     # ---------------------------------------------------------------------------------
     # agree: sample and registry -> fields that stood -> shares per pool
