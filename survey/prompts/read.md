@@ -51,6 +51,8 @@ File the object in the excluded shard with its reason when:
      as its expression of the columns (`ave(IQ, class)`).
 5. **Ignore** row ids, weights, offsets, alternate responses, derived columns and field
    coordinates (`row`, `col`, latitude). An offset stays in the formula as `offset(log(area))`.
+   Coordinates that identify one plot observed on several occasions on the same land are the
+   grouping factor `row:col`.
 6. **Types the file cannot carry**, for covariates only. Text, Excel and JSON: `categorical`,
    `ordered` or `continuous` in `types` as documented. R, Stata and SPSS: only `ordered`
    factors, and `categorical` for a numeric column the model wraps in `factor()`.
