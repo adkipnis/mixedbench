@@ -100,7 +100,7 @@ fitModel <- function(table, input) {
 describeFit <- function(model, table, family) {
   estimates <- fixef(model)
   errors <- sqrt(diag(as.matrix(vcov(model))))
-  fixed <- list()
+  fixed <- setNames(list(), character())  # named, so that no fixed effect writes `{}`
   for (name in names(estimates)) {
     fixed[[name]] <- c(estimates[[name]], errors[[name]])
   }
