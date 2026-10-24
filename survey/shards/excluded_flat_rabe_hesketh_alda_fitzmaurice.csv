@@ -1,0 +1,2 @@
+"source","object","reason","detail"
+"rabe_hesketh","scotmap.dta","response missing or undocumented","Second reading of a flat table: regid (Region identifier, with regcode) repeats over the lon and lat vertices of each region's boundary polygon, so rows repeat within region, but the table is the boundary map of the Scottish lip-cancer regions and holds no response; lon and lat are coordinates."
