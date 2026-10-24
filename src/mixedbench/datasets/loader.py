@@ -20,13 +20,12 @@ a pinned Source
 from __future__ import annotations
 
 import hashlib
-import shutil
 import ssl
 import tarfile
+import tempfile
 import time
 import urllib.error
 import urllib.request
-import uuid
 import zipfile
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
@@ -189,9 +188,10 @@ class Loader:
         """Writes beside `file`, then renames it into place:
         a concurrent load reads the whole file or none."""
         file.parent.mkdir(parents=True, exist_ok=True)
-        partial = file.with_name(f'{file.name}.{uuid.uuid4().hex}.partial')
-        partial.write_bytes(data)
-        partial.replace(file)
+        with tempfile.TemporaryDirectory(dir=file.parent) as scratch:
+            partial = Path(scratch) / file.name
+            partial.write_bytes(data)
+            partial.replace(file)
 
     def _verify(self, file: Path, checksum: str | None) -> None:
         """Once per file and loader: every manifest load passes through its source's download
@@ -208,19 +208,19 @@ class Loader:
     def _extract(archive: Path, tree: Path) -> None:
         """Extracts beside `tree`, then renames it into place:
         a concurrent load lists the whole tree or none."""
-        partial = tree.with_name(f'{tree.name}.{uuid.uuid4().hex}.partial')
-        if archive.suffix.lower() == '.zip':
-            with zipfile.ZipFile(archive) as z:
-                z.extractall(partial)
-        else:
-            with tarfile.open(archive) as t:
-                t.extractall(partial, filter='data')
-        try:
-            partial.rename(tree)
-        except OSError:  # a non-empty tree is in place: another load renamed its copy first
-            if not tree.exists():
-                raise
-            shutil.rmtree(partial)
+        with tempfile.TemporaryDirectory(dir=tree.parent) as scratch:
+            partial = Path(scratch) / tree.name
+            if archive.suffix.lower() == '.zip':
+                with zipfile.ZipFile(archive) as z:
+                    z.extractall(partial)
+            else:
+                with tarfile.open(archive) as t:
+                    t.extractall(partial, filter='data')
+            try:
+                partial.rename(tree)
+            except OSError:  # a non-empty tree is in place: another load renamed its copy first
+                if not tree.exists():
+                    raise
 
     # ------------------------------------------------------------------------------------------
     # tree -> files -> objects
