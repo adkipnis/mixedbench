@@ -10,7 +10,7 @@ import pytest
 from columns import COLUMN_COLUMNS
 from dimensions import DIMENSION_COLUMNS
 from fits import FIT_COLUMNS
-from flat import SCREEN_COLUMNS
+from flat import FLAT_COLUMN_COLUMNS, FLAT_COLUMNS, SCREEN_COLUMNS
 from groups import COLUMN_FACTOR_COLUMNS
 from mixedbench.frequentist import Status
 from mixedbench.registry.row import Family, ResponseType, Verified
@@ -35,6 +35,8 @@ MEASURED_COLUMNS = {
     'column_factors': COLUMN_FACTOR_COLUMNS,
     'factor_pairs': FACTOR_PAIR_COLUMNS,
     'fits': FIT_COLUMNS,
+    'flat': FLAT_COLUMNS,
+    'flat_columns': FLAT_COLUMN_COLUMNS,
 }
 
 
