@@ -28,7 +28,10 @@ documentation's words for them.
   evidence then names.
 - `hidden grouping`: a column indexes a unit the rows repeat within, a subject, plot, school,
   site or wave with two or more rows each, whether or not the documentation fits a model with
-  it. It is a grouping factor the first reading missed.
+  it. It is a grouping factor the first reading missed. A grouping factor the documentation
+  does not fit needs at least five levels (Harrison et al. 2018) sampled from a larger
+  population (Bolker et al. 2009); fewer levels, or a few exhaustive ones (a city's boroughs,
+  a country's regions), make a design factor.
 - `flat`: everything else. No documented model fits the table with a random effect and no
   column indexes a unit the rows repeat within. A design factor of fixed levels (treatment,
   dose, sex), a field coordinate, a count and an id with one row per unit are no grouping
