@@ -136,6 +136,19 @@ def test_a_rank_deficient_design_has_an_infinite_condition_index(herds, rows):
     assert dimension['condition_all'] == np.inf
 
 
+@pytest.mark.parametrize(
+    ('x', 'condition'),
+    [([0.0, 0.0, 0.0, 1.0], 1.7321), ([2.0, 2.0, 2.0, 2.0], np.inf)],
+    ids=['gram-eigenvalues-3/2-and-1/2', 'a-constant-repeats-the-intercept'],
+)
+def test_the_condition_index_of_a_design_frame(x, condition):
+    """The flat pass builds designs that have no registry row, so the index takes the design
+    itself. Scaled to unit length, the intercept and x = (0, 0, 0, 1) have the Gram matrix
+    [[1, 1/2], [1/2, 1]], whose eigenvalues 3/2 and 1/2 give the index √3."""
+    design = pd.DataFrame({'Intercept': [1.0] * 4, 'x': x})
+    assert dimensions.computeConditionIndex(design) == condition
+
+
 def test_no_condition_index_where_the_contract_builds_no_problem(herds, rows):
     """The contract refuses a categorical response, so neither design exists. A column missing
     on every measured row leaves no row complete in every column: only the documented design
