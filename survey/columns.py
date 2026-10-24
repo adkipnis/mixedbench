@@ -3,9 +3,9 @@
 pipeline:
 ---------
 a measurer
--> each column's largest rank correlation         measureMaxAbsRho
--> its type, level, missing share and membership  measureColumn
--> the quirk statistics its kind defines          measureShape
+-> each column's largest rank correlation                       measureMaxAbsRho
+-> its type, level and membership                               measureColumn
+-> its missing share and the quirk statistics its kind defines  measureShape
 """
 
 from __future__ import annotations
@@ -43,7 +43,7 @@ def codeColumn(values: pd.Series, kind: str) -> pd.Series:
 
 
 # =====================================================================================
-# columns.csv: rank correlations -> type, level and missing share -> quirk statistics
+# columns.csv: rank correlations -> type and level -> missing share and quirk statistics
 # =====================================================================================
 def measure(measurer: Measurer) -> list[dict]:
     rho = measureMaxAbsRho(measurer.table, measurer.column_types)
@@ -76,22 +76,23 @@ def measureColumn(measurer: Measurer, column: str) -> dict:
         'K': levels,
         'level': 'group' if constant_within else 'within',
         'constant_within': ';'.join(constant_within),
-        'missing_share': round(float(values.isna().mean()), 4),
         'in_model': 'yes' if column in measurer.row.covariates else 'no',
-    } | measureShape(values.dropna(), kind)
+    } | measureShape(values, kind)
 
 
 def measureShape(values: pd.Series, kind: str) -> dict:
-    """The statistics the column's kind defines, over its present values."""
-    if values.empty:
-        return {}
-    shape = {'unique_share': round(values.nunique() / len(values), 4)}
+    """The missing share, then the statistics the column's kind defines over its present values."""
+    shape = {'missing_share': round(float(values.isna().mean()), 4)}
+    observed = values.dropna()
+    if observed.empty:
+        return shape
+    shape['unique_share'] = round(observed.nunique() / len(observed), 4)
     if kind == 'continuous':
-        shape |= measureMoments(values)
+        shape |= measureMoments(observed)
     if kind in ('continuous', 'ordered'):
-        shape |= measureBounds(values, kind)
+        shape |= measureBounds(observed, kind)
     if kind != 'continuous':
-        counts = values.value_counts()
+        counts = observed.value_counts()
         present = counts[counts > 0]  # a categorical may carry unused levels
         shape['rare_level_share'] = round(float(present.min() / present.sum()), 4)
     return shape
