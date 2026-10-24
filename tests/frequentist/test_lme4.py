@@ -170,6 +170,14 @@ def test_a_generalized_fit_has_no_residual_sd_and_adds_the_family_variance(
 
 
 @pytest.mark.lme4
+def test_a_model_without_fixed_effects_has_none_and_no_fixed_variance(tmp_path):
+    """`y ~ 0 + (1 | g)` leaves the mean to the groups, as rethinking's Prussian horse kicks do."""
+    fitted = fit(balancedOneWay(), 'y ~ 0 + (1 | g)', 'gaussian', tmp_path, TIMEOUT)
+
+    assert (fitted.status, fitted.fixed, fitted.sigma2_fixed) == ('ok', {}, 0)
+
+
+@pytest.mark.lme4
 def test_a_binary_response_of_text_fits_as_its_0_1_coding(tmp_path):
     """A source may store a binary response as `N` and `Y`, which glmer takes only as a factor."""
     coded = generalized('bernoulli')
