@@ -393,6 +393,18 @@ def test_a_merge_leaves_fits_csv_as_the_last_fits_pass_wrote_it(merger):
     assert (merger.registry / 'fits.csv').read_bytes() == fits
 
 
+def test_a_merge_leaves_the_flat_files_as_the_last_flat_pass_wrote_them(merger):
+    """The flat pass loads a thousand tables and refuses while a flagged one has no verdict,
+    so a shard merged during the second reading neither reruns it nor fails (#115)."""
+    written = {}
+    for name in ('flat.csv', 'flat_columns.csv'):
+        written[name] = f'"source","object"\n"pens","{name}"\n'.encode()
+        (merger.registry / name).write_bytes(written[name])
+    mergeShard(merger, FIXTURES / 'registry_herds.csv')
+    for name, text in written.items():
+        assert (merger.registry / name).read_bytes() == text
+
+
 def test_the_measure_script_writes_what_the_merge_writes(merger):
     """`measure.py` reruns the merge's measure pass without a shard to merge, so a changed
     statistic reaches the whole registry in one run (#98). It loads from the cache the merge
