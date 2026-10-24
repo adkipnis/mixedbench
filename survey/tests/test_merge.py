@@ -417,3 +417,38 @@ def test_every_merge_names_each_registry_objects_file_in_the_manifest(merger):
     assert rows == [
         {'source': 'herds', 'object': 'herds.csv', 'file': 'herds.csv', 'sha256': sha256, 'size': str(len(herds))}
     ]  # fmt: skip
+
+
+VERDICT = {'source': 'cattle', 'object': 'cattle.csv', 'verdict': 'wide', 'evidence': 'calvings as columns'}  # fmt: skip
+
+
+def test_a_verdict_shard_merges_into_the_survey_with_its_tier_filled_in(splitMerger):
+    """The second reading's verdicts are survey bookkeeping, beside dropped.csv; a verdict
+    decides its flat table and moves the object out of no file."""
+    merger = splitMerger
+    mergeShard(merger, FIXTURES / 'excluded_cattle.csv')
+    mergeShard(merger, writeShard(merger.survey / 'shards' / 'flat_second.csv', [VERDICT]))
+    assert readRows(merger.survey / 'flat_verdicts.csv') == [VERDICT | {'tier': 'R'}]
+    assert [r['object'] for r in readRows(merger.registry / 'excluded.csv')] == ['cattle.csv']
+
+
+@pytest.mark.parametrize(
+    'edit, column, problem',
+    [
+        ({'verdict': 'grouped'}, 'verdict', 'not allowed'),
+        ({'evidence': ''}, 'evidence', 'required'),
+        ({'object': 'cattle.old'}, 'object', 'not in registry.csv or excluded.csv'),
+    ],
+)
+def test_a_verdict_outside_the_vocabulary_or_on_an_unknown_object_is_refused_naming_the_row(
+    merger, edit, column, problem
+):
+    """Checked as a dropped shard is: the glossary's three verdicts, a line of evidence each,
+    and an object the census holds."""
+    mergeShard(merger, FIXTURES / 'excluded_cattle.csv')
+    verdict = VERDICT | edit
+    problems = refusal(merger, writeShard(merger.survey / 'shards' / 'flat_bad.csv', [verdict]))
+    assert problems[['line', 'key', 'column', 'problem']].values.tolist() == [
+        [2, f'cattle {verdict["object"]}', column, problem]
+    ]
+    assert not (merger.survey / 'flat_verdicts.csv').exists()
