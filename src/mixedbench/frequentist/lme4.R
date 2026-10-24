@@ -39,14 +39,12 @@ UNFITTED <- list(
 # =====================================================================================
 
 # a categorical column is read as text, then coded by its levels;
-# a value that is no level would be lost as a missing value.
-# Other text is read as a factor, as a formula's terms take it: glmer takes a text response only so
+# a value that is no level would be lost as a missing value
 readTable <- function(dir, input) {
   columns <- names(input$levels)
   classes <- setNames(rep("character", length(columns)), columns)
   table <- read.csv(
-    file.path(dir, "table.csv"), check.names = FALSE, colClasses = classes, na.strings = "",
-    stringsAsFactors = TRUE
+    file.path(dir, "table.csv"), check.names = FALSE, colClasses = classes, na.strings = ""
   )
   for (column in columns) {
     levels <- unlist(input$levels[[column]])
@@ -91,6 +89,10 @@ fitWithin <- function(table, input) {
 
 fitModel <- function(table, input) {
   formula <- as.formula(input$formula)
+  # glmer takes a text response only as a factor; other text stays text, which `==` compares
+  for (column in intersect(all.vars(formula[[2]]), names(table))) {
+    if (is.character(table[[column]])) table[[column]] <- factor(table[[column]])
+  }
   if (input$family == "gaussian") {
     return(lmer(formula, data = table))
   }
