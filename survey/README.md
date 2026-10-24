@@ -24,6 +24,11 @@ deposits of the practice survey's papers, `O` open tabular repositories):
 6. **Checks.** A blind second reading of the `medium` and `low` rows, a spot check per tier and
    two hand samples against [ADR 0002](../docs/adr/0002-registry-suite-versioning-licenses.md)'s
    bar; the outcomes are in [`HISTORY.md`](HISTORY.md).
+7. **Flat pass.** `flat.py screen` derives the frame of flat tables from the exclusions filed
+   `no grouping structure` and flags a read table whose filing line says wide, repeat, occasion
+   or visit, or that has a repeated column with an id-like name. Agents give each flagged table
+   a verdict by [`prompts/flat.md`](prompts/flat.md)
+   ([ADR 0007](../docs/adr/0007-flat-sample.md)).
 
 ```
 uv run python survey/pull.py [--tiers E O]
@@ -31,10 +36,11 @@ uv run python survey/merge.py survey/shards/<shard>.csv
 uv run python survey/measure.py
 uv run python survey/fits.py run <index>
 uv run python survey/fits.py collect
+uv run python survey/flat.py screen
 uv run python survey/mirror.py --tag mirror-<n>
 ```
 
-`pull.py`, `merge.py`, `measure.py` and `fits.py` take `--registry DIR` and `--survey DIR`
+`pull.py`, `merge.py`, `measure.py`, `fits.py` and `flat.py` take `--registry DIR` and `--survey DIR`
 (default `registry/`, `survey/`), `fits.py` also `--dir DIR` for its run directories (default
 `fits/`). `pull.py --tiers` pulls only those tiers; the others keep their rows.
 
@@ -49,7 +55,7 @@ uv run python survey/mirror.py --tag mirror-<n>
 | `dimensions.py`, `columns.py`, `groups.py`, `pairs.py` | one module per measured file |
 | `SUMMARY.template.md` | the digit-free template of `registry/SUMMARY.md` |
 | `prompts/read.md` | the reading agent's brief |
-| `shards/<table>_<label>.csv` | one shard per reading run; `table` ∈ `registry`, `excluded`, `duplicates`, `dropped` |
+| `shards/<table>_<label>.csv` | one shard per reading run; `table` ∈ `registry`, `excluded`, `duplicates`, `dropped`, `flat` (the verdicts) |
 | `candidates.csv`, `duplicates.csv`, `dropped.csv` | the bookkeeping (below) |
 | `deposits.csv`, `deposit_files.csv` | Tier D's frame: the drawn papers and every file their deposits list |
 | `sample.csv`, `agreement.csv` | the second hand sample (#61): 100 candidates not yet hand-checked with their readings at draw time, and the share of readings that stood per field |
@@ -81,3 +87,14 @@ The merge's files:
 - `dropped.csv`: key `source`, `object`; agent columns `source`, `object`, `reason`, plus
   `tier`. A dropped object leaves `registry.csv` and `excluded.csv` until a later shard re-files
   it. One the loader no longer enumerates is deleted from every file instead (#14).
+
+`flat_screen.csv`, the second reading's worklist, rewritten whole by `flat.py screen`:
+
+- Key `source`, `object`; one row per table of the flat frame in frame order, with `tier` and
+  `stratum`: `read` where the pre-screen passed and an agent filed it, `prescreened` where the
+  pre-screen stopped at `no repeated column`.
+- `words`: the filing line's words that say wide, repeat, occasion or visit. `id_columns`: the
+  columns that could index groups and are named like an id. `integer_columns`: those of more
+  than ten integer levels, which flag nothing. Lists are `;`-separated; a prescreened table has
+  none.
+- `flagged`: `yes` where `words` or `id_columns` is not empty.
