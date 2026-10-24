@@ -489,6 +489,18 @@ reading's open disagreements, four to eight per tier.
 - The second pass refitted all 620 rows, every task with its record: 388 `ok`, 77 `warning`,
   65 `singular`, 64 `error`, 26 `no_formula`, no `timeout`. No σ², ICC or R² of a row estimated
   in both passes moved.
+- The 64 errors left were read for patches a user would apply. `shards/registry_fits_2.csv`
+  wrote out 13 cells: goodwin's `week` and villemereuil's `laydate` from their date text,
+  selfPacedReadingHeid's `PC1` as its help page computes it, LGAclaims' covariates scaled, the
+  error strata of rm_anova2 and Hox's MetaResp equation in lme4 syntax, and three names in rows
+  that stay refused (verberk, barbosa). `fits_preparation.csv` lists the documented subsets of
+  police and timmer, ARM's one zero-exposure row and thailand's frequency weights.
+- Left as they fail: english (rms splines and an inferred random effect), polls (state-level
+  files the table lacks), kleisner (shape scores built from landmarks), mortality and SibDiv
+  (a person-period expansion), martinez model 2 (no column identified for disengagement),
+  pilots.dat (an aggregate the Ch.19 row carries), depression_pp (fails rescaled too).
+- Their 17 rows refitted: 398 `ok`, 79 `warning`, 67 `singular`, 52 `error`, 24 `no_formula`.
+  No σ², ICC or R² of another row moved.
 
 ## Reading rulings (m3#22 to #15)
 
