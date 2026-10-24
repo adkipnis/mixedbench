@@ -208,6 +208,21 @@ Per registry object the file it loads from, with its sha256 and size; written by
   the residual).
 
 
+## The flat sample
+
+The survey's tables filed `no grouping structure`, screened and read again by `survey/flat.py`
+([ADR 0007](adr/0007-flat-sample.md)).
+
+- `flat_verdicts.csv`, in `survey/`: key `source`, `object`; agent columns `source`, `object`,
+  `verdict`, `evidence`; the merge adds `tier`. A verdict decides its table whatever the screen
+  said, from the second reading or a hand sample's correction:
+  - `flat`: no documented model fits the table with a random effect and no column indexes a unit
+    the rows repeat within; the table is in the flat sample.
+  - `wide`: grouped data stored wide, its repeated measures as columns; the table is out of the
+    sample and on the list for a long form.
+  - `hidden grouping`: a column indexes a unit the rows repeat within; the table is out of the
+    sample and re-filed into the registry by a dropped and a registry shard.
+
 ## `quantiles.yaml` and `SUMMARY.md`
 
 - Per axis `n`, `min`, `p5`, `p10`, `p50`, `p90`, `p95`, `max`, pooled, per tier and without
