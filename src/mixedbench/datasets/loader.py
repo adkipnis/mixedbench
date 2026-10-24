@@ -22,6 +22,7 @@ from __future__ import annotations
 import hashlib
 import ssl
 import tarfile
+import tempfile
 import time
 import urllib.error
 import urllib.request
@@ -156,8 +157,7 @@ class Loader:
         filename = source.file or Path(urlparse(urls[0]).path).name
         file = self._dir(source) / filename
         if not file.exists():
-            file.parent.mkdir(parents=True, exist_ok=True)
-            file.write_bytes(self._fetchFirst(source, urls))
+            self._write(file, self._fetchFirst(source, urls))
         self._verify(file, source.checksum)
         return file
 
@@ -183,6 +183,16 @@ class Loader:
                 return data
         raise FileNotFoundError(f'{source.name} {source.pin}: not at {", ".join(urls)}')
 
+    @staticmethod
+    def _write(file: Path, data: bytes) -> None:
+        """Writes beside `file`, then renames it into place:
+        a concurrent load reads the whole file or none."""
+        file.parent.mkdir(parents=True, exist_ok=True)
+        with tempfile.TemporaryDirectory(dir=file.parent) as scratch:
+            partial = Path(scratch) / file.name
+            partial.write_bytes(data)
+            partial.replace(file)
+
     def _verify(self, file: Path, checksum: str | None) -> None:
         """Once per file and loader: every manifest load passes through its source's download
         again."""
@@ -195,13 +205,22 @@ class Loader:
         self._verified.add((file, checksum))
 
     @staticmethod
-    def _extract(archive: Path, dir: Path) -> None:
-        if archive.suffix.lower() == '.zip':
-            with zipfile.ZipFile(archive) as z:
-                z.extractall(dir)
-        else:
-            with tarfile.open(archive) as t:
-                t.extractall(dir, filter='data')
+    def _extract(archive: Path, tree: Path) -> None:
+        """Extracts beside `tree`, then renames it into place:
+        a concurrent load lists the whole tree or none."""
+        with tempfile.TemporaryDirectory(dir=tree.parent) as scratch:
+            partial = Path(scratch) / tree.name
+            if archive.suffix.lower() == '.zip':
+                with zipfile.ZipFile(archive) as z:
+                    z.extractall(partial)
+            else:
+                with tarfile.open(archive) as t:
+                    t.extractall(partial, filter='data')
+            try:
+                partial.rename(tree)
+            except OSError:  # a non-empty tree is in place: another load renamed its copy first
+                if not tree.exists():
+                    raise
 
     # ------------------------------------------------------------------------------------------
     # tree -> files -> objects
@@ -276,9 +295,8 @@ class Loader:
             return self.tree(source) / row.file
         file = self._dir(source) / 'files' / row.file
         if not file.exists():
-            file.parent.mkdir(parents=True, exist_ok=True)
             revision = f'https://raw.githubusercontent.com/{self._repo(source)}/{source.pin}'
-            file.write_bytes(self._fetchFirst(source, [f'{revision}/{quote(row.file)}']))
+            self._write(file, self._fetchFirst(source, [f'{revision}/{quote(row.file)}']))
         return file
 
     @staticmethod

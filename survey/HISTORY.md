@@ -462,6 +462,53 @@ reading's open disagreements, four to eight per tier.
   refused rows are unchanged. It is a patch, 1.0.7, as for #57: no suite is frozen before
   release 1.1.
 
+## Fits pass (#111, 2026-10-24)
+
+- The 620 registry rows with a continuous, binary or count response were fitted on the cluster's
+  CPU nodes, one task each, with R 4.6.1 and lme4 2.0-6 (`survey/fits.sbatch`), and collected
+  into `registry/fits.csv`, `quantiles.yaml` and `SUMMARY.md`. The top-level keys of
+  `quantiles.yaml` are unchanged.
+- The first pass ended 119 fits in `error`. By cause:
+  - 54 formula cells failed on a remark after the formula, a column named otherwise than in the
+    table, or a variable the source derives from columns. `shards/registry_fits.csv` rewrote them
+    in `formula` and `notes` alone (ADR 0006, amended 2026-10-24). Police still fails: one of its
+    900 rows, outside the documented subset `crime == 1`, has no arrest, so its offset is −Inf.
+  - 2 fitter bugs. `mmList` ordered a fit's terms by the columns as loaded, where an integer
+    `a:b` is R's sequence, so a slope term met another term's covariance (veneer), and 17 fits
+    warned "numerical expression has N elements"; `lme4.R` now reads each term's columns off
+    Zt. glmer refused a `Y`/`N` response (Beavers2). A third, a model without fixed effects,
+    surfaced in the rewritten cells (PrussianHorses).
+  - 2 fits lme4 ends on valid input (LGAclaims, depression_pp).
+  - 61 documented models lme4 refuses (survival, censored, heteroscedastic, nonlinear, smooth,
+    zero-inflated or structured-covariance models) or that need what the table lacks (a principal
+    component, a date string, a phylogeny, the log of a zero), recorded as they fail.
+- 83 tasks of the first array ended without a record. 23 ran on one node whose `/tmp` R could
+  not use, and `fits.sbatch` now sets `TMPDIR` beside the run directories. The rest listed a
+  cache tree or read a file another task was still writing, and the loader now renames both into
+  place whole.
+- The second pass refitted all 620 rows, every task with its record: 388 `ok`, 77 `warning`,
+  65 `singular`, 64 `error`, 26 `no_formula`, no `timeout`. No σ², ICC or R² of a row estimated
+  in both passes moved.
+- The 64 errors left were read for patches a user would apply. `shards/registry_fits_2.csv`
+  wrote out 13 cells: goodwin's `week` and villemereuil's `laydate` from their date text,
+  selfPacedReadingHeid's `PC1` as its help page computes it, LGAclaims' covariates scaled, the
+  error strata of rm_anova2 and Hox's MetaResp equation in lme4 syntax, and three names in rows
+  that stay refused (verberk, barbosa). `fits_preparation.csv` lists the documented subsets of
+  police and timmer, ARM's one zero-exposure row and thailand's frequency weights.
+- Left as they fail: english (rms splines and an inferred random effect), polls (state-level
+  files the table lacks), kleisner (shape scores built from landmarks), mortality and SibDiv
+  (a person-period expansion), martinez model 2 (no column identified for disengagement),
+  pilots.dat (an aggregate the Ch.19 row carries), depression_pp (fails rescaled too).
+- Their 17 rows refitted: 398 `ok`, 79 `warning`, 67 `singular`, 52 `error`, 24 `no_formula`.
+  No σ², ICC or R² of another row moved.
+- The debloat found twin_hay fitted on its 40 response patterns, every component 0:
+  `fits_preparation.csv` lacked the `freq` weight that `suite/admit.py` applies. `freq` counts
+  twin pairs and stands on both members of a pair, so `frequency_factor` makes each copy of a pair
+  a pair of its own. Refitted on 7,614 rows over 3,807 pairs, twin_hay is `ok` with an ICC of
+  0.29, and no other row of `fits.csv` moved.
+- A one-off check before the merge found every run on its row's current formula and every
+  prepared row's run on the table its preparation makes now.
+
 ## Reading rulings (m3#22 to #15)
 
 The rulings [`prompts/read.md`](prompts/read.md) does not carry, from the agents' `RULE GAP` notes and Alex's checks, each with an example

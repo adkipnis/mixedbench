@@ -1,5 +1,5 @@
 ---
-status: accepted
+status: accepted, amended 2026-10-23
 date: 2026-10-20
 ---
 
@@ -25,7 +25,8 @@ be computed here, from the cached tables, and shipped in a pinned release. Grill
 - Rejected: one long file (key, statistic, value), which hides the keys in a column and needs
   a pivot on every read.
 - Decision: every column `columns.csv` lists is measured, with `in_model` kept, over the rows
-  with a measured response; the response is not, since it is the outcome's business.
+  with a measured response; the response's documented model is fitted (the amendment below),
+  since its R², ICC and sd(η) are what TabDGP's outcome node must cover.
 - Why: filtering to the documented covariates is the consumer's one-line choice; the reverse
   is a rerun.
 
@@ -62,3 +63,53 @@ be computed here, from the cached tables, and shipped in a pinned release. Grill
   release names a suite freeze (ADR 0002, amended 2026-10-20).
 - Decision: which quirks real tables show strongly enough to earn a generator axis is TabDGP's
   reading of these files, never a decision taken here.
+
+## Amendment 2026-10-23: the response's documented model, fitted
+
+- Decision: a fifth measured file, `fits.csv`, keyed per grouping factor like
+  `dimensions.csv`, holds per registry row with a continuous, binary or count response the
+  variance components, R² and sd(η) of its documented model, and per factor its random
+  variance and ICC, as [`docs/registry.md`](../registry.md) defines them. The model is the
+  registry's `formula` as written, offsets and transforms included, fitted by lme4 on the typed
+  table with the family the contract's rule gives the response type; the registry's `family`
+  departure rides beside the fit as a flag.
+- Why the documented model and not the contract's design: the design carries no offset or
+  transform, and R², ICC and sd(η) are scale-free, so the documented model is the fact TabDGP's
+  outcome node must cover.
+- Why lme4 and one grammar: one fitter is one seam. A formula lme4 refuses (an nlme
+  heteroscedastic fit, a nonlinear mean, a smooth, a censored likelihood) is recorded as it
+  fails, since each would need a fitter of its own with an R² of its own; a model documented in
+  words, with no `|` term, is recorded without a fit.
+- Decision: one `status` per fit, the worst that applies of `ok`, `singular`, `warning`,
+  `timeout`, `error`, `no_formula`, with the messages kept beside it; the components are
+  written for the first three. A fit ends at one hour, recorded as `timeout`, never skipped.
+- Why one word: the consumer filters on it, and the decision track (ADR 0005) scores the same
+  failures, so the vocabulary is shared from the start.
+- Decision: the fitter lives in the package, `mixedbench.frequentist`, with its R script beside
+  it as `references` keeps brms: one fixed set back per fit (the status, the fixed effects with
+  their Wald standard errors, the variance components, the per-factor variance of Johnson 2014,
+  the fixed predictor's variance, sd(η) and the distribution variance of Nakagawa, Johnson and
+  Schielzeth 2017). The survey computes R² and ICC from it; the decision track fits the
+  contract's problems through the same seam.
+- Why: the alternative, a fitter in the survey and another in the decision track, repeats the
+  status capture, the family map, the control and the pins three times, with the K-fold
+  experiment's.
+- Decision: the fits are measured by a cluster pass, not by the merge; a merge leaves
+  `fits.csv` as it is, and `survey/HISTORY.md` dates each pass with its R and lme4 versions.
+- Rejected: fitting the prose rows by hand-written nonlinear models (typed, and the
+  decomposition assumes a linear predictor); `sd_eta_fixed`, the root of `sigma2_fixed`.
+
+## Amendment 2026-10-24: the formula cell holds the formula alone
+
+- Decision: a remark in the `formula` cell moves to `notes`, a column is named as the table
+  names it, and a variable the source derives from columns is written as its expression
+  (`I(age - 12)`, `ave(IQ, class)`), so that the cell is the model lme4 fits. A model part lme4
+  cannot express (a residual structure, a censored or zero-inflated likelihood, a pedigree)
+  stays in the cell, and its fit is recorded as it fails.
+- Why: the first pass ended 54 fits on a remark or a name, not on their model, and 13 more
+  cells needed a date, a principal component or a scaling written out.
+- Decision: a subset the source fits, or a frequency weight it repeats rows by, is listed in
+  `survey/fits_preparation.csv` and applied before the fit, since a formula cannot carry it.
+  The registry keeps its columns, and the contract its whole table.
+- Decision: 1.0.8 carries these 67 rows, in `formula` and `notes` alone. The contract never
+  reads `formula`, so no hash moves.

@@ -282,6 +282,34 @@ which factor of a nested pair is the superior, the one listed first, second or n
 | factor_a | 103 | 84% |
 | factor_b | 20 | 16% |
 
+## Fits of the documented models
+
+Every registry row with a continuous, binary or count response, its documented model fitted as
+written: the variance components and R² once per row, the ICCs once per grouping factor of the
+fit, over the fits that ended with estimates; the status of every row.
+
+| statistic | n | min | p5 | p10 | p50 | p90 | p95 | max |
+|---|---|---|---|---|---|---|---|---|
+| sigma2_fixed | 544 | 0 | 0 | 0.0002 | 0.6046 | 350.7875 | 3234.4203 | 9170746.8354 |
+| sigma2_random | 544 | 0 | 0 | 0.0082 | 0.9986 | 356.1538 | 3035.9392 | 18651991.7893 |
+| sigma2_residual | 366 | 0.0001 | 0.006 | 0.0251 | 2.316 | 1336.9035 | 6876.6969 | 1451863.8213 |
+| sigma2_distribution | 544 | 0 | 0 | 0 | 0 | 3.2899 | 3.2899 | 5.6401 |
+| sd_eta | 544 | 0 | 0.132 | 0.2276 | 1.3456 | 30.1039 | 86.1292 | 5558.5806 |
+| r2_marginal | 544 | 0 | 0 | 0.0001 | 0.172 | 0.7009 | 0.864 | 0.9999 |
+| r2_conditional | 544 | 0 | 0.0815 | 0.1413 | 0.6181 | 0.9647 | 0.9874 | 0.9999 |
+| q | 728 | 1 | 1 | 1 | 1 | 2 | 2 | 8 |
+| sigma2 | 728 | 0 | 0 | 0.0007 | 0.6064 | 214.4758 | 2177.5672 | 18651991.7893 |
+| icc | 728 | 0 | 0 | 0.0018 | 0.1417 | 0.6079 | 0.7707 | 0.9914 |
+| icc_adjusted | 728 | 0 | 0 | 0.0032 | 0.2399 | 0.8105 | 0.9383 | 0.9983 |
+
+| status | n | share |
+|---|---|---|
+| ok | 399 | 64% |
+| warning | 79 | 13% |
+| singular | 66 | 11% |
+| error | 52 | 8% |
+| no_formula | 24 | 4% |
+
 ## Response, reader and published model
 
 | response type | n | share |

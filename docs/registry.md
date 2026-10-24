@@ -67,7 +67,7 @@ Key `source`, `object`, `model_index`. Agent columns, in order:
 | `random_slopes` | `;`-list of `x\|g` (correlated with the intercept of `g`) and `x\|\|g` (uncorrelated) terms, `x` a covariate and `g` a grouping factor of the row; blank for an intercept-only model (ADR 0001) |
 | `ignore` | `;`-list of columns no model should use: ids, weights, alternate responses, coordinates |
 | `types` | `;`-list of `column=categorical` / `ordered` / `continuous` where the file carries no type, and `ordered` for an R ordered factor; covariates only |
-| `formula` | the documented model verbatim, lme4 syntax where given; a nonlinear model in words |
+| `formula` | the documented model, lme4 syntax where given, its columns named as the table names them and a variable the source derives from columns written as its expression (`I(age - 12)`); a nonlinear model in words; a remark goes to `notes` |
 | `documented_prior` | the prior as the source states it, one line; only on a `published_model` `yes` row |
 | `published_model` | `yes` when a published model specification exists; else `no` |
 | `domain` | `ecology_biology` / `psychology_neuroscience` / `biomedicine` / `social_humanities` / `agriculture` / `education` / `economics` / `industry` / `other` |
@@ -165,6 +165,50 @@ Per registry object the file it loads from, with its sha256 and size; written by
     decimals; blank for a nested pair.
 
 
+## `fits.csv`
+
+- The documented model of each registry row with a `continuous`, `binary` or `count` response:
+  its `formula` as written, offsets and transforms included, fitted by lme4 on the loaded table
+  with the contract's family, `gaussian` by `lmer` (REML), `bernoulli` (logit) and `poisson`
+  (log) by `glmer`. `survey/fits.py` runs the pass on a cluster; a merge leaves the file as it is.
+- A row whose source fits a subset of the table, or repeats each row by a frequency weight, is
+  listed in `survey/fits_preparation.csv` (the subset as a pandas query, the weight's column,
+  the reason); the fit takes those rows, and `n_obs` counts them. A weight that counts the
+  groups of a factor (`frequency_factor`, twin_hay's `pair`) makes each copy of a group a group
+  of its own.
+- Key `source`, `object`, `model_index`, `factor`, with `tier`; a row per grouping factor of the
+  fit, the per-row fields repeated. `factor` is the registry's grouping factor that groups the
+  rows alike, else lme4's name (`factor(year)`, an observation-level `INDEX`); a fit without
+  estimates keeps a row per grouping factor of its registry row.
+- Per row:
+  - `status`, the worst that applies of `ok`, `singular` (lme4's `isSingular`), `warning`,
+    `timeout` (after one hour), `error` and `no_formula` (no `|` term, a model documented in
+    words, not fitted); `message`, every warning and the error joined by `; ` on one line.
+    A `poisson` fit's warnings and error include those of its null model, which gives
+    `sigma2_distribution`.
+  - `seconds`; `n_obs`, the rows the fit used; `family`, the contract's; `family_doc`, the
+    registry's `family`, blank where none.
+  - The variance components on the link scale (Nakagawa, Johnson and Schielzeth 2017), blank
+    unless `status` is `ok`, `singular` or `warning`:
+    - `sigma2_fixed`: the variance over rows of Xβ̂, by n − 1 as performance takes it.
+    - `sigma2_random`: the sum of `sigma2` over the fit's factors.
+    - `sigma2_residual`: σ̂² of a gaussian fit, blank otherwise.
+    - `sigma2_distribution`: 0 for `gaussian`, π²/3 for `bernoulli`, ln(1 + 1/λ) for `poisson`
+      with λ = exp(β̂₀ + σ²₀ / 2) of the model with an intercept and the same random effects,
+      σ²₀ the sum of its random-intercept variances, as performance computes it.
+    - `sd_eta`: the sd over rows of the linear predictor, with the random effects and offsets.
+    - `r2_marginal`, `sigma2_fixed` over the total of the four components; `r2_conditional`,
+      `sigma2_fixed` and `sigma2_random` over the total.
+- Per factor:
+  - `q`: the columns of its random terms, over every term of the factor.
+  - `sigma2`: the mean over rows of z'Σz over its terms (Johnson 2014).
+  - `icc`: `sigma2` over the total; `icc_adjusted`: over the total without `sigma2_fixed`.
+- Four decimals, negatives and `inf` kept, blank where undefined.
+- Unlike performance 0.17.1, `sigma2_random` keeps every term of a factor (performance keeps the
+  first of an uncorrelated `(1 + x || g)`) and the observation-level ones (it moves them into
+  the residual).
+
+
 ## `quantiles.yaml` and `SUMMARY.md`
 
 - Per axis `n`, `min`, `p5`, `p10`, `p50`, `p90`, `p95`, `max`, pooled, per tier and without
@@ -173,8 +217,11 @@ Per registry object the file it loads from, with its sha256 and size; written by
   `d_all` once per registry row; `K` once per documented categorical covariate.
 - A quirk statistic is an axis named as its column, after `K`, counted once per row of its file
   that defines it; `inf` kept.
+- A fit statistic of `fits.csv` is an axis named as its column, after the quirk statistics, a
+  per-row one counted once per registry row and a per-factor one once per row of the file.
 - `shares`: `pair_relation` over the rows of `factor_pairs.csv`; `superior` over its nested
-  pairs, `factor_a` or `factor_b` for the side that holds the superior, `none` when neither does.
+  pairs, `factor_a` or `factor_b` for the side that holds the superior, `none` when neither does;
+  `status` over the registry rows of `fits.csv`.
 - `implied_columns`: the expected design columns of a 9- and a 14-term model (the practice
   survey's p90 and p95 of terms) under the observed categorical share and mean K − 1.
 

@@ -19,7 +19,9 @@ deposits of the practice survey's papers, `O` open tabular repositories):
 4. **Merge.** `merge.py` validates a shard against the row grammar and the table, upserts it,
    folds duplicates, measures, and rewrites the manifest and the summary. A failing shard is
    refused, its rows printed, nothing written.
-5. **Checks.** A blind second reading of the `medium` and `low` rows, a spot check per tier and
+5. **Fits.** `fits.py` fits each documented model by lme4, a cluster array task per row, and
+   collects `fits.csv`; a merge leaves it as it is.
+6. **Checks.** A blind second reading of the `medium` and `low` rows, a spot check per tier and
    two hand samples against [ADR 0002](../docs/adr/0002-registry-suite-versioning-licenses.md)'s
    bar; the outcomes are in [`HISTORY.md`](HISTORY.md).
 
@@ -27,17 +29,22 @@ deposits of the practice survey's papers, `O` open tabular repositories):
 uv run python survey/pull.py [--tiers E O]
 uv run python survey/merge.py survey/shards/<shard>.csv
 uv run python survey/measure.py
+uv run python survey/fits.py run <index>
+uv run python survey/fits.py collect
 uv run python survey/mirror.py --tag mirror-<n>
 ```
 
-`pull.py`, `merge.py` and `measure.py` take `--registry DIR` and `--survey DIR` (default
-`registry/`, `survey/`). `pull.py --tiers` pulls only those tiers; the others keep their rows.
+`pull.py`, `merge.py`, `measure.py` and `fits.py` take `--registry DIR` and `--survey DIR`
+(default `registry/`, `survey/`), `fits.py` also `--dir DIR` for its run directories (default
+`fits/`). `pull.py --tiers` pulls only those tiers; the others keep their rows.
 
 ## Files
 
 | file | content |
 |---|---|
 | `pull.py`, `merge.py`, `measure.py`, `mirror.py` | the scripts: the pull, the merge, the measurement pass, a mirror tag for the loader's fallback copies |
+| `fits.py`, `fits.sbatch` | the fits pass and its cluster array |
+| `fits_preparation.csv` | the rows a source fitted where they are not the whole table: a subset or a frequency weight, read by `fits.py` |
 | `schema.py`, `sources.py`, `help.py`, `summarize.py` | the survey's file contract, the frame, the help pages, the summary |
 | `dimensions.py`, `columns.py`, `groups.py`, `pairs.py` | one module per measured file |
 | `SUMMARY.template.md` | the digit-free template of `registry/SUMMARY.md` |

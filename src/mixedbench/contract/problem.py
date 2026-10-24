@@ -45,6 +45,14 @@ from mixedbench.registry.row import Row, parts
 # what `build` returns or raises, and the records a problem holds
 CONTRACT = int(version('mixedbench').partition('.')[0])  # the package's major version
 Regime = Literal['full', 'rows', 'groups']
+# the family rule: the response type sets brms's family and link
+FAMILY = {
+    'continuous': ('gaussian', 'identity'),
+    'binary': ('bernoulli', 'logit'),
+    'count': ('poisson', 'log'),
+    'binomial': ('binomial', 'logit'),
+    'ordinal': ('cumulative', 'logit'),
+}
 
 
 @dataclass(frozen=True)
@@ -197,14 +205,6 @@ Coded = dict[str, dict[str, pd.Series]]  # the coded columns of each covariate o
 
 
 class _Builder:
-    # the family rule: the response type sets brms's family and link
-    FAMILY = {
-        'continuous': ('gaussian', 'identity'),
-        'binary': ('bernoulli', 'logit'),
-        'count': ('poisson', 'log'),
-        'binomial': ('binomial', 'logit'),
-        'ordinal': ('cumulative', 'logit'),
-    }
     CENSORED = ('cox', 'weibull')
     # the prior on the standardized scale, one per brms class
     PRIOR = {
@@ -235,7 +235,7 @@ class _Builder:
         columns = design | self._codeResponse() | factors | regimes
         table = pd.DataFrame(columns).reset_index(drop=True)
         correlations = self._listCorrelations(coded)
-        family, link = self.FAMILY[self.row.response_type]
+        family, link = FAMILY[self.row.response_type]
         return Problem(
             id=self.id,
             table=table,

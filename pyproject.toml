@@ -62,6 +62,7 @@ packages = ["src/mixedbench"]
 "registry/columns.csv" = "mixedbench/registry/files/columns.csv"
 "registry/column_factors.csv" = "mixedbench/registry/files/column_factors.csv"
 "registry/factor_pairs.csv" = "mixedbench/registry/files/factor_pairs.csv"
+"registry/fits.csv" = "mixedbench/registry/files/fits.csv"
 "registry/quantiles.yaml" = "mixedbench/registry/files/quantiles.yaml"
 "registry/SUMMARY.md" = "mixedbench/registry/files/SUMMARY.md"
 "registry/manifest.csv" = "mixedbench/registry/files/manifest.csv"
@@ -77,6 +78,7 @@ only-include = [
     "registry/columns.csv",
     "registry/column_factors.csv",
     "registry/factor_pairs.csv",
+    "registry/fits.csv",
     "registry/quantiles.yaml",
     "registry/SUMMARY.md",
     "registry/manifest.csv",
@@ -103,8 +105,9 @@ testpaths = ["tests"]
 # pytest's defaults kept; survey tests run by hand (`uv run pytest survey/tests`);
 # registry/cache holds fetched repositories with tests of their own
 norecursedirs = [".*", "build", "dist", "venv", "*.egg", "survey", "cache"]
-addopts = "-m 'not network and not brms' --import-mode=importlib"
+addopts = "-m 'not network and not brms and not lme4' --import-mode=importlib"
 markers = [
     "network: fetches a source over the network; runs only in the CI fetch matrix",
     "brms: fits a reference with R, brms and CmdStan; runs by `-m brms`, skipped where R or CmdStan is absent",
+    "lme4: fits a model with R and lme4; runs by `-m lme4`, skipped where R, lme4, jsonlite or performance is absent",
 ]

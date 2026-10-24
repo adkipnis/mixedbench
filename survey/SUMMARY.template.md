@@ -119,6 +119,16 @@ ${table_pair_relation}
 
 ${table_superior}
 
+## Fits of the documented models
+
+Every registry row with a continuous, binary or count response, its documented model fitted as
+written: the variance components and R² once per row, the ICCs once per grouping factor of the
+fit, over the fits that ended with estimates; the status of every row.
+
+${table_fit_statistics}
+
+${table_status}
+
 ## Response, reader and published model
 
 ${table_response_type}

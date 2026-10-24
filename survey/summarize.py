@@ -1,5 +1,5 @@
 """Quantiles and summary of the dimension survey from the measured files (#18):
-`quantiles.yaml` from `registry.csv` and the four measured files, every axis pooled,
+`quantiles.yaml` from `registry.csv` and the measured files, every axis pooled,
 per tier and with agridat removed; `SUMMARY.md` from the digit-free template, the practice
 survey's p90 read at merge time from `practice_quantiles.yaml`, a snapshot of the practice
 survey's `quantiles.yaml`, which stays in metabeta-v3.
@@ -14,6 +14,7 @@ import pandas as pd
 import yaml
 from columns import COLUMN_STATISTICS
 from dimensions import CONDITIONS, pickObserved
+from fits import FACTOR_STATISTICS, FIT_STATISTICS, ROW_STATISTICS
 from groups import COLUMN_FACTOR_STATISTICS
 from mixedbench.registry.row import readCsv
 from pairs import FACTOR_PAIR_STATISTICS
@@ -67,6 +68,8 @@ class Summarizer:
         column_factors = readCsv(self.root / 'column_factors.csv')
         self.column_factors = self.numeric(column_factors, COLUMN_FACTOR_STATISTICS)
         self.pairs = self.numeric(readCsv(self.root / 'factor_pairs.csv'), FACTOR_PAIR_STATISTICS)
+        self.fits = self.numeric(readCsv(self.root / 'fits.csv'), FIT_STATISTICS)
+        self.fitted = self.fits.drop_duplicates(['source', 'object', 'model_index'])  # per row
         self.rows = self.dimensions.drop_duplicates(['source', 'object', 'model_index'])
         self.modeled = self.columns[self.columns['in_model'] == 'yes']
         self.categoricals = self.modeled[self.modeled['type'].isin(CATEGORICAL_TYPES)]
@@ -92,6 +95,8 @@ class Summarizer:
         axes |= {axis: self.axis(self.column_factors, axis) for axis in COLUMN_FACTOR_STATISTICS}
         axes |= {axis: self.axis(self.pairs, axis) for axis in FACTOR_PAIR_STATISTICS}
         axes |= {axis: self.axis(self.rows, axis) for axis in CONDITIONS}
+        axes |= {axis: self.axis(self.fitted, axis) for axis in ROW_STATISTICS}
+        axes |= {axis: self.axis(self.fits, axis) for axis in FACTOR_STATISTICS}
         return {
             'n_rows': len(self.registry),
             'n_objects': len(self.registry.drop_duplicates(['source', 'object'])),
@@ -107,6 +112,7 @@ class Summarizer:
                 'response_type': self.shares(self.registry['response_type']),
                 'reader': self.shares(self.registry['reader']),
                 'published_model': self.shares(self.registry['published_model']),
+                'status': self.shares(self.fitted['status']),
             },
             'k_distribution': {int(k): v for k, v in self.shares(self.categoricals['K']).items()},
             'implied_columns': self.impliedColumns(),
@@ -198,6 +204,8 @@ class Summarizer:
                 COLUMN_FACTOR_STATISTICS, axes
             ),
             'table_pair_statistics': self.renderStatisticTable(FACTOR_PAIR_STATISTICS, axes),
+            'table_fit_statistics': self.renderStatisticTable(FIT_STATISTICS, axes),
+            'table_status': self.renderShareTable(self.fitted['status'], 'status'),
             'table_pair_relation': self.renderShareTable(self.pairs['relation'], 'pair relation'),
             'table_superior': self.renderShareTable(self.findSuperiorSides(), 'superior'),
             'table_relation': self.renderShareTable(self.dimensions['relation'], 'relation'),

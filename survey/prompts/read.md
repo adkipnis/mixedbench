@@ -27,7 +27,9 @@ File the object in the excluded shard with its reason when:
 
 ## Record the model
 
-1. **The documented model**, verbatim in `formula` (lme4 syntax where the source gives one).
+1. **The documented model** in `formula`, lme4 syntax where the source gives one, the formula
+   alone: its columns named as the table names them (in backticks where R needs them), a remark
+   in `notes`.
 2. **Response.** The column in `response`; what it holds in `response_type`, not the family: a
    Poisson fit over counts is `count`, successes out of trials `binomial` with `trials` named,
    proportions `continuous` with the denominator in the formula. A transformed response
@@ -42,7 +44,8 @@ File the object in the excluded shard with its reason when:
    - An observation-level effect (`(1|obs)`) is no grouping factor: its column goes in
      `ignore`, its term stays in the formula.
    - A column is a grouping factor or a covariate, never both.
-   - What is no column of the table (a group mean, a recode) stays in the formula only.
+   - What is no column of the table (a group mean, a recode) stays in the formula only, written
+     as its expression of the columns (`ave(IQ, class)`).
 5. **Ignore** row ids, weights, offsets, alternate responses, derived columns and field
    coordinates (`row`, `col`, latitude). An offset stays in the formula as `offset(log(area))`.
 6. **Types the file cannot carry**, for covariates only. Text, Excel and JSON: `categorical`,
