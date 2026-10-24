@@ -16,4 +16,7 @@
 # no sync per task, which concurrent tasks would race on in the shared .venv: run `uv sync` once
 # through Slurm first
 export UV_NO_SYNC=1
+# R's session directory beside the run directories: a node whose /tmp is broken fails every task
+export TMPDIR="$PWD/fits/tmp"
+mkdir -p "$TMPDIR"
 uv run python survey/fits.py run "$SLURM_ARRAY_TASK_ID"
