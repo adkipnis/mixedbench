@@ -1,0 +1,5 @@
+"source","object","reason"
+"stan_arm","ARM/Ch.10/ideo2.dat","second reading of a flat table found a grouping factor the first reading missed"
+"stan_bugs","bugs_examples/vol2/ice/ice.data.json","second reading of a flat table found a grouping factor the first reading missed"
+"pymc_examples","examples/data/gdp_data_hierarchical_clean.csv","second reading of a flat table found a grouping factor the first reading missed"
+"pymc_examples","examples/data/pancreatitis.csv","second reading of a flat table found a grouping factor the first reading missed"
