@@ -36,10 +36,13 @@ def test_quantiles_carry_every_axis_pooled_per_tier_and_without_agridat(merger):
     assert (quantiles['n_rows'], quantiles['n_objects'], quantiles['n_factor_rows']) == (2, 1, 3)
     axes = quantiles['axes']
     assert set(axes) == set(FACTOR_AXES) | set(ROW_AXES) | {'K'} | set(QUIRK_AXES) | set(FIT_AXES)
-    for axis in axes.values():
+    for name, axis in axes.items():
         assert set(axis) == {'pooled', 'tiers', 'without_agridat'}
         assert set(axis['pooled']) == set(QUANTILE_KEYS)
-        assert set(axis['tiers']) <= {'D'}  # the scratch registry's fits.csv holds no row yet
+        if name in FIT_AXES:  # the scratch registry's fits.csv holds no row yet
+            assert set(axis['tiers']) <= {'D'}
+        else:
+            assert set(axis['tiers']) == {'D'}
     assert axes['n_groups']['pooled'] == {'n': 3, 'min': 3, 'p5': 3, 'p10': 3, 'p50': 5, 'p90': 5, 'p95': 5, 'max': 5}  # fmt: skip
     assert axes['n_grouping_factors']['pooled'] == {'n': 2, 'min': 1, 'p5': 1, 'p10': 1, 'p50': 2, 'p90': 2, 'p95': 2, 'max': 2}  # fmt: skip
     assert axes['alpha']['pooled']['min'] == pytest.approx(4.4118, abs=1e-3)
