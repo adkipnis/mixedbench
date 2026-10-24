@@ -144,6 +144,22 @@ def test_max_abs_rho_ranks_continuous_binary_and_ordered_columns(herds, rows):
     assert (rho['weight'], rho['sick'], rho['parity']) == (0.6841, 0.6841, 0.4864)
 
 
+def test_max_abs_rho_ranks_the_typed_columns_of_a_table(herds):
+    """The flat pass ranks tables that have no registry row, so the step takes a table and its
+    column types. The values are model 2's, by scipy.stats.spearmanr; the herds columns given
+    no type (id, cases, trials and the factors) take no part, as a row's response does."""
+    types = {
+        'weight': ('continuous', ''),
+        'sick': ('binary', 2),
+        'parity': ('continuous', ''),
+        'breed': ('categorical', 4),
+    }
+    rho = columns.measureMaxAbsRho(herds, types)
+    assert list(rho.index) == ['weight', 'sick', 'parity', 'breed']
+    assert (rho['weight'], rho['sick'], rho['parity']) == (0.6841, 0.6841, 0.4864)
+    assert pd.isna(rho['breed'])
+
+
 def test_max_abs_rho_pairs_over_the_rows_both_columns_observe(herds, rows):
     """A missing weight leaves 13 rows to pair with sick (scipy: 0.6761) and parity (0.2856). A
     column observed on the nine healthy rows only pairs with weight (0.5295) and parity (0.0404)
