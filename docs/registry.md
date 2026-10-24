@@ -182,6 +182,8 @@ Per registry object the file it loads from, with its sha256 and size; written by
   - `status`, the worst that applies of `ok`, `singular` (lme4's `isSingular`), `warning`,
     `timeout` (after one hour), `error` and `no_formula` (no `|` term, a model documented in
     words, not fitted); `message`, every warning and the error joined by `; ` on one line.
+    A `poisson` fit's warnings and error include those of its null model, which gives
+    `sigma2_distribution`.
   - `seconds`; `n_obs`, the rows the fit used; `family`, the contract's; `family_doc`, the
     registry's `family`, blank where none.
   - The variance components on the link scale (Nakagawa, Johnson and Schielzeth 2017), blank
