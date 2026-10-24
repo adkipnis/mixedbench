@@ -32,11 +32,21 @@ COLUMN_COLUMNS = (
 )  # fmt: skip
 
 
+def codeColumn(values: pd.Series, kind: str) -> pd.Series:
+    """A continuous column as loaded, a binary or ordered one by the codes of its present
+    levels. A missing value stays missing."""
+    if kind == 'continuous':
+        return values.astype(float)
+    levels = pd.Categorical(values).remove_unused_categories()
+    codes = pd.Series(levels.codes, index=values.index)
+    return codes.where(codes >= 0)  # -1 codes a missing value
+
+
 # =====================================================================================
 # columns.csv: rank correlations -> type, level and missing share -> quirk statistics
 # =====================================================================================
 def measure(measurer: Measurer) -> list[dict]:
-    rho = measureMaxAbsRho(measurer)
+    rho = measureMaxAbsRho(measurer.table, measurer.column_types)
     columns = []
     for column in measurer.column_names:
         key = {'column': column}
@@ -45,17 +55,16 @@ def measure(measurer: Measurer) -> list[dict]:
     return columns
 
 
-def measureMaxAbsRho(measurer: Measurer) -> pd.Series:
-    """Each column's largest |Spearman| with another, pairwise complete. A categorical column
-    has no order to rank, so it takes no part. Blank with no partner or when constant."""
+def measureMaxAbsRho(table: pd.DataFrame, column_types: dict[str, tuple]) -> pd.Series:
+    """Each typed column's largest |Spearman| with another, pairwise complete. A categorical
+    column has no order to rank, so it takes no part. Blank with no partner or when constant."""
     ranked = {}
-    for column in measurer.column_names:
-        kind, _ = measurer.column_types[column]
+    for column, (kind, _) in column_types.items():
         if kind != 'categorical':
-            ranked[column] = measurer.codeColumn(column, kind)
-    rho = pd.DataFrame(ranked, index=measurer.table.index).corr(method='spearman').abs()
+            ranked[column] = codeColumn(table[column], kind)
+    rho = pd.DataFrame(ranked, index=table.index).corr(method='spearman').abs()
     partners = rho.where(~np.eye(len(rho), dtype=bool))
-    return partners.max().round(4).reindex(measurer.column_names)
+    return partners.max().round(4).reindex(list(column_types))
 
 
 def measureColumn(measurer: Measurer, column: str) -> dict:
