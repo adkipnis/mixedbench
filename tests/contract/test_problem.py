@@ -16,7 +16,7 @@ import pandas as pd
 import pytest
 from hypothesis import given
 from hypothesis import strategies as st
-from mixedbench.contract import Prior, Problem, Refused, Scale
+from mixedbench.contract import Prior, Problem, Refused, Scale, codeCovariate
 from mixedbench.registry.row import Row, SlopeTerm
 
 NAN = float('nan')
@@ -88,6 +88,42 @@ def test_the_design_has_the_coded_columns_in_order_with_the_intercept_first() ->
     assert design['grade[hi]'].tolist() == [0, 0, 1] * 4
     assert design['x:sex'].tolist() == [x * s for x, s in zip(X, SEX)]
     assert all(design[c].dtype == np.float64 for c in problem.design)
+
+
+@pytest.mark.parametrize(
+    ('values', 'coded'),
+    [
+        (pd.Series([1.0, -1.0, 2.5], name='x'), {'x': [1.0, -1.0, 2.5]}),
+        (pd.Series(['m', 'f', 'm'], name='sex'), {'sex': [1.0, 0.0, 1.0]}),
+        (
+            pd.Series(
+                pd.Categorical(['b', 'a', 'c', 'a'], categories=['a', 'b', 'c']), name='diet'
+            ),
+            {'diet[b]': [1.0, 0.0, 0.0, 0.0], 'diet[c]': [0.0, 0.0, 1.0, 0.0]},
+        ),
+        (
+            pd.Series(
+                pd.Categorical(['hi', 'lo', 'mid'], categories=['lo', 'mid', 'hi'], ordered=True),
+                name='grade',
+            ),
+            {'grade[mid]': [0.0, 0.0, 1.0], 'grade[hi]': [1.0, 0.0, 0.0]},
+        ),
+    ],
+    ids=[
+        'continuous-raw',
+        'binary-first-level-0',
+        'categorical-contrasts',
+        'ordered-by-its-levels',
+    ],
+)
+def test_one_column_codes_into_the_design_columns_its_kind_gives(
+    values: pd.Series, coded: dict[str, list[float]]
+) -> None:
+    """The flat pass codes a table that has no registry row, so the coding of one column is
+    callable alone, its kind by the typing rule. An ordered factor's reference is its first
+    level, `lo`, not the first in the alphabet."""
+    columns = codeCovariate(values)
+    assert {name: column.tolist() for name, column in columns.items()} == coded
 
 
 def test_an_integer_covariate_is_continuous_unless_it_arrives_as_a_categorical() -> None:
