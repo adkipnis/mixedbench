@@ -149,6 +149,13 @@ def test_the_condition_index_of_a_design_frame(x, condition):
     assert dimensions.computeConditionIndex(design) == condition
 
 
+def test_a_design_wider_than_its_rows_has_an_infinite_condition_index():
+    """More columns than rows are dependent whatever their values, so the index needs no
+    decomposition; a flat table's date strings give tens of thousands of contrasts."""
+    design = pd.DataFrame({'Intercept': [1.0, 1.0], 'x': [0.0, 1.0], 'z': [3.0, -1.0]})
+    assert dimensions.computeConditionIndex(design) == np.inf
+
+
 def test_no_condition_index_where_the_contract_builds_no_problem(herds, rows):
     """The contract refuses a categorical response, so neither design exists. A column missing
     on every measured row leaves no row complete in every column: only the documented design
