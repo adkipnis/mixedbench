@@ -109,5 +109,5 @@ addopts = "-m 'not network and not brms and not lme4' --import-mode=importlib"
 markers = [
     "network: fetches a source over the network; runs only in the CI fetch matrix",
     "brms: fits a reference with R, brms and CmdStan; runs by `-m brms`, skipped where R or CmdStan is absent",
-    "lme4: fits a model with R and lme4; runs by `-m lme4`, skipped where R or lme4 is absent",
+    "lme4: fits a model with R and lme4; runs by `-m lme4`, skipped where R, lme4, jsonlite or performance is absent",
 ]
