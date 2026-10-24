@@ -73,7 +73,8 @@ fitWithin <- function(table, input) {
       error = function(e) list(described = UNFITTED, singular = NA, error = conditionMessage(e))
     ),
     warning = function(w) {
-      warnings <<- c(warnings, conditionMessage(w))
+      # once per message: a fit can repeat one warning a hundred thousand times
+      if (!(conditionMessage(w) %in% warnings)) warnings <<- c(warnings, conditionMessage(w))
       invokeRestart("muffleWarning")
     }
   )
@@ -83,7 +84,7 @@ fitWithin <- function(table, input) {
   if (length(warnings) > 0) status <- "warning"
   if (length(result$error) > 0) status <- if (seconds >= input$timeout) "timeout" else "error"
   # one line, for a cell of a table: a parse error points at the formula over three
-  message <- gsub("\\s*\n\\s*", " ", paste(c(unique(warnings), result$error), collapse = "; "))
+  message <- gsub("\\s*\n\\s*", " ", paste(c(warnings, result$error), collapse = "; "))
   c(list(status = status, seconds = seconds, message = message), result$described)
 }
 
