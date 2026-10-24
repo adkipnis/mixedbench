@@ -110,3 +110,20 @@ the registry. Grilled on 2026-10-24 ([#72](https://github.com/adkipnis/mixedbenc
   by an id-like name, 362 by either, and 572 by the integer rule alone, which caught field
   coordinates (`row`, `col`) and counts; with it the targeted second reading would be a second
   pass over 677 tables.
+
+## Amendment 2026-10-24: duplicates, and grouped tables the registry leaves out ([#118](https://github.com/adkipnis/mixedbench/issues/118))
+
+- Decision: a frame table that copies another frame table or a registry object leaves the frame
+  as `derived or duplicated table`, before the release, and the copy kept is the registry
+  object, else the first in frame order. A script settles copies with equal columns and values,
+  row order ignored, and a reading agent the rest of the tables that share the merge's
+  duplicate signature.
+- Why: a census counts each table once, and a copy of a registry object would count a grouped
+  table as flat.
+- Decision: a table both wide and grouped is `wide`, since its long form is the table the
+  registry would hold.
+- Decision: a `hidden grouping` whose only repeated unit is a wave that a documented model fits
+  as fixed or separately per wave keeps its exclusion, out of the sample and with no registry
+  row (GSSvocab).
+- Why: its rows repeat within waves, so it is not flat, but the registry's reading rules leave
+  such a wave out.
