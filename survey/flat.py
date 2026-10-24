@@ -10,11 +10,17 @@ excluded.csv and candidates.csv
 -> the sample: the screened frame decided by the verdicts   FlatPass._selectSample
 -> a table's sizes, design and column statistics            FlatPass.measureTable
 -> flat.csv and flat_columns.csv                            FlatPass.measure
+-> flat_sample.csv, 50 sample tables in two batches         FlatPass.draw
+-> one batch as a prompt with page and download URLs        FlatPass.handoff
+-> flat_agreement.csv, the share that stood per stratum     FlatPass.agree
 
 Run a step from the repo root:
 
     uv run python survey/flat.py screen
     uv run python survey/flat.py measure
+    uv run python survey/flat.py draw
+    uv run python survey/flat.py handoff --batch 1
+    uv run python survey/flat.py agree
 """
 
 from __future__ import annotations
@@ -28,10 +34,11 @@ from columns import COLUMN_STATISTICS, measureMaxAbsRho, measureShape
 from dimensions import computeConditionIndex, countWidth
 from mixedbench.contract import codeCovariate, columnType
 from mixedbench.datasets import Loader
-from mixedbench.registry.row import readCsv, writeCsv
+from mixedbench.registry.row import readCsv, splitList, writeCsv
 from pull import Puller
 from schema import FLAT_VERDICTS
 from sources import readFrame
+from verify import Links, drawSample, renderHelpPage
 
 HERE = Path(__file__).parent
 
@@ -70,6 +77,81 @@ FLAT_COLUMNS = (
 FLAT_COLUMN_COLUMNS = (
     'source', 'object', 'tier', 'column', 'type', 'K', 'missing_share', *COLUMN_STATISTICS,
 )  # fmt: skip
+SAMPLE_SIZE = 50
+SEED = 2  # the registry's hand samples took 0 and 1
+# the hand sample's strata, in the order their ties are allocated; read/integer holds the
+# unflagged tables the dropped integer-levels rule alone would have flagged
+SAMPLE_STRATA = ('prescreened', 'read/unflagged', 'read/flagged', 'read/integer')
+# flat_sample.csv: per drawn table, its stratum and batch, and what its handoff shows as it stood
+# at the draw
+SAMPLE_COLUMNS = (
+    'source', 'object', 'tier', 'file', 'stratum', 'batch', 'basis', 'evidence', 'detail',
+    'words', 'id_columns', 'integer_columns',
+)  # fmt: skip
+# a drawn table's screen columns as its handoff names them
+SCREEN_REASONS = {
+    'words': 'filing words',
+    'id_columns': 'id-like columns',
+    'integer_columns': 'integer columns',
+}
+# a batch's handoff opens with a prompt that a checker who knows neither the survey nor the
+# repository can act on
+HANDOFF_HEAD = """# Flat tables, hand check, batch {batch}
+
+You check {n} tables from public statistics sources that a survey filed as having no grouping
+structure, so that they can serve as a reference sample of flat tables beside a registry of
+grouped ones.
+A language model read each table once, and read the flagged ones a second time.
+Open each table's page and download, read its documentation and its columns, and decide which
+verdict holds.
+
+## Verdicts
+
+- **flat:** no documented model fits the table with a random effect, and no column indexes a
+  unit the rows repeat within. A design factor of fixed levels (treatment, dose, sex), a field
+  coordinate each plot holds once, a count and an id with one row per unit are no grouping
+  factor.
+- **wide:** grouped data stored wide, its repeated measures as columns (`y1` to `y4` for four
+  visits, one column per year), whether or not the source also holds a long form.
+- **hidden grouping:** a column indexes a unit the rows repeat within, a subject, plot, school,
+  site or wave with two or more rows each, whether or not the documentation fits a model with
+  it.
+
+Four rules settle the edge cases:
+
+- **Levels:** a grouping factor no documented model fits needs at least five levels sampled
+  from a larger population (Harrison et al. 2018; Bolker et al. 2009). Fewer levels, or a few
+  exhaustive ones (a city's boroughs, a country's regions), make a design factor.
+- **Plots:** coordinates that identify one plot observed on several occasions on the same land
+  group as `row:col`, even where some plots are observed once.
+- **Waves:** a wave that a documented model fits as fixed, or separately per wave, keeps the
+  table flat.
+- **Wide first:** a wide table that also has a grouping column is `wide`.
+
+## Per table
+
+- **page, download:** the source at the version the survey read; the file names the table
+  inside an archive.
+- **filing:** the first reading's reason for calling the table flat, or `no repeated column`
+  where no column repeats a value.
+- **screen:** the filing words or id-like columns that flagged the table for the second
+  reading. Integer columns of more than ten repeated levels flag nothing yet; this check
+  decides whether they should. The screen is a reason to look, never evidence.
+- **second reading:** its evidence for `flat`, where the table had one.
+- **help page:** the documentation the first reading saw, where one exists, ending with the
+  table's column types and first rows; cut at 20,000 characters.
+
+## Answer
+
+One bullet per table in this order, nothing else:
+
+- `<n> · <source> · <object>: stands — <what makes it flat>`
+- `<n> · <source> · <object>: wide — <the columns that repeat a measure>`
+- `<n> · <source> · <object>: hidden grouping <column or a:b> — <its levels, rows per level,
+  the documented model and its link if any>`
+
+Take the evidence from the source, not from the filing or the screen alone.
+"""
 
 
 # =====================================================================================
@@ -248,6 +330,78 @@ class FlatPass:
             design |= coded
         return {'condition_all': computeConditionIndex(pd.DataFrame(design))}
 
+    # ---------------------------------------------------------------------------------
+    # the hand sample: sample -> drawn tables -> a batch's prompt -> the share that stood
+    # ---------------------------------------------------------------------------------
+
+    def draw(self) -> None:
+        """flat_sample.csv: 50 tables of the flat sample over four strata, in two batches."""
+        population = []
+        for _, row in self._selectSample().iterrows():
+            stratum = {'stratum': self._findSampleStratum(row)}
+            population.append(row.to_dict() | self._findBasis(row) | stratum)
+        sample = drawSample(pd.DataFrame(population), SAMPLE_STRATA, SAMPLE_SIZE, SEED)
+        writeCsv(sample[list(SAMPLE_COLUMNS)], self.survey / 'flat_sample.csv')
+
+    @staticmethod
+    def _findSampleStratum(row: pd.Series) -> str:
+        if row['stratum'] == 'prescreened':
+            return 'prescreened'
+        if row['flagged'] == 'yes':
+            return 'read/flagged'
+        if row['integer_columns'] != '':
+            return 'read/integer'
+        return 'read/unflagged'
+
+    def handoff(self, batch: int) -> str:
+        """One batch as a prompt for a check in the browser: page and download URLs, never a
+        local path."""
+        sample = readCsv(self.survey / 'flat_sample.csv')
+        drawn = sample[sample['batch'] == str(batch)]
+        links = Links(self.registry, self.survey)
+        sections = []
+        for number, (_, row) in enumerate(drawn.iterrows(), start=1):
+            sections.append(self._renderSection(number, row, links))
+        return HANDOFF_HEAD.format(batch=batch, n=len(sections)) + ''.join(sections)
+
+    def _renderSection(self, number: int, row: pd.Series, links: Links) -> str:
+        page, download = links.resolveUrls(row['source'], row['object'], row['file'])
+        second_reading = row['evidence'] if row['basis'] == 'second reading' else '—'
+        lines = [
+            f'- page: {page}',
+            f'- download: {download} (file `{row["file"]}`)',
+            f'- filing: {row["detail"]}',
+            f'- screen: {self._renderScreen(row)}',
+            f'- second reading: {second_reading}',
+        ]
+        heading = f'## {number}. {row["source"]} · {row["object"]}'
+        help_page = renderHelpPage(self.registry, row['source'], row['object'])
+        return f'\n{heading}\n\n' + '\n'.join(lines) + f'\n\n{help_page}'
+
+    @staticmethod
+    def _renderScreen(row: pd.Series) -> str:
+        reasons = []
+        for column, name in SCREEN_REASONS.items():
+            names = [f'`{c}`' for c in splitList(row[column])]
+            if names:
+                reasons.append(f'{name} {", ".join(names)}')
+        return '; '.join(reasons) or '—'
+
+    def agree(self) -> None:
+        """flat_agreement.csv: the share of drawn tables still in the flat sample, per stratum
+        and overall. A table the check took out of the frame or the sample did not stand."""
+        drawn = readCsv(self.survey / 'flat_sample.csv')
+        kept = self._selectSample()[['source', 'object']]
+        joined = drawn.merge(kept, on=['source', 'object'], how='left', indicator=True)
+        stood = joined['_merge'] == 'both'
+        rows = []
+        for stratum in (*SAMPLE_STRATA, 'all'):
+            within = stood if stratum == 'all' else stood[joined['stratum'] == stratum]
+            rows.append(
+                {'stratum': stratum, 'tables': len(within), 'stood': round(within.mean(), 3)}
+            )
+        writeCsv(pd.DataFrame(rows), self.survey / 'flat_agreement.csv')
+
 
 # =====================================================================================
 # main
@@ -255,7 +409,8 @@ class FlatPass:
 if __name__ == '__main__':
     # fmt: off
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('step', choices=['screen', 'measure'], help='the step to run')
+    parser.add_argument('step', choices=['screen', 'measure', 'draw', 'handoff', 'agree'], help='the step to run')
+    parser.add_argument('--batch', type=int, help='handoff: the batch to render')
     parser.add_argument('--registry', type=Path, default=HERE.parent / 'registry', help='folder holding sources.yaml and the census tables')
     parser.add_argument('--survey', type=Path, default=HERE, help='folder holding candidates.csv and the bookkeeping tables')
     args = parser.parse_args()
@@ -266,3 +421,9 @@ if __name__ == '__main__':
             flat.screen()
         case 'measure':
             flat.measure()
+        case 'draw':
+            flat.draw()
+        case 'handoff':
+            print(flat.handoff(args.batch))
+        case 'agree':
+            flat.agree()
