@@ -192,6 +192,19 @@ def test_a_binary_response_of_text_fits_as_its_0_1_coding(tmp_path):
 
 
 @pytest.mark.lme4
+def test_text_columns_of_different_values_compare_in_the_formula(tmp_path):
+    """olympics' same-country indicator `I(pcountry == jcountry)`:
+    as factors of different levels, R refuses to compare them."""
+    table = balancedOneWay()
+    table['a'] = ['x', 'y', 'z'] * 10
+    table['b'] = ['x', 'w'] * 15
+
+    fitted = fit(table, 'y ~ I(a == b) + (1 | g)', 'gaussian', tmp_path, TIMEOUT)
+
+    assert (fitted.status, list(fitted.fixed)) == ('ok', ['(Intercept)', 'I(a == b)TRUE'])
+
+
+@pytest.mark.lme4
 def test_a_fit_by_another_lme4_than_the_pin_raises(tmp_path, monkeypatch):
     """A pass mixing lme4 versions would mix their optimizers' estimates."""
     monkeypatch.setattr(lme4, 'LME4', '0.0.0')
