@@ -235,8 +235,8 @@ The condition index of the documented design and of the design over every column
 
 | statistic | n | min | p5 | p10 | p50 | p90 | p95 | max |
 |---|---|---|---|---|---|---|---|---|
-| condition_doc | 692 | 1 | 1 | 1 | 3.1463 | 12.4718 | 21.752 | inf |
-| condition_all | 687 | 1 | 1 | 1 | 4.0813 | inf | inf | inf |
+| condition_doc | 692 | 1 | 1 | 1 | 3.1463 | 11.9758 | 20.4299 | inf |
+| condition_all | 687 | 1 | 1 | 1 | 3.9666 | 68.9934 | inf | inf |
 
 ## Quirk statistics per column
 
