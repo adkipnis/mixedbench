@@ -230,8 +230,8 @@ def test_summary_axis_tables_end_with_a_flat_row_where_the_axis_has_one(merger):
 
 def writeFlatBookkeeping(merger) -> None:
     """The flat pass's files in the survey: a frame of three read tables, two flagged, and one
-    prescreened; three verdicts, one on a copy that has left the frame; the hand sample's
-    share."""
+    prescreened; three verdicts, one on a copy that has left the frame; the shares of the hand
+    sample, the response check and its recheck."""
     screen = [
         ('plain.csv', 'read', 'no'), ('sparse.csv', 'read', 'yes'), ('stored.csv', 'read', 'yes'),
         ('labels.csv', 'prescreened', 'no'),
@@ -242,6 +242,10 @@ def writeFlatBookkeeping(merger) -> None:
     writeCsv(pd.DataFrame(verdicts, columns=['object', 'verdict']), merger.survey / 'flat_verdicts.csv')  # fmt: skip
     agreement = pd.DataFrame([('all', '10', '0.9')], columns=['stratum', 'tables', 'stood'])
     writeCsv(agreement, merger.survey / 'flat_agreement.csv')
+    responses = pd.DataFrame([('all', '5', '0.6')], columns=['stratum', 'tables', 'stood'])
+    writeCsv(responses, merger.survey / 'flat_response_agreement.csv')
+    recheck = pd.DataFrame([('all', '4', '0.75')], columns=['stratum', 'tables', 'stood'])
+    writeCsv(recheck, merger.survey / 'flat_response_recheck_agreement.csv')
 
 
 def test_summary_closes_with_the_flat_samples_corpus_type_mix_and_statistics(merger):
@@ -255,7 +259,8 @@ def test_summary_closes_with_the_flat_samples_corpus_type_mix_and_statistics(mer
     assert (
         '3 flat tables; per stratum read 2, prescreened 1; per tier R 2, D 1. The screen flagged'
         " 2 of the frame's 3 read tables for a second reading; verdicts wide 2, flat 1. The hand"
-        ' sample of 10 tables stood at 0.9.'
+        ' sample of 10 tables stood at 0.9. 2 of the 3 tables name a response; the response check'
+        ' of 5 tables stood at 0.6, its recheck of 4 `none` tables at 0.75.'
     ) in ' '.join(section.split())
     types = tableRows(section, '| column type | n | share |')
     assert {row[0]: row[1] for row in types} == {'continuous': '4', 'categorical': '2', 'binary': '1', 'ordered': '1'}  # fmt: skip
