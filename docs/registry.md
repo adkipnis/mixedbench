@@ -227,26 +227,29 @@ The survey's tables filed `no grouping structure`, screened and read again by `s
   outcome of its first documented model, or `none` when no model is documented, the outcomes
   are analyzed jointly or the outcome is no column of the table; it is never inferred.
 - `flat.csv` and `flat_columns.csv` are written by `survey/flat.py measure`, which refuses while
-  a flagged table has no verdict; a merge leaves them as the last pass wrote them. A frame table
-  is in the sample when it is prescreened, read and unflagged with no verdict, or judged `flat`.
-  Four decimals, negatives and `inf` kept, blank where undefined.
+  a flagged table has no verdict or a sample table no response; a merge leaves them as the last
+  pass wrote them. A frame table is in the sample when it is prescreened, read and unflagged
+  with no verdict, or judged `flat`. A table's response is measured in neither file, as a
+  registry row's is in neither `columns.csv` nor `dimensions.csv`. Four decimals, negatives and
+  `inf` kept, blank where undefined.
 - `flat.csv`: key `source`, `object`, with `tier`; a row per table of the sample, in frame order.
   - `stratum` `read` (filed by a reading agent) or `prescreened` (stopped by the pre-screen at
     `no repeated column`).
   - `basis` `prescreen`, `first reading` or `second reading`, and `evidence` the pre-screen's
     verdict, the first reading's `detail` or the second reading's line.
-  - `n_obs` counts every row and `n_columns` every column; `n_continuous`, `n_binary`,
-    `n_categorical` and `n_ordered` count the columns by their `type`.
+  - `response` from `flat_responses.csv`, or `none`.
+  - `n_obs` counts every row and `n_columns` every column but the response; `n_continuous`,
+    `n_binary`, `n_categorical` and `n_ordered` count the columns by their `type`.
   - `n_id_columns` counts the id columns, the categoricals whose present values are all
     distinct.
-  - `d_all` and `condition_all` as `dimensions.csv` defines them, over every column but the id
-    columns, with no interaction: the design centered as the contract centers its full regime,
-    on the rows complete in all of them. `condition_all` is `inf` when rank-deficient, blank when
-    no row is complete.
+  - `d_all` and `condition_all` as `dimensions.csv` defines them, over every column but the
+    response and the id columns, with no interaction: the design centered as the contract
+    centers its full regime, on the rows complete in all of them. `condition_all` is `inf` when
+    rank-deficient, blank when no row is complete.
 - `flat_columns.csv`: key `source`, `object`, `column`, with `tier`; a row per column of each
-  table of `flat.csv`, the id columns included. `type`, `K`, `missing_share` and the quirk
-  statistics as `columns.csv` defines them, over every row; `max_abs_rho` with every other
-  column of the table.
+  table of `flat.csv` but its response, the id columns included. `type`, `K`, `missing_share`
+  and the quirk statistics as `columns.csv` defines them, over every row; `max_abs_rho` with
+  every other column of the table but the response.
 
 ## `quantiles.yaml` and `SUMMARY.md`
 
