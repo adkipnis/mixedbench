@@ -247,8 +247,8 @@ The survey's tables filed `no grouping structure`, screened and read again by `s
     distinct.
   - `d_all` and `condition_all` as `dimensions.csv` defines them, over every column but the
     response and the id columns, with no interaction: the design centered as the contract
-    centers its full regime, on the rows complete in all of them. `condition_all` is `inf` when
-    rank-deficient, blank when no row is complete.
+    centers its full regime, on the rows complete in all of them, without a coded column of one
+    value. `condition_all` is `inf` when rank-deficient, blank when no row is complete.
 - `flat_columns.csv`: key `source`, `object`, `column`, with `tier`; a row per column of each
   table of `flat.csv` but its response, the id columns included. `type`, `K`, `missing_share`
   and the quirk statistics as `columns.csv` defines them, over every row; `max_abs_rho` with
