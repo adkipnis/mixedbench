@@ -16,6 +16,7 @@ import yaml
 from columns import COLUMN_STATISTICS
 from dimensions import CONDITIONS, pickObserved
 from fits import FACTOR_STATISTICS, FIT_STATISTICS, ROW_STATISTICS
+from flat import CHECKS, HandCheck
 from groups import COLUMN_FACTOR_STATISTICS
 from mixedbench.registry.row import readCsv
 from pairs import FACTOR_PAIR_STATISTICS
@@ -282,16 +283,13 @@ class Summarizer:
         """The flat sample's tables by stratum and tier, the frame's read tables the screen
         flagged, the verdicts by kind, the share of the hand sample that stood, the tables that
         name a response and the shares of the response check and its recheck."""
-        file = self.survey / 'flat_screen.csv'
-        if not file.exists():
-            return 'Flat pass not run.'
-        screen = readCsv(file)
+        screen = readCsv(self.survey / 'flat_screen.csv')
         read = screen[screen['stratum'] == 'read']
         flagged = read[read['flagged'] == 'yes']
         verdicts = self.counted(readCsv(self.survey / 'flat_verdicts.csv')['verdict'])
-        hand = readCsv(self.survey / 'flat_agreement.csv').set_index('stratum').loc['all']
-        check = readCsv(self.survey / 'flat_response_agreement.csv').set_index('stratum').loc['all']
-        recheck = readCsv(self.survey / 'flat_response_recheck_agreement.csv').set_index('stratum').loc['all']  # fmt: skip
+        hand = self.readAgreement(CHECKS['verdict'])
+        check = self.readAgreement(CHECKS['response'])
+        recheck = self.readAgreement(CHECKS['recheck'])
         named = (self.flat['response'] != 'none').sum()
         strata = self.counted(self.flat['stratum'])
         tiers = self.counted(self.flat['tier'])
@@ -301,6 +299,10 @@ class Summarizer:
             f'The hand sample of {hand["tables"]} tables stood at {hand["stood"]}.',
             f'{named} of the {len(self.flat)} tables name a response; the response check of {check["tables"]} tables stood at {check["stood"]}, its recheck of {recheck["tables"]} `none` tables at {recheck["stood"]}.',
         ])  # fmt: skip
+
+    def readAgreement(self, check: HandCheck) -> pd.Series:
+        """A hand check's tables and the share of them that stood, over all its strata."""
+        return readCsv(self.survey / check.AGREEMENT).set_index('stratum').loc['all']
 
     @staticmethod
     def renderAxisTable(axis: str, block: dict, practice: dict) -> str:
