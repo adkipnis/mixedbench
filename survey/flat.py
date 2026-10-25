@@ -10,6 +10,7 @@ excluded.csv and candidates.csv
 -> the sample: the screened frame decided by the verdicts   FlatPass._selectSample
 -> a table's sizes, design and column statistics            FlatPass.measureTable
 -> flat.csv and flat_columns.csv                            FlatPass.measure
+-> quantiles.yaml and SUMMARY.md with the flat split        Summarizer.flush
 -> flat_sample.csv, 50 sample tables in two batches         FlatPass.draw
 -> one batch as a prompt with page and download URLs        FlatPass.handoff
 -> flat_agreement.csv, the share that stood per stratum     FlatPass.agree
@@ -40,6 +41,7 @@ from mixedbench.registry.row import readCsv, splitList, writeCsv
 from pull import Puller
 from schema import FLAT_VERDICTS
 from sources import readFrame
+from summarize import Summarizer
 from verify import Links, drawSample, renderHelpPage
 
 HERE = Path(__file__).parent
@@ -438,6 +440,7 @@ if __name__ == '__main__':
             flat.screen()
         case 'measure':
             flat.measure()
+            Summarizer(args.registry, args.survey).flush()
         case 'draw':
             flat.draw()
         case 'handoff':
