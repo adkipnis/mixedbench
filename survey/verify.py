@@ -213,10 +213,8 @@ class Links:
 
 
 def renderHelpPage(registry: Path, label: str, object: str) -> str:
-    """The help page the reader saw, folded; empty where the object has none."""
+    """The help page the reader saw, folded."""
     path = registry / 'help' / label / f'{object}.txt'
-    if not path.exists():
-        return ''
     text = DEPOSIT_LINE.sub('', path.read_text(), count=1)
     if len(text) > HELP_CHARACTERS:
         text = f'{text[:HELP_CHARACTERS]}\n[cut at {HELP_CHARACTERS:,} characters]'
@@ -237,7 +235,7 @@ class Verifier:
     # draw: candidates -> strata -> quotas -> sample
     # ---------------------------------------------------------------------------------
     def draw(self) -> None:
-        """Each stratum takes its first rows in one permutation, so the batches mix strata."""
+        """sample.csv: `SAMPLE_SIZE` unchecked candidates over tier × `verified`."""
         unchecked = self._listUnchecked()
         sample = drawSample(unchecked, STRATA, SAMPLE_SIZE, SEED)[list(SAMPLE_COLUMNS)]
         sample.to_csv(self.survey / 'sample.csv', index=False, quoting=csv.QUOTE_ALL)
