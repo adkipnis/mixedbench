@@ -532,6 +532,24 @@ reading's open disagreements, four to eight per tier.
   verdict, and `flat.py measure` wrote 729 tables (559 read, 170 prescreened) and 43,826 columns
   into `registry/flat.csv` and `flat_columns.csv`, in five minutes at 7.8 GB on the laptop
   (#122). `quantiles.yaml` gained the `flat` blocks and the flat type mix; no other value moved.
+- Each of the 729 tables was read again by `prompts/response.md` for its response, the outcome of
+  its first documented model, or `none` (#130). Twelve runs named 199, but they split on whether
+  the source's files count beside the help page and whether an outcome named in words counts. The
+  rules ADR 0007 took on 2026-10-25 settle both. The source's own files at its pin document a
+  table, and nothing recalled from a book does. An outcome named in words counts, a model on a
+  subset, renaming or re-export of the rows documents the table, a distribution fit has an
+  outcome, and test code documents nothing. Seven runs over the page-only `none` rows and six rows
+  set by rule brought the count to 299.
+- The response check of 25, seed 3, stood at 0.84, but its `none` stratum at 11 of 15 (0.733)
+  missed the bar of 0.8. Three of its four corrections rested on the authors' material outside
+  the pinned files, so the documentation was widened to the authors' or publisher's own material
+  wherever it is hosted. The 73 T, O and E `none` tables of book- and site-documented sources were
+  read again with web access, and 43 were named. A recheck of 15 fresh `none` tables, seed 4,
+  stood at 15 of 15. 346 of the 729 tables name a response.
+- `flat.py measure` now measures each table without its response column, so `flat_columns.csv`
+  holds 43,480 columns; only the `flat` blocks of `quantiles.yaml` moved. 35 tables' evidence opens
+  with `NOT FLAT:` (24 `wide`, 11 `hidden grouping`), listed on #130 for an issue of their own,
+  and 61 rows' evidence still names a `RULE GAP:` the amended rules mostly settle.
 
 ## Reading rulings (m3#22 to #15)
 
