@@ -85,3 +85,7 @@
 "kleisner_2026_osf/data.csv/2","covariance_structured_effect: POPULATION correlated by linguistic similarity (#32)"
 "kleisner_2026_osf/data.csv/3","covariance_structured_effect: POPULATION correlated by linguistic similarity (#32)"
 "rethinking/data/Primates301.csv/2","covariance_structured_effect: species correlated by phylogenetic distance (#61)"
+"ros/Peacekeeping/data/pk&pkept.dta/1","family cox is a censored model, outside suite 1.1 (ADR 0001)"
+"pymc_examples/examples/data/gdp_data_hierarchical_clean.csv/1","lagged_predictors: a hierarchical VAR(2) of dl_gdp, dl_cons and dl_gfcf (#120)"
+"pymc_examples/examples/data/gdp_data_hierarchical_clean.csv/2","lagged_predictors: a hierarchical VAR(2) of dl_gdp, dl_cons and dl_gfcf (#120)"
+"pymc_examples/examples/data/gdp_data_hierarchical_clean.csv/3","lagged_predictors: a hierarchical VAR(2) of dl_gdp, dl_cons and dl_gfcf (#120)"
