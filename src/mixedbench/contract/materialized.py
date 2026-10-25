@@ -59,6 +59,7 @@ def load(id: str, cache: Path) -> Problem:
         levels={column: tuple(levels) for column, levels in stored['levels'].items()},
         scales=_readScales(stored['scales']),
         dropped_share=stored['dropped_share'],
+        dropped_columns=tuple(stored['dropped_columns']),
         trials=stored['trials'],
         family=stored['family'],
         link=stored['link'],

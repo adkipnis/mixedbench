@@ -509,6 +509,19 @@ reading's open disagreements, four to eight per tier.
 - A one-off check before the merge found every run on its row's current formula and every
   prepared row's run on the table its preparation makes now.
 
+## Constant design columns (#131, 2026-10-25)
+
+- The contract drops a design column with one value over the kept rows and refuses a covariate
+  that varies only over the rows without a response (ADR 0001, amended 2026-10-25).
+- `suite/admit.py`'s rerun moved all 608 contract hashes, since every record gained
+  `dropped_columns`. Only ros Helicopters, liutu_2026_zenodo_3 Measurement_plots and
+  timmer_2024_osf_15 lost columns, and every other table and record is unchanged byte for byte.
+  stata_phenobarb and stata_quinidine stay refused by hand. It is a patch, 1.0.9, as for #57:
+  no suite is frozen before release 1.1.
+- `measure.py`'s rerun moved 25 condition indexes of `dimensions.csv` from inf to a finite
+  value, 5 of the documented design and 20 of the design over every column, since a constant
+  column no longer makes a design rank-deficient. No other measured column moved.
+
 ## Reading rulings (m3#22 to #15)
 
 The rulings [`prompts/read.md`](prompts/read.md) does not carry, from the agents' `RULE GAP` notes and Alex's checks, each with an example

@@ -202,3 +202,31 @@ any rule is a new suite version, never a recomputation.
 
 - Decision: the 49 contract hashes move, as a patch, since no suite is frozen before
   release 1.1.
+
+## Amendment 2026-10-25: constant design columns (#131)
+
+**Coding.**
+
+- Decision: a design column with one value over the kept rows is dropped, as lme4 drops the
+  columns of a rank-deficient model matrix, and the materialized problem lists it in
+  `dropped_columns`.
+- Why: no likelihood identifies the coefficient of such a column. Three candidates had one.
+  The width and length of ros Helicopters are fixed over its 20 flights, so z-scoring turned
+  them into rounding noise, and Helicopters keeps only its intercept. Empty interaction cells
+  in liutu_2026_zenodo_3 and timmer_2024_osf_15 gave all-zero contrasts, whose coefficients
+  never met the likelihood.
+
+**Refusals.**
+
+- Decision: a row is refused when a covariate varies only over the rows without a response.
+- Why: Stata's copies of Phenobarb and Quinidine put a dose of 0 on each observation row and
+  the doses on dosing rows without a concentration. Dropping the constant dose would state a
+  model of another quantity. nlme's copies leave the dose missing on observation rows, so no
+  row of theirs is complete and they were refused already. The rule reads the rows without a
+  response rather than every dropped row, which would also refuse six of the survey's designs
+  over every column.
+
+**Hashes.**
+
+- Decision: every contract hash moves, as a patch, since no suite is frozen before
+  release 1.1. Every record gains `dropped_columns`.
