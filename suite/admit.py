@@ -142,6 +142,16 @@ REFUSED = {
     'rabe_hesketh/ecls_child.dta/1': (
         'joined_covariate: nbhoodcl comes from ecls_school.dta, merged by s4_id (#82)'
     ),
+    # a vector autoregression, whose predictors are the series' lags, no columns of the table (#120)
+    'pymc_examples/examples/data/gdp_data_hierarchical_clean.csv/1': (
+        'lagged_predictors: a hierarchical VAR(2) of dl_gdp, dl_cons and dl_gfcf (#120)'
+    ),
+    'pymc_examples/examples/data/gdp_data_hierarchical_clean.csv/2': (
+        'lagged_predictors: a hierarchical VAR(2) of dl_gdp, dl_cons and dl_gfcf (#120)'
+    ),
+    'pymc_examples/examples/data/gdp_data_hierarchical_clean.csv/3': (
+        'lagged_predictors: a hierarchical VAR(2) of dl_gdp, dl_cons and dl_gfcf (#120)'
+    ),
     # a censored time filed as a continuous response, whose Gaussian fit ignores the censoring (#61)
     'MASS/gehan/1': 'censored_response: a censored time filed as continuous (#61)',
     'rabe_hesketh/bladder.dta/1': 'censored_response: a censored time filed as continuous (#61)',
