@@ -464,3 +464,40 @@ def test_a_verdict_outside_the_vocabulary_or_on_an_unknown_object_is_refused_nam
         [2, f'cattle {verdict["object"]}', column, problem]
     ]
     assert not (merger.survey / 'flat_verdicts.csv').exists()
+
+
+RESPONSE = {'source': 'cattle', 'object': 'cattle.csv', 'response': 'kg', 'evidence': 'lm(kg ~ diet + calving) in its help page'}  # fmt: skip
+
+
+@pytest.mark.parametrize('response', ['kg', 'none'])
+def test_a_response_shard_merges_into_the_survey_with_its_tier_filled_in(splitMerger, response):
+    """A flat table's response is survey bookkeeping, beside the verdicts; `none` is a reading
+    too, for a table no documented model fits."""
+    merger = splitMerger
+    mergeShard(merger, FIXTURES / 'excluded_cattle.csv')
+    reading = RESPONSE | {'response': response}
+    mergeShard(merger, writeShard(merger.survey / 'shards' / 'response_first.csv', [reading]))
+    assert readRows(merger.survey / 'flat_responses.csv') == [reading | {'tier': 'R'}]
+
+
+@pytest.mark.parametrize(
+    'edit, column, problem',
+    [
+        ({'response': ''}, 'response', 'required'),
+        ({'evidence': ''}, 'evidence', 'required'),
+        ({'object': 'cattle.old'}, 'object', 'not in registry.csv or excluded.csv'),
+        ({'response': 'weight'}, 'response', 'not a column of the table'),
+    ],
+)
+def test_a_response_without_evidence_on_an_unknown_object_or_no_column_is_refused(
+    merger, edit, column, problem
+):
+    """A response is a column of the loaded table or `none`, read with a line of evidence on an
+    object the census holds."""
+    mergeShard(merger, FIXTURES / 'excluded_cattle.csv')
+    reading = RESPONSE | edit
+    problems = refusal(merger, writeShard(merger.survey / 'shards' / 'response_bad.csv', [reading]))
+    assert problems[['line', 'key', 'column', 'problem']].values.tolist() == [
+        [2, f'cattle {reading["object"]}', column, problem]
+    ]
+    assert not (merger.survey / 'flat_responses.csv').exists()
