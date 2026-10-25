@@ -844,3 +844,8 @@
 "agridat","lehmann.rice.uniformity","1","R","plot:range","ok","","0.1093","153","gaussian","","4363.364","1131.4235","1055.8352","0.0","73.6309","0.6661","0.8388","1","1131.4235","0.1727","0.5173"
 "agridat","roemer.sugarbeet.uniformity","1","R","row:col","ok","","0.1101","192","gaussian","","0.5568","0.4684","3.6364","0.0","0.8077","0.1195","0.2199","1","0.4684","0.1005","0.1141"
 "HSAUR3","Forbes2000","1","R","country","ok","","0.2487","1995","gaussian","","0.8186","0.1255","0.5335","0.0","0.9422","0.554","0.6389","1","0.1255","0.0849","0.1904"
+"agridat","heady.fertilizer","1","R","rep:P:N","ok","","0.1292","228","gaussian","","1862.0009","20.4308","125.8902","0.0","43.2061","0.9271","0.9373","1","20.4308","0.0102","0.1396"
+"MASS","Cars93","1","R","Manufacturer","ok","","0.2112","93","gaussian","","32.6602","38.406","26.5102","0.0","7.801","0.3347","0.7283","1","38.406","0.3936","0.5916"
+"posteriordb","posterior_database/data/data/loss_curves.json.zip","1","E","cohort_id","no_formula","","","","gaussian","","","","","","","","","","","",""
+"pymc_examples","examples/data/fastball_spin_rates.csv","1","E","pitcher_name","no_formula","","","","gaussian","","","","","","","","","","","",""
+"pymc_examples","examples/data/gambia_dataset.csv","1","E","x:y","no_formula","","","","bernoulli","","","","","","","","","","","",""
