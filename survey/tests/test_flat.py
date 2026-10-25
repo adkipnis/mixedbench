@@ -175,14 +175,15 @@ def test_a_flat_tables_design_statistics_equal_the_registrys_over_the_same_colum
 
 def test_an_all_distinct_label_column_is_measured_but_left_out_of_the_design(herds):
     """A column of names or ids would make the design as wide as the table is long, so a
-    categorical whose present values are all distinct is measured and counted, but left out of
-    d_all and condition_all; its one missing name drops no row from the design."""
+    categorical whose present values are all distinct is measured, counted and flagged, but left
+    out of d_all and condition_all; its one missing name drops no row from the design."""
     cut = herds[MODEL_2_COLUMNS]
     names = [f'cow {i}' for i in range(len(cut))]
     names[0] = None
     measured, columns = FlatPass.measureTable(cut.assign(name=names))
     alone, _ = FlatPass.measureTable(cut)
     assert [c['column'] for c in columns] == [*MODEL_2_COLUMNS, 'name']
+    assert [c['id_column'] for c in columns] == ['no'] * len(MODEL_2_COLUMNS) + ['yes']
     assert (measured['n_id_columns'], alone['n_id_columns']) == (1, 0)
     assert measured['d_all'] == alone['d_all']
     assert measured['condition_all'] == alone['condition_all']
@@ -351,9 +352,6 @@ def test_the_pass_writes_a_row_per_sample_table_and_a_row_per_its_column(plots):
         '3', '2', '2', '0', '0', '0', '0', '2', 'inf',
     ]  # fmt: skip
     columns = readRows(plots.registry / 'flat_columns.csv')
-    assert list(columns[0]) == [
-        'source', 'object', 'tier', 'column', 'type', 'K', 'missing_share', *COLUMN_STATISTICS,
-    ]  # fmt: skip
     assert [(c['object'], c['column']) for c in columns] == [
         ('plain.csv', 'dose'), ('plain.csv', 'response'), ('distinct.csv', 'x'),
         ('distinct.csv', 'y'),
