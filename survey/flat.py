@@ -12,7 +12,7 @@ excluded.csv and candidates.csv
 -> a table's sizes, design and column statistics            FlatPass.measureTable
 -> flat.csv and flat_columns.csv, without the responses     FlatPass.measure
 -> quantiles.yaml and SUMMARY.md with the flat split        Summarizer.flush
--> a hand check's sample, 50 verdicts or 25 responses        FlatPass.draw
+-> a hand check's sample: 50 verdicts, 25 or 15 responses   FlatPass.draw
 -> one batch as a prompt with page and download URLs        FlatPass.handoff
 -> the share of the hand check that stood per stratum       FlatPass.agree
 -> the wide tables as an issue's list                       FlatPass.listWide
@@ -41,9 +41,8 @@ from mixedbench.contract import codeCovariate, columnType, dropConstant
 from mixedbench.datasets import Loader
 from mixedbench.registry.row import readCsv, splitList, writeCsv
 from pull import Puller
-from schema import FLAT_RESPONSES, FLAT_VERDICTS
+from schema import FLAT_RESPONSES, FLAT_VERDICTS, Table
 from sources import readFrame
-from summarize import Summarizer
 from verify import Links, drawSample, renderHelpPage
 
 HERE = Path(__file__).parent
@@ -54,8 +53,7 @@ HERE = Path(__file__).parent
 # the pre-screen's verdict -> the stratum of a table filed `no grouping structure`; a table
 # stopped at `one column`, `under 3 rows` or `no frame` cannot be measured
 STRATA = {'pass': 'read', 'no repeated column': 'prescreened'}
-# The screen's two rules flag a read table for the second reading; their stems are those of the
-# prototype that ADR 0007's counts rest on. A false positive costs one second reading.
+# the screen's two rules flag a read table for a second reading, all that a false positive costs
 FILING_WORDS = re.compile(r'\b(?:wide|repeat|occasion|visit)\w*', re.IGNORECASE)
 ID_STEMS = (
     'subj', 'participant', 'patient', 'person', 'site', 'school', 'plot', 'block', 'unit',
@@ -69,12 +67,10 @@ MANY_LEVELS = 10  # a repeated integer column with more levels is recorded for t
 # opens a response reading's evidence where the reader found the table grouped or wide, which
 # flags the table as the screen does
 NOT_FLAT = 'NOT FLAT:'
-# flat_screen.csv: one row per frame table; a list of words or columns is `;`-separated
-SCREEN_COLUMNS = (
-    'source', 'object', 'tier', 'stratum', 'words', 'id_columns', 'integer_columns', 'flagged',
-)  # fmt: skip
 # a prescreened table's filing line is the pre-screen's verdict, and it holds no repeated column
 UNSCREENED = {'words': '', 'id_columns': '', 'integer_columns': '', 'flagged': 'no'}
+# flat_screen.csv: one row per frame table; a list of words or columns is `;`-separated
+SCREEN_COLUMNS = ('source', 'object', 'tier', 'stratum', *UNSCREENED)
 COLUMN_TYPES = ('continuous', 'binary', 'categorical', 'ordered')  # the kinds `columnType` gives
 # flat.csv: one row per table of the flat sample, how it got in, its response, its sizes and
 # its design
@@ -91,7 +87,7 @@ FLAT_COLUMN_COLUMNS = (
 )  # fmt: skip
 # a batch's handoff opens with a prompt that a checker who knows neither the survey nor the
 # repository can act on, one per hand check
-VERDICT_HEAD = """# Flat tables, hand check, batch {batch}
+VERDICT_HEAD = """# Flat tables, {title}, batch {batch}
 
 You check {n} tables from public statistics sources that a survey filed as having no grouping
 structure, so that they can serve as a reference sample of flat tables beside a registry of
@@ -149,7 +145,7 @@ Take the evidence from the source, not from the filing or the screen alone.
 """
 
 
-RESPONSE_HEAD = """# Flat tables, response check, batch {batch}
+RESPONSE_HEAD = """# Flat tables, {title}, batch {batch}
 
 You check {n} tables from public statistics sources that a survey holds as flat tables, tables
 with no grouping structure, kept as a reference sample beside a registry of grouped ones.
@@ -161,8 +157,10 @@ holds.
 
 - **A column:** the outcome of the first model the documentation fits or states on this table:
   the help page's first, else the first in the files the source ships with it at the version
-  read (example and chapter scripts, vignettes, notebooks, Stan programs, a deposit's code), in
-  the order the source presents them. A fit of one column's distribution has that column as
+  read (example and chapter scripts, vignettes, notebooks, Stan programs, a deposit's code),
+  else the first in the material its authors or publisher wrote, wherever it is hosted (a
+  documentation site, a book's companion page or code, course scripts), each in the order the
+  source presents them. A fit of one column's distribution has that column as
   its outcome, and a model fitted on a subset, a renaming or a re-export of the table's rows
   documents the table too; test code does not. Without a model, a column the documentation
   calls the response or the outcome, or the quantity it says an analysis of the table relates
@@ -177,8 +175,9 @@ holds.
   does not hold these rows).
 
 A response is never inferred: a table whose documentation neither models nor names an outcome
-is `none`, even where one column is plainly the outcome, and a model recalled from a book the
-source's files do not hold does not count.
+is `none`, even where one column is plainly the outcome. A model recalled from a book that
+neither the source's files nor its authors' or publisher's material hold does not count, nor
+does an analysis by others (a blog, another author's course).
 
 ## Per table
 
@@ -211,6 +210,7 @@ Take the evidence from the source, not from the reading alone.
 class VerdictCheck:
     """The verdicts' check: a drawn table stood when it is still in the flat sample."""
 
+    TITLE = 'hand check'
     STRATA = ('prescreened', 'read/unflagged', 'read/flagged', 'read/integer')
     SIZE = 50
     SEED = 2  # the registry's hand samples took 0 and 1
@@ -229,13 +229,12 @@ class VerdictCheck:
         'integer_columns': 'integer columns',
     }
 
-    @staticmethod
-    def selectPopulation(flat: FlatPass) -> pd.DataFrame:
+    def selectPopulation(self, flat: FlatPass) -> pd.DataFrame:
         """The sample's tables with how they got in; read/integer holds the unflagged tables the
         dropped integer-levels rule alone would have flagged."""
         population = []
         for _, row in flat._selectSample().iterrows():
-            stratum = {'stratum': VerdictCheck._findStratum(row)}
+            stratum = {'stratum': self._findStratum(row)}
             population.append(row.to_dict() | flat._findBasis(row) | stratum)
         return pd.DataFrame(population)
 
@@ -249,19 +248,17 @@ class VerdictCheck:
             return 'read/integer'
         return 'read/unflagged'
 
-    @staticmethod
-    def renderLines(row: pd.Series) -> list[str]:
+    def renderLines(self, row: pd.Series) -> list[str]:
         second_reading = row['evidence'] if row['basis'] == 'second reading' else '—'
         return [
             f'- filing: {row["detail"]}',
-            f'- screen: {VerdictCheck._renderScreen(row)}',
+            f'- screen: {self._renderScreen(row)}',
             f'- second reading: {second_reading}',
         ]
 
-    @staticmethod
-    def _renderScreen(row: pd.Series) -> str:
+    def _renderScreen(self, row: pd.Series) -> str:
         reasons = []
-        for column, name in VerdictCheck.SCREEN_REASONS.items():
+        for column, name in self.SCREEN_REASONS.items():
             names = [f'`{c}`' for c in splitList(row[column])]
             if names:
                 reasons.append(f'{name} {", ".join(names)}')
@@ -279,6 +276,7 @@ class ResponseCheck:
     """The responses' check: a drawn table stood when it is still in the flat sample with the
     response drawn."""
 
+    TITLE = 'response check'
     STRATA = ('named', 'none')
     SIZE = 25
     SEED = 3
@@ -311,16 +309,15 @@ class ResponseRecheck(ResponseCheck):
     """The none stratum's second check, after the first missed the bar: fresh none tables, none
     of them drawn by the first check."""
 
+    TITLE = 'response recheck'
     STRATA = ('none',)
     SIZE = 15
     SEED = 4
     SAMPLE = 'flat_response_recheck_sample.csv'
     AGREEMENT = 'flat_response_recheck_agreement.csv'
-    HEAD = RESPONSE_HEAD.replace('response check, batch', 'response recheck, batch')
 
-    @staticmethod
-    def selectPopulation(flat: FlatPass) -> pd.DataFrame:
-        population = ResponseCheck.selectPopulation(flat)
+    def selectPopulation(self, flat: FlatPass) -> pd.DataFrame:
+        population = super().selectPopulation(flat)
         drawn = readCsv(flat.survey / ResponseCheck.SAMPLE)[['source', 'object']]
         joined = population.merge(drawn, on=['source', 'object'], how='left', indicator=True)
         fresh = (joined['_merge'] == 'left_only') & (joined['stratum'] == 'none')
@@ -347,16 +344,12 @@ class FlatPass:
 
     def measure(self) -> None:
         """flat.csv and flat_columns.csv: every table of the flat sample, measured without its
-        response. Refuses, naming them, while a flagged table has no verdict, and before writing
-        while a sample table has no response or one its table lacks."""
-        tables, columns, problems = [], [], []
+        response. Refuses, naming them, while a flagged table has no verdict or a sample table
+        has no response."""
+        tables, columns = [], []
         for _, row in self._selectResponded().iterrows():
             table = self.loader.load(self.sources[row['source']], row['object'])
             response = row['response']
-            problem = self._findResponseProblem(response, table)
-            if problem != '':
-                problems.append(f'{row["source"]} {row["object"]}: {problem}')
-                continue
             covariates = table if response == 'none' else table.drop(columns=response)
             measured, measured_columns = self.measureTable(covariates)
             identity = {c: row[c] for c in ('source', 'object', 'tier')}
@@ -364,12 +357,6 @@ class FlatPass:
             tables.append(identity | how | measured)
             for column in measured_columns:
                 columns.append(identity | column)
-        if problems:
-            names = '\n'.join(problems)
-            raise ValueError(
-                f'{len(problems)} sample tables without a response or with one their table '
-                f'lacks:\n{names}'
-            )
         writeCsv(pd.DataFrame(tables, columns=FLAT_COLUMNS), self.registry / 'flat.csv')
         flat_columns = pd.DataFrame(columns, columns=FLAT_COLUMN_COLUMNS)
         writeCsv(flat_columns, self.registry / 'flat_columns.csv')
@@ -400,8 +387,7 @@ class FlatPass:
             screenings.append(screening)
         return frame.join(pd.DataFrame(screenings, index=frame.index, columns=list(UNSCREENED)))
 
-    @staticmethod
-    def screenTable(detail: str, table: pd.DataFrame) -> dict[str, str]:
+    def screenTable(self, detail: str, table: pd.DataFrame) -> dict[str, str]:
         """A read table's screen: the words of its filing line that say grouped data stored wide
         or repeated, its columns that could index groups and are named like an id, and those of
         many integer levels, which flag nothing."""
@@ -411,9 +397,9 @@ class FlatPass:
             values = table[column]
             if not Puller.canGroup(values):
                 continue
-            if FlatPass._isIdLike(str(column)):
+            if self._isIdLike(str(column)):
                 id_columns.append(str(column))
-            if FlatPass._isInteger(values) and values.nunique() > MANY_LEVELS:
+            if self._isInteger(values) and values.nunique() > MANY_LEVELS:
                 integer_columns.append(str(column))
         return {
             'words': ';'.join(words),
@@ -438,27 +424,22 @@ class FlatPass:
     # ---------------------------------------------------------------------------------
 
     def _selectSample(self) -> pd.DataFrame:
-        """The screened frame's tables in the flat sample: a verdict decides its table whatever
-        the screen said; without one, a prescreened or unflagged table is in. A table the
-        response reading found not flat is flagged as the screen's are."""
-        screened = self._screenFrame().merge(
-            self._readVerdicts(), on=['source', 'object'], how='left'
-        )
-        screened[['verdict', 'evidence']] = screened[['verdict', 'evidence']].fillna('')
-        flagged = (screened['flagged'] == 'yes') | self._isFoundNotFlat(screened)
+        """The screened frame's tables in the flat sample, each with its verdict and its response,
+        blank where it has none: a verdict decides its table whatever the screen said; without
+        one, a prescreened or unflagged table is in. A table the response reading found not flat
+        is flagged as the screen's are."""
+        verdicts = self._readBookkeeping(FLAT_VERDICTS)
+        responses = self._readBookkeeping(FLAT_RESPONSES)
+        responses = responses.rename(columns={'evidence': 'response_evidence'})
+        screened = self._screenFrame().merge(verdicts, on=['source', 'object'], how='left')
+        screened = screened.merge(responses, on=['source', 'object'], how='left').fillna('')
+        found_not_flat = screened['response_evidence'].str.startswith(NOT_FLAT)
+        flagged = (screened['flagged'] == 'yes') | found_not_flat
         unread = screened[flagged & (screened['verdict'] == '')]
         if not unread.empty:
             names = '\n'.join(unread['source'] + ' ' + unread['object'])
             raise ValueError(f'{len(unread)} flagged tables without a verdict:\n{names}')
         return screened[screened['verdict'].isin(['', 'flat'])]
-
-    def _isFoundNotFlat(self, frame: pd.DataFrame) -> pd.Series:
-        """Per frame table, whether its response reading's evidence opens with `NOT FLAT:`."""
-        responses = self._readResponses()
-        found = responses[responses['evidence'].str.startswith(NOT_FLAT)]
-        keys = ['source', 'object']
-        isin = pd.MultiIndex.from_frame(frame[keys]).isin(pd.MultiIndex.from_frame(found[keys]))
-        return pd.Series(isin, index=frame.index)
 
     @staticmethod
     def _findBasis(row: pd.Series) -> dict[str, str]:
@@ -471,42 +452,27 @@ class FlatPass:
         return {'basis': 'first reading', 'evidence': row['detail']}
 
     def _selectResponded(self) -> pd.DataFrame:
-        """The sample with each table's response and its evidence, blank where it has none."""
+        """The sample, refused while a table has no response, so that a blank never counts as
+        named. The merge refused a response its table lacks."""
         sample = self._selectSample()
-        responses = self._readResponses().rename(columns={'evidence': 'response_evidence'})
-        responded = sample.merge(responses, on=['source', 'object'], how='left')
-        return responded.fillna({'response': '', 'response_evidence': ''})
+        unread = sample[sample['response'] == '']
+        if not unread.empty:
+            names = '\n'.join(unread['source'] + ' ' + unread['object'])
+            raise ValueError(f'{len(unread)} sample tables without a response:\n{names}')
+        return sample
 
-    @staticmethod
-    def _findResponseProblem(response: str, table: pd.DataFrame) -> str:
-        """Why a sample table cannot be measured without its response; empty when it can."""
-        if response == '':
-            return 'no response'
-        if response != 'none' and response not in table.columns:
-            return f'no column {response}'
-        return ''
+    def _readBookkeeping(self, table: Table) -> pd.DataFrame:
+        """A merged table of the survey, in its agent columns."""
+        return readCsv(self.survey / f'{table.name}.csv')[list(table.agentColumns)]
 
-    def _readResponses(self) -> pd.DataFrame:
-        path = self.survey / 'flat_responses.csv'
-        if not path.exists():  # until the merge of the first response shard
-            return pd.DataFrame(columns=FLAT_RESPONSES.agentColumns)
-        return readCsv(path)[list(FLAT_RESPONSES.agentColumns)]
-
-    def _readVerdicts(self) -> pd.DataFrame:
-        path = self.survey / 'flat_verdicts.csv'
-        if not path.exists():  # until the merge of the first verdict shard
-            return pd.DataFrame(columns=FLAT_VERDICTS.agentColumns)
-        return readCsv(path)[list(FLAT_VERDICTS.agentColumns)]
-
-    @staticmethod
-    def measureTable(table: pd.DataFrame) -> tuple[dict, list[dict]]:
+    def measureTable(self, table: pd.DataFrame) -> tuple[dict, list[dict]]:
         """A flat table's sizes and design statistics, and each column's statistics by the
         functions that measure the registry's."""
         column_types = {c: columnType(table[c]) for c in table.columns}
         rho = measureMaxAbsRho(table, column_types)
         columns, designed = [], []
         for column, (kind, levels) in column_types.items():
-            id_column = FlatPass._isIdColumn(table[column], kind, levels)
+            id_column = self._isIdColumn(table[column], kind, levels)
             typed = {
                 'column': column,
                 'type': kind,
@@ -517,8 +483,8 @@ class FlatPass:
             columns.append(typed | shape)
             if not id_column:
                 designed.append(column)
-        sizes = FlatPass._countColumns(table, column_types, designed)
-        return sizes | FlatPass._measureCondition(table[designed]), columns
+        sizes = self._countColumns(table, column_types, designed)
+        return sizes | self._measureCondition(table[designed]), columns
 
     @staticmethod
     def _isIdColumn(values: pd.Series, kind: str, levels: int | str) -> bool:
@@ -579,7 +545,8 @@ class FlatPass:
         sections = []
         for number, (_, row) in enumerate(drawn.iterrows(), start=1):
             sections.append(self._renderSection(number, row, links, check))
-        return check.HEAD.format(batch=batch, n=len(sections)) + ''.join(sections)
+        head = check.HEAD.format(title=check.TITLE, batch=batch, n=len(sections))
+        return head + ''.join(sections)
 
     def _renderSection(self, number: int, row: pd.Series, links: Links, check: HandCheck) -> str:
         page, download = links.resolveUrls(row['source'], row['object'], row['file'])
@@ -613,7 +580,7 @@ class FlatPass:
         """The frame's tables judged `wide`, in frame order, a bullet each with its source and
         evidence. A table that has left the frame (e.g. a copy) is not listed."""
         frame = self.deriveFrame()[['source', 'object']]
-        judged = frame.merge(self._readVerdicts(), on=['source', 'object'])
+        judged = frame.merge(self._readBookkeeping(FLAT_VERDICTS), on=['source', 'object'])
         wide = judged[judged['verdict'] == 'wide']
         bullets = []
         for _, row in wide.iterrows():
@@ -625,6 +592,8 @@ class FlatPass:
 # main
 # =====================================================================================
 if __name__ == '__main__':
+    from summarize import Summarizer  # imported here: summarize imports this module
+
     # fmt: off
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('step', choices=['screen', 'measure', 'draw', 'handoff', 'agree', 'wide'], help='the step to run')
@@ -634,7 +603,7 @@ if __name__ == '__main__':
     parser.add_argument('--survey', type=Path, default=HERE, help='folder holding candidates.csv and the bookkeeping tables')
     args = parser.parse_args()
     if args.step in ('draw', 'handoff', 'agree') and args.check is None:
-        parser.error(f'{args.step} names its hand check: --check verdict or --check response')
+        parser.error(f'{args.step} names its hand check: --check verdict, response or recheck')
     # fmt: on
     flat = FlatPass(args.registry, args.survey)
     match args.step:
