@@ -153,11 +153,22 @@ def test_a_flat_columns_statistics_equal_the_registrys_for_the_same_column(herds
     pd.testing.assert_frame_equal(flat, registry, check_dtype=False)
 
 
-def test_a_flat_tables_design_statistics_equal_the_registrys_over_the_same_columns(herds, rows):
+@pytest.mark.parametrize(
+    'extra',
+    [
+        pytest.param({}, id='the cut table'),
+        pytest.param({'pen': 1.0}, id='a column of one value leaves both designs'),
+    ],
+)
+def test_a_flat_tables_design_statistics_equal_the_registrys_over_the_same_columns(
+    herds, rows, extra
+):
     """d_all and condition_all count and code every measured column as dimensions.csv does,
-    the design centered as the contract centers it, so the cut table gives model 2's."""
-    measured, _ = FlatPass.measureTable(herds[MODEL_2_COLUMNS])
-    dimension = dimensions.measure(Measurer(herds, parsed(rows[1])))[0]
+    the design centered as the contract centers it and a constant column dropped as the
+    contract drops it, so the cut table gives model 2's."""
+    table = herds.assign(**extra)
+    measured, _ = FlatPass.measureTable(table[[*MODEL_2_COLUMNS, *extra]])
+    dimension = dimensions.measure(Measurer(table, parsed(rows[1])))[0]
     assert measured['d_all'] == dimension['d_all']
     assert measured['condition_all'] == dimension['condition_all']
 
