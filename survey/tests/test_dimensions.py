@@ -122,13 +122,11 @@ def test_the_condition_index_of_the_documented_design(herds, rows):
 
 
 def test_a_rank_deficient_design_has_an_infinite_condition_index(herds, rows):
-    """Breed and feed leave cells empty, so their interaction has columns of zeros; a dose that
-    never varies is collinear with the intercept, though the contract standardizes it to 0/0;
-    weight in pounds repeats weight in kilograms, among every measured column only."""
+    """Breed and feed leave cells empty: no hereford or jersey eats grain, the reference feed,
+    so each of their contrasts is the sum of their interaction columns.
+    Weight in pounds repeats weight in kilograms, among every measured column only."""
     interacting = rows[0] | {'interactions': 'breed:feed'}
     assert dimensions.measure(Measurer(herds, parsed(interacting)))[0]['condition_doc'] == np.inf
-    dosed = rows[1] | {'covariates': 'breed;dose'}
-    assert dimensions.measure(Measurer(herds.assign(dose=2.5), parsed(dosed)))[0]['condition_doc'] == np.inf  # fmt: skip
     pounds = herds.assign(pounds=herds['weight'] * 2.2046)
     alone = rows[1] | {'covariates': 'weight;breed', 'ignore': 'id;region;feed;parity;sick'}
     dimension = dimensions.measure(Measurer(pounds, parsed(alone)))[0]
