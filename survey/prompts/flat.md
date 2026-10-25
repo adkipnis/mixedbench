@@ -13,7 +13,8 @@ Per object of the worklist:
 - its `registry/excluded.csv` row, whose `detail` is the first reading's filing line;
 - its `survey/candidates.csv` row;
 - its `survey/flat_screen.csv` row: the filing line's `words` and the `id_columns` that flagged
-  it;
+  it, or its `survey/flat_responses.csv` row, whose evidence opens with `NOT FLAT:` where the
+  response reading flagged it;
 - its help page `registry/help/<source>/<object>.txt`, which ends with the table's dtypes and
   first rows. A Tier D page opens with the path of its deposit page, which runs to hundreds of
   kilobytes: search it for the table's file name and its model, once per deposit.
@@ -39,7 +40,7 @@ documentation's words for them.
   dose, sex), a field coordinate that each plot holds once, a count and an id with one row per
   unit are no grouping factor.
 
-The screen's flag is a reason to look, never evidence: a flagged column `trials` that counts
+The flag is a reason to look, never evidence: a flagged column `trials` that counts
 trials is no grouping factor.
 
 ## Hidden grouping
