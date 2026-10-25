@@ -37,7 +37,7 @@ from pathlib import Path
 import pandas as pd
 from columns import COLUMN_STATISTICS, measureMaxAbsRho, measureShape
 from dimensions import computeConditionIndex, countWidth
-from mixedbench.contract import codeCovariate, columnType
+from mixedbench.contract import codeCovariate, columnType, dropConstant
 from mixedbench.datasets import Loader
 from mixedbench.registry.row import readCsv, splitList, writeCsv
 from pull import Puller
@@ -535,20 +535,21 @@ class FlatPass:
     @staticmethod
     def _measureCondition(table: pd.DataFrame) -> dict:
         """condition_all over the rows complete in every column: the intercept and each column
-        coded as the contract codes it, a continuous one standardized as the contract's full
-        regime standardizes it. Blank when no row is complete."""
+        coded as the contract codes it, a coded column of one value dropped and a continuous one
+        standardized as the contract's full regime standardizes it. Blank when no row is
+        complete."""
         complete = table.dropna()
         if complete.empty:
             return {}
+        coded = {column: codeCovariate(complete[column]) for column in complete.columns}
+        kept, _ = dropConstant(coded)
         design = {'Intercept': pd.Series(1.0, index=complete.index)}
-        for column in complete.columns:
-            values = complete[column]
-            kind, _ = columnType(values)
-            coded = codeCovariate(values)
-            if kind == 'continuous':
-                raw = coded[column]
-                coded = {column: (raw - raw.mean()) / raw.std()}
-            design |= coded
+        for column, columns in kept.items():
+            kind, _ = columnType(complete[column])
+            if kind == 'continuous' and columns:  # empty when dropped
+                raw = columns[column]
+                columns = {column: (raw - raw.mean()) / raw.std()}
+            design |= columns
         return {'condition_all': computeConditionIndex(pd.DataFrame(design))}
 
     # ---------------------------------------------------------------------------------
