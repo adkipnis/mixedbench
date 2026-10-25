@@ -1,0 +1,174 @@
+"""run.py compares the registry's grouped tables with the flat sample's, the table its unit (#123).
+
+A table is summarized by its sizes, the shares of its column types,
+and per column statistic its median over its columns.
+A registry object counts its first model's columns, every column but the response, trials and
+grouping factors.
+A flat table counts every column but its id columns, the categoricals whose present values are all
+distinct.
+It reads the measured files at the commit that wrote its outputs, the files mixedbench 1.0.9 ships.
+
+pipeline:
+---------
+the measured files of registry/
+-> per registry object, its first model's columns            summarizeRegistry
+-> per flat table, its columns but the id columns            summarizeFlat
+-> per table: sizes, type shares, each statistic's median    summarizeTables
+-> per statistic: the U test and the rank-biserial r         compareSamples
+-> registry_tables.csv, flat_tables.csv and tests.csv
+
+Run from the repo root:
+
+    uv run python experiments/flat/run.py
+"""
+
+from __future__ import annotations
+
+import argparse
+import math
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+from mixedbench.registry.row import readCsv
+
+HERE = Path(__file__).parent
+KEY = ['source', 'object']
+TYPES = ('continuous', 'binary', 'categorical', 'ordered')  # the column types of columns.csv
+LEVELED_TYPES = ('categorical', 'ordered')  # the types whose K levels count K − 1 in d_all
+COLUMN_STATISTICS = (
+    'missing_share', 'skewness', 'excess_kurtosis', 'outlier_share', 'zero_share', 'min_share',
+    'max_share', 'unique_share', 'rare_level_share', 'max_abs_rho',
+)  # fmt: skip
+STATISTICS = (
+    'n_obs', 'n_columns', 'd_all', 'condition_all',
+    'continuous_share', 'binary_share', 'categorical_share', 'ordered_share',
+    'K', *COLUMN_STATISTICS,
+)  # fmt: skip
+
+# =====================================================================================
+# the summary tables
+# =====================================================================================
+
+
+def summarizeRegistry(dir: Path) -> pd.DataFrame:
+    """Per registry object, its first model: n_obs and condition_all as dimensions.csv holds them,
+    the rest over its columns in columns.csv."""
+    dimensions = _readNumbers(dir / 'dimensions.csv', ('n_obs', 'condition_all'))
+    first = dimensions[dimensions['model_index'] == '1']
+    tables = first.drop_duplicates(KEY)  # n_obs of the first factor, as quantiles.yaml counts it
+    columns = _readNumbers(dir / 'columns.csv', ('K', *COLUMN_STATISTICS))
+    columns = columns[columns['model_index'] == '1']
+    return summarizeTables(tables, columns)
+
+
+def summarizeFlat(dir: Path) -> pd.DataFrame:
+    """Per flat table: n_obs and condition_all as flat.csv holds them, the rest over its columns in
+    flat_columns.csv but the id columns."""
+    sizes = ('n_obs', 'n_columns', 'n_id_columns', 'd_all', 'condition_all')
+    tables = _readNumbers(dir / 'flat.csv', sizes)
+    columns = _readNumbers(dir / 'flat_columns.csv', ('K', *COLUMN_STATISTICS))
+    columns = columns[~_isIdColumn(columns, tables)]
+    summary = summarizeTables(tables, columns)
+    # the id columns found here are the ones flat.csv counts
+    assert (summary['n_columns'] == tables['n_columns'] - tables['n_id_columns']).all()
+    assert (summary['d_all'] == tables['d_all']).all()
+    return summary
+
+
+def _readNumbers(path: Path, columns: tuple[str, ...]) -> pd.DataFrame:
+    table = readCsv(path)
+    converted = {c: pd.to_numeric(table[c].replace('', np.nan)) for c in columns}
+    return table.assign(**converted)
+
+
+def _isIdColumn(columns: pd.DataFrame, tables: pd.DataFrame) -> pd.Series:
+    """Marks a categorical with as many levels as present values.
+    The file holds the present values as n_obs × (1 − missing_share), the share to four decimals."""
+    n_obs = columns[KEY].merge(tables, on=KEY, how='left')['n_obs'].to_numpy()
+    present = n_obs * (1 - columns['missing_share'])
+    tolerance = 0.5 + n_obs * 5e-5  # half a row, and half the share's last decimal
+    return (columns['type'] == 'categorical') & ((columns['K'] - present).abs() <= tolerance)
+
+
+def summarizeTables(tables: pd.DataFrame, columns: pd.DataFrame) -> pd.DataFrame:
+    """One row per table: its sizes, the shares of its column types and each statistic's median
+    over its columns. A table without a column has n_columns and d_all 0, its shares and medians
+    blank."""
+    summary = tables.set_index(KEY)[['tier', 'n_obs']]
+    by_table = columns.groupby(KEY)
+    summary['n_columns'] = by_table.size().reindex(summary.index, fill_value=0)
+    leveled = columns['type'].isin(LEVELED_TYPES)
+    widths = columns.assign(width=np.where(leveled, columns['K'] - 1, 1))
+    summary['d_all'] = widths.groupby(KEY)['width'].sum().reindex(summary.index, fill_value=0)
+    summary['condition_all'] = tables.set_index(KEY)['condition_all']
+    shares = pd.crosstab([columns['source'], columns['object']], columns['type'], normalize='index')
+    for kind in TYPES:
+        summary[f'{kind}_share'] = shares[kind]
+    summary['K'] = columns[leveled].groupby(KEY)['K'].median()
+    for statistic in COLUMN_STATISTICS:
+        summary[statistic] = by_table[statistic].median()
+    return summary.astype({'n_columns': int, 'd_all': int}).reset_index()
+
+
+# =====================================================================================
+# the tests
+# =====================================================================================
+
+
+def compareSamples(registry: pd.DataFrame, flat: pd.DataFrame) -> pd.DataFrame:
+    """Per statistic, each sample's tables and median, the U test and the rank-biserial
+    correlation. A blank is left out, inf kept."""
+    records = []
+    for statistic in STATISTICS:
+        x = registry[statistic].dropna()
+        y = flat[statistic].dropna()
+        records.append(
+            {
+                'statistic': statistic,
+                'n_registry': len(x),
+                'n_flat': len(y),
+                'median_registry': x.median(),
+                'median_flat': y.median(),
+            }
+            | _testMannWhitney(x, y)
+        )
+    return pd.DataFrame(records)
+
+
+def _testMannWhitney(x: pd.Series, y: pd.Series) -> dict:
+    """The two-sided Mann–Whitney U test in its normal approximation with the tie and continuity
+    corrections, as scipy.stats.mannwhitneyu(method='asymptotic') computes it.
+    The rank-biserial correlation 2U / (n_x n_y) − 1 is the probability that x lies above y minus
+    the reverse (Kerby 2014, https://doi.org/10.2466/11.IT.3.1)."""
+    n_x = len(x)
+    n_y = len(y)
+    n = n_x + n_y
+    pooled = pd.concat([x, y])
+    ranks = pooled.rank().to_numpy()  # average ranks over ties, inf above every finite value
+    u = ranks[:n_x].sum() - n_x * (n_x + 1) / 2  # the pairs where x is larger, a tie half
+    ties = pooled.value_counts().to_numpy()  # the size of each group of equal values
+    variance = n_x * n_y / 12 * (n + 1 - (ties**3 - ties).sum() / (n * (n - 1)))
+    z = (abs(u - n_x * n_y / 2) - 0.5) / math.sqrt(variance)
+    return {'U': u, 'p': math.erfc(z / math.sqrt(2)), 'rank_biserial': 2 * u / (n_x * n_y) - 1}
+
+
+# =====================================================================================
+# main
+# =====================================================================================
+
+if __name__ == '__main__':
+    # fmt: off
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument('--registry', type=Path, default=Path('registry'), help='the directory of the measured files')
+    parser.add_argument('--out', type=Path, default=HERE, help='the directory of the three tables')
+    args = parser.parse_args()
+    # fmt: on
+    registry = summarizeRegistry(args.registry)
+    flat = summarizeFlat(args.registry)
+    tests = compareSamples(registry, flat)
+    registry.round(4).to_csv(args.out / 'registry_tables.csv', index=False)
+    flat.round(4).to_csv(args.out / 'flat_tables.csv', index=False)
+    rounded = {'median_registry': 4, 'median_flat': 4, 'rank_biserial': 4}
+    tests.round(rounded).to_csv(args.out / 'tests.csv', index=False)
+    print(f'{len(registry)} registry objects, {len(flat)} flat tables, {len(tests)} statistics')
