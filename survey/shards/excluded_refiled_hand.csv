@@ -1,0 +1,3 @@
+"source","object","reason","detail"
+"rabe_hesketh","divorce3.dta","no grouping structure","Wide multi-span format: time1-time17 and numkid1-numkid17 are the fertility spans as columns, one row per marriage, marriages repeating within respondent id; wide over grouped (hand check #120). divorce2.dta, one marriage per respondent split by span, is the long form the registry holds."
+"openml_40916","dataset_40916.pq","no grouping structure","World Happiness 2015: one row per country; Region holds ten exhaustive world regions, a design factor (hand check #120); matched column Family is a happiness-score component (social-support contribution), a predictor not a clustering unit."
