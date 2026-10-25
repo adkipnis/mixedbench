@@ -83,9 +83,11 @@ FLAT_COLUMNS = (
     'n_columns', 'n_continuous', 'n_binary', 'n_categorical', 'n_ordered', 'n_id_columns',
     'd_all', 'condition_all',
 )  # fmt: skip
-# flat_columns.csv: columns.csv's columns less those a registry row's model binds
+# flat_columns.csv: columns.csv's columns less those a registry row's model binds, and whether
+# the column labels its rows
 FLAT_COLUMN_COLUMNS = (
-    'source', 'object', 'tier', 'column', 'type', 'K', 'missing_share', *COLUMN_STATISTICS,
+    'source', 'object', 'tier', 'column', 'type', 'K', 'id_column', 'missing_share',
+    *COLUMN_STATISTICS,
 )  # fmt: skip
 # a batch's handoff opens with a prompt that a checker who knows neither the survey nor the
 # repository can act on, one per hand check
@@ -504,10 +506,16 @@ class FlatPass:
         rho = measureMaxAbsRho(table, column_types)
         columns, designed = [], []
         for column, (kind, levels) in column_types.items():
-            typed = {'column': column, 'type': kind, 'K': levels}
+            id_column = FlatPass._isIdColumn(table[column], kind, levels)
+            typed = {
+                'column': column,
+                'type': kind,
+                'K': levels,
+                'id_column': 'yes' if id_column else 'no',
+            }
             shape = measureShape(table[column], kind) | {'max_abs_rho': rho[column]}
             columns.append(typed | shape)
-            if not FlatPass._isIdColumn(table[column], kind, levels):
+            if not id_column:
                 designed.append(column)
         sizes = FlatPass._countColumns(table, column_types, designed)
         return sizes | FlatPass._measureCondition(table[designed]), columns
