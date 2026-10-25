@@ -66,6 +66,9 @@ ID_STEMS = (
     'month', 'date',
 )  # fmt: skip
 MANY_LEVELS = 10  # a repeated integer column with more levels is recorded for the hand sample
+# opens a response reading's evidence where the reader found the table grouped or wide, which
+# flags the table as the screen does
+NOT_FLAT = 'NOT FLAT:'
 # flat_screen.csv: one row per frame table; a list of words or columns is `;`-separated
 SCREEN_COLUMNS = (
     'source', 'object', 'tier', 'stratum', 'words', 'id_columns', 'integer_columns', 'flagged',
@@ -434,16 +437,26 @@ class FlatPass:
 
     def _selectSample(self) -> pd.DataFrame:
         """The screened frame's tables in the flat sample: a verdict decides its table whatever
-        the screen said; without one, a prescreened or unflagged table is in."""
+        the screen said; without one, a prescreened or unflagged table is in. A table the
+        response reading found not flat is flagged as the screen's are."""
         screened = self._screenFrame().merge(
             self._readVerdicts(), on=['source', 'object'], how='left'
         )
         screened[['verdict', 'evidence']] = screened[['verdict', 'evidence']].fillna('')
-        unread = screened[(screened['flagged'] == 'yes') & (screened['verdict'] == '')]
+        flagged = (screened['flagged'] == 'yes') | self._isFoundNotFlat(screened)
+        unread = screened[flagged & (screened['verdict'] == '')]
         if not unread.empty:
             names = '\n'.join(unread['source'] + ' ' + unread['object'])
             raise ValueError(f'{len(unread)} flagged tables without a verdict:\n{names}')
         return screened[screened['verdict'].isin(['', 'flat'])]
+
+    def _isFoundNotFlat(self, frame: pd.DataFrame) -> pd.Series:
+        """Per frame table, whether its response reading's evidence opens with `NOT FLAT:`."""
+        responses = self._readResponses()
+        found = responses[responses['evidence'].str.startswith(NOT_FLAT)]
+        keys = ['source', 'object']
+        isin = pd.MultiIndex.from_frame(frame[keys]).isin(pd.MultiIndex.from_frame(found[keys]))
+        return pd.Series(isin, index=frame.index)
 
     @staticmethod
     def _findBasis(row: pd.Series) -> dict[str, str]:
@@ -472,7 +485,10 @@ class FlatPass:
         return ''
 
     def _readResponses(self) -> pd.DataFrame:
-        return readCsv(self.survey / 'flat_responses.csv')[list(FLAT_RESPONSES.agentColumns)]
+        path = self.survey / 'flat_responses.csv'
+        if not path.exists():  # until the merge of the first response shard
+            return pd.DataFrame(columns=FLAT_RESPONSES.agentColumns)
+        return readCsv(path)[list(FLAT_RESPONSES.agentColumns)]
 
     def _readVerdicts(self) -> pd.DataFrame:
         path = self.survey / 'flat_verdicts.csv'
