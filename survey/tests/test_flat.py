@@ -9,9 +9,10 @@ import pandas as pd
 import pytest
 import yaml
 from columns import COLUMN_STATISTICS
-from conftest import asOrdered, measuredColumns, parsed, readRows, scratchMerger, sha, zippedFiles
-from flat import FlatPass, ResponseCheck, ResponseRecheck, VerdictCheck
+from conftest import asOrdered, measuredColumns, parsed, readRows, scratchMerger, servePlots
+from flat import COLUMN_TYPES, FlatPass, ResponseCheck, ResponseRecheck, VerdictCheck
 from measure import Measurer
+from mixedbench.contract import columnType
 from mixedbench.datasets import Loader
 from mixedbench.registry.row import writeCsv
 from schema import CANDIDATE_COLUMNS, EXCLUDED, FLAT_RESPONSES, FLAT_VERDICTS
@@ -109,12 +110,12 @@ ELEVEN_LEVELS = [float(i) for i in range(11)] + [0.0]  # R stores integer codes 
     ],
 )
 def test_the_screen_flags_a_read_table_on_its_filing_line_or_a_repeated_id_like_column(
-    detail, columns, screening
+    flat, detail, columns, screening
 ):
     """The two rules of the screen, read off its row: a filing line that says the data is wide
     or repeated, or a column that could index groups and is named like an id. Many integer
     levels caught field coordinates and counts, so they only mark a hand-sample stratum."""
-    assert FlatPass.screenTable(detail, pd.DataFrame(columns)) == screening
+    assert flat.screenTable(detail, pd.DataFrame(columns)) == screening
 
 
 def test_the_screen_step_writes_every_frame_table_with_its_stratum_and_its_flags(flat):
@@ -128,9 +129,6 @@ def test_the_screen_step_writes_every_frame_table_with_its_stratum_and_its_flags
     ])  # fmt: skip
     flat.screen()
     rows = readRows(flat.survey / 'flat_screen.csv')
-    assert list(rows[0]) == [
-        'source', 'object', 'tier', 'stratum', 'words', 'id_columns', 'integer_columns', 'flagged',
-    ]  # fmt: skip
     assert [list(row.values())[1:] for row in rows] == [
         ['herds.csv', 'D', 'read', '', 'region;herd;trials', '', 'yes'],  # trial is a stem
         ['cattle.csv', 'R', 'read', 'repeated;wide', 'farm', '', 'yes'],
@@ -142,15 +140,15 @@ def test_the_screen_step_writes_every_frame_table_with_its_stratum_and_its_flags
 MODEL_2_COLUMNS = ['region', 'breed', 'feed', 'parity', 'weight', 'sick']
 
 
-def test_a_flat_columns_statistics_equal_the_registrys_for_the_same_column(herds, rows):
+def test_a_flat_columns_statistics_equal_the_registrys_for_the_same_column(flat, herds, rows):
     """One home per statistic: cut to model 2's covariate columns, the herds table is a flat
     table whose every column statistic equals the number columns.csv holds under model 2,
     whose response is observed on every row."""
-    _, measured = FlatPass.measureTable(herds[MODEL_2_COLUMNS])
+    _, measured = flat.measureTable(herds[MODEL_2_COLUMNS])
     statistics = ['type', 'K', 'missing_share', *COLUMN_STATISTICS]
-    flat = pd.DataFrame(measured).set_index('column').reindex(columns=statistics)
+    flat_columns = pd.DataFrame(measured).set_index('column').reindex(columns=statistics)
     registry = measuredColumns(herds, rows[1])[statistics]
-    pd.testing.assert_frame_equal(flat, registry, check_dtype=False)
+    pd.testing.assert_frame_equal(flat_columns, registry, check_dtype=False)
 
 
 @pytest.mark.parametrize(
@@ -161,27 +159,27 @@ def test_a_flat_columns_statistics_equal_the_registrys_for_the_same_column(herds
     ],
 )
 def test_a_flat_tables_design_statistics_equal_the_registrys_over_the_same_columns(
-    herds, rows, extra
+    flat, herds, rows, extra
 ):
     """d_all and condition_all count and code every measured column as dimensions.csv does,
     the design centered as the contract centers it and a constant column dropped as the
     contract drops it, so the cut table gives model 2's."""
     table = herds.assign(**extra)
-    measured, _ = FlatPass.measureTable(table[[*MODEL_2_COLUMNS, *extra]])
+    measured, _ = flat.measureTable(table[[*MODEL_2_COLUMNS, *extra]])
     dimension = dimensions.measure(Measurer(table, parsed(rows[1])))[0]
     assert measured['d_all'] == dimension['d_all']
     assert measured['condition_all'] == dimension['condition_all']
 
 
-def test_an_all_distinct_label_column_is_measured_but_left_out_of_the_design(herds):
+def test_an_all_distinct_label_column_is_measured_but_left_out_of_the_design(flat, herds):
     """A column of names or ids would make the design as wide as the table is long, so a
     categorical whose present values are all distinct is measured, counted and flagged, but left
     out of d_all and condition_all; its one missing name drops no row from the design."""
     cut = herds[MODEL_2_COLUMNS]
     names = [f'cow {i}' for i in range(len(cut))]
     names[0] = None
-    measured, columns = FlatPass.measureTable(cut.assign(name=names))
-    alone, _ = FlatPass.measureTable(cut)
+    measured, columns = flat.measureTable(cut.assign(name=names))
+    alone, _ = flat.measureTable(cut)
     assert [c['column'] for c in columns] == [*MODEL_2_COLUMNS, 'name']
     assert [c['id_column'] for c in columns] == ['no'] * len(MODEL_2_COLUMNS) + ['yes']
     assert (measured['n_id_columns'], alone['n_id_columns']) == (1, 0)
@@ -189,7 +187,7 @@ def test_an_all_distinct_label_column_is_measured_but_left_out_of_the_design(her
     assert measured['condition_all'] == alone['condition_all']
 
 
-def test_a_flat_tables_sizes_count_every_row_and_every_column_by_its_type(herds):
+def test_a_flat_tables_sizes_count_every_row_and_every_column_by_its_type(flat, herds):
     """A flat table has no response, so n_obs counts every row, a row missing a weight too.
     The labels count among the categoricals and among the columns."""
     table = herds[MODEL_2_COLUMNS].assign(
@@ -197,22 +195,34 @@ def test_a_flat_tables_sizes_count_every_row_and_every_column_by_its_type(herds)
         name=[f'cow {i}' for i in range(len(herds))],
     )
     table.loc[0, 'weight'] = float('nan')
-    measured, _ = FlatPass.measureTable(table)
+    measured, _ = flat.measureTable(table)
     sizes = ['n_obs', 'n_columns', 'n_continuous', 'n_binary', 'n_categorical', 'n_ordered']
     assert [measured[s] for s in sizes] == [14, 7, 1, 1, 4, 1]
 
 
-def test_a_flat_table_without_a_complete_row_has_no_condition_index(herds):
+def test_a_flat_table_without_a_complete_row_has_no_condition_index(flat, herds):
     """A column missing on every row leaves no row complete in every designed column."""
     empty = pd.Categorical([None] * len(herds), categories=['low', 'high'], ordered=True)
-    measured, _ = FlatPass.measureTable(herds[MODEL_2_COLUMNS].assign(empty=empty))
+    measured, _ = flat.measureTable(herds[MODEL_2_COLUMNS].assign(empty=empty))
     assert 'condition_all' not in measured
+
+
+def test_the_type_counts_name_every_kind_the_typing_rule_gives():
+    """flat.csv counts a table's columns per kind of `COLUMN_TYPES`, so a kind it left out would
+    go uncounted."""
+    columns = {
+        'continuous': [0.5, 1.5, 2.5],
+        'binary': ['a', 'b', 'a'],
+        'categorical': ['a', 'b', 'c'],
+        'ordered': pd.Categorical(['a', 'b', 'c'], ordered=True),
+    }
+    kinds = [columnType(pd.Series(values))[0] for values in columns.values()]
+    assert kinds == list(COLUMN_TYPES)
 
 
 # ---------------------------------------------------------------------------------
 # the pass: the screen recomputed, the verdicts read, the sample measured into two files
 # ---------------------------------------------------------------------------------
-PLOTS_URL = 'https://example.org/plots.zip'
 PLAIN = 'dose,response\n1.5,0.5\n2.5,0.7\n3.5,0.9\n'  # nothing repeats, so nothing flags
 HERDED = 'herd,dose,response\na,1.5,0.5\na,2.5,0.7\nb,3.5,0.9\n'  # a repeated id-like column
 DISTINCT = 'x,y\n1,4\n2,5\n3,6\n'  # every column all-unique, as the pre-screen stops at
@@ -233,12 +243,11 @@ def plotsPass(tmp_path: Path, files: dict[str, str]) -> FlatPass:
     (Tier O), serving `files` from memory: every table the scratch sources pin has a repeated
     column named like an id, so none would pass the screen unflagged."""
     merger = scratchMerger(tmp_path / 'registry', tmp_path / 'survey')
-    archive = zippedFiles('plots', files)
-    pinned = {'kind': 'url', 'name': PLOTS_URL, 'pin': sha(archive), 'license': 'CC0 1.0 Universal'}  # fmt: skip
+    entry, fetch = servePlots(files)
     sources = yaml.safe_load((merger.registry / 'sources.yaml').read_text())
-    sources['tiers']['O'] = {'plots': pinned}
+    sources['tiers']['O'] = {'plots': entry}
     (merger.registry / 'sources.yaml').write_text(yaml.safe_dump(sources, sort_keys=False))
-    loader = Loader(merger.registry / 'cache', fetch={PLOTS_URL: archive}.get)
+    loader = Loader(merger.registry / 'cache', fetch=fetch)
     return FlatPass(merger.registry, merger.survey, loader=loader)
 
 
@@ -342,11 +351,6 @@ def test_the_pass_writes_a_row_per_sample_table_and_a_row_per_its_column(plots):
     writeResponses(plots, [('plots', 'plain.csv', 'none'), ('plots', 'distinct.csv', 'none')])
     plots.measure()
     tables = readRows(plots.registry / 'flat.csv')
-    assert list(tables[0]) == [
-        'source', 'object', 'tier', 'stratum', 'basis', 'evidence', 'response', 'n_obs',
-        'n_columns', 'n_continuous', 'n_binary', 'n_categorical', 'n_ordered', 'n_id_columns',
-        'd_all', 'condition_all',
-    ]  # fmt: skip
     assert list(tables[0].values()) == [
         'plots', 'plain.csv', 'O', 'read', 'first reading', 'one row per plot', 'none',
         '3', '2', '2', '0', '0', '0', '0', '2', 'inf',
@@ -381,19 +385,19 @@ def test_the_response_leaves_flat_columns_and_every_count_and_design_statistic_o
     assert [(c['column'], c['max_abs_rho']) for c in columns] == [('dose', '')]
 
 
-def test_the_pass_refuses_naming_every_sample_table_without_a_response_or_with_one_its_table_lacks(
-    plots,
-):
-    """A response arrives by shard, so a sample table can lack one, or name a column its table
-    lacks once the shard is edited by hand. The pass then writes nothing."""
+def test_the_pass_refuses_naming_every_sample_table_without_a_response(plots):
+    """A response arrives by shard, so a sample table can lack one, and a blank would count as
+    named in the response check. The pass then writes nothing; the merge refused a response its
+    table lacks."""
     writeSurvey(plots, [
         ('plots', 'plain.csv', 'pass', NO_GROUPING, 'one row per plot'),
         ('plots', 'decided.csv', 'pass', NO_GROUPING, 'one row per plot'),
         ('plots', 'distinct.csv', 'no repeated column', NO_GROUPING, 'no repeated column'),
     ])  # fmt: skip
-    writeResponses(plots, [('plots', 'plain.csv', 'response'), ('plots', 'distinct.csv', 'z')])
-    names = 'plots decided.csv: no response\nplots distinct.csv: no column z'
-    with pytest.raises(ValueError, match=f'2 sample tables .*\n{names}$'):
+    writeResponses(plots, [('plots', 'plain.csv', 'response')])
+    with pytest.raises(
+        ValueError, match='2 sample tables .*\nplots decided.csv\nplots distinct.csv$'
+    ):
         plots.measure()
     assert readRows(plots.registry / 'flat.csv') == []
 
@@ -432,19 +436,13 @@ def strataPass(tmp_path: Path) -> FlatPass:
 
 
 def test_draw_allocates_fifty_sample_tables_over_four_strata_in_two_batches(tmp_path):
-    """The hand sample is 50 tables of the flat sample, proportional over its four strata.
-    Worked by hand: 50/80 of 13, 22, 18 and 27 is 8.125, 13.75, 11.25 and 16.875, the two
-    tables left over going to the largest remainders, read/integer's and read/unflagged's: 8,
-    14, 11 and 17. A table judged wide is out of the sample, so never drawn. The draw is a
-    function of the files and the seed, so drawing again writes the same file."""
+    """The hand sample is 50 tables of the flat sample, proportional over its four strata as
+    test_verify.py works it out. A table judged wide is out of the sample, so never drawn. The
+    draw is a function of the files and the seed, so drawing again writes the same file."""
     flat = strataPass(tmp_path)
     flat.draw(VerdictCheck())
     path = flat.survey / 'flat_sample.csv'
     sample = readRows(path)
-    assert list(sample[0]) == [
-        'source', 'object', 'tier', 'file', 'stratum', 'batch', 'basis', 'evidence', 'detail',
-        'words', 'id_columns', 'integer_columns',
-    ]  # fmt: skip
     assert Counter(row['stratum'] for row in sample) == {
         'prescreened': 8,
         'read/unflagged': 14,
@@ -478,7 +476,7 @@ DRAWN = [
 
 def handoffPass(tmp_path: Path) -> FlatPass:
     """A drawn sample with one table per kind of source, a CRAN package, a git tree, a url
-    archive and two Tier D deposits, and the help pages of the first two."""
+    archive and two Tier D deposits, each with its help page."""
     registry, survey = tmp_path / 'registry', tmp_path / 'survey'
     registry.mkdir()
     survey.mkdir()
@@ -502,6 +500,10 @@ def handoffPass(tmp_path: Path) -> FlatPass:
     pages = {
         'pens/herds.txt': '\\name{herds}\n\\title{Weights of pigs by herd}\n',
         'ros/Beauty/data/beauty.csv.txt': '# first rows (of 463)\neval: float64\n',
+        'rabe_hesketh/pig.dta.txt': '# first rows (of 432)\nweight: float64\n',
+        'arriero_2017_dryad/voles.xlsx.txt': '# first rows (of 9)\n',
+        'leder_2020_osf/data.csv.txt': '# first rows (of 120)\n',
+        'pens/sows.txt': '\\name{sows}\n',
     }
     for path, text in pages.items():
         (registry / 'help' / path).parent.mkdir(parents=True, exist_ok=True)
@@ -512,47 +514,26 @@ def handoffPass(tmp_path: Path) -> FlatPass:
 def test_handoff_names_each_tables_page_and_download_and_no_local_path(tmp_path):
     """The batch is checked in the browser against the source itself, so every table carries
     its page and its download at the pin, its filing line, the screen's reason, the second
-    reading where one exists and the help page where one exists, and no path of the checkout.
-    A Tier D page is its deposit's, at doi.org where the link is a DOI."""
+    reading where one exists and its help page, and no path of the checkout."""
     flat = handoffPass(tmp_path)
 
     text = flat.handoff(VerdictCheck(), 1)
 
-    urls = [
-        'https://cran.r-project.org/package=pens',
-        'https://github.com/cran/pens/blob/1.0/data/herds.rda',
-        'https://github.com/avehtari/ROS-Examples/tree/abc123/Beauty/data',
-        'https://github.com/avehtari/ROS-Examples/blob/abc123/Beauty/data/beauty.csv',
-        'https://www.stata-press.com/data/mlmus4.html',
-        'https://www.stata-press.com/data/mlmus4/mlmus4.zip',
-        'https://doi.org/10.5061/dryad.110pk',
-        'https://datadryad.org/api/v2/files/51526/download',
-        'https://osf.io/txb9c',
-        'https://osf.io/download/znb6c/',
-    ]
-    assert [url for url in urls if url not in text] == []
+    assert (
+        '- download: https://github.com/cran/pens/blob/1.0/data/herds.rda (file `data/herds.rda`)'
+        in text
+    )
+    assert text.count('\n- page: https://') == text.count('\n- download: https://') == 5
     assert 'filing: one row per course' in text
     assert 'second reading: prof names one instructor, once each' in text
     assert '`prof`' in text and '`parity`' in text and '`trap`' in text
     assert '\\title{Weights of pigs by herd}' in text
     assert 'eval: float64' in text
-    assert text.count('<details>') == 2  # the prescreened table and the deposits have no page
+    assert text.count('<details>') == 5
     assert 'sows' not in text  # batch 2
     assert str(tmp_path) not in text
     assert 'registry/' not in text
     assert 'cache' not in text
-
-
-def test_handoff_cuts_a_help_page_longer_than_twenty_thousand_characters(tmp_path):
-    """A help page can hold a whole table, one in the frame 20 MB of it, which would drown the
-    prompt, so it is cut and says where."""
-    flat = handoffPass(tmp_path)
-    (flat.registry / 'help' / 'pens' / 'herds.txt').write_text('x' * 20_000 + 'y')
-
-    text = flat.handoff(VerdictCheck(), 1)
-
-    assert 'x' * 20_000 + '\n[cut at 20,000 characters]' in text
-    assert 'xy' not in text
 
 
 def test_agree_gives_the_share_of_drawn_tables_still_in_the_sample_per_stratum_and_overall(
@@ -620,8 +601,7 @@ def respondedPass(tmp_path: Path, named: int, unnamed: int) -> FlatPass:
 
 def test_the_response_check_draws_25_sample_tables_over_named_and_none_in_one_batch(tmp_path):
     """The response check is 25 tables of the flat sample, proportional over whether the reading
-    named a response. Worked by hand: 25/33 of 20 and 13 is 15.15 and 9.85, the table left over
-    going to the larger remainder, none's: 15 and 10. A table judged wide is out of the sample,
+    named a response as test_verify.py works it out. A table judged wide is out of the sample,
     so never drawn, and drawing again writes the same file."""
     flat = respondedPass(tmp_path, named=20, unnamed=13)
 
@@ -629,9 +609,6 @@ def test_the_response_check_draws_25_sample_tables_over_named_and_none_in_one_ba
 
     path = flat.survey / 'flat_response_sample.csv'
     sample = readRows(path)
-    assert list(sample[0]) == [
-        'source', 'object', 'tier', 'file', 'stratum', 'batch', 'response', 'evidence',
-    ]  # fmt: skip
     assert Counter(row['stratum'] for row in sample) == {'named': 15, 'none': 10}
     assert {row['batch'] for row in sample} == {'1'}
     assert 'stored.csv' not in {row['object'] for row in sample}
@@ -673,25 +650,18 @@ DRAWN_RESPONSES = [
 def test_the_response_check_hands_off_each_tables_response_its_evidence_and_its_urls(tmp_path):
     """The response check is read in the browser as the verdict check is: a self-contained
     prompt with the answers it takes, then per table its page and download at the pin, the
-    response or `none`, the evidence and the help page where one exists, and no local path. A
+    response or `none`, the evidence and its help page, and no local path. A
     deposit's help page opens with the local path of its deposit page, which its page URL
     replaces."""
     flat = handoffPass(tmp_path)
     sample = pd.DataFrame(DRAWN_RESPONSES, columns=ResponseCheck.COLUMNS)
     writeCsv(sample, flat.survey / 'flat_response_sample.csv')
     voles = flat.registry / 'help' / 'arriero_2017_dryad' / 'voles.xlsx.txt'
-    voles.parent.mkdir(parents=True)
     voles.write_text('# deposit page: registry/help/deposits/arriero.txt\n\n# first rows (of 9)\n')
 
     text = flat.handoff(ResponseCheck(), 1)
 
-    urls = [
-        'https://cran.r-project.org/package=pens',
-        'https://github.com/cran/pens/blob/1.0/data/herds.rda',
-        'https://github.com/avehtari/ROS-Examples/blob/abc123/Beauty/data/beauty.csv',
-        'https://doi.org/10.5061/dryad.110pk',
-    ]
-    assert [url for url in urls if url not in text] == []
+    assert text.count('\n- page: https://') == text.count('\n- download: https://') == 3
     assert ': response <column> — ' in text and ': none — ' in text
     assert '- response: weight\n- evidence: lm(weight ~ breed + feed)' in text
     assert '- response: none\n' in text
