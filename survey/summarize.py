@@ -16,7 +16,7 @@ import yaml
 from columns import COLUMN_STATISTICS
 from dimensions import CONDITIONS, pickObserved
 from fits import FACTOR_STATISTICS, FIT_STATISTICS, ROW_STATISTICS
-from flat import CHECKS, HandCheck
+from flat import CHECKS, NOT_FLAT, HandCheck
 from groups import COLUMN_FACTOR_STATISTICS
 from mixedbench.registry.row import readCsv
 from pairs import FACTOR_PAIR_STATISTICS
@@ -281,11 +281,14 @@ class Summarizer:
 
     def renderFlatCorpus(self) -> str:
         """The flat sample's tables by stratum and tier, the frame's read tables the screen
-        flagged, the verdicts by kind, the share of the hand sample that stood, the tables that
-        name a response and the shares of the response check and its recheck."""
+        flagged, the tables the response reading found not flat, the verdicts by kind, the share
+        of the hand sample that stood, the tables that name a response and the shares of the
+        response check and its recheck."""
         screen = readCsv(self.survey / 'flat_screen.csv')
         read = screen[screen['stratum'] == 'read']
         flagged = read[read['flagged'] == 'yes']
+        responses = readCsv(self.survey / 'flat_responses.csv')
+        not_flat = responses['evidence'].str.startswith(NOT_FLAT).sum()
         verdicts = self.counted(readCsv(self.survey / 'flat_verdicts.csv')['verdict'])
         hand = self.readAgreement(CHECKS['verdict'])
         check = self.readAgreement(CHECKS['response'])
@@ -295,7 +298,7 @@ class Summarizer:
         tiers = self.counted(self.flat['tier'])
         return '\n'.join([
             f'**Corpus.** {len(self.flat)} flat tables; per stratum {strata}; per tier {tiers}.',
-            f"The screen flagged {len(flagged)} of the frame's {len(read)} read tables for a second reading; verdicts {verdicts}.",
+            f"The screen flagged {len(flagged)} of the frame's {len(read)} read tables for a second reading and the response reading found {not_flat} not flat; verdicts {verdicts}.",
             f'The hand sample of {hand["tables"]} tables stood at {hand["stood"]}.',
             f'{named} of the {len(self.flat)} tables name a response; the response check of {check["tables"]} tables stood at {check["stood"]}, its recheck of {recheck["tables"]} `none` tables at {recheck["stood"]}.',
         ])  # fmt: skip
