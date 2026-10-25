@@ -14,7 +14,7 @@ from flat import SAMPLE_COLUMNS, FlatPass
 from measure import Measurer
 from mixedbench.datasets import Loader
 from mixedbench.registry.row import writeCsv
-from schema import CANDIDATE_COLUMNS, EXCLUDED, FLAT_VERDICTS
+from schema import CANDIDATE_COLUMNS, EXCLUDED, FLAT_RESPONSES, FLAT_VERDICTS
 from sources import readFrame
 
 # source, object, the pre-screen's verdict, the exclusion's reason and detail ('' for none)
@@ -251,6 +251,16 @@ def writeVerdicts(flat: FlatPass, verdicts: list[tuple[str, str, str, str]]) -> 
     writeCsv(pd.DataFrame(rows, columns=FLAT_VERDICTS.columns), flat.survey / 'flat_verdicts.csv')
 
 
+def writeResponses(flat: FlatPass, responses: list[tuple[str, str, str]]) -> None:
+    """The responses as the merge leaves them in `flat_responses.csv`, the tier filled."""
+    tiers = readFrame(flat.registry).tiers
+    rows = []
+    for source, object, response in responses:
+        rows.append({'source': source, 'tier': tiers[source], 'object': object, 'response': response, 'evidence': 'its help page'})  # fmt: skip
+    path = flat.survey / 'flat_responses.csv'
+    writeCsv(pd.DataFrame(rows, columns=FLAT_RESPONSES.columns), path)
+
+
 def test_a_verdict_decides_its_table_and_every_sample_table_records_how_it_got_in(plots):
     """A table is in the sample when it is prescreened, read and unflagged with no verdict,
     or judged `flat`, with the evidence of the reading that put it there. A verdict decides
@@ -270,6 +280,10 @@ def test_a_verdict_decides_its_table_and_every_sample_table_records_how_it_got_i
         ('plots', 'hidden.csv', 'hidden grouping', 'cows repeat within herds'),
         ('plots', 'decided.csv', 'wide', 'two plots per row'),
     ])  # fmt: skip
+    writeResponses(plots, [
+        ('plots', 'plain.csv', 'none'), ('plots', 'herded.csv', 'none'),
+        ('plots', 'distinct.csv', 'none'),
+    ])  # fmt: skip
     plots.measure()
     rows = readRows(plots.registry / 'flat.csv')
     assert [(r['object'], r['stratum'], r['basis'], r['evidence']) for r in rows] == [
@@ -281,21 +295,23 @@ def test_a_verdict_decides_its_table_and_every_sample_table_records_how_it_got_i
 
 def test_the_pass_writes_a_row_per_sample_table_and_a_row_per_its_column(plots):
     """flat.csv keys a table by source and object, flat_columns.csv a column, in columns.csv's
-    order less what a registry row's model binds. The plain table's response is linear in its
-    dose, so its design is rank-deficient and its condition index written as `inf`."""
+    order less what a registry row's model binds. A table without a response keeps every
+    column: the plain table's `response` is linear in its dose, so its design is rank-deficient
+    and its condition index written as `inf`."""
     writeSurvey(plots, [
         ('plots', 'plain.csv', 'pass', NO_GROUPING, 'one row per plot'),
         ('plots', 'distinct.csv', 'no repeated column', NO_GROUPING, 'no repeated column'),
     ])  # fmt: skip
+    writeResponses(plots, [('plots', 'plain.csv', 'none'), ('plots', 'distinct.csv', 'none')])
     plots.measure()
     tables = readRows(plots.registry / 'flat.csv')
     assert list(tables[0]) == [
-        'source', 'object', 'tier', 'stratum', 'basis', 'evidence', 'n_obs', 'n_columns',
-        'n_continuous', 'n_binary', 'n_categorical', 'n_ordered', 'n_id_columns', 'd_all',
-        'condition_all',
+        'source', 'object', 'tier', 'stratum', 'basis', 'evidence', 'response', 'n_obs',
+        'n_columns', 'n_continuous', 'n_binary', 'n_categorical', 'n_ordered', 'n_id_columns',
+        'd_all', 'condition_all',
     ]  # fmt: skip
     assert list(tables[0].values()) == [
-        'plots', 'plain.csv', 'O', 'read', 'first reading', 'one row per plot',
+        'plots', 'plain.csv', 'O', 'read', 'first reading', 'one row per plot', 'none',
         '3', '2', '2', '0', '0', '0', '0', '2', 'inf',
     ]  # fmt: skip
     columns = readRows(plots.registry / 'flat_columns.csv')
@@ -306,6 +322,46 @@ def test_the_pass_writes_a_row_per_sample_table_and_a_row_per_its_column(plots):
         ('plain.csv', 'dose'), ('plain.csv', 'response'), ('distinct.csv', 'x'),
         ('distinct.csv', 'y'),
     ]  # fmt: skip
+
+
+GAPPY = 'dose,response\n1.5,\n2.5,0.7\n3.5,0.9\n'  # a row without its response
+
+
+def test_the_response_leaves_flat_columns_and_every_count_and_design_statistic_of_flat_csv(
+    tmp_path,
+):
+    """A registry row's response is in neither columns.csv nor its design, so a flat table's
+    response leaves both: the dose is left without a partner for max_abs_rho, and its design,
+    the intercept and the standardized dose, is orthogonal, of condition index 1. Every row
+    stays, the one without its response too."""
+    flat = plotsPass(tmp_path, {'gappy.csv': GAPPY})
+    writeSurvey(flat, [('plots', 'gappy.csv', 'pass', NO_GROUPING, 'one row per plot')])
+    writeResponses(flat, [('plots', 'gappy.csv', 'response')])
+
+    flat.measure()
+
+    [table] = readRows(flat.registry / 'flat.csv')
+    sizes = ['response', 'n_obs', 'n_columns', 'n_continuous', 'n_id_columns', 'd_all', 'condition_all']  # fmt: skip
+    assert [table[s] for s in sizes] == ['response', '3', '1', '1', '0', '1', '1.0']
+    columns = readRows(flat.registry / 'flat_columns.csv')
+    assert [(c['column'], c['max_abs_rho']) for c in columns] == [('dose', '')]
+
+
+def test_the_pass_refuses_naming_every_sample_table_without_a_response_or_with_one_its_table_lacks(
+    plots,
+):
+    """A response arrives by shard, so a sample table can lack one, or name a column its table
+    lacks once the shard is edited by hand. The pass then writes nothing."""
+    writeSurvey(plots, [
+        ('plots', 'plain.csv', 'pass', NO_GROUPING, 'one row per plot'),
+        ('plots', 'decided.csv', 'pass', NO_GROUPING, 'one row per plot'),
+        ('plots', 'distinct.csv', 'no repeated column', NO_GROUPING, 'no repeated column'),
+    ])  # fmt: skip
+    writeResponses(plots, [('plots', 'plain.csv', 'response'), ('plots', 'distinct.csv', 'z')])
+    names = 'plots decided.csv: no response\nplots distinct.csv: no column z'
+    with pytest.raises(ValueError, match=f'2 sample tables .*\n{names}$'):
+        plots.measure()
+    assert readRows(plots.registry / 'flat.csv') == []
 
 
 # ---------------------------------------------------------------------------------
