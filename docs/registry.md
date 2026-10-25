@@ -252,7 +252,8 @@ The survey's tables filed `no grouping structure`, screened and read again by `s
 - `flat_columns.csv`: key `source`, `object`, `column`, with `tier`; a row per column of each
   table of `flat.csv` but its response, the id columns included. `type`, `K`, `missing_share`
   and the quirk statistics as `columns.csv` defines them, over every row; `max_abs_rho` with
-  every other column of the table but the response.
+  every other column of the table but the response. `id_column` `yes` for an id column, which
+  `n_id_columns` counts and the design leaves out, else `no`.
 
 ## `quantiles.yaml` and `SUMMARY.md`
 
