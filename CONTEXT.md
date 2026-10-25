@@ -137,9 +137,13 @@ _Avoid_: outer factor, parent, higher level
 
 **Flat table**:
 A table of the survey's frame that no documented model fits with a random effect and in which
-no column indexes a unit the rows repeat within. Grouped data stored wide, with repeated
-measures as columns, is not flat; it is grouped data the registry lacks a long form of.
+no column indexes a unit the rows repeat within. A wide table is not flat.
 _Avoid_: i.i.d. table, unclustered, exclusion (the bookkeeping entry)
+
+**Wide table**:
+Grouped data stored with one row per unit and its repeated measures as columns. Its long form
+stacks them, one row per unit and occasion, and is the table the registry would hold.
+_Avoid_: unstacked table, pivoted table
 
 **Flat sample**:
 Every flat table of the survey's frame, measured by script with the registry's per-column
