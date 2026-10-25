@@ -127,3 +127,22 @@ the registry. Grilled on 2026-10-24 ([#72](https://github.com/adkipnis/mixedbenc
   row (GSSvocab).
 - Why: its rows repeat within waves, so it is not flat, but the registry's reading rules leave
   such a wave out.
+
+## Amendment 2026-10-25: the response ([#130](https://github.com/adkipnis/mixedbench/issues/130))
+
+- Decision: a reading names each flat table's response, the outcome of its first documented
+  model, or `none` when no model is documented, the outcomes are analyzed jointly (e.g. PCA)
+  or the outcome is no column of the table. A response is never inferred, and a binomial
+  trials column stays a column.
+- Decision: the response leaves `flat_columns.csv` and every count and design statistic of
+  `flat.csv`, `max_abs_rho` included, as a registry row's response leaves `columns.csv` and
+  `dimensions.csv`. This replaces "no response" under the statistics.
+- Why: `columns.csv` measures a registry row's covariates alone, so a flat table's response
+  would count as a covariate in the comparison. If every flat table's response were
+  continuous, the rank-biserial r of the continuous share would move from −0.45 to −0.34.
+- Why none is inferred: the registry's reading infers a response because a grouped table
+  needs a model to fit, but a flat table without a model has no outcome to leave out.
+- Decision: a seeded hand sample of 25 tables (seed 3), stratified by whether the reading
+  named a response, checks it at ADR 0002's bar of 0.8 per stratum.
+- Rejected: leaving out the trials and `ignore` columns (ids, weights, alternate responses) as
+  the registry does, which would turn the response reading into a registry reading.
