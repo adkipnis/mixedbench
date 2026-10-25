@@ -27,7 +27,10 @@ deposits of the practice survey's papers, `O` open tabular repositories):
 7. **Flat pass.** `flat.py screen` derives the frame of flat tables from the exclusions filed
    `no grouping structure` and flags a read table whose filing line says wide, repeat, occasion
    or visit, or that has a repeated column with an id-like name. Agents give each flagged table
-   a verdict by [`prompts/flat.md`](prompts/flat.md)
+   a verdict by [`prompts/flat.md`](prompts/flat.md). `flat.py measure` measures the flat sample
+   into `registry/flat.csv` and `flat_columns.csv`, then rewrites the summary; a merge leaves the
+   two files as they are. `draw`, `handoff` and `agree` run the hand sample, and `wide` lists the
+   tables judged `wide` for the issue of their long forms
    ([ADR 0007](../docs/adr/0007-flat-sample.md)).
 
 ```
@@ -37,6 +40,8 @@ uv run python survey/measure.py
 uv run python survey/fits.py run <index>
 uv run python survey/fits.py collect
 uv run python survey/flat.py screen
+uv run python survey/flat.py measure
+uv run python survey/flat.py wide
 uv run python survey/mirror.py --tag mirror-<n>
 ```
 
@@ -50,6 +55,7 @@ uv run python survey/mirror.py --tag mirror-<n>
 |---|---|
 | `pull.py`, `merge.py`, `measure.py`, `mirror.py` | the scripts: the pull, the merge, the measurement pass, a mirror tag for the loader's fallback copies |
 | `fits.py`, `fits.sbatch` | the fits pass and its cluster array |
+| `flat.py`, `prompts/flat.md` | the flat pass and the second reading's brief |
 | `fits_preparation.csv` | the rows a source fitted where they are not the whole table: a subset or a frequency weight, read by `fits.py` |
 | `schema.py`, `sources.py`, `help.py`, `summarize.py` | the survey's file contract, the frame, the help pages, the summary |
 | `dimensions.py`, `columns.py`, `groups.py`, `pairs.py` | one module per measured file |
@@ -57,6 +63,7 @@ uv run python survey/mirror.py --tag mirror-<n>
 | `prompts/read.md` | the reading agent's brief |
 | `shards/<table>_<label>.csv` | one shard per reading run; `table` ∈ `registry`, `excluded`, `duplicates`, `dropped`, `flat` (the verdicts) |
 | `candidates.csv`, `duplicates.csv`, `dropped.csv` | the bookkeeping (below) |
+| `flat_screen.csv`, `flat_verdicts.csv`, `flat_sample.csv`, `flat_agreement.csv` | the flat pass's bookkeeping: the screen (below), the verdicts ([`docs/registry.md`](../docs/registry.md)), the hand sample of 50 with what its handoff showed at draw time, and the share that stood per stratum |
 | `deposits.csv`, `deposit_files.csv` | Tier D's frame: the drawn papers and every file their deposits list |
 | `sample.csv`, `agreement.csv` | the second hand sample (#61): 100 candidates not yet hand-checked with their readings at draw time, and the share of readings that stood per field |
 | `practice_quantiles.yaml` | the practice survey's `quantiles.yaml` (metabeta-v3), the practice column of `SUMMARY.md` |
