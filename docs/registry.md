@@ -219,7 +219,9 @@ The survey's tables filed `no grouping structure`, screened and read again by `s
   - `flat`: no documented model fits the table with a random effect and no column indexes a unit
     the rows repeat within; the table is in the flat sample.
   - `wide`: grouped data stored wide, its repeated measures as columns; the table is out of the
-    sample and on the list for a long form.
+    sample and on the [list for a long form](https://github.com/adkipnis/mixedbench/issues/129).
+    A wide table whose stacked measures all occur in a registry object or in another frame
+    table, a subset too, is a copy and leaves the frame as `derived or duplicated table`.
   - `hidden grouping`: a column indexes a unit the rows repeat within; the table is out of the
     sample and re-filed into the registry by a dropped and a registry shard.
 - `flat_responses.csv`, in `survey/`: key `source`, `object`; agent columns `source`, `object`,
@@ -227,9 +229,10 @@ The survey's tables filed `no grouping structure`, screened and read again by `s
   outcome of its first documented model, or `none` when no model is documented, the outcomes
   are analyzed jointly or the outcome is no column of the table; it is never inferred.
 - `flat.csv` and `flat_columns.csv` are written by `survey/flat.py measure`, which refuses while
-  a flagged table has no verdict or a sample table no response; a merge leaves them as the last
-  pass wrote them. A frame table is in the sample when it is prescreened, read and unflagged
-  with no verdict, or judged `flat`. A table's response is measured in neither file, as a
+  a table the screen flagged, or whose response evidence opens with `NOT FLAT:`, has no verdict,
+  or a sample table has no response; a merge leaves them as the last pass wrote them. A frame
+  table is in the sample when it is prescreened, read and unflagged with no verdict, or judged
+  `flat`. A table's response is measured in neither file, as a
   registry row's is in neither `columns.csv` nor `dimensions.csv`. Four decimals, negatives and
   `inf` kept, blank where undefined.
 - `flat.csv`: key `source`, `object`, with `tier`; a row per table of the sample, in frame order.
