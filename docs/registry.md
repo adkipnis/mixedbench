@@ -222,6 +222,10 @@ The survey's tables filed `no grouping structure`, screened and read again by `s
     sample and on the list for a long form.
   - `hidden grouping`: a column indexes a unit the rows repeat within; the table is out of the
     sample and re-filed into the registry by a dropped and a registry shard.
+- `flat_responses.csv`, in `survey/`: key `source`, `object`; agent columns `source`, `object`,
+  `response`, `evidence`; the merge adds `tier`. The `response` is a column of the table, the
+  outcome of its first documented model, or `none` when no model is documented, the outcomes
+  are analyzed jointly or the outcome is no column of the table; it is never inferred.
 - `flat.csv` and `flat_columns.csv` are written by `survey/flat.py measure`, which refuses while
   a flagged table has no verdict; a merge leaves them as the last pass wrote them. A frame table
   is in the sample when it is prescreened, read and unflagged with no verdict, or judged `flat`.

@@ -28,6 +28,7 @@ HOME = {
     'duplicates': README,
     'dropped': README,
     'flat_verdicts': REGISTRY,  # beside the flat files a verdict decides membership of
+    'flat_responses': REGISTRY,  # beside the flat files a response leaves
 }
 MEASURED_COLUMNS = {
     'dimensions': DIMENSION_COLUMNS,
