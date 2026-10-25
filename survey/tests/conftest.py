@@ -57,6 +57,14 @@ def zipped(folder: str, filename: str, text: str) -> bytes:
     return buffer.getvalue()
 
 
+def zippedFiles(folder: str, files: dict[str, str]) -> bytes:
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, 'w') as archive:
+        for filename, text in files.items():
+            archive.writestr(f'{folder}/{filename}', text)
+    return buffer.getvalue()
+
+
 def cranTarball(package: str, license: str, table: pd.DataFrame, name: str) -> bytes:
     """A CRAN source tarball: a DESCRIPTION and the table as `data/<name>.rds`."""
     description = f'Package: {package}\nVersion: 1.0\nLicense: {license}\n'

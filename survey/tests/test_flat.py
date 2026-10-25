@@ -1,8 +1,6 @@
 """The flat module at its seams: the merged files in; the frame, `flat_screen.csv`, the two flat
 files and the hand sample's files out; the screen rule and the measurer on hand-made tables."""
 
-import io
-import zipfile
 from collections import Counter
 from pathlib import Path
 
@@ -11,7 +9,7 @@ import pandas as pd
 import pytest
 import yaml
 from columns import COLUMN_STATISTICS
-from conftest import asOrdered, measuredColumns, parsed, readRows, scratchMerger, sha
+from conftest import asOrdered, measuredColumns, parsed, readRows, scratchMerger, sha, zippedFiles
 from flat import SAMPLE_COLUMNS, FlatPass
 from measure import Measurer
 from mixedbench.datasets import Loader
@@ -211,14 +209,6 @@ PLOTS = {
     'hidden.csv': HERDED, 'distinct.csv': DISTINCT,
 }  # fmt: skip
 NO_GROUPING = 'no grouping structure'
-
-
-def zippedFiles(folder: str, files: dict[str, str]) -> bytes:
-    buffer = io.BytesIO()
-    with zipfile.ZipFile(buffer, 'w') as archive:
-        for filename, text in files.items():
-            archive.writestr(f'{folder}/{filename}', text)
-    return buffer.getvalue()
 
 
 @pytest.fixture
