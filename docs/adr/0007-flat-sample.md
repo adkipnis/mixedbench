@@ -157,3 +157,12 @@ the registry. Grilled on 2026-10-24 ([#72](https://github.com/adkipnis/mixedbenc
   that read the Stan programs and scripts beside it, and runs that named a column the page calls
   the response against runs that wrote `none`; the registry's readings of Stan data read the
   program too.
+- Decision: the material a source's authors or publisher wrote, wherever it is hosted (a
+  documentation site, a book's companion page, published book code, course scripts) and cited
+  by URL, documents a table after its source's files; nobody else's analysis does. The `none`
+  tables of the book- and site-documented sources of Tiers T, O and E are read again for it, and
+  a second check of 15 `none` tables the first check did not draw (seed 4) holds that stratum
+  to the bar.
+- Why: the response check's `none` stratum stood at 0.733 (11 of 15), and three of its four
+  misses rested on such material outside the pinned files; the eight `none` tables of CRAN
+  packages it drew all stood, so their shipped files stay their documentation.
