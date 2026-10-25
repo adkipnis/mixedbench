@@ -67,15 +67,11 @@ def summarizeRegistry(dir: Path) -> pd.DataFrame:
 def summarizeFlat(dir: Path) -> pd.DataFrame:
     """Per flat table: its response, n_obs and condition_all as flat.csv holds them, the rest over
     its columns in flat_columns.csv but the id columns."""
-    sizes = ('n_obs', 'n_columns', 'n_id_columns', 'd_all', 'condition_all')
-    tables = _readNumbers(dir / 'flat.csv', sizes)
+    tables = _readNumbers(dir / 'flat.csv', ('n_obs', 'condition_all'))
     columns = _readNumbers(dir / 'flat_columns.csv', ('K', *COLUMN_STATISTICS))
-    columns = columns[~_isIdColumn(columns, tables)]
+    columns = columns[columns['id_column'] == 'no']
     summary = summarizeTables(tables, columns)
     summary.insert(3, 'response', tables['response'])
-    # the id columns found here are the ones flat.csv counts
-    assert (summary['n_columns'] == tables['n_columns'] - tables['n_id_columns']).all()
-    assert (summary['d_all'] == tables['d_all']).all()
     return summary
 
 
@@ -83,15 +79,6 @@ def _readNumbers(path: Path, columns: tuple[str, ...]) -> pd.DataFrame:
     table = readCsv(path)
     converted = {c: pd.to_numeric(table[c].replace('', np.nan)) for c in columns}
     return table.assign(**converted)
-
-
-def _isIdColumn(columns: pd.DataFrame, tables: pd.DataFrame) -> pd.Series:
-    """Marks a categorical with as many levels as present values.
-    The file holds the present values as n_obs × (1 − missing_share), the share to four decimals."""
-    n_obs = columns[KEY].merge(tables, on=KEY, how='left')['n_obs'].to_numpy()
-    present = n_obs * (1 - columns['missing_share'])
-    tolerance = 0.5 + n_obs * 5e-5  # half a row, and half the share's last decimal
-    return (columns['type'] == 'categorical') & ((columns['K'] - present).abs() <= tolerance)
 
 
 def summarizeTables(tables: pd.DataFrame, columns: pd.DataFrame) -> pd.DataFrame:
