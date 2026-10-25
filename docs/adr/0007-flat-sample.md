@@ -150,7 +150,9 @@ the registry. Grilled on 2026-10-24 ([#72](https://github.com/adkipnis/mixedbenc
   pin (example and chapter scripts, vignettes, notebooks, Stan programs, a deposit's code); a
   model recalled from a book those files do not hold is none. Without a model, an outcome the
   documentation names in words is the response: a column it calls the response or the outcome,
-  or the quantity it says an analysis of the table relates to the other columns.
+  or the quantity it says an analysis of the table relates to the other columns. A model
+  fitted on a subset, a renaming or a re-export of the table's rows documents the table, and a
+  fit of one column's distribution has that column as its outcome; test code documents nothing.
 - Why: the first reading pass split on both, runs that read only the help page against runs
   that read the Stan programs and scripts beside it, and runs that named a column the page calls
   the response against runs that wrote `none`; the registry's readings of Stan data read the
