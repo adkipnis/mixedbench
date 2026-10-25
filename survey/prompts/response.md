@@ -15,27 +15,37 @@ Per object of the worklist:
 - its help page `registry/help/<source>/<object>.txt`, which ends with the table's dtypes and
   first rows. Read a page longer than 20,000 characters in parts. A Tier D page opens with the
   path of its deposit page, which runs to hundreds of kilobytes: search it for the table's file
-  name and its model, once per deposit.
+  name and its model, once per deposit;
+- the files its source ships at its pin in the source's tree under `registry/cache/`: example
+  and chapter scripts, vignettes, demos, notebooks, Stan programs, do-files, a deposit's code.
+  Search them for the table's name or file name.
 
 ## Response
 
-1. **The first documented model** in the page's order: a model the documentation fits or states
-   on this table (an example in the help page, a vignette, a textbook's worked example, the
-   paper's analysis, a Stan program's likelihood). A regression of any family, an ANOVA, a test
-   of one outcome across groups, a survival or a time-series model each have an outcome.
+1. **The first documented model**, the help page's first, else the first in the source's files
+   in the order the source presents them (a book's chapters, a vignette's sections): a model the
+   documentation fits or states on this table (an example in the help page, a vignette, a
+   chapter script, the paper's analysis, a Stan program's likelihood). A regression of any
+   family, an ANOVA, a test of one outcome across groups, a survival or a time-series model each
+   have an outcome. Without a model, an outcome the documentation names in words counts: a
+   column it calls the response or the outcome, or the quantity it says an analysis of this
+   table relates to the other columns.
 2. **Its outcome** is the response, named exactly as the dtypes at the page's end name the
    column. A transformed outcome (`log(y)`) names the raw column `y`; successes out of trials
    name the successes, and the trials stay a column.
 3. **`none`** when:
-   - no model is documented: the table is only described, plotted or summarized;
+   - no model is documented and no outcome named: the table is only described, plotted or
+     summarized, or the documentation names a topic of interest but no column, or two outcomes
+     without an order;
    - the outcomes are analyzed jointly (e.g. a correlation, a principal component, factor or
      cluster analysis, a test of independence);
    - the outcome is no column of the table: computed from several columns, or found only in
      another table.
 
-A response is never inferred: a table without a documented model is `none`, even where one
-column is plainly the outcome. `RULE GAP:` opens the evidence of any case these rules do not
-settle.
+A response is never inferred: a table whose documentation neither models nor names an outcome
+is `none`, even where one column is plainly the outcome, and a model recalled from a book the
+source's files do not hold is no documentation. `RULE GAP:` opens the evidence of any case
+these rules do not settle.
 
 ## Not flat
 
@@ -45,9 +55,9 @@ no other shard for it.
 
 ## Evidence
 
-One line per object: the model as the documentation writes it (the call or the formula) and
-where it stands (the help page's examples, a vignette's section, the paper's table); for `none`,
-which of the three cases holds and why.
+One line per object: the model as the documentation writes it (the call or the formula), or
+its words naming the outcome, and where it stands (the help page's examples, a script's path, a
+vignette's section, the paper's table); for `none`, which of the three cases holds and why.
 
 ## Output — shards only
 
