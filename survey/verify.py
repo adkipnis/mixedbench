@@ -85,6 +85,9 @@ PAGES = {
 }  # fmt: skip
 DOI = re.compile(r'10\.\d{4,}/\S+')  # a DOI anywhere in a deposit's link
 HELP_CHARACTERS = 20_000  # a help page can hold a whole table, which would drown a handoff
+# the pull opens a deposit's help page with the local path of its deposit page, which the
+# deposit's page URL replaces in a handoff
+DEPOSIT_LINE = re.compile(r'^# deposit page: [^\n]*\n\n')
 # a batch's handoff opens with a prompt that a checker who knows neither the survey nor the
 # repository can act on
 HANDOFF_HEAD = """# Grouped tables, hand check, batch {batch}
@@ -214,7 +217,7 @@ def renderHelpPage(registry: Path, label: str, object: str) -> str:
     path = registry / 'help' / label / f'{object}.txt'
     if not path.exists():
         return ''
-    text = path.read_text()
+    text = DEPOSIT_LINE.sub('', path.read_text(), count=1)
     if len(text) > HELP_CHARACTERS:
         text = f'{text[:HELP_CHARACTERS]}\n[cut at {HELP_CHARACTERS:,} characters]'
     return f'<details><summary>help page</summary>\n\n~~~~\n{text}\n~~~~\n\n</details>\n'
