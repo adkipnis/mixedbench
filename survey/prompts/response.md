@@ -27,9 +27,11 @@ Per object of the worklist:
    documentation fits or states on this table (an example in the help page, a vignette, a
    chapter script, the paper's analysis, a Stan program's likelihood). A regression of any
    family, an ANOVA, a test of one outcome across groups, a survival or a time-series model each
-   have an outcome. Without a model, an outcome the documentation names in words counts: a
-   column it calls the response or the outcome, or the quantity it says an analysis of this
-   table relates to the other columns.
+   have an outcome, and so does a fit of one column's distribution. A model fitted on a subset,
+   a renaming or a re-export of this table's rows documents this table too; test code does
+   not. Without a model, an outcome the documentation names in words counts: a column it calls
+   the response or the outcome, or the quantity it says an analysis of this table relates to
+   the other columns.
 2. **Its outcome** is the response, named exactly as the dtypes at the page's end name the
    column. A transformed outcome (`log(y)`) names the raw column `y`; successes out of trials
    name the successes, and the trials stay a column.
@@ -39,8 +41,8 @@ Per object of the worklist:
      without an order;
    - the outcomes are analyzed jointly (e.g. a correlation, a principal component, factor or
      cluster analysis, a test of independence);
-   - the outcome is no column of the table: computed from several columns, or found only in
-     another table.
+   - the outcome is no column of the table: computed from several columns, aggregated to other
+     units, or found only in a table that does not hold this table's rows.
 
 A response is never inferred: a table whose documentation neither models nor names an outcome
 is `none`, even where one column is plainly the outcome, and a model recalled from a book the
