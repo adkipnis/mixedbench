@@ -22,7 +22,7 @@ a typed registry row and its loaded table
 -> refused if outside the contract             _refuseUncovered, _refuseSeparated
 -> composites added, incomplete rows dropped   withComposites, _dropIncomplete
 -> each covariate's kind and coded columns     _typeCovariates, _codeTerms
--> the columns with one value dropped          _dropConstant
+-> the columns with one value dropped          dropConstant
 -> the design, factors and response            _assembleDesign, _codeFactor, _codeResponse
 -> the regimes `rows` and `groups`, in folds   _dealRegimes
 -> each fold's scales                          _measureFolds
@@ -233,7 +233,7 @@ class _Builder:
 
     def build(self) -> Problem:
         kinds = self._typeCovariates()
-        coded, dropped_columns = self._dropConstant(self._codeTerms())
+        coded, dropped_columns = dropConstant(self._codeTerms())
         design = self._assembleDesign(coded)
         factors = {factor: self._codeFactor(factor) for factor in self.row.grouping_factors}
         regimes = self._dealRegimes(factors)
@@ -317,22 +317,6 @@ class _Builder:
                     products[f'{name}:{part_name}'] = column * part_column
             columns = products
         return columns
-
-    @staticmethod
-    def _dropConstant(coded: Coded) -> tuple[Coded, tuple[str, ...]]:
-        """Drops the coded columns with one value over the kept rows and lists them,
-        as lme4 drops the columns of a rank-deficient model matrix."""
-        # no likelihood identifies a constant column's coefficient
-        kept = {}
-        dropped = []
-        for term, columns in coded.items():
-            kept[term] = {}
-            for name, column in columns.items():
-                if column.nunique() == 1:
-                    dropped.append(name)
-                else:
-                    kept[term][name] = column
-        return kept, tuple(dropped)
 
     def _assembleDesign(self, coded: Coded) -> dict[str, pd.Series]:
         """Returns `Intercept`, then the coded columns in the row's order."""
@@ -535,6 +519,22 @@ def codeCovariate(values: pd.Series) -> dict[str, pd.Series]:
     for level in loaded[1:]:
         contrasts[f'{column}[{level}]'] = (values == level).astype(float)
     return contrasts
+
+
+def dropConstant(coded: Coded) -> tuple[Coded, tuple[str, ...]]:
+    """Drops the coded columns with one value over the kept rows and lists them,
+    as lme4 drops the columns of a rank-deficient model matrix."""
+    # no likelihood identifies a constant column's coefficient
+    kept = {}
+    dropped = []
+    for term, columns in coded.items():
+        kept[term] = {}
+        for name, column in columns.items():
+            if column.nunique() == 1:
+                dropped.append(name)
+            else:
+                kept[term][name] = column
+    return kept, tuple(dropped)
 
 
 def _orderLevels(values: pd.Series) -> tuple:
