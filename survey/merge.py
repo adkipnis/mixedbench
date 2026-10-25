@@ -7,7 +7,7 @@ offending rows, and otherwise upserts on the table's row key, so merging the sam
 changes nothing and a corrected shard replaces its earlier rows. Every merge then folds
 confirmed duplicates, measures the whole registry and rewrites the manifest and the summary.
 The census tables land in `registry/`, the survey's bookkeeping tables (duplicates, dropped,
-flat verdicts) in `survey/`. Run from the repo root:
+flat verdicts and responses) in `survey/`. Run from the repo root:
 
     uv run python survey/merge.py survey/shards/registry_lme4.csv
 """
@@ -52,7 +52,7 @@ from summarize import Summarizer
 HERE = Path(__file__).parent
 # An object is in the registry or in the exclusions, never both: the second shard is refused.
 RIVALS = {'registry': 'excluded', 'excluded': 'registry'}
-ON_CENSUS = ('dropped', 'flat_verdicts')  # shards about an object the census must hold
+ON_CENSUS = ('dropped', 'flat_verdicts', 'flat_responses')  # about an object the census holds
 # A dropped object leaves both files; re-filing it leaves dropped.csv. The later merge wins.
 SUPERSEDES = {
     'registry': ('dropped',),
@@ -60,6 +60,7 @@ SUPERSEDES = {
     'dropped': ('registry', 'excluded'),
     'duplicates': (),
     'flat_verdicts': (),
+    'flat_responses': (),
 }
 RECONCILED = ('registry', 'duplicates', 'dropped')  # merges that can change the duplicate fold
 CENSUS = ('registry', 'excluded')  # shard tables in registry/; the others in survey/
@@ -124,6 +125,8 @@ class Merger:
         if self.table.name in ON_CENSUS:
             problems += self.unknownObjects()
         self.refuse(problems)
+        if self.table.name == 'flat_responses':  # every object loads, the census holds it
+            self.refuse(self.flatResponseProblems())
 
     @staticmethod
     def refuse(problems: list[dict]) -> None:
@@ -210,6 +213,17 @@ class Merger:
         known = self.objectsIn(TABLES['registry']) | self.objectsIn(TABLES['excluded'])
         unknown = ~self.keysOf(self.shard).isin(known)
         return self.flag(unknown, 'object', 'not in registry.csv or excluded.csv')
+
+    def flatResponseProblems(self) -> list[dict]:
+        """A flat table's response is a column of its loaded table, or `none`."""
+        problems = []
+        for line, row in self.shard.iterrows():
+            if row['response'] == 'none':
+                continue
+            table = self.loader.load(self.frame.sources[row['source']], row['object'])
+            if row['response'] not in table.columns:
+                problems.append(self.problem(line, 'response', 'not a column of the table'))
+        return problems
 
     def objectsIn(self, table: Table) -> set[Key]:
         return set(self.keysOf(self.canonical(table)))
