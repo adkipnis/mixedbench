@@ -1,0 +1,3 @@
+"source","object","response","evidence"
+"faraway","pneumo","none","hand check: none, no model documented: the page describes the miners' counts Freq by status and years of service without a model or a designated outcome, and has no examples; no other file in faraway's tree uses pneumo"
+"koczynska_2026_osf_42","htests_fit1a_unc_tab","none","hand check: none, no model documented: the processing script (osf.io/download/sta7f) builds these six rows from fit1a's posterior hypothesis summaries per lag (est, est_error, ci_lo, ci_hi, p) without fitting a model to them; the supplement (osf.io/download/d92re) loads the object but never references it"
