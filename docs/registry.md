@@ -254,14 +254,19 @@ The survey's tables filed `no grouping structure`, screened and read again by `s
   that defines it; `inf` kept.
 - A fit statistic of `fits.csv` is an axis named as its column, after the quirk statistics, a
   per-row one counted once per registry row and a per-factor one once per row of the file.
+- An axis the flat sample shares gains a `flat` block after `without_agridat`: `n_obs`, `d_all`
+  and `condition_all` once per table of `flat.csv`, `K` once per categorical or ordered column
+  of `flat_columns.csv` and a quirk statistic once per column of it that defines it. The other
+  axes have none.
 - `shares`: `pair_relation` over the rows of `factor_pairs.csv`; `superior` over its nested
   pairs, `factor_a` or `factor_b` for the side that holds the superior, `none` when neither does;
-  `status` over the registry rows of `fits.csv`.
+  `status` over the registry rows of `fits.csv`; `flat_column_type` over the rows of
+  `flat_columns.csv`.
 - `implied_columns`: the expected design columns of a 9- and a 14-term model (the practice
   survey's p90 and p95 of terms) under the observed categorical share and mean K − 1.
 
 - `SUMMARY.md` is rendered from the digit-free `survey/SUMMARY.template.md` on every merge and
-  measurement.
+  measurement, the flat sample's section from the survey's flat files as they stand.
 - metabeta-v3's `packages/glmm/tests/surveys/test_dimension_quantiles.py` asserts the shape of
   `quantiles.yaml`; an axis or tier name changes only with it.
 
