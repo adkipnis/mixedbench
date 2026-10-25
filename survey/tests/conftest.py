@@ -33,6 +33,7 @@ import columns
 import groups
 from columns import COLUMN_COLUMNS
 from fits import FIT_COLUMNS
+from flat import FLAT_COLUMN_COLUMNS, FLAT_COLUMNS
 from groups import COLUMN_FACTOR_COLUMNS
 from measure import Measurer, measureRegistry
 from merge import Merger
@@ -93,11 +94,13 @@ def readRows(path: Path) -> list[dict]:
 
 
 def emptyCensus(registry: Path) -> None:
-    """The repository's registry/ always holds both census files and fits.csv, which no merge
-    writes; a scratch one starts with them empty."""
+    """The repository's registry/ always holds both census files, fits.csv and the two flat
+    files, which no merge writes; a scratch one starts with them empty."""
     for table in (REGISTRY, EXCLUDED):
         writeCsv(pd.DataFrame(columns=table.columns), registry / f'{table.name}.csv')
     writeCsv(pd.DataFrame(columns=FIT_COLUMNS), registry / 'fits.csv')
+    writeCsv(pd.DataFrame(columns=FLAT_COLUMNS), registry / 'flat.csv')
+    writeCsv(pd.DataFrame(columns=FLAT_COLUMN_COLUMNS), registry / 'flat_columns.csv')
 
 
 def scratchMerger(registry: Path, survey: Path) -> Merger:
