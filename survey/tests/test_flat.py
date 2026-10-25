@@ -519,3 +519,18 @@ def test_agree_gives_the_share_of_drawn_tables_still_in_the_sample_per_stratum_a
         ['all', '6', '0.5'],
     ]
     assert list(rows[0]) == ['stratum', 'tables', 'stood']
+
+
+def test_the_wide_list_names_each_frame_table_judged_wide_with_its_source_and_evidence(flat):
+    """The issue for the long forms lists every wide table once: a copy filed as derived has
+    left the frame, and a table of another verdict is not listed."""
+    writeSurvey(flat, SURVEY)
+    writeVerdicts(flat, [
+        ('pens', 'read', 'wide', 'four visits as columns'),
+        ('pens', 'unique', 'flat', 'one row per pen'),
+        ('pens', 'copy', 'wide', 'four visits as columns'),
+    ])  # fmt: skip
+
+    text = flat.listWide()
+
+    assert text == '- **pens · read:** four visits as columns\n'
