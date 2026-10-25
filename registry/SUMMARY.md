@@ -354,7 +354,7 @@ sample's rule are in [`docs/registry.md`](../docs/registry.md). An axis both sam
 its table above with the flat sample's row.
 
 **Corpus.** 729 flat tables; per stratum read 559, prescreened 170; per tier R 370, E 153, T 136, D 62, O 8.
-The screen flagged 294 of the frame's 675 read tables for a second reading; verdicts flat 203, wide 129, hidden grouping 33.
+The screen flagged 294 of the frame's 675 read tables for a second reading; verdicts flat 205, wide 151, hidden grouping 43.
 The hand sample of 50 tables stood at 0.92.
 346 of the 729 tables name a response; the response check of 25 tables stood at 0.84, its recheck of 15 `none` tables at 1.0.
 
