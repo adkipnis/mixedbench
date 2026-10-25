@@ -39,7 +39,7 @@ from mixedbench.contract import codeCovariate, columnType
 from mixedbench.datasets import Loader
 from mixedbench.registry.row import readCsv, splitList, writeCsv
 from pull import Puller
-from schema import FLAT_VERDICTS
+from schema import FLAT_RESPONSES, FLAT_VERDICTS
 from sources import readFrame
 from summarize import Summarizer
 from verify import Links, drawSample, renderHelpPage
@@ -71,11 +71,12 @@ SCREEN_COLUMNS = (
 # a prescreened table's filing line is the pre-screen's verdict, and it holds no repeated column
 UNSCREENED = {'words': '', 'id_columns': '', 'integer_columns': '', 'flagged': 'no'}
 COLUMN_TYPES = ('continuous', 'binary', 'categorical', 'ordered')  # the kinds `columnType` gives
-# flat.csv: one row per table of the flat sample, how it got in, its sizes and its design
+# flat.csv: one row per table of the flat sample, how it got in, its response, its sizes and
+# its design
 FLAT_COLUMNS = (
-    'source', 'object', 'tier', 'stratum', 'basis', 'evidence', 'n_obs', 'n_columns',
-    'n_continuous', 'n_binary', 'n_categorical', 'n_ordered', 'n_id_columns', 'd_all',
-    'condition_all',
+    'source', 'object', 'tier', 'stratum', 'basis', 'evidence', 'response', 'n_obs',
+    'n_columns', 'n_continuous', 'n_binary', 'n_categorical', 'n_ordered', 'n_id_columns',
+    'd_all', 'condition_all',
 )  # fmt: skip
 # flat_columns.csv: columns.csv's columns less those a registry row's model binds
 FLAT_COLUMN_COLUMNS = (
@@ -173,16 +174,34 @@ class FlatPass:
         writeCsv(screened[list(SCREEN_COLUMNS)], self.survey / 'flat_screen.csv')
 
     def measure(self) -> None:
-        """flat.csv and flat_columns.csv: every table of the flat sample, measured. Refuses,
-        naming them, while a flagged table has no verdict."""
-        tables, columns = [], []
-        for _, row in self._selectSample().iterrows():
+        """flat.csv and flat_columns.csv: every table of the flat sample, measured without its
+        response. Refuses, naming them, while a flagged table has no verdict, and before writing
+        while a sample table has no response or one its table lacks."""
+        sample = self._selectSample()
+        responses = self._readResponses()[['source', 'object', 'response']]
+        sample = sample.merge(responses, on=['source', 'object'], how='left')
+        sample['response'] = sample['response'].fillna('')
+        tables, columns, problems = [], [], []
+        for _, row in sample.iterrows():
             table = self.loader.load(self.sources[row['source']], row['object'])
-            measured, measured_columns = self.measureTable(table)
+            response = row['response']
+            problem = self._findResponseProblem(response, table)
+            if problem != '':
+                problems.append(f'{row["source"]} {row["object"]}: {problem}')
+                continue
+            covariates = table if response == 'none' else table.drop(columns=response)
+            measured, measured_columns = self.measureTable(covariates)
             identity = {c: row[c] for c in ('source', 'object', 'tier')}
-            tables.append(identity | {'stratum': row['stratum']} | self._findBasis(row) | measured)
+            how = {'stratum': row['stratum']} | self._findBasis(row) | {'response': response}
+            tables.append(identity | how | measured)
             for column in measured_columns:
                 columns.append(identity | column)
+        if problems:
+            names = '\n'.join(problems)
+            raise ValueError(
+                f'{len(problems)} sample tables without a response or with one their table '
+                f'lacks:\n{names}'
+            )
         writeCsv(pd.DataFrame(tables, columns=FLAT_COLUMNS), self.registry / 'flat.csv')
         flat_columns = pd.DataFrame(columns, columns=FLAT_COLUMN_COLUMNS)
         writeCsv(flat_columns, self.registry / 'flat_columns.csv')
@@ -272,6 +291,18 @@ class FlatPass:
         if row['stratum'] == 'prescreened':
             return {'basis': 'prescreen', 'evidence': row['screen']}
         return {'basis': 'first reading', 'evidence': row['detail']}
+
+    @staticmethod
+    def _findResponseProblem(response: str, table: pd.DataFrame) -> str:
+        """Why a sample table cannot be measured without its response; empty when it can."""
+        if response == '':
+            return 'no response'
+        if response != 'none' and response not in table.columns:
+            return f'no column {response}'
+        return ''
+
+    def _readResponses(self) -> pd.DataFrame:
+        return readCsv(self.survey / 'flat_responses.csv')[list(FLAT_RESPONSES.agentColumns)]
 
     def _readVerdicts(self) -> pd.DataFrame:
         path = self.survey / 'flat_verdicts.csv'
