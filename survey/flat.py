@@ -153,23 +153,31 @@ holds.
 
 ## The response
 
-- **A column:** the outcome of the first model the documentation fits or states on this table,
-  in the documentation's order (an example in a help page, a vignette, a textbook's worked
-  example, a paper's analysis, a Stan program's likelihood), named as the table names the
-  column. A transformed outcome (`log(y)`) names the raw column `y`; successes out of trials
-  name the successes.
-- **none:** no model is documented (the table is only described, plotted or summarized), the
-  outcomes are analyzed jointly (e.g. a correlation, a principal component or cluster
-  analysis, a test of independence), or the outcome is no column of the table (computed from
-  several columns, or found only in another table).
+- **A column:** the outcome of the first model the documentation fits or states on this table:
+  the help page's first, else the first in the files the source ships with it at the version
+  read (example and chapter scripts, vignettes, notebooks, Stan programs, a deposit's code), in
+  the order the source presents them. A fit of one column's distribution has that column as
+  its outcome, and a model fitted on a subset, a renaming or a re-export of the table's rows
+  documents the table too; test code does not. Without a model, a column the documentation
+  calls the response or the outcome, or the quantity it says an analysis of the table relates
+  to the other columns, is the response. It is named as the table names the column; a
+  transformed outcome (`log(y)`) names the raw column `y`; successes out of trials name the
+  successes.
+- **none:** no model is documented and no outcome named (the table is only described, plotted
+  or summarized, or the documentation names a topic but no column, or two outcomes without an
+  order), the outcomes are analyzed jointly (e.g. a correlation, a principal component or
+  cluster analysis, a test of independence), or the outcome is no column of the table
+  (computed from several columns, aggregated to other units, or found only in a table that
+  does not hold these rows).
 
-A response is never inferred: a table without a documented model is `none`, even where one
-column is plainly the outcome.
+A response is never inferred: a table whose documentation neither models nor names an outcome
+is `none`, even where one column is plainly the outcome, and a model recalled from a book the
+source's files do not hold does not count.
 
 ## Per table
 
 - **page, download:** the source at the version the survey read; the file names the table
-  inside an archive.
+  inside an archive. A CRAN package's files are on GitHub's mirror beside the download.
 - **response, evidence:** the reading and the model or the reason it rests on. `NOT FLAT:`
   opens the evidence of a table the reader found grouped or wide; the response is checked all
   the same.
