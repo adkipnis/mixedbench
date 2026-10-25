@@ -1,0 +1,3 @@
+"source","object","verdict","evidence"
+"stan_arm","ARM/Ch.7/congress.data.json","wide","vote_86 and vote_88 repeat Democratic vote share across two elections in the same districts."
+"carData","BEPS","wide","Blair, Hague and Kennedy repeat each respondent's 1–5 leader assessment across three targets."
