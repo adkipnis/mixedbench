@@ -6,7 +6,7 @@ A registry object counts its first model's columns, every column but the respons
 grouping factors.
 A flat table counts every column but its id columns, the categoricals whose present values are all
 distinct.
-It reads the measured files at the commit that wrote its outputs, the files mixedbench 1.0.9 ships.
+It reads the measured files at the commit that wrote its outputs, the files mixedbench 1.0.10 ships.
 
 pipeline:
 ---------
