@@ -1,6 +1,6 @@
 """File contract of the GLMM dimension survey: what a writer knows of `registry.csv`,
-`excluded.csv`, `duplicates.csv`, `dropped.csv` and `flat_verdicts.csv` (agent and script
-columns, allowed values, row keys) and the shape of `sources.yaml`.
+`excluded.csv`, `duplicates.csv`, `dropped.csv`, `flat_verdicts.csv` and `flat_responses.csv`
+(agent and script columns, allowed values, row keys) and the shape of `sources.yaml`.
 The registry row's dialect, columns, vocabularies and grammars are the package's
 (`mixedbench.registry.row`). The merge script enforces it;
 agents write shards with exactly the agent columns. Documented for humans in `docs/registry.md` and `README.md`.
@@ -70,7 +70,17 @@ FLAT_VERDICTS = Table(
     key=('source', 'object'),
 )
 
-TABLES = {t.name: t for t in (REGISTRY, EXCLUDED, DUPLICATES, DROPPED, FLAT_VERDICTS)}
+# A flat table's response, the outcome of its first documented model, or `none`.
+FLAT_RESPONSES = Table(
+    name='flat_responses',
+    columns=('source', 'tier', 'object', 'response', 'evidence'),
+    scriptColumns=('tier',),
+    key=('source', 'object'),
+)
+
+TABLES = {
+    t.name: t for t in (REGISTRY, EXCLUDED, DUPLICATES, DROPPED, FLAT_VERDICTS, FLAT_RESPONSES)
+}
 # a shard `<prefix>_<label>.csv` -> the table it merges into
 SHARDS = {
     'registry': REGISTRY,
@@ -78,6 +88,7 @@ SHARDS = {
     'duplicates': DUPLICATES,
     'dropped': DROPPED,
     'flat': FLAT_VERDICTS,
+    'response': FLAT_RESPONSES,
 }
 IDENTITY = (
     'source',
@@ -129,6 +140,7 @@ ALLOWED: dict[str, dict[str, tuple[str, ...]]] = {
     'duplicates': {'verdict': ('same', 'different')},
     'dropped': {},
     'flat_verdicts': {'verdict': ('flat', 'wide', 'hidden grouping')},
+    'flat_responses': {},
 }
 
 REQUIRED = {
@@ -140,6 +152,7 @@ REQUIRED = {
     'duplicates': ('source_a', 'object_a', 'source_b', 'object_b', 'verdict'),
     'dropped': ('source', 'object', 'reason'),
     'flat_verdicts': ('source', 'object', 'verdict', 'evidence'),
+    'flat_responses': ('source', 'object', 'response', 'evidence'),
 }  # fmt: skip
 MAX_MODELS_PER_OBJECT = 3
 MAX_ORDINAL_LEVELS = 10  # an ordinal response with more distinct values is refused
