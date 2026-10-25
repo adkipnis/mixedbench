@@ -193,7 +193,7 @@
 "stan_arm","E","ARM/Ch.10/sesame.dta","hidden grouping","site indexes the study site the children (id, one row each) repeat within; ARM Ch.23 fits this same file with a site x setting random effect (siteset), so it is re-filed as a duplicate of ARM/Ch.23/sesame.dta."
 "stan_arm","E","ARM/Ch.10/sesame_multi_preds_3a.data.json","hidden grouping","site indexes the study site the children repeat within, fitted as factor(site) here but as siteset by ARM Ch.23; re-filed as a column subset of ARM/Ch.10/sesame.dta."
 "stan_arm","E","ARM/Ch.10/sesame_multi_preds_3b.data.json","hidden grouping","site indexes the study site the children repeat within, as in sesame_multi_preds_3a, of which this file is a byte-identical copy; re-filed as derived."
-"stan_arm","E","ARM/Ch.13/heights.dta","flat","race and hisp classify respondents, one row each, and yearbn is a birth year; the Ch.13 varying-intercept model groups by eth, a demographic recode filed on ARM/Ch.13/earnings.data.json, not a sampled cluster (as for ros earnings)."
+"stan_arm","E","ARM/Ch.13/heights.dta","hidden grouping","race and hisp recode into eth, four ethnicity groups that the Ch.13 model fits with varying intercepts and height slopes."
 "stan_arm","E","ARM/Ch.19/schools.data.json","flat","one row per school with y and sigma_y (estimated treatment effects and their standard errors); the school effect is observation-level and no column indexes a unit rows repeat within."
 "stan_arm","E","ARM/Ch.23/electric.dat","wide","treated.Pretest/Posttest and control.Pretest/Posttest hold the two classes of a matched pair as columns, one row per pair; the long form is ARM/Ch.23/electric.data.json with (1 | pair)."
 "stan_arm","E","ARM/Ch.23/electric2.data.json","wide","treatment1/4, pre_test1/4 and post_test1/4 hold grade-1 and grade-4 classes side by side as columns; the long form with pair and grade is ARM/Ch.23/electric.data.json."
@@ -363,3 +363,4 @@
 "datasets","R","quakes","flat","""1000 seismic events"", one row per event; lat, long, depth, mag and stations are event attributes, no grouping column."
 "stan_arm","E","ARM/Ch.7/congress.data.json","wide","vote_86 and vote_88 repeat Democratic vote share across two elections in the same districts."
 "carData","R","BEPS","wide","Blair, Hague and Kennedy repeat each respondent's 1–5 leader assessment across three targets."
+"stan_arm","E","ARM/Ch.10/candidate_effects.dat","wide","Columns 2 to 13 repeat each state's candidate-effect adjustment across the elections 1948 to 1992, as the headered Ch.14 copy names them."
