@@ -17,13 +17,14 @@ excluded.csv and candidates.csv
 -> the share of the hand check that stood per stratum       FlatPass.agree
 -> the wide tables as an issue's list                       FlatPass.listWide
 
-Run a step from the repo root; a hand check's steps name it, `verdict` or `response`:
+Run a step from the repo root; a hand check's steps name it, `verdict`, `response` or `recheck`:
 
     uv run python survey/flat.py screen
     uv run python survey/flat.py measure
     uv run python survey/flat.py draw --check response
     uv run python survey/flat.py handoff --check response --batch 1
     uv run python survey/flat.py agree --check response
+    uv run python survey/flat.py draw --check recheck
     uv run python survey/flat.py wide
 """
 
@@ -301,8 +302,28 @@ class ResponseCheck:
         return joined['response'] == joined['response_merged']
 
 
+class ResponseRecheck(ResponseCheck):
+    """The none stratum's second check, after the first missed the bar: fresh none tables, none
+    of them drawn by the first check."""
+
+    STRATA = ('none',)
+    SIZE = 15
+    SEED = 4
+    SAMPLE = 'flat_response_recheck_sample.csv'
+    AGREEMENT = 'flat_response_recheck_agreement.csv'
+    HEAD = RESPONSE_HEAD.replace('response check, batch', 'response recheck, batch')
+
+    @staticmethod
+    def selectPopulation(flat: FlatPass) -> pd.DataFrame:
+        population = ResponseCheck.selectPopulation(flat)
+        drawn = readCsv(flat.survey / ResponseCheck.SAMPLE)[['source', 'object']]
+        joined = population.merge(drawn, on=['source', 'object'], how='left', indicator=True)
+        fresh = (joined['_merge'] == 'left_only') & (joined['stratum'] == 'none')
+        return joined[fresh].drop(columns='_merge')
+
+
 HandCheck = VerdictCheck | ResponseCheck
-CHECKS = {'verdict': VerdictCheck(), 'response': ResponseCheck()}
+CHECKS = {'verdict': VerdictCheck(), 'response': ResponseCheck(), 'recheck': ResponseRecheck()}
 
 
 # =====================================================================================
