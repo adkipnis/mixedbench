@@ -166,3 +166,30 @@ the registry. Grilled on 2026-10-24 ([#72](https://github.com/adkipnis/mixedbenc
 - Why: the response check's `none` stratum stood at 0.733 (11 of 15), and three of its four
   misses rested on such material outside the pinned files; the eight `none` tables of CRAN
   packages it drew all stood, so their shipped files stay their documentation.
+
+## Amendment 2026-10-25: the wide tables ([#129](https://github.com/adkipnis/mixedbench/issues/129))
+
+- Decision: a table whose response reading opens with `NOT FLAT:` is flagged like the screen's
+  tables and gets the second reading, whose verdict decides; the response reading judges no
+  table.
+- Why: the response reading found 35 tables the screen never flagged not flat (24 wide, 11
+  hidden grouping), 16 of them prescreened, so its prompt, not built for the question, was their
+  only reading of it.
+- Decision: a wide table whose stacked repeated measures all occur in a registry object, as an
+  equal multiset or as equal patterns per unit once a frequency weight is expanded, is a copy of
+  that object and leaves the frame as `derived or duplicated table`; a subset counts. A wide
+  table that differs from the object in one value or in its scale stays `wide`.
+- Why: a census counts each table once, and 16 of the 140 wide tables hold no observation the
+  registry lacks (fitzmaurice's `dental.dta` is nlme's `Orthodont`).
+- Decision: a wide table whose long twin is excluded as simulated shares the exclusion.
+- Decision: the loader gains a declared stack of a table's repeated columns in a registry pass of
+  its own, after this sample ships; until then a wide table stays out of the registry and out of
+  the sample.
+- Why: of the 140 wide tables, 105 have a long form only by a reshape, about 27 of them with a
+  documented grouped model; 4 have it only in another file (two simulated, one spread over 49
+  files, one whose unit lives inside an id string), and 11 have none. The tables a reshape adds
+  are short, balanced designs, so the census owes them, but the pass (where the stack lives, a
+  reading of each table's stack, a hand sample, fits) outweighs what is left of this sample and
+  changes none of its tables.
+- Rejected: no reshape ever, which leaves out every grouped table a source stores wide; the
+  reshape before this sample ships.
