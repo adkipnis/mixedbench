@@ -5,3 +5,4 @@
 "rabe_hesketh","twin_hay.dta","1","","freq","pair","freq counts the twin pairs of each response pattern and stands on both members of its pair"
 "timmer_2024_osf_16","color_experiments_data_27.05.2024.txt","1","rt > 0.317 and rt < 2.5 and acc == '1' and aftererror == 0 and trial_type not in ['practice', 'first']","","","conversational_switching_data_analysis.R keeps rt in (0.317, 2.5), accurate trials, none after an error, no practice or first trials"
 "timmer_2024_osf_15","tone_experiments_data_27.05.2024.txt","1","rt > 0.317 and rt < 2.5 and acc == '1' and aftererror == 0 and trial_type not in ['practice', 'first']","","","conversational_switching_data_analysis.R keeps rt in (0.317, 2.5), accurate trials, none after an error, no practice or first trials"
+"agridat","heady.fertilizer","1","crop in ['corn', 'corn2']","","","rep:P:N indexes the corn plots, the same in 1952 (corn) and 1953 (corn2); the alfalfa and clover rows are other plots"
