@@ -321,7 +321,7 @@ def test_the_census_lands_in_the_registry_and_the_bookkeeping_in_the_survey(spli
     registryFiles = sorted(p.name for p in merger.registry.iterdir() if p.is_file())
     surveyFiles = sorted(p.name for p in merger.survey.iterdir() if p.is_file())
     assert registryFiles == ['SUMMARY.md', 'column_factors.csv', 'columns.csv', 'dimensions.csv', 'excluded.csv', 'factor_pairs.csv', 'fits.csv', 'flat.csv', 'flat_columns.csv', 'manifest.csv', 'quantiles.yaml', 'registry.csv', 'sources.yaml']  # fmt: skip
-    assert surveyFiles == ['dropped.csv', 'duplicates.csv']
+    assert surveyFiles == ['dropped.csv', 'duplicates.csv', 'flat_agreement.csv', 'flat_response_agreement.csv', 'flat_response_recheck_agreement.csv', 'flat_responses.csv', 'flat_screen.csv', 'flat_verdicts.csv']  # fmt: skip
 
 
 def test_a_composite_grouping_factor_merges_and_gets_its_own_dimension_row(merger):
@@ -463,7 +463,7 @@ def test_a_verdict_outside_the_vocabulary_or_on_an_unknown_object_is_refused_nam
     assert problems[['line', 'key', 'column', 'problem']].values.tolist() == [
         [2, f'cattle {verdict["object"]}', column, problem]
     ]
-    assert not (merger.survey / 'flat_verdicts.csv').exists()
+    assert readRows(merger.survey / 'flat_verdicts.csv') == []
 
 
 RESPONSE = {'source': 'cattle', 'object': 'cattle.csv', 'response': 'kg', 'evidence': 'lm(kg ~ diet + calving) in its help page'}  # fmt: skip
@@ -500,4 +500,16 @@ def test_a_response_without_evidence_on_an_unknown_object_or_no_column_is_refuse
     assert problems[['line', 'key', 'column', 'problem']].values.tolist() == [
         [2, f'cattle {reading["object"]}', column, problem]
     ]
-    assert not (merger.survey / 'flat_responses.csv').exists()
+    assert readRows(merger.survey / 'flat_responses.csv') == []
+
+
+def test_a_flat_merge_leaves_the_measured_files_and_the_manifest_as_they_are(merger):
+    """A verdict or a response changes no registry row, so its merge skips the measure pass,
+    which loads every registry table."""
+    mergeShard(merger, FIXTURES / 'registry_herds.csv')
+    mergeShard(merger, FIXTURES / 'excluded_cattle.csv')
+    files = [merger.registry / name for name in (*MEASURED, 'manifest.csv')]
+    written = [file.stat().st_mtime_ns for file in files]
+    mergeShard(merger, writeShard(merger.survey / 'shards' / 'flat_second.csv', [VERDICT]))
+    mergeShard(merger, writeShard(merger.survey / 'shards' / 'response_first.csv', [RESPONSE]))
+    assert [file.stat().st_mtime_ns for file in files] == written
