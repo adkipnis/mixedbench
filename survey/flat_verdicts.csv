@@ -361,3 +361,5 @@
 "datasets","R","attitude","flat","One row per department, ""aggregated from the questionnaires"" of its employees; the documented lm(rating ~ .) has no grouping."
 "datasets","R","penguins_raw","flat","Individual ID is the page's ""unique ID for each individual in dataset"" and Date Egg the date a study nest was observed; Species and Island are fixed classifications and no model has a random effect."
 "datasets","R","quakes","flat","""1000 seismic events"", one row per event; lat, long, depth, mag and stations are event attributes, no grouping column."
+"stan_arm","E","ARM/Ch.7/congress.data.json","wide","vote_86 and vote_88 repeat Democratic vote share across two elections in the same districts."
+"carData","R","BEPS","wide","Blair, Hague and Kennedy repeat each respondent's 1–5 leader assessment across three targets."
