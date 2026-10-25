@@ -132,6 +132,40 @@ def test_a_grouping_factor_is_integer_coded_with_its_levels_listed() -> None:
     assert list(problem.table.columns) == [*problem.design, 'y', 'block', 'block:plot', 'rows', 'groups']  # fmt: skip
 
 
+@pytest.mark.parametrize(
+    'width, interactions, design, dropped',
+    [
+        pytest.param(
+            [4.6] * 14, ('x:sex',), (), ('width',),
+            id='a covariate with one value over every row, as ros Helicopters',
+        ),
+        pytest.param(
+            [0.0] * 12 + [5.0, 0.0], ('x:sex',), (), ('width',),
+            id='a covariate whose other value sits on the row dropped for a missing x',
+        ),
+        pytest.param(
+            [4.6] * 14, ('x:sex', 'sex:diet'), ('sex:diet[b]',), ('width', 'sex:diet[c]'),
+            id='an interaction contrast of an empty cell, no diet c among sex m',
+        ),
+    ],
+)  # fmt: skip
+def test_a_design_column_with_one_value_over_the_kept_rows_is_dropped_and_recorded(
+    width: list[float], interactions: tuple[str, ...], design: tuple[str, ...], dropped: tuple
+) -> None:
+    """No likelihood identifies the coefficient of a constant column (#131).
+    Z-scored it is rounding noise or NaN, and an all-zero contrast never meets the likelihood.
+    `build` drops it, as lme4 drops the columns of a rank-deficient model matrix, and says so."""
+    row = fixtureRow(covariates=(*ROW.covariates, 'width'), interactions=interactions)
+    problem = Problem.build(row, fixtureTable().assign(width=width))
+    expected = ('Intercept', 'x', 'sex', 'diet[b]', 'diet[c]', 'grade[mid]', 'grade[hi]', 'x:sex', *design)  # fmt: skip
+    assert problem.design == expected
+    assert problem.dropped_columns == dropped
+    assert list(problem.table.columns) == [*expected, 'y', 'block', 'block:plot', 'rows', 'groups']  # fmt: skip
+    assert set(problem.scales['full'][0]) == {'x', 'y'}
+    assert not set(dropped) & set(problem.parameters)
+    assert not problem.standardized().isna().any().any()
+
+
 # ==============================================================================================
 # rows
 # ==============================================================================================
@@ -154,6 +188,17 @@ def test_a_table_with_no_complete_row_is_refused() -> None:
     table = fixtureTable().assign(y=NAN)
     with pytest.raises(Refused, match='fixture/trial/1: no row has every model value'):
         Problem.build(fixtureRow(), table)
+
+
+def test_a_covariate_varying_only_over_rows_without_a_response_is_refused() -> None:
+    """Stata's copy of Phenobarb has complete rows, but a dose of 0 on each observation row,
+    so its doses vary only over the dosing rows, which have no response (#131).
+    Dropping the constant dose would state a model of another quantity, so `build` refuses it,
+    as it refuses nlme's copy."""
+    row = fixtureRow(covariates=(*ROW.covariates, 'dose'))
+    dosed = fixtureTable().assign(y=[NAN, NAN, *Y[2:], 1.0, 2.0], dose=[5.0, 7.0] + [0.0] * 12)
+    with pytest.raises(Refused, match='fixture/trial/1: dose varies only over rows without a response'):  # fmt: skip
+        Problem.build(row, dosed)
 
 
 # ==============================================================================================
