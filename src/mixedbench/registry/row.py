@@ -176,6 +176,9 @@ class Row:
         for factor in splitList(cells['grouping_factors']):
             if factor in covariates:
                 refusals.append(('grouping_factors', f'{factor} is also a covariate'))
+        # a model never takes its response as a covariate
+        if cells['response'] in covariates:
+            refusals.append(('covariates', f'{cells["response"]} is also the response'))
         if cells['verified'] not in get_args(Verified):
             refusals.append(('verified', f'not a verification: {cells["verified"]}'))
         return refusals
