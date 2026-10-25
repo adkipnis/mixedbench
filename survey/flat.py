@@ -13,6 +13,7 @@ excluded.csv and candidates.csv
 -> flat_sample.csv, 50 sample tables in two batches         FlatPass.draw
 -> one batch as a prompt with page and download URLs        FlatPass.handoff
 -> flat_agreement.csv, the share that stood per stratum     FlatPass.agree
+-> the wide tables as an issue's list                       FlatPass.listWide
 
 Run a step from the repo root:
 
@@ -21,6 +22,7 @@ Run a step from the repo root:
     uv run python survey/flat.py draw
     uv run python survey/flat.py handoff --batch 1
     uv run python survey/flat.py agree
+    uv run python survey/flat.py wide
 """
 
 from __future__ import annotations
@@ -402,6 +404,21 @@ class FlatPass:
             )
         writeCsv(pd.DataFrame(rows), self.survey / 'flat_agreement.csv')
 
+    # ---------------------------------------------------------------------------------
+    # the wide list: verdicts -> the issue for the long forms
+    # ---------------------------------------------------------------------------------
+
+    def listWide(self) -> str:
+        """The frame's tables judged `wide`, in frame order, a bullet each with its source and
+        evidence. A table that has left the frame (e.g. a copy) is not listed."""
+        frame = self.deriveFrame()[['source', 'object']]
+        judged = frame.merge(self._readVerdicts(), on=['source', 'object'])
+        wide = judged[judged['verdict'] == 'wide']
+        bullets = []
+        for _, row in wide.iterrows():
+            bullets.append(f'- **{row["source"]} · {row["object"]}:** {row["evidence"]}\n')
+        return ''.join(bullets)
+
 
 # =====================================================================================
 # main
@@ -409,7 +426,7 @@ class FlatPass:
 if __name__ == '__main__':
     # fmt: off
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('step', choices=['screen', 'measure', 'draw', 'handoff', 'agree'], help='the step to run')
+    parser.add_argument('step', choices=['screen', 'measure', 'draw', 'handoff', 'agree', 'wide'], help='the step to run')
     parser.add_argument('--batch', type=int, help='handoff: the batch to render')
     parser.add_argument('--registry', type=Path, default=HERE.parent / 'registry', help='folder holding sources.yaml and the census tables')
     parser.add_argument('--survey', type=Path, default=HERE, help='folder holding candidates.csv and the bookkeeping tables')
@@ -427,3 +444,5 @@ if __name__ == '__main__':
             print(flat.handoff(args.batch))
         case 'agree':
             flat.agree()
+        case 'wide':
+            print(flat.listWide())
