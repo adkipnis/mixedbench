@@ -320,7 +320,7 @@ def test_the_census_lands_in_the_registry_and_the_bookkeeping_in_the_survey(spli
     mergeShard(merger, FIXTURES / 'registry_cattle.csv')  # flags the pair with herds
     registryFiles = sorted(p.name for p in merger.registry.iterdir() if p.is_file())
     surveyFiles = sorted(p.name for p in merger.survey.iterdir() if p.is_file())
-    assert registryFiles == ['SUMMARY.md', 'column_factors.csv', 'columns.csv', 'dimensions.csv', 'excluded.csv', 'factor_pairs.csv', 'fits.csv', 'manifest.csv', 'quantiles.yaml', 'registry.csv', 'sources.yaml']  # fmt: skip
+    assert registryFiles == ['SUMMARY.md', 'column_factors.csv', 'columns.csv', 'dimensions.csv', 'excluded.csv', 'factor_pairs.csv', 'fits.csv', 'flat.csv', 'flat_columns.csv', 'manifest.csv', 'quantiles.yaml', 'registry.csv', 'sources.yaml']  # fmt: skip
     assert surveyFiles == ['dropped.csv', 'duplicates.csv']
 
 
@@ -398,7 +398,7 @@ def test_a_merge_leaves_the_flat_files_as_the_last_flat_pass_wrote_them(merger):
     so a shard merged during the second reading neither reruns it nor fails (#115)."""
     written = {}
     for name in ('flat.csv', 'flat_columns.csv'):
-        written[name] = f'"source","object"\n"pens","{name}"\n'.encode()
+        written[name] = (FIXTURES / name).read_bytes()
         (merger.registry / name).write_bytes(written[name])
     mergeShard(merger, FIXTURES / 'registry_herds.csv')
     for name, text in written.items():
