@@ -554,6 +554,22 @@ reading's open disagreements, four to eight per tier.
   re-filed rows as candidates and refused four, the VAR's three equations as `lagged_predictors`
   and Peacekeeping's cox model as censored. The 608 earlier candidates kept main's hashes.
   `measure.py` moved main's 25 condition indexes and `condition_all` of the three Storable tables.
+- The 35 tables the response reading found not flat had no verdict, since the screen had not
+  flagged them, so a `NOT FLAT:` evidence now flags a table as the screen does (#133; ADR 0007,
+  amended 2026-10-25). pefr.dta was a copy. Two runs by `prompts/flat.md` read the other 34:
+  22 `wide`, 10 `hidden grouping` and 2 `flat`, toothpaste's arm summaries and rock, whose
+  cores only the response marks. The ten hidden groupings were re-filed and checked by hand:
+  all stood, with heady.fertilizer's fit on its corn plots and fastball's response
+  standardized. An LDA's documents and a multi-output GP's pitchers group, though the first
+  reading had filed such posteriors as having no grouping. The five rows of a fitted response
+  type were fitted: heady.fertilizer and Cars93 by lme4, the three in words without a formula.
+  The registry holds 724 rows over 649 datasets.
+- 21 tables left the frame. 16 are wide copies of a registry object (fitzmaurice's `dental.dta`
+  is nlme's `Orthodont`) and two are the wide twins of simulated tables. Three copy another
+  frame table: lead.dta is tlc.dta's succimer arm, Ch.10's candidate_effects Ch.14's less
+  the row read as its header, and openml_43452 ros' `student-mat.csv` recoded. The
+  frame holds 815 tables, `flat.py wide` lists 118 for #129, and the measure over the sample's
+  696 tables moved only the `flat` blocks of `quantiles.yaml` and the flat type mix.
 
 ## Constant design columns (#131, 2026-10-25)
 
@@ -628,16 +644,21 @@ object and the deciding issue.
 **Exclusions**
 
 - `simulated data` only where the source says so (Stata's chicken, hox SocsLong; m3#24, #12);
-  a guessed "constructed" stays (SASmixed Animal; m3#22).
+  a guessed "constructed" stays (SASmixed Animal; m3#22). A wide twin of a simulated table
+  shares its exclusion (socscors; #133).
 - `no grouping structure`: wide repeated-measures tables (nitrofen), replication without a
   replicate column (faraway rats), a uniformity trial without a random term, coordinates as the
   only grouping (besag.checks); m3#22, m3#23. A fixed-effects fit over blocks is rendered with
   random blocks at `low` (mead.germination; m3#22).
 - `derived or duplicated table`: a subset with its own model (wages_small_pp), a
   multiple-membership reshape (star_mm), Stan's censored and uncensored halves, read as the
-  modal one (BUGS kidney); m3#24, m3#25.
+  modal one (BUGS kidney); m3#24, m3#25. A wide table whose stacked measures all occur in a
+  registry object or another frame table is a copy, a subset too, and the superset stays
+  (dental.dta, lead.dta; #133). The same tokens split into other documents keep a row each
+  (three_men; #133).
 - Stan: pure GP, time-series, CAR and mixture posteriors have no grouping; a GP beside random
-  intercepts stays (m3#24).
+  intercepts stays (m3#24). A column that indexes a unit the rows repeat within groups whatever
+  the model, an LDA's documents or a multi-output GP's pitchers (prideprejudice, fastball; #133).
 - Kept: ARM's raw tables of an early chapter, with a later chapter's multilevel fit at `medium`
   when the grouping column is in the table (m3#24).
 
