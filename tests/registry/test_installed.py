@@ -37,6 +37,13 @@ def test_the_directory_holds_exactly_the_registry_files() -> None:
     assert all(p.is_file() for p in entries)
 
 
+def test_the_literal_names_every_file_of_the_repositorys_registry_folder() -> None:
+    """A file a survey pass writes into registry/ reaches the package only through the literal,
+    so a new one (the flat sample's, #115) cannot be left out; cache/ and help/ are folders."""
+    written = [p.name for p in Path('registry').iterdir() if p.is_file()]
+    assert sorted(written) == sorted(FILES)
+
+
 def test_pyproject_ships_exactly_the_registry_files() -> None:
     """The wheel's force-include and the sdist's only-include name the registry files one by
     one; a file added to the literal without them would be missing from the package."""
