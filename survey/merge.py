@@ -5,7 +5,8 @@ A shard is `shards/<table>_<label>.csv` with exactly the agent columns of its ta
 validates the shard against the table it returns, refuses a failing shard printing the
 offending rows, and otherwise upserts on the table's row key, so merging the same shard twice
 changes nothing and a corrected shard replaces its earlier rows. Every merge then folds
-confirmed duplicates, measures the whole registry and rewrites the manifest and the summary.
+confirmed duplicates, measures the whole registry and rewrites the manifest and the summary;
+a merge about the flat sample measures nothing.
 The census tables land in `registry/`, the survey's bookkeeping tables (duplicates, dropped,
 flat verdicts and responses) in `survey/`. Run from the repo root:
 
@@ -63,6 +64,7 @@ SUPERSEDES = {
     'flat_responses': (),
 }
 RECONCILED = ('registry', 'duplicates', 'dropped')  # merges that can change the duplicate fold
+FLAT = ('flat_verdicts', 'flat_responses')  # merges about the flat sample, never a registry row
 CENSUS = ('registry', 'excluded')  # shard tables in registry/; the others in survey/
 MANIFEST_COLUMNS = ['source', 'object', 'file', 'sha256', 'size']
 
@@ -486,8 +488,15 @@ class Merger:
         return (len(table), tuple(sorted(table.nunique())))
 
     # ---------------------------------------------------------------------------------
-    # manifest: registry objects -> manifest.csv
+    # measure: registry -> measured files -> manifest.csv
     # ---------------------------------------------------------------------------------
+    def measure(self) -> None:
+        """A flat verdict or response changes no registry row, so its merge measures nothing."""
+        if self.table.name in FLAT:
+            return
+        measureRegistry(self.registry, self.loader)
+        self.writeManifest()
+
     def writeManifest(self) -> None:
         """The file each registry object loads from, with its digest and size (#4)."""
         registry = self.canonical(TABLES['registry'])
@@ -529,7 +538,6 @@ if __name__ == '__main__':
     merger.upsert()
     merger.supersede()
     merger.reconcile()
-    measureRegistry(merger.registry, merger.loader)
-    merger.writeManifest()
+    merger.measure()
     Summarizer(args.registry, args.survey).flush()
     merger.report()
