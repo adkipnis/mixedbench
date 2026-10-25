@@ -72,11 +72,13 @@ class Puller:
             self.rows.extend(rows)
 
     def copyHelp(self) -> None:
-        """One page per object to read; a source's folder is rewritten, so a changed cap or
-        frame leaves no stale page behind."""
+        """One page per object to read, and per object stopped at `no repeated column`, which
+        the flat sample reads for its response; a source's folder is rewritten, so a changed
+        cap or frame leaves no stale page behind."""
         for label in self.labels:
             shutil.rmtree(self.registry / 'help' / label, ignore_errors=True)
         to_read = [row for row in self.rows if row['screen'] == 'pass' and row['capped'] == 'no']
+        to_read += [row for row in self.rows if row['screen'] == 'no repeated column']
         for row in to_read:
             source = self.frame.sources[row['source']]
             file = self.registry / 'help' / row['source'] / f'{row["object"]}.txt'
