@@ -9,7 +9,9 @@ the model formula, model family, prior, train/test splits, scales, and parameter
    One prior serves every problem.
    One typing rule decides each column's kind.
 3. Complete cases only: a row that misses a model value is dropped.
-   A row outside the contract (a categorical response, a censored model) raises `Refused`.
+   A design column with one value over the kept rows is dropped and recorded.
+   A row outside the contract (a categorical response, a censored model,
+   doses on rows without a response) raises `Refused`.
 4. Scaled per fold: the table stays in raw units.
    Each fold records the scales of the rows its fit sees.
 5. Parameter names are based on brms and are in brms's block order.
@@ -17,9 +19,10 @@ the model formula, model family, prior, train/test splits, scales, and parameter
 pipeline:
 ---------
 a typed registry row and its loaded table
--> refused if outside the contract             _refuseUncovered
+-> refused if outside the contract             _refuseUncovered, _refuseSeparated
 -> composites added, incomplete rows dropped   withComposites, _dropIncomplete
 -> each covariate's kind and coded columns     _typeCovariates, _codeTerms
+-> the columns with one value dropped          _dropConstant
 -> the design, factors and response            _assembleDesign, _codeFactor, _codeResponse
 -> the regimes `rows` and `groups`, in folds   _dealRegimes
 -> each fold's scales                          _measureFolds
@@ -69,6 +72,7 @@ class Problem:
     # sees, with `full` as one fold that holds nothing out
     scales: dict[Regime, tuple[dict[str, Scale], ...]]
     dropped_share: float  # the share of loaded rows dropped for a missing model value
+    dropped_columns: tuple[str, ...]  # the coded columns dropped for one value over the kept rows
     trials: str | None  # the trials column of a binomial response
     family: str  # brms's name, set by the family rule
     link: str
@@ -220,6 +224,7 @@ class _Builder:
         self.row = row
         self.id = row.id
         self._refuseUncovered()
+        self._refuseSeparated(table)
         composed = withComposites(table, row.grouping_factors)
         self.table = self._dropIncomplete(composed)
         if self.table.empty:  # nlme Phenobarb: doses and responses on different rows
@@ -228,7 +233,7 @@ class _Builder:
 
     def build(self) -> Problem:
         kinds = self._typeCovariates()
-        coded = self._codeTerms()
+        coded, dropped_columns = self._dropConstant(self._codeTerms())
         design = self._assembleDesign(coded)
         factors = {factor: self._codeFactor(factor) for factor in self.row.grouping_factors}
         regimes = self._dealRegimes(factors)
@@ -245,6 +250,7 @@ class _Builder:
             levels=self._listLevels(kinds),
             scales=self._measureFolds(table, kinds),
             dropped_share=self.dropped_share,
+            dropped_columns=dropped_columns,
             trials=self.row.trials or None,
             family=family,
             link=link,
@@ -265,6 +271,14 @@ class _Builder:
         if self.row.family in self.CENSORED:
             reason = f'family {self.row.family} is a censored model, outside suite 1.1 (ADR 0001)'
             raise Refused(self.id, reason)
+
+    def _refuseSeparated(self, table: pd.DataFrame) -> None:
+        """Refuses a covariate that varies only over rows without a response,
+        as doses on dosing rows apart from the concentrations."""
+        responded = table[table[self.row.response].notna()]
+        for column in self.row.covariates:
+            if responded[column].nunique() == 1 and table[column].nunique() > 1:
+                raise Refused(self.id, f'{column} varies only over rows without a response')
 
     def _dropIncomplete(self, table: pd.DataFrame) -> pd.DataFrame:
         """Drops the rows that miss a model value."""
@@ -303,6 +317,22 @@ class _Builder:
                     products[f'{name}:{part_name}'] = column * part_column
             columns = products
         return columns
+
+    @staticmethod
+    def _dropConstant(coded: Coded) -> tuple[Coded, tuple[str, ...]]:
+        """Drops the coded columns with one value over the kept rows and lists them,
+        as lme4 drops the columns of a rank-deficient model matrix."""
+        # no likelihood identifies a constant column's coefficient
+        kept = {}
+        dropped = []
+        for term, columns in coded.items():
+            kept[term] = {}
+            for name, column in columns.items():
+                if column.nunique() == 1:
+                    dropped.append(name)
+                else:
+                    kept[term][name] = column
+        return kept, tuple(dropped)
 
     def _assembleDesign(self, coded: Coded) -> dict[str, pd.Series]:
         """Returns `Intercept`, then the coded columns in the row's order."""
@@ -387,7 +417,8 @@ class _Builder:
         kinds: dict[str, str],
     ) -> dict[Regime, tuple[dict[str, Scale], ...]]:
         """Returns each fold's scales over the rows its fit sees."""
-        columns = [column for column, kind in kinds.items() if kind == 'continuous']
+        continuous = [column for column, kind in kinds.items() if kind == 'continuous']
+        columns = [column for column in continuous if column in table]  # not a dropped one
         if self.row.response_type == 'continuous':
             columns.append(self.row.response)
         splits = [regime for regime in ('rows', 'groups') if regime in table]
