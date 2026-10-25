@@ -8,7 +8,7 @@ from pathlib import Path
 import pandas as pd
 import pytest
 import yaml
-from conftest import emptyCensus, mergeShard, readRows, sha, zippedFiles
+from conftest import emptyCensus, emptyFlatPass, mergeShard, readRows, servePlots
 from merge import Merger
 from mixedbench.datasets import Loader
 from pull import Puller
@@ -101,7 +101,6 @@ def test_a_help_page_ends_with_the_dtypes_and_first_rows_of_its_table(root):
     assert head.count('\n') >= 2 + 2 + 6  # banner, dtype lines, header and rows
 
 
-PLOTS_URL = 'https://example.org/plots.zip'
 PLOTS = {
     'distinct.csv': 'x,y\n1,4\n2,5\n3,6\n',  # every column all-unique
     'single.csv': 'x\n1\n1\n2\n',
@@ -112,10 +111,10 @@ PLOTS = {
 def test_an_object_stopped_at_no_repeated_column_gets_a_help_page_too(tmp_path):
     """Such an object is in the flat sample, whose responses are read off its documentation;
     an object stopped at one column is in no sample and gets none."""
-    archive = zippedFiles('plots', PLOTS)
-    frame = {'seed': 0, 'tiers': {'O': {'plots': {'kind': 'url', 'name': PLOTS_URL, 'pin': sha(archive)}}}}  # fmt: skip
+    entry, fetch = servePlots(PLOTS)
+    frame = {'seed': 0, 'tiers': {'O': {'plots': entry}}}
     (tmp_path / 'sources.yaml').write_text(yaml.safe_dump(frame, sort_keys=False))
-    loader = Loader(tmp_path / 'cache', fetch={PLOTS_URL: archive}.get)
+    loader = Loader(tmp_path / 'cache', fetch=fetch)
     puller = Puller(tmp_path, tmp_path, loader=loader)
     puller.enumerate()
     puller.copyHelp()
@@ -198,6 +197,7 @@ def test_the_prescreen_shard_merges_into_the_exclusions(root):
     merge like any agent shard, with the tier filled in."""
     puller = pull(root, root, Server())
     emptyCensus(root)
+    emptyFlatPass(root)
     merger = Merger(root, root, loader=puller.loader)
     mergeShard(merger, root / 'shards' / 'excluded_prescreen.csv')
     rows = readRows(root / 'excluded.csv')
