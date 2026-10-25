@@ -1,0 +1,5 @@
+"source","object","response","evidence"
+"languageR","nessdemog","Vm","hand check: exercise 6.7 in inst/scripts/examples.txt fits lnre('fzm', nessdemog.spc), whose fitted spectrum counts are Vm, indexed by frequency class m, as zipfR's documentation specifies"
+"bambi_admissions","admissions.csv","admit","hand check: bambi's Getting Started notebook (bambinos.github.io/bambi/notebooks/getting_started.html) fits the Bernoulli model admit ~ gre + gpa + rank on the supplied admissions data"
+"alda","aldatxt/cocaine_relapse.txt","WEEK","hand check: the ALDA companion page for chapter 10 (stats.oarc.ucla.edu/r/examples/alda/r-applied-longitudinal-data-analysis-ch-10/), Figure 10.2, fits survfit(Surv(week, 1-censor) ~ 1) on an identical lowercase-column re-export of these 104 rows"
+"zuur_zim","Crocodiles.txt","Survived01","hand check: an open Highstat-attributed workshop script (github.com/farkastime/highstat-glmm, ZIPBook_Chapter4_MODIFIED_V3.R) first fits binomial-logit Survived01 ~ DeltaWeight on byte-identical data; the book's own first formula remains unverified"
