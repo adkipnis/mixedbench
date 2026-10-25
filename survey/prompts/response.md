@@ -18,14 +18,18 @@ Per object of the worklist:
   name and its model, once per deposit;
 - the files its source ships at its pin in the source's tree under `registry/cache/`: example
   and chapter scripts, vignettes, demos, notebooks, Stan programs, do-files, a deposit's code.
-  Search them for the table's name or file name.
+  Search them for the table's name or file name;
+- the material the source's authors or publisher wrote, wherever it is hosted: the source's
+  documentation site, its book's companion page, the published book code, course scripts.
+  Cite it by URL in the evidence.
 
 ## Response
 
-1. **The first documented model**, the help page's first, else the first in the source's files
-   in the order the source presents them (a book's chapters, a vignette's sections): a model the
-   documentation fits or states on this table (an example in the help page, a vignette, a
-   chapter script, the paper's analysis, a Stan program's likelihood). A regression of any
+1. **The first documented model**, the help page's first, else the first in the source's files,
+   else the first in its authors' or publisher's material, each in the order the source
+   presents them (a book's chapters, a vignette's sections): a model the documentation fits or
+   states on this table (an example in the help page, a vignette, a chapter script, the paper's
+   analysis, a Stan program's likelihood). A regression of any
    family, an ANOVA, a test of one outcome across groups, a survival or a time-series model each
    have an outcome, and so does a fit of one column's distribution. A model fitted on a subset,
    a renaming or a re-export of this table's rows documents this table too; test code does
@@ -45,8 +49,9 @@ Per object of the worklist:
      units, or found only in a table that does not hold this table's rows.
 
 A response is never inferred: a table whose documentation neither models nor names an outcome
-is `none`, even where one column is plainly the outcome, and a model recalled from a book the
-source's files do not hold is no documentation. `RULE GAP:` opens the evidence of any case
+is `none`, even where one column is plainly the outcome. A model recalled from a book that
+neither the source's files nor its authors' or publisher's material hold is no documentation,
+and nor is an analysis by others (a blog, another author's course). `RULE GAP:` opens the evidence of any case
 these rules do not settle.
 
 ## Not flat
