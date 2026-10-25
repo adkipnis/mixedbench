@@ -32,7 +32,7 @@ deposits of the practice survey's papers, `O` open tabular repositories):
    [`prompts/response.md`](prompts/response.md). `flat.py measure` measures the flat sample
    without its responses into `registry/flat.csv` and `flat_columns.csv`, then rewrites the
    summary; a merge leaves the two files as they are. `draw`, `handoff` and `agree` run a hand
-   check, `--check verdict` or `--check response`, and `wide` lists the tables judged `wide` for
+   check, `--check verdict`, `response` or `recheck`, and `wide` lists the tables judged `wide` for
    the issue of their long forms ([ADR 0007](../docs/adr/0007-flat-sample.md)).
 
 ```
@@ -69,7 +69,7 @@ uv run python survey/mirror.py --tag mirror-<n>
 | `shards/<table>_<label>.csv` | one shard per reading run; `table` ∈ `registry`, `excluded`, `duplicates`, `dropped`, `flat` (the verdicts), `response` (the flat tables' responses) |
 | `candidates.csv`, `duplicates.csv`, `dropped.csv` | the bookkeeping (below) |
 | `flat_screen.csv`, `flat_verdicts.csv`, `flat_responses.csv` | the flat pass's bookkeeping: the screen (below), the verdicts and the responses ([`docs/registry.md`](../docs/registry.md)) |
-| `flat_sample.csv`, `flat_agreement.csv`, `flat_response_sample.csv`, `flat_response_agreement.csv` | the hand checks of the verdicts (50 tables) and of the responses (25): the drawn tables with what their handoff showed at draw time, and the share that stood per stratum |
+| `flat_sample.csv`, `flat_agreement.csv`, `flat_response_sample.csv`, `flat_response_agreement.csv`, `flat_response_recheck_sample.csv`, `flat_response_recheck_agreement.csv` | the hand checks of the verdicts (50 tables), of the responses (25) and of the `none` responses again (15): the drawn tables with what their handoff showed at draw time, and the share that stood per stratum |
 | `deposits.csv`, `deposit_files.csv` | Tier D's frame: the drawn papers and every file their deposits list |
 | `sample.csv`, `agreement.csv` | the second hand sample (#61): 100 candidates not yet hand-checked with their readings at draw time, and the share of readings that stood per field |
 | `practice_quantiles.yaml` | the practice survey's `quantiles.yaml` (metabeta-v3), the practice column of `SUMMARY.md` |
