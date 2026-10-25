@@ -120,7 +120,6 @@ def computeConditionIndex(design: pd.DataFrame) -> float:
     """σ_max / σ_min of a standardized design with each column scaled to unit length
     (Belsley, Kuh and Welsch 1980), inf when rank-deficient."""
     scaled = (design / np.sqrt((design**2).sum())).to_numpy()
-    scaled = np.nan_to_num(scaled)  # a constant or empty-cell column scales to 0/0: zeros
     n, d = scaled.shape
     # more columns than rows are dependent, and the decomposition of so wide a design takes hours
     if d > n or np.linalg.matrix_rank(scaled) < d:
