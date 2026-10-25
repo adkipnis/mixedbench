@@ -251,14 +251,39 @@ def writeVerdicts(flat: FlatPass, verdicts: list[tuple[str, str, str, str]]) -> 
     writeCsv(pd.DataFrame(rows, columns=FLAT_VERDICTS.columns), flat.survey / 'flat_verdicts.csv')
 
 
-def writeResponses(flat: FlatPass, responses: list[tuple[str, str, str]]) -> None:
-    """The responses as the merge leaves them in `flat_responses.csv`, the tier filled."""
+def writeResponses(
+    flat: FlatPass, responses: list[tuple[str, str, str]], not_flat: tuple[str, ...] = ()
+) -> None:
+    """The responses as the merge leaves them in `flat_responses.csv`, the tier filled; the
+    evidence of an object in `not_flat` opens as a reader who found it grouped writes it."""
     tiers = readFrame(flat.registry).tiers
     rows = []
     for source, object, response in responses:
-        rows.append({'source': source, 'tier': tiers[source], 'object': object, 'response': response, 'evidence': 'its help page'})  # fmt: skip
+        evidence = 'NOT FLAT: cows repeat within herds' if object in not_flat else 'its help page'
+        rows.append({'source': source, 'tier': tiers[source], 'object': object, 'response': response, 'evidence': evidence})  # fmt: skip
     path = flat.survey / 'flat_responses.csv'
     writeCsv(pd.DataFrame(rows, columns=FLAT_RESPONSES.columns), path)
+
+
+def test_the_pass_refuses_naming_every_table_the_response_reading_found_not_flat_without_a_verdict(
+    plots,
+):
+    """The response reading finds tables not flat that the screen let through, a prescreened
+    one too; its `NOT FLAT:` flags them as the screen does, so each waits for its second
+    reading, and one with a verdict is decided by it."""
+    writeSurvey(plots, [
+        ('plots', 'plain.csv', 'pass', NO_GROUPING, 'one row per plot'),
+        ('plots', 'decided.csv', 'pass', NO_GROUPING, 'one row per plot'),
+        ('plots', 'distinct.csv', 'no repeated column', NO_GROUPING, 'no repeated column'),
+    ])  # fmt: skip
+    writeVerdicts(plots, [('plots', 'decided.csv', 'wide', 'two plots per row')])
+    responses = [
+        ('plots', 'plain.csv', 'none'), ('plots', 'decided.csv', 'none'),
+        ('plots', 'distinct.csv', 'none'),
+    ]  # fmt: skip
+    writeResponses(plots, responses, not_flat=('decided.csv', 'distinct.csv'))
+    with pytest.raises(ValueError, match='1 flagged .*\nplots distinct.csv$'):
+        plots.measure()
 
 
 def test_a_verdict_decides_its_table_and_every_sample_table_records_how_it_got_in(plots):
