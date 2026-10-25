@@ -6,6 +6,8 @@ A registry object counts its first model's columns, every column but the respons
 grouping factors.
 A flat table counts every column but its id columns, the categoricals whose present values are all
 distinct.
+The flat side is tested twice, with all its tables and with those whose documentation names a
+response, since a table without one may count its outcome among its columns.
 It reads the measured files at the commit that wrote its outputs, the files mixedbench 1.0.10 ships.
 
 pipeline:
@@ -14,7 +16,7 @@ the measured files of registry/
 -> per registry object, its first model's columns            summarizeRegistry
 -> per flat table, its columns but the id columns            summarizeFlat
 -> per table: sizes, type shares, each statistic's median    summarizeTables
--> per statistic: the U test and the rank-biserial r         compareSamples
+-> per flat side and statistic: the U test, rank-biserial r  compareSamples
 -> registry_tables.csv, flat_tables.csv and tests.csv
 
 Run from the repo root:
@@ -63,13 +65,14 @@ def summarizeRegistry(dir: Path) -> pd.DataFrame:
 
 
 def summarizeFlat(dir: Path) -> pd.DataFrame:
-    """Per flat table: n_obs and condition_all as flat.csv holds them, the rest over its columns in
-    flat_columns.csv but the id columns."""
+    """Per flat table: its response, n_obs and condition_all as flat.csv holds them, the rest over
+    its columns in flat_columns.csv but the id columns."""
     sizes = ('n_obs', 'n_columns', 'n_id_columns', 'd_all', 'condition_all')
     tables = _readNumbers(dir / 'flat.csv', sizes)
     columns = _readNumbers(dir / 'flat_columns.csv', ('K', *COLUMN_STATISTICS))
     columns = columns[~_isIdColumn(columns, tables)]
     summary = summarizeTables(tables, columns)
+    summary.insert(3, 'response', tables['response'])
     # the id columns found here are the ones flat.csv counts
     assert (summary['n_columns'] == tables['n_columns'] - tables['n_id_columns']).all()
     assert (summary['d_all'] == tables['d_all']).all()
@@ -117,22 +120,25 @@ def summarizeTables(tables: pd.DataFrame, columns: pd.DataFrame) -> pd.DataFrame
 
 
 def compareSamples(registry: pd.DataFrame, flat: pd.DataFrame) -> pd.DataFrame:
-    """Per statistic, each sample's tables and median, the U test and the rank-biserial
-    correlation. A blank is left out, inf kept."""
+    """Per flat side and statistic, each sample's tables and median, the U test and the
+    rank-biserial correlation. A blank is left out, inf kept."""
+    sides = {'all': flat, 'response': flat[flat['response'] != 'none']}
     records = []
-    for statistic in STATISTICS:
-        x = registry[statistic].dropna()
-        y = flat[statistic].dropna()
-        records.append(
-            {
-                'statistic': statistic,
-                'n_registry': len(x),
-                'n_flat': len(y),
-                'median_registry': x.median(),
-                'median_flat': y.median(),
-            }
-            | _testMannWhitney(x, y)
-        )
+    for side, tables in sides.items():
+        for statistic in STATISTICS:
+            x = registry[statistic].dropna()
+            y = tables[statistic].dropna()
+            records.append(
+                {
+                    'flat': side,
+                    'statistic': statistic,
+                    'n_registry': len(x),
+                    'n_flat': len(y),
+                    'median_registry': x.median(),
+                    'median_flat': y.median(),
+                }
+                | _testMannWhitney(x, y)
+            )
     return pd.DataFrame(records)
 
 
@@ -171,4 +177,4 @@ if __name__ == '__main__':
     flat.round(4).to_csv(args.out / 'flat_tables.csv', index=False)
     rounded = {'median_registry': 4, 'median_flat': 4, 'rank_biserial': 4}
     tests.round(rounded).to_csv(args.out / 'tests.csv', index=False)
-    print(f'{len(registry)} registry objects, {len(flat)} flat tables, {len(tests)} statistics')
+    print(f'{len(registry)} registry objects, {len(flat)} flat tables, {len(tests)} tests')
