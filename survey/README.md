@@ -26,9 +26,9 @@ deposits of the practice survey's papers, `O` open tabular repositories):
    two hand samples against [ADR 0002](../docs/adr/0002-registry-suite-versioning-licenses.md)'s
    bar; the outcomes are in [`HISTORY.md`](HISTORY.md).
 7. **Flat pass.** `flat.py screen` derives the frame of flat tables from the exclusions filed
-   `no grouping structure` and flags a read table whose filing line says wide, repeat, occasion
-   or visit, or that has a repeated column with an id-like name. Agents give each flagged table
-   a verdict by [`prompts/flat.md`](prompts/flat.md), and each sample table its response by
+   `no grouping structure` and flags read tables for a second reading
+   ([`flat_screen.csv`](#bookkeeping)). Agents give each flagged table a verdict by
+   [`prompts/flat.md`](prompts/flat.md), and each sample table its response by
    [`prompts/response.md`](prompts/response.md). `flat.py measure` measures the flat sample
    without its responses into `registry/flat.csv` and `flat_columns.csv`, then rewrites the
    summary; a merge leaves the two files as they are. `draw`, `handoff` and `agree` run a hand
