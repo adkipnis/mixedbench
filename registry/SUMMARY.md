@@ -38,6 +38,7 @@ Rows with a measured response; a pharmacokinetic table's dosing rows are not obs
 | tier D | 104 | 45 | 76 | 219 | 1211 | 21729 | 61248 | 210658 |  |
 | tier O | 13 | 52 | 52 | 63 | 478 | 181800 | 318438 | 318438 |  |
 | without agridat | 683 | 7 | 30 | 45 | 480 | 8604 | 21814 | 1000209 |  |
+| flat | 729 | 3 | 9 | 14 | 75 | 1534 | 4842 | 81422 |  |
 
 ## Grouping factors
 
@@ -184,6 +185,7 @@ Levels of the categorical covariates:
 | tier D | 51 | 3 | 3 | 3 | 4 | 47 | 76 | 117 |  |
 | tier O | 37 | 2 | 2 | 3 | 5 | 26 | 73 | 717 |  |
 | without agridat | 335 | 2 | 2 | 2 | 4 | 10 | 17 | 717 |  |
+| flat | 986 | 0 | 1 | 2 | 11 | 91 | 199 | 59548 |  |
 
 | K | n | share |
 |---|---|---|
@@ -227,6 +229,7 @@ its levels less one, an interaction the product.
 | tier D | 104 | 1 | 2 | 3 | 10 | 156 | 163 | 4580 |  |
 | tier O | 13 | 2 | 2 | 2 | 19 | 79 | 23759 | 23759 |  |
 | without agridat | 683 | 0 | 0 | 1 | 5 | 21 | 55 | 23759 |  |
+| flat | 729 | 0 | 2 | 2 | 5 | 23 | 89 | 29573 |  |
 
 The condition index of the documented design and of the design over every column.
 
@@ -342,3 +345,34 @@ The practice survey's deposits, resolved and pulled by the archived `resolve.py`
 - Listed files: 1632; by role other 622, data 607, script 231, documentation 172; data files not pulled: too large 30, hidden path 9.
 - Objects excluded: 917 (derived or duplicated table 573, unreadable format 158, no grouping structure 111, not the paper's data 46, response missing or undocumented 29).
 - Papers with a registry row: 38, over 104 rows.
+
+## Flat sample
+
+The survey's tables filed `no grouping structure`, screened, read again and measured beside the
+registry by `flat.py`, every column by the statistics `columns.csv` defines; the files and the
+sample's rule are in [`docs/registry.md`](../docs/registry.md). An axis both samples share ends
+its table above with the flat sample's row.
+
+**Corpus.** 729 flat tables; per stratum read 559, prescreened 170; per tier R 370, E 153, T 136, D 62, O 8.
+The screen flagged 294 of the frame's 675 read tables for a second reading; verdicts flat 203, wide 129, hidden grouping 33.
+The hand sample of 50 tables stood at 0.92.
+
+| column type | n | share |
+|---|---|---|
+| continuous | 37420 | 85% |
+| binary | 5420 | 12% |
+| categorical | 848 | 2% |
+| ordered | 138 | 0% |
+
+| statistic | n | min | p5 | p10 | p50 | p90 | p95 | max |
+|---|---|---|---|---|---|---|---|---|
+| condition_all | 706 | 1 | 1.2248 | 1.5688 | 6.928 | inf | inf | inf |
+| skewness | 36641 | -11.1669 | -0.5495 | -0.0345 | 1.3904 | 3.5328 | 3.9474 | 244.6948 |
+| excess_kurtosis | 36605 | -5.6896 | -1.8911 | -1.6564 | 1.1423 | 12.0767 | 15.56 | 59915.5349 |
+| outlier_share | 36641 | 0 | 0 | 0 | 0 | 0.02 | 0.0318 | 0.0565 |
+| zero_share | 37358 | 0 | 0 | 0 | 0.6926 | 0.9152 | 0.9364 | 1 |
+| min_share | 37496 | 0 | 0.0065 | 0.0185 | 0.7244 | 0.9187 | 0.9399 | 1 |
+| max_share | 37496 | 0 | 0.0033 | 0.0093 | 0.05 | 0.3675 | 0.4417 | 1 |
+| unique_share | 43758 | 0 | 0.0071 | 0.0071 | 0.0106 | 0.7068 | 0.89 | 1 |
+| rare_level_share | 6400 | 0 | 0.0023 | 0.0115 | 0.136 | 0.4382 | 0.4841 | 1 |
+| max_abs_rho | 42166 | 0 | 0.2651 | 0.3371 | 0.9046 | 0.9951 | 0.9999 | 1 |
