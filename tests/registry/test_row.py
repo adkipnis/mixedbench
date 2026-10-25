@@ -74,6 +74,7 @@ def verbAggCells() -> dict[str, str]:
         ('random_slopes', 'Anger|Gender', 'Gender is not a grouping factor'),
         ('interactions', 'Anger:resp', 'resp is not a covariate'),
         ('grouping_factors', 'id;item;Anger', 'Anger is also a covariate'),
+        ('covariates', 'Anger;Gender;btype;situ;r2', 'r2 is also the response'),
     ],
 )
 def test_a_cell_the_grammar_refuses_raises_naming_the_row_and_the_column(
