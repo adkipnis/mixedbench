@@ -639,10 +639,15 @@ DRAWN_RESPONSES = [
 def test_the_response_check_hands_off_each_tables_response_its_evidence_and_its_urls(tmp_path):
     """The response check is read in the browser as the verdict check is: a self-contained
     prompt with the answers it takes, then per table its page and download at the pin, the
-    response or `none`, the evidence and the help page where one exists, and no local path."""
+    response or `none`, the evidence and the help page where one exists, and no local path. A
+    deposit's help page opens with the local path of its deposit page, which its page URL
+    replaces."""
     flat = handoffPass(tmp_path)
     sample = pd.DataFrame(DRAWN_RESPONSES, columns=ResponseCheck.COLUMNS)
     writeCsv(sample, flat.survey / 'flat_response_sample.csv')
+    voles = flat.registry / 'help' / 'arriero_2017_dryad' / 'voles.xlsx.txt'
+    voles.parent.mkdir(parents=True)
+    voles.write_text('# deposit page: registry/help/deposits/arriero.txt\n\n# first rows (of 9)\n')
 
     text = flat.handoff(ResponseCheck(), 1)
 
@@ -658,7 +663,8 @@ def test_the_response_check_hands_off_each_tables_response_its_evidence_and_its_
     assert '- response: none\n' in text
     assert 'NOT FLAT: trap indexes repeated captures' in text
     assert '\\title{Weights of pigs by herd}' in text
-    assert text.count('<details>') == 2  # the deposit has no page
+    assert text.count('<details>') == 3
+    assert '# first rows (of 9)' in text
     assert str(tmp_path) not in text
     assert 'registry/' not in text
 
