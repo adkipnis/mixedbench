@@ -550,6 +550,10 @@ reading's open disagreements, four to eight per tier.
   holds 43,480 columns; only the `flat` blocks of `quantiles.yaml` moved. 35 tables' evidence opens
   with `NOT FLAT:` (24 `wide`, 11 `hidden grouping`), listed on #130 for an issue of their own,
   and 61 rows' evidence still names a `RULE GAP:` the amended rules mostly settle.
+- After main's constant columns (#131) were merged, `suite/admit.py` admitted 16 of the 20
+  re-filed rows as candidates and refused four, the VAR's three equations as `lagged_predictors`
+  and Peacekeeping's cox model as censored. The 608 earlier candidates kept main's hashes.
+  `measure.py` moved main's 25 condition indexes and `condition_all` of the three Storable tables.
 
 ## Constant design columns (#131, 2026-10-25)
 
