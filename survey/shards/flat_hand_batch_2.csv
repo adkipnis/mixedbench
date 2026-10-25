@@ -1,0 +1,3 @@
+"source","object","verdict","evidence"
+"stan_arm","ARM/Ch.10/candidate_effects.dat","wide","Columns 2 to 13 repeat each state's candidate-effect adjustment across the elections 1948 to 1992, as the headered Ch.14 copy names them."
+"stan_arm","ARM/Ch.13/heights.dta","hidden grouping","race and hisp recode into eth, four ethnicity groups that the Ch.13 model fits with varying intercepts and height slopes."
