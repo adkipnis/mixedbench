@@ -509,6 +509,30 @@ reading's open disagreements, four to eight per tier.
 - A one-off check before the merge found every run on its row's current formula and every
   prepared row's run on the table its preparation makes now.
 
+## Flat pass (#115, 2026-10-24 to 2026-10-25)
+
+- `flat.py screen` derived the frame from the exclusions filed `no grouping structure`: 842 read
+  and 185 prescreened tables. It flagged 362 read tables for a second reading, 219 by the filing
+  line and 211 by an id-like column (#116; ADR 0007, amended 2026-10-24).
+- Seven reading runs by `prompts/flat.md` gave the 362 their verdicts: 203 `flat`, 125 `wide`,
+  34 `hidden grouping` (#118). The hidden groupings re-filed 22 rows of 20 tables into the
+  registry, 13 more were excluded for another reason, and GSSvocab stays excluded, its authors
+  fitting the wave as fixed. 153 copies of another frame table left the frame, 125 by script
+  and 28 read. The rules the reading added are under Reading rulings.
+- The hand sample of 50 over four strata, seed 2, stood at 0.92, each stratum at 0.9 or above
+  against the bar of 0.8 (#120). congress, BEPS and candidate_effects were corrected to `wide`,
+  and heights.dta was excluded as derived. Of the 22 re-filed rows 8 stood and 12 were corrected
+  by hand; divorce3 went back to the frame as `wide` and openml_40916 as `flat`. The hierarchical
+  VAR's three rows open their notes with `RULE GAP:`, and `suite/admit.py` refuses them as
+  `lagged_predictors`.
+- The 16 re-filed rows with a fitted response type were fitted on the cluster and collected into
+  `fits.csv`; the four ordinal ones have no fit (#121). #129 lists the 116 `wide` tables still
+  in the frame for their long forms.
+- The screen rerun over the frame's 846 tables flagged 294 of its 675 read ones, each with a
+  verdict, and `flat.py measure` wrote 729 tables (559 read, 170 prescreened) and 43,826 columns
+  into `registry/flat.csv` and `flat_columns.csv`, in five minutes at 7.8 GB on the laptop
+  (#122). `quantiles.yaml` gained the `flat` blocks and the flat type mix; no other value moved.
+
 ## Reading rulings (m3#22 to #15)
 
 The rulings [`prompts/read.md`](prompts/read.md) does not carry, from the agents' `RULE GAP` notes and Alex's checks, each with an example
