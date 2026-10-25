@@ -38,7 +38,7 @@ Rows with a measured response; a pharmacokinetic table's dosing rows are not obs
 | tier D | 104 | 45 | 76 | 219 | 1211 | 21729 | 61248 | 210658 |  |
 | tier O | 13 | 52 | 52 | 63 | 478 | 181800 | 318438 | 318438 |  |
 | without agridat | 692 | 7 | 30 | 45 | 500 | 8654 | 24611 | 1000209 |  |
-| flat | 729 | 3 | 9 | 14 | 75 | 1534 | 4842 | 81422 |  |
+| flat | 696 | 3 | 9 | 14 | 76 | 1501 | 3941 | 81422 |  |
 
 ## Grouping factors
 
@@ -185,7 +185,7 @@ Levels of the categorical covariates:
 | tier D | 51 | 3 | 3 | 3 | 4 | 47 | 76 | 117 |  |
 | tier O | 37 | 2 | 2 | 3 | 5 | 26 | 73 | 717 |  |
 | without agridat | 335 | 2 | 2 | 2 | 4 | 10 | 17 | 717 |  |
-| flat | 969 | 0 | 1 | 2 | 11 | 93 | 204 | 59548 |  |
+| flat | 949 | 0 | 1 | 2 | 11 | 81 | 192 | 59548 |  |
 
 | K | n | share |
 |---|---|---|
@@ -229,7 +229,7 @@ its levels less one, an interaction the product.
 | tier D | 104 | 1 | 2 | 3 | 10 | 156 | 163 | 4580 |  |
 | tier O | 13 | 2 | 2 | 2 | 19 | 79 | 23759 | 23759 |  |
 | without agridat | 692 | 0 | 0 | 1 | 4 | 21 | 55 | 23759 |  |
-| flat | 729 | 0 | 1 | 2 | 4 | 22 | 88 | 29573 |  |
+| flat | 696 | 0 | 1 | 2 | 4 | 21 | 79 | 29573 |  |
 
 The condition index of the documented design and of the design over every column.
 
@@ -353,27 +353,27 @@ registry by `flat.py`, every column by the statistics `columns.csv` defines; the
 sample's rule are in [`docs/registry.md`](../docs/registry.md). An axis both samples share ends
 its table above with the flat sample's row.
 
-**Corpus.** 729 flat tables; per stratum read 559, prescreened 170; per tier R 370, E 153, T 136, D 62, O 8.
-The screen flagged 294 of the frame's 675 read tables for a second reading; verdicts flat 205, wide 151, hidden grouping 43.
+**Corpus.** 696 flat tables; per stratum read 543, prescreened 153; per tier R 357, E 142, T 131, D 58, O 8.
+The screen flagged 276 of the frame's 648 read tables for a second reading; verdicts flat 205, wide 151, hidden grouping 43.
 The hand sample of 50 tables stood at 0.92.
-346 of the 729 tables name a response; the response check of 25 tables stood at 0.84, its recheck of 15 `none` tables at 1.0.
+336 of the 696 tables name a response; the response check of 25 tables stood at 0.84, its recheck of 15 `none` tables at 1.0.
 
 | column type | n | share |
 |---|---|---|
-| continuous | 37144 | 85% |
-| binary | 5367 | 12% |
-| categorical | 835 | 2% |
+| continuous | 36594 | 85% |
+| binary | 5350 | 12% |
+| categorical | 815 | 2% |
 | ordered | 134 | 0% |
 
 | statistic | n | min | p5 | p10 | p50 | p90 | p95 | max |
 |---|---|---|---|---|---|---|---|---|
-| condition_all | 705 | 1 | 1 | 1.0747 | 5.4742 | inf | inf | inf |
-| skewness | 36365 | -11.1669 | -0.541 | -0.0271 | 1.4008 | 3.5352 | 3.9474 | 244.6948 |
-| excess_kurtosis | 36330 | -5.6896 | -1.8923 | -1.6564 | 1.1639 | 12.0767 | 15.574 | 59915.5349 |
-| outlier_share | 36365 | 0 | 0 | 0 | 0 | 0.02 | 0.0318 | 0.0565 |
-| zero_share | 37082 | 0 | 0 | 0 | 0.6961 | 0.9152 | 0.9364 | 1 |
-| min_share | 37216 | 0 | 0.0068 | 0.0185 | 0.7279 | 0.9187 | 0.9399 | 1 |
-| max_share | 37216 | 0 | 0.0033 | 0.0098 | 0.053 | 0.3675 | 0.4417 | 1 |
-| unique_share | 43412 | 0 | 0.0071 | 0.0071 | 0.0106 | 0.7037 | 0.8824 | 1 |
-| rare_level_share | 6330 | 0 | 0.0023 | 0.0108 | 0.1343 | 0.4375 | 0.4841 | 1 |
-| max_abs_rho | 41775 | 0 | 0.2637 | 0.3342 | 0.9064 | 0.9951 | 0.9999 | 1 |
+| condition_all | 673 | 1 | 1 | 1.0843 | 5.423 | inf | inf | inf |
+| skewness | 35816 | -11.1669 | -0.5434 | -0.0263 | 1.4233 | 3.5352 | 3.9478 | 244.6948 |
+| excess_kurtosis | 35781 | -5.6896 | -1.8933 | -1.6631 | 1.1953 | 12.0788 | 15.612 | 59915.5349 |
+| outlier_share | 35816 | 0 | 0 | 0 | 0 | 0.0211 | 0.0318 | 0.0565 |
+| zero_share | 36532 | 0 | 0 | 0 | 0.7067 | 0.9152 | 0.9364 | 1 |
+| min_share | 36666 | 0 | 0.0098 | 0.0185 | 0.7314 | 0.9187 | 0.9399 | 1 |
+| max_share | 36666 | 0 | 0.0035 | 0.0098 | 0.053 | 0.371 | 0.4452 | 1 |
+| unique_share | 42825 | 0 | 0.0071 | 0.0071 | 0.0106 | 0.6852 | 0.8529 | 1 |
+| rare_level_share | 6293 | 0 | 0.0023 | 0.0127 | 0.1343 | 0.4375 | 0.4841 | 1 |
+| max_abs_rho | 41215 | 0 | 0.2637 | 0.3333 | 0.9072 | 0.9956 | 0.9999 | 1 |
