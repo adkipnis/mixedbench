@@ -10,7 +10,7 @@ import pytest
 import yaml
 from columns import COLUMN_STATISTICS
 from conftest import asOrdered, measuredColumns, parsed, readRows, scratchMerger, sha, zippedFiles
-from flat import SAMPLE_COLUMNS, FlatPass
+from flat import FlatPass, ResponseCheck, VerdictCheck
 from measure import Measurer
 from mixedbench.datasets import Loader
 from mixedbench.registry.row import writeCsv
@@ -404,7 +404,7 @@ def test_draw_allocates_fifty_sample_tables_over_four_strata_in_two_batches(tmp_
     14, 11 and 17. A table judged wide is out of the sample, so never drawn. The draw is a
     function of the files and the seed, so drawing again writes the same file."""
     flat = strataPass(tmp_path)
-    flat.draw()
+    flat.draw(VerdictCheck())
     path = flat.survey / 'flat_sample.csv'
     sample = readRows(path)
     assert list(sample[0]) == [
@@ -419,12 +419,12 @@ def test_draw_allocates_fifty_sample_tables_over_four_strata_in_two_batches(tmp_
     }
     assert [row['batch'] for row in sample] == ['1'] * 25 + ['2'] * 25
     drawn = path.read_text()
-    flat.draw()
+    flat.draw(VerdictCheck())
     assert path.read_text() == drawn
 
 
 ZEROS = '0' * 64
-# one drawn table per kind of source; a row's columns as SAMPLE_COLUMNS orders them
+# one drawn table per kind of source; a row's columns as the verdict check's sample orders them
 DRAWN = [
     ('pens', 'herds', 'R', 'data/herds.rda', 'read/unflagged', '1', 'first reading',
      'one row per cow', 'one row per cow', '', '', 'parity'),
@@ -464,7 +464,7 @@ def handoffPass(tmp_path: Path) -> FlatPass:
         'label,link\n,osf.io/unlabelled\narriero_2017_dryad,10.5061/dryad.110pk\n'
         'leder_2020_osf,osf.io/txb9c\n'
     )
-    writeCsv(pd.DataFrame(DRAWN, columns=SAMPLE_COLUMNS), survey / 'flat_sample.csv')
+    writeCsv(pd.DataFrame(DRAWN, columns=VerdictCheck.COLUMNS), survey / 'flat_sample.csv')
     pages = {
         'pens/herds.txt': '\\name{herds}\n\\title{Weights of pigs by herd}\n',
         'ros/Beauty/data/beauty.csv.txt': '# first rows (of 463)\neval: float64\n',
@@ -482,7 +482,7 @@ def test_handoff_names_each_tables_page_and_download_and_no_local_path(tmp_path)
     A Tier D page is its deposit's, at doi.org where the link is a DOI."""
     flat = handoffPass(tmp_path)
 
-    text = flat.handoff(1)
+    text = flat.handoff(VerdictCheck(), 1)
 
     urls = [
         'https://cran.r-project.org/package=pens',
@@ -515,7 +515,7 @@ def test_handoff_cuts_a_help_page_longer_than_twenty_thousand_characters(tmp_pat
     flat = handoffPass(tmp_path)
     (flat.registry / 'help' / 'pens' / 'herds.txt').write_text('x' * 20_000 + 'y')
 
-    text = flat.handoff(1)
+    text = flat.handoff(VerdictCheck(), 1)
 
     assert 'x' * 20_000 + '\n[cut at 20,000 characters]' in text
     assert 'xy' not in text
@@ -552,9 +552,10 @@ def test_agree_gives_the_share_of_drawn_tables_still_in_the_sample_per_stratum_a
     sample = pd.DataFrame(
         [{'source': 'plots', 'object': o, 'stratum': s, 'batch': '1'} for o, s in drawn]
     )
-    writeCsv(sample.reindex(columns=SAMPLE_COLUMNS, fill_value=''), flat.survey / 'flat_sample.csv')
+    columns = VerdictCheck.COLUMNS
+    writeCsv(sample.reindex(columns=columns, fill_value=''), flat.survey / 'flat_sample.csv')
 
-    flat.agree()
+    flat.agree(VerdictCheck())
 
     rows = readRows(flat.survey / 'flat_agreement.csv')
     assert [list(row.values()) for row in rows] == [
@@ -565,6 +566,108 @@ def test_agree_gives_the_share_of_drawn_tables_still_in_the_sample_per_stratum_a
         ['all', '6', '0.5'],
     ]
     assert list(rows[0]) == ['stratum', 'tables', 'stood']
+
+
+# ---------------------------------------------------------------------------------
+# the response check: the sample drawn, a batch handed off, the share that stood
+# ---------------------------------------------------------------------------------
+def respondedPass(tmp_path: Path, named: int, unnamed: int) -> FlatPass:
+    """A flat sample of plain tables, `named` with their response named and `unnamed` with
+    `none`, and a table judged wide whose response was read before its verdict."""
+    objects = [f'plain_{i}.csv' for i in range(named + unnamed)]
+    flat = plotsPass(tmp_path, dict.fromkeys([*objects, 'stored.csv'], PLAIN))
+    writeSurvey(flat, [('plots', o, 'pass', NO_GROUPING, 'one row per plot') for o in [*objects, 'stored.csv']])  # fmt: skip
+    writeVerdicts(flat, [('plots', 'stored.csv', 'wide', 'two plots per row')])
+    responses = [('plots', o, 'response') for o in objects[:named]]
+    responses += [('plots', o, 'none') for o in objects[named:]]
+    writeResponses(flat, [*responses, ('plots', 'stored.csv', 'response')])
+    return flat
+
+
+def test_the_response_check_draws_25_sample_tables_over_named_and_none_in_one_batch(tmp_path):
+    """The response check is 25 tables of the flat sample, proportional over whether the reading
+    named a response. Worked by hand: 25/33 of 20 and 13 is 15.15 and 9.85, the table left over
+    going to the larger remainder, none's: 15 and 10. A table judged wide is out of the sample,
+    so never drawn, and drawing again writes the same file."""
+    flat = respondedPass(tmp_path, named=20, unnamed=13)
+
+    flat.draw(ResponseCheck())
+
+    path = flat.survey / 'flat_response_sample.csv'
+    sample = readRows(path)
+    assert list(sample[0]) == [
+        'source', 'object', 'tier', 'file', 'stratum', 'batch', 'response', 'evidence',
+    ]  # fmt: skip
+    assert Counter(row['stratum'] for row in sample) == {'named': 15, 'none': 10}
+    assert {row['batch'] for row in sample} == {'1'}
+    assert 'stored.csv' not in {row['object'] for row in sample}
+    drawn = path.read_text()
+    flat.draw(ResponseCheck())
+    assert path.read_text() == drawn
+
+
+# a drawn table per kind of source; a row's columns as the response check's sample orders them
+DRAWN_RESPONSES = [
+    ('pens', 'herds', 'R', 'data/herds.rda', 'named', '1', 'weight',
+     'lm(weight ~ breed + feed) in the help page examples'),
+    ('ros', 'Beauty/data/beauty.csv', 'T', 'Beauty/data/beauty.csv', 'none', '1', 'none',
+     'no model is documented: the help page only describes the columns'),
+    ('arriero_2017_dryad', 'voles.xlsx', 'D', 'voles.xlsx', 'named', '1', 'mass',
+     'NOT FLAT: trap indexes repeated captures; lm(mass ~ sex) in the paper'),
+]  # fmt: skip
+
+
+def test_the_response_check_hands_off_each_tables_response_its_evidence_and_its_urls(tmp_path):
+    """The response check is read in the browser as the verdict check is: a self-contained
+    prompt with the answers it takes, then per table its page and download at the pin, the
+    response or `none`, the evidence and the help page where one exists, and no local path."""
+    flat = handoffPass(tmp_path)
+    sample = pd.DataFrame(DRAWN_RESPONSES, columns=ResponseCheck.COLUMNS)
+    writeCsv(sample, flat.survey / 'flat_response_sample.csv')
+
+    text = flat.handoff(ResponseCheck(), 1)
+
+    urls = [
+        'https://cran.r-project.org/package=pens',
+        'https://github.com/cran/pens/blob/1.0/data/herds.rda',
+        'https://github.com/avehtari/ROS-Examples/blob/abc123/Beauty/data/beauty.csv',
+        'https://doi.org/10.5061/dryad.110pk',
+    ]
+    assert [url for url in urls if url not in text] == []
+    assert ': response <column> — ' in text and ': none — ' in text
+    assert '- response: weight\n- evidence: lm(weight ~ breed + feed)' in text
+    assert '- response: none\n' in text
+    assert 'NOT FLAT: trap indexes repeated captures' in text
+    assert '\\title{Weights of pigs by herd}' in text
+    assert text.count('<details>') == 2  # the deposit has no page
+    assert str(tmp_path) not in text
+    assert 'registry/' not in text
+
+
+def test_the_response_check_agrees_where_a_drawn_tables_response_still_stands(tmp_path):
+    """A drawn table stood when it is still in the flat sample and its response is the one
+    drawn. plain_1 was drawn naming `dose`, which a hand correction replaced, and plain_2 was
+    judged wide after the draw, which took it out of the sample: neither stood."""
+    flat = respondedPass(tmp_path, named=3, unnamed=2)
+    writeVerdicts(flat, [('plots', 'plain_2.csv', 'wide', 'two plots per row')])
+    drawn = [
+        ('plain_0.csv', 'named', 'response'), ('plain_1.csv', 'named', 'dose'),
+        ('plain_2.csv', 'named', 'response'), ('plain_3.csv', 'none', 'none'),
+        ('plain_4.csv', 'none', 'none'),
+    ]  # fmt: skip
+    rows = [{'source': 'plots', 'object': o, 'stratum': s, 'batch': '1', 'response': r} for o, s, r in drawn]  # fmt: skip
+    sample = pd.DataFrame(rows).reindex(columns=ResponseCheck.COLUMNS, fill_value='')
+    writeCsv(sample, flat.survey / 'flat_response_sample.csv')
+
+    flat.agree(ResponseCheck())
+
+    rows = readRows(flat.survey / 'flat_response_agreement.csv')
+    assert list(rows[0]) == ['stratum', 'tables', 'stood']
+    assert [list(row.values()) for row in rows] == [
+        ['named', '3', '0.333'],
+        ['none', '2', '1.0'],
+        ['all', '5', '0.6'],
+    ]
 
 
 def test_the_wide_list_names_each_frame_table_judged_wide_with_its_source_and_evidence(flat):
