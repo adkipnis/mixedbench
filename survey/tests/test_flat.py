@@ -10,7 +10,7 @@ import pytest
 import yaml
 from columns import COLUMN_STATISTICS
 from conftest import asOrdered, measuredColumns, parsed, readRows, scratchMerger, sha, zippedFiles
-from flat import FlatPass, ResponseCheck, VerdictCheck
+from flat import FlatPass, ResponseCheck, ResponseRecheck, VerdictCheck
 from measure import Measurer
 from mixedbench.datasets import Loader
 from mixedbench.registry.row import writeCsv
@@ -604,6 +604,25 @@ def test_the_response_check_draws_25_sample_tables_over_named_and_none_in_one_ba
     drawn = path.read_text()
     flat.draw(ResponseCheck())
     assert path.read_text() == drawn
+
+
+def test_the_response_recheck_draws_15_none_tables_the_first_check_did_not_draw(tmp_path):
+    """The recheck holds the none stratum to the bar after the first check missed it, so it
+    draws only none tables, and only fresh ones: 15 of the 17 left once the first check took
+    three of the 20."""
+    flat = respondedPass(tmp_path, named=5, unnamed=20)
+    first = [{'source': 'plots', 'object': f'plain_{i}.csv', 'stratum': 'none'} for i in (5, 6, 7)]
+    sample = pd.DataFrame(first).reindex(columns=ResponseCheck.COLUMNS, fill_value='')
+    writeCsv(sample, flat.survey / 'flat_response_sample.csv')
+
+    flat.draw(ResponseRecheck())
+
+    drawn = readRows(flat.survey / 'flat_response_recheck_sample.csv')
+    assert len(drawn) == 15
+    assert {(row['stratum'], row['response'], row['batch']) for row in drawn} == {
+        ('none', 'none', '1')
+    }
+    assert {row['object'] for row in drawn} & {'plain_5.csv', 'plain_6.csv', 'plain_7.csv'} == set()
 
 
 # a drawn table per kind of source; a row's columns as the response check's sample orders them
