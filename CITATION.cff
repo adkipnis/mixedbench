@@ -6,7 +6,7 @@ authors:
     given-names: Alex
 repository-code: https://github.com/adkipnis/mixedbench
 license-url: https://github.com/adkipnis/mixedbench/blob/main/LICENSE  # code Apache-2.0, registry files CC BY 4.0: the license key cannot say AND
-version: 1.0.8
+version: 1.0.9
 doi: 10.5281/zenodo.23285683
 identifiers:
   - type: doi
