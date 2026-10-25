@@ -5,8 +5,9 @@ import csv
 from collections import Counter
 from pathlib import Path
 
+import pytest
 from schema import REGISTRY
-from verify import SAMPLE_COLUMNS, Verifier
+from verify import SAMPLE_COLUMNS, Links, Verifier, _allocate, renderHelpPage
 
 
 def writeRegistry(registry: Path, rows: list[dict]) -> None:
@@ -103,6 +104,28 @@ def test_draw_is_a_function_of_the_registry_the_candidates_and_the_seed(tmp_path
     assert texts[0] == texts[1]
 
 
+@pytest.mark.parametrize(
+    'sizes, size, quotas',
+    [
+        pytest.param(
+            {'prescreened': 13, 'read/unflagged': 22, 'read/flagged': 18, 'read/integer': 27},
+            50,
+            {'prescreened': 8, 'read/unflagged': 14, 'read/flagged': 11, 'read/integer': 17},
+            id='50/80 of each is 8.125, 13.75, 11.25 and 16.875, two left to the largest remainders',
+        ),
+        pytest.param(
+            {'named': 20, 'none': 13},
+            25,
+            {'named': 15, 'none': 10},
+            id='25/33 of each is 15.15 and 9.85, one left to the larger remainder',
+        ),
+    ],
+)
+def test_allocate_gives_each_stratum_its_share_by_largest_remainder(sizes, size, quotas):
+    """The flat pass's hand checks draw through the same allocation as the registry's."""
+    assert _allocate(sizes, tuple(sizes), size) == quotas
+
+
 def writeHelp(registry: Path, source: str, object: str, text: str) -> None:
     """A git object's name is its path in the tree, so its help page sits in subdirectories."""
     page = registry / 'help' / source / f'{object}.txt'
@@ -179,6 +202,85 @@ def test_handoff_names_page_and_download_urls_and_no_local_path(tmp_path):
     assert str(tmp_path) not in text
     assert 'registry/' not in text
     assert 'cache' not in text
+
+
+ZEROS = '0' * 64
+
+
+@pytest.fixture
+def links(tmp_path: Path) -> Links:
+    """One source per kind: a CRAN package, a git tree, a url archive and two Tier D deposits,
+    one linked by a DOI."""
+    (tmp_path / 'sources.yaml').write_text(
+        'seed: 0\n'
+        'tiers:\n'
+        '  R:\n'
+        "    pens: {kind: cran, pin: '1.0'}\n"
+        '  T:\n'
+        '    ros: {kind: git, name: https://github.com/avehtari/ROS-Examples, pin: abc123}\n'
+        f'    rabe_hesketh: {{kind: url, name: https://www.stata-press.com/data/mlmus4/mlmus4.zip, pin: {ZEROS}}}\n'
+        '  D:\n'
+        f'    arriero_2017_dryad: {{kind: url, name: https://datadryad.org/api/v2/files/51526/download, pin: {ZEROS}}}\n'
+        f'    leder_2020_osf: {{kind: url, name: https://osf.io/download/znb6c/, pin: {ZEROS}}}\n'
+    )
+    (tmp_path / 'deposit_files.csv').write_text(
+        'label,link\n,osf.io/unlabelled\narriero_2017_dryad,10.5061/dryad.110pk\n'
+        'leder_2020_osf,osf.io/txb9c\n'
+    )
+    return Links(tmp_path, tmp_path)
+
+
+@pytest.mark.parametrize(
+    'label, object, file, page, download',
+    [
+        pytest.param(
+            'pens', 'herds', 'data/herds.rda',
+            'https://cran.r-project.org/package=pens',
+            'https://github.com/cran/pens/blob/1.0/data/herds.rda',
+            id='a CRAN file on GitHub\'s mirror, tagged by version',
+        ),
+        pytest.param(
+            'ros', 'Beauty/data/beauty.csv', 'Beauty/data/beauty.csv',
+            'https://github.com/avehtari/ROS-Examples/tree/abc123/Beauty/data',
+            'https://github.com/avehtari/ROS-Examples/blob/abc123/Beauty/data/beauty.csv',
+            id='a git file at its commit, its folder the page',
+        ),
+        pytest.param(
+            'rabe_hesketh', 'pig.dta', 'pig.dta',
+            'https://www.stata-press.com/data/mlmus4.html',
+            'https://www.stata-press.com/data/mlmus4/mlmus4.zip',
+            id='a url archive, its page by label prefix',
+        ),
+        pytest.param(
+            'arriero_2017_dryad', 'voles.xlsx', 'voles.xlsx',
+            'https://doi.org/10.5061/dryad.110pk',
+            'https://datadryad.org/api/v2/files/51526/download',
+            id='a deposit linked by a DOI, its page at doi.org',
+        ),
+        pytest.param(
+            'leder_2020_osf', 'data.csv', 'data.csv',
+            'https://osf.io/txb9c',
+            'https://osf.io/download/znb6c/',
+            id='a deposit without a DOI, its page the link',
+        ),
+    ],
+)  # fmt: skip
+def test_links_name_a_page_and_a_download_per_kind_of_source(
+    links, label, object, file, page, download
+):
+    """A batch is checked in the browser against the source itself, at its pin."""
+    assert links.resolveUrls(label, object, file) == (page, download)
+
+
+def test_a_help_page_longer_than_twenty_thousand_characters_is_cut(tmp_path):
+    """A help page can hold a whole table, one in the flat frame 20 MB of it, which would drown
+    the prompt, so it is cut and says where."""
+    writeHelp(tmp_path, 'pens', 'herds', 'x' * 20_000 + 'y')
+
+    text = renderHelpPage(tmp_path, 'pens', 'herds')
+
+    assert 'x' * 20_000 + '\n[cut at 20,000 characters]' in text
+    assert 'xy' not in text
 
 
 def reading(source: str, object: str, **fields: str) -> dict:
