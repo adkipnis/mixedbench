@@ -86,7 +86,7 @@ FLAT_COLUMN_COLUMNS = (
     *COLUMN_STATISTICS,
 )  # fmt: skip
 # a batch's handoff opens with a prompt that a checker who knows neither the survey nor the
-# repository can act on, one per hand check
+# repository can act on, one for the verdicts and one for the responses
 VERDICT_HEAD = """# Flat tables, {title}, batch {batch}
 
 You check {n} tables from public statistics sources that a survey filed as having no grouping
@@ -205,7 +205,7 @@ Take the evidence from the source, not from the reading alone.
 # =====================================================================================
 # hand checks
 # =====================================================================================
-# A hand check is a seeded sample of the flat sample, checked at the source in the browser in
+# a hand check is a seeded sample of the flat sample, checked at the source in the browser in
 # batches; its agreement file gives the share that stood per stratum.
 class VerdictCheck:
     """The verdicts' check: a drawn table stood when it is still in the flat sample."""
@@ -256,9 +256,10 @@ class VerdictCheck:
             f'- second reading: {second_reading}',
         ]
 
-    def _renderScreen(self, row: pd.Series) -> str:
+    @classmethod
+    def _renderScreen(cls, row: pd.Series) -> str:
         reasons = []
-        for column, name in self.SCREEN_REASONS.items():
+        for column, name in cls.SCREEN_REASONS.items():
             names = [f'`{c}`' for c in splitList(row[column])]
             if names:
                 reasons.append(f'{name} {", ".join(names)}')
@@ -436,10 +437,15 @@ class FlatPass:
         found_not_flat = screened['response_evidence'].str.startswith(NOT_FLAT)
         flagged = (screened['flagged'] == 'yes') | found_not_flat
         unread = screened[flagged & (screened['verdict'] == '')]
+        self._refuseUnread(unread, 'flagged tables without a verdict')
+        return screened[screened['verdict'].isin(['', 'flat'])]
+
+    @staticmethod
+    def _refuseUnread(unread: pd.DataFrame, waiting: str) -> None:
+        """Refuses, naming them, the tables that wait for a reading."""
         if not unread.empty:
             names = '\n'.join(unread['source'] + ' ' + unread['object'])
-            raise ValueError(f'{len(unread)} flagged tables without a verdict:\n{names}')
-        return screened[screened['verdict'].isin(['', 'flat'])]
+            raise ValueError(f'{len(unread)} {waiting}:\n{names}')
 
     @staticmethod
     def _findBasis(row: pd.Series) -> dict[str, str]:
@@ -455,10 +461,7 @@ class FlatPass:
         """The sample, refused while a table has no response, so that a blank never counts as
         named. The merge refused a response its table lacks."""
         sample = self._selectSample()
-        unread = sample[sample['response'] == '']
-        if not unread.empty:
-            names = '\n'.join(unread['source'] + ' ' + unread['object'])
-            raise ValueError(f'{len(unread)} sample tables without a response:\n{names}')
+        self._refuseUnread(sample[sample['response'] == ''], 'sample tables without a response')
         return sample
 
     def _readBookkeeping(self, table: Table) -> pd.DataFrame:
