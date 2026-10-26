@@ -38,7 +38,7 @@ Rows with a measured response; a pharmacokinetic table's dosing rows are not obs
 | tier D | 104 | 45 | 76 | 219 | 1211 | 21729 | 61248 | 210658 |  |
 | tier O | 12 | 52 | 52 | 120 | 2298 | 181800 | 318438 | 318438 |  |
 | without agridat | 663 | 7 | 32 | 50 | 572 | 9558 | 24613 | 1000209 |  |
-| flat | 696 | 3 | 9 | 14 | 76 | 1501 | 3941 | 81422 |  |
+| flat | 722 | 3 | 9 | 14 | 75 | 1445 | 3888 | 81422 |  |
 
 ## Grouping factors
 
@@ -185,7 +185,7 @@ Levels of the categorical covariates:
 | tier D | 51 | 3 | 3 | 3 | 4 | 47 | 76 | 117 |  |
 | tier O | 35 | 2 | 2 | 3 | 5 | 26 | 73 | 717 |  |
 | without agridat | 321 | 2 | 2 | 2 | 4 | 10 | 17 | 717 |  |
-| flat | 949 | 0 | 1 | 2 | 11 | 81 | 192 | 59548 |  |
+| flat | 1055 | 0 | 1 | 3 | 11 | 107 | 307 | 59548 |  |
 
 | K | n | share |
 |---|---|---|
@@ -229,7 +229,7 @@ its levels less one, an interaction the product.
 | tier D | 104 | 1 | 2 | 3 | 10 | 156 | 163 | 4580 |  |
 | tier O | 12 | 2 | 2 | 2 | 19 | 79 | 23759 | 23759 |  |
 | without agridat | 663 | 0 | 0 | 1 | 5 | 20 | 55 | 23759 |  |
-| flat | 696 | 0 | 1 | 2 | 4 | 21 | 79 | 29573 |  |
+| flat | 722 | 0 | 1 | 2 | 5 | 22 | 78 | 29573 |  |
 
 The condition index of the documented design and of the design over every column.
 
@@ -293,24 +293,24 @@ fit, over the fits that ended with estimates; the status of every row.
 
 | statistic | n | min | p5 | p10 | p50 | p90 | p95 | max |
 |---|---|---|---|---|---|---|---|---|
-| sigma2_fixed | 556 | 0 | 0 | 0.0002 | 0.6156 | 366.1112 | 3357.9388 | 9170746.8354 |
-| sigma2_random | 556 | 0 | 0 | 0.0076 | 0.9831 | 356.1538 | 3035.9392 | 18651991.7893 |
-| sigma2_residual | 376 | 0 | 0.0057 | 0.0239 | 2.316 | 1229.9175 | 6876.6969 | 1451863.8213 |
-| sigma2_distribution | 556 | 0 | 0 | 0 | 0 | 3.2899 | 3.2899 | 5.676 |
-| sd_eta | 556 | 0 | 0.1281 | 0.2202 | 1.3383 | 30.8604 | 86.1292 | 5558.5806 |
-| r2_marginal | 556 | 0 | 0 | 0.0003 | 0.1734 | 0.7194 | 0.893 | 0.9999 |
-| r2_conditional | 556 | 0 | 0.0815 | 0.1417 | 0.6252 | 0.9647 | 0.9885 | 0.9999 |
-| q | 741 | 1 | 1 | 1 | 1 | 2 | 2 | 8 |
-| sigma2 | 741 | 0 | 0 | 0.0007 | 0.5736 | 205.3507 | 1965.1447 | 18651991.7893 |
-| icc | 741 | 0 | 0 | 0.0018 | 0.1408 | 0.6032 | 0.7669 | 0.9914 |
-| icc_adjusted | 741 | 0 | 0 | 0.0032 | 0.2367 | 0.8097 | 0.9368 | 0.9983 |
+| sigma2_fixed | 528 | 0 | 0 | 0.0009 | 0.6216 | 350.7875 | 1987.784 | 9170746.8354 |
+| sigma2_random | 528 | 0 | 0 | 0.0082 | 0.9495 | 356.1538 | 3035.9392 | 18651991.7893 |
+| sigma2_residual | 350 | 0 | 0.006 | 0.0256 | 2.2937 | 1229.9175 | 6876.6969 | 1451863.8213 |
+| sigma2_distribution | 528 | 0 | 0 | 0 | 0 | 3.2899 | 3.2899 | 5.676 |
+| sd_eta | 528 | 0 | 0.1413 | 0.2276 | 1.3221 | 30.1039 | 84.4016 | 5558.5806 |
+| r2_marginal | 528 | 0 | 0 | 0.0008 | 0.1734 | 0.7094 | 0.893 | 0.9999 |
+| r2_conditional | 528 | 0 | 0.1043 | 0.1425 | 0.6197 | 0.9653 | 0.9885 | 0.9999 |
+| q | 706 | 1 | 1 | 1 | 1 | 2 | 2 | 8 |
+| sigma2 | 706 | 0 | 0 | 0.001 | 0.5736 | 205.3507 | 2177.5672 | 18651991.7893 |
+| icc | 706 | 0 | 0 | 0.0019 | 0.1426 | 0.6026 | 0.7605 | 0.9907 |
+| icc_adjusted | 706 | 0 | 0 | 0.0032 | 0.2533 | 0.8077 | 0.9368 | 0.9983 |
 
 | status | n | share |
 |---|---|---|
-| ok | 409 | 64% |
-| warning | 80 | 12% |
-| singular | 67 | 10% |
-| error | 53 | 8% |
+| ok | 386 | 63% |
+| warning | 79 | 13% |
+| singular | 63 | 10% |
+| error | 53 | 9% |
 | no_formula | 32 | 5% |
 
 ## Response, reader and published model
@@ -353,27 +353,27 @@ registry by `flat.py`, every column by the statistics `columns.csv` defines; the
 sample's rule are in [`docs/registry.md`](../docs/registry.md). An axis both samples share ends
 its table above with the flat sample's row.
 
-**Corpus.** 696 flat tables; per stratum read 543, prescreened 153; per tier R 357, E 142, T 131, D 58, O 8.
-The screen flagged 276 of the frame's 648 read tables for a second reading and the response reading found 35 not flat; verdicts flat 205, wide 151, hidden grouping 43.
+**Corpus.** 722 flat tables; per stratum read 569, prescreened 153; per tier R 373, E 142, T 140, D 58, O 9.
+The screen flagged 289 of the frame's 674 read tables for a second reading and the response reading found 35 not flat; verdicts flat 218, wide 151, hidden grouping 43.
 The hand sample of 50 tables stood at 0.92.
-336 of the 696 tables name a response; the response check of 25 tables stood at 0.84, its recheck of 15 `none` tables at 1.0.
+362 of the 722 tables name a response; the response check of 25 tables stood at 0.84, its recheck of 15 `none` tables at 1.0.
 
 | column type | n | share |
 |---|---|---|
-| continuous | 36594 | 85% |
-| binary | 5350 | 12% |
-| categorical | 815 | 2% |
-| ordered | 134 | 0% |
+| continuous | 36800 | 85% |
+| binary | 5459 | 13% |
+| categorical | 917 | 2% |
+| ordered | 138 | 0% |
 
 | statistic | n | min | p5 | p10 | p50 | p90 | p95 | max |
 |---|---|---|---|---|---|---|---|---|
-| condition_all | 673 | 1 | 1 | 1.0843 | 4.7482 | inf | inf | inf |
-| skewness | 35816 | -11.1669 | -0.5434 | -0.0263 | 1.4233 | 3.5352 | 3.9478 | 244.6948 |
-| excess_kurtosis | 35781 | -5.6896 | -1.8933 | -1.6631 | 1.1953 | 12.0788 | 15.612 | 59915.5349 |
-| outlier_share | 35816 | 0 | 0 | 0 | 0 | 0.0211 | 0.0318 | 0.0565 |
-| zero_share | 36532 | 0 | 0 | 0 | 0.7067 | 0.9152 | 0.9364 | 1 |
-| min_share | 36666 | 0 | 0.0098 | 0.0185 | 0.7314 | 0.9187 | 0.9399 | 1 |
-| max_share | 36666 | 0 | 0.0035 | 0.0098 | 0.053 | 0.371 | 0.4452 | 1 |
-| unique_share | 42825 | 0 | 0.0071 | 0.0071 | 0.0106 | 0.6852 | 0.8529 | 1 |
-| rare_level_share | 6293 | 0 | 0.0023 | 0.0127 | 0.1343 | 0.4375 | 0.4841 | 1 |
-| max_abs_rho | 41215 | 0 | 0.2637 | 0.3333 | 0.9072 | 0.9956 | 0.9999 | 1 |
+| condition_all | 698 | 1 | 1 | 1.1115 | 4.821 | inf | inf | inf |
+| skewness | 36020 | -11.1669 | -0.5451 | -0.0284 | 1.4166 | 3.5352 | 3.9586 | 244.6948 |
+| excess_kurtosis | 35985 | -5.6896 | -1.8923 | -1.6617 | 1.1862 | 12.0888 | 15.7992 | 59915.5349 |
+| outlier_share | 36020 | 0 | 0 | 0 | 0 | 0.02 | 0.0318 | 0.0565 |
+| zero_share | 36738 | 0 | 0 | 0 | 0.7032 | 0.9152 | 0.9364 | 1 |
+| min_share | 36876 | 0 | 0.0098 | 0.0185 | 0.7314 | 0.9187 | 0.9399 | 1 |
+| max_share | 36876 | 0 | 0.0035 | 0.0098 | 0.053 | 0.371 | 0.4452 | 1 |
+| unique_share | 43246 | 0 | 0.0063 | 0.0071 | 0.0106 | 0.6863 | 0.8571 | 1 |
+| rare_level_share | 6508 | 0 | 0.0022 | 0.01 | 0.1343 | 0.435 | 0.4839 | 1 |
+| max_abs_rho | 41530 | 0 | 0.2635 | 0.3321 | 0.9059 | 0.9956 | 0.9999 | 1 |
