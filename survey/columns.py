@@ -32,16 +32,6 @@ COLUMN_COLUMNS = (
 )  # fmt: skip
 
 
-def codeColumn(values: pd.Series, kind: str) -> pd.Series:
-    """A continuous column as loaded, a binary or ordered one by the codes of its present
-    levels. A missing value stays missing."""
-    if kind == 'continuous':
-        return values.astype(float)
-    levels = pd.Categorical(values).remove_unused_categories()
-    codes = pd.Series(levels.codes, index=values.index)
-    return codes.where(codes >= 0)  # -1 codes a missing value
-
-
 # =====================================================================================
 # columns.csv: rank correlations -> type and level -> missing share and quirk statistics
 # =====================================================================================
@@ -67,6 +57,16 @@ def measureMaxAbsRho(table: pd.DataFrame, column_types: dict[str, tuple]) -> pd.
     np.fill_diagonal(rho, np.nan)  # a column is no partner of itself
     largest = np.fmax.reduce(rho, axis=0, initial=np.nan)  # (d,), nan only without a partner
     return pd.Series(largest, index=list(ranked)).round(4).reindex(list(column_types))
+
+
+def codeColumn(values: pd.Series, kind: str) -> pd.Series:
+    """A continuous column as loaded, a binary or ordered one by the codes of its present
+    levels. A missing value stays missing."""
+    if kind == 'continuous':
+        return values.astype(float)
+    levels = pd.Categorical(values).remove_unused_categories()
+    codes = pd.Series(levels.codes, index=values.index)
+    return codes.where(codes >= 0)  # -1 codes a missing value
 
 
 def measureColumn(measurer: Measurer, column: str) -> dict:
