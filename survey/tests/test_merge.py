@@ -451,6 +451,7 @@ def test_a_verdict_shard_merges_into_the_survey_with_its_tier_filled_in(splitMer
         ({'evidence': ''}, 'evidence', 'required'),
         ({'object': 'cattle.old'}, 'object', 'not in registry.csv or excluded.csv'),
     ],
+    ids=['a-verdict-outside-the-glossary', 'no-evidence', 'an-object-the-census-lacks'],
 )
 def test_a_verdict_outside_the_vocabulary_or_on_an_unknown_object_is_refused_naming_the_row(
     merger, edit, column, problem
@@ -488,6 +489,7 @@ def test_a_response_shard_merges_into_the_survey_with_its_tier_filled_in(splitMe
         ({'object': 'cattle.old'}, 'object', 'not in registry.csv or excluded.csv'),
         ({'response': 'weight'}, 'response', 'not a column of the table'),
     ],
+    ids=['no-response', 'no-evidence', 'an-object-the-census-lacks', 'no-column-of-the-table'],
 )
 def test_a_response_without_evidence_on_an_unknown_object_or_no_column_is_refused(
     merger, edit, column, problem
