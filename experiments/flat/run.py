@@ -1,10 +1,15 @@
-"""flat/run.py compares the registry's grouped tables with flat tables.
+"""flat/run.py compares the registry's grouped tables with flat tables, one table at a time.
 
-Comparison axes:
-- ...
+Comparison axes, one number per table each:
+- sizes: rows, columns, design columns and the condition index
+- type mix: the shares of continuous, binary, categorical and ordered columns, and the median K
+  of the categorical and ordered ones
+- column statistics: each statistic's median over the table's columns
 
-The sets are compared by the Mann-Whitney-U test, which ...
-We test against two sets of flat tables: (1) all, and (2) only tables with a documented response.
+The sets are compared by the two-sided Mann–Whitney U test, which asks whether a table of one set
+tends to lie above a table of the other, with the rank-biserial correlation as its effect size.
+We test against two sets of flat tables: (1) all, and (2) only tables with a documented response,
+since a table without one may count its outcome among its columns.
 
 pipeline:
 ---------
@@ -50,8 +55,7 @@ STATISTICS = (
 
 
 def summarizeRegistry(dir: Path) -> pd.DataFrame:
-    """Per registry object, its first model: n_obs and condition_all as dimensions.csv holds them,
-    the rest over its columns in columns.csv."""
+    """One row per registry object, from its first model."""
     dimensions = _readNumbers(dir / 'dimensions.csv', ('n_obs', 'condition_all'))
     first = dimensions[dimensions['model_index'] == '1']
     tables = first.drop_duplicates(KEY)  # n_obs of the first factor, as quantiles.yaml counts it
@@ -67,8 +71,7 @@ def _readNumbers(path: Path, columns: tuple[str, ...]) -> pd.DataFrame:
 
 
 def summarizeFlat(dir: Path) -> pd.DataFrame:
-    """Per flat table: its response, n_obs and condition_all as flat.csv holds them, the rest over
-    its columns in flat_columns.csv but the id columns."""
+    """One row per flat table with its response, from every column but the id columns."""
     tables = _readNumbers(dir / 'flat.csv', ('n_obs', 'condition_all'))
     columns = _readNumbers(dir / 'flat_columns.csv', ('K', *COLUMN_STATISTICS))
     columns = columns[columns['id_column'] == 'no']
@@ -78,9 +81,8 @@ def summarizeFlat(dir: Path) -> pd.DataFrame:
 
 
 def summarizeTables(tables: pd.DataFrame, columns: pd.DataFrame) -> pd.DataFrame:
-    """One row per table: its sizes, the shares of its column types and each statistic's median
-    over its columns. A table without a column has n_columns and d_all 0, its shares and medians
-    blank."""
+    """Each table's sizes, type shares and statistic medians.
+    A table without columns gets zero counts and blank shares and medians."""
     summary = tables.set_index(KEY)[['tier', 'n_obs']]
     by_table = columns.groupby(KEY)
     summary['n_columns'] = by_table.size().reindex(summary.index, fill_value=0)
@@ -103,8 +105,7 @@ def summarizeTables(tables: pd.DataFrame, columns: pd.DataFrame) -> pd.DataFrame
 
 
 def compareSamples(registry: pd.DataFrame, flat: pd.DataFrame) -> pd.DataFrame:
-    """Per flat side and statistic, each sample's tables and median, the U test and the
-    rank-biserial correlation. A blank is left out, inf kept."""
+    """Tests every statistic against both flat sets, leaving out blanks but keeping inf."""
     sides = {'all': flat, 'response': flat[flat['response'] != 'none']}
     records = []
     for side, tables in sides.items():
@@ -126,10 +127,9 @@ def compareSamples(registry: pd.DataFrame, flat: pd.DataFrame) -> pd.DataFrame:
 
 
 def _testMannWhitney(x: pd.Series, y: pd.Series) -> dict:
-    """The two-sided Mann–Whitney U test in its normal approximation with the tie and continuity
-    corrections, as scipy.stats.mannwhitneyu(method='asymptotic') computes it.
-    The rank-biserial correlation 2U / (n_x n_y) − 1 is the probability that x lies above y minus
-    the reverse (Kerby 2014, https://doi.org/10.2466/11.IT.3.1)."""
+    """The Mann–Whitney U test as scipy's `mannwhitneyu(method='asymptotic')` computes it, and the
+    rank-biserial r = 2U / (n_x n_y) − 1, the probability that x lies above y minus the reverse
+    (Kerby 2014, https://doi.org/10.2466/11.IT.3.1)."""
     n_x = len(x)
     n_y = len(y)
     n = n_x + n_y
