@@ -143,3 +143,16 @@ The practice survey's deposits, resolved and pulled by the archived `resolve.py`
 `survey-archive`); the loss by cause is the tier's finding.
 
 ${tier_d}
+
+## Flat sample
+
+The survey's tables filed `no grouping structure`, screened, read again and measured beside the
+registry by `flat.py`, every column by the statistics `columns.csv` defines; the files and the
+sample's rule are in [`docs/registry.md`](../docs/registry.md). An axis both samples share ends
+its table above with the flat sample's row.
+
+${flat_corpus}
+
+${table_flat_column_type}
+
+${table_flat_statistics}

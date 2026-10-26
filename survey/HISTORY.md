@@ -509,6 +509,68 @@ reading's open disagreements, four to eight per tier.
 - A one-off check before the merge found every run on its row's current formula and every
   prepared row's run on the table its preparation makes now.
 
+## Flat pass (#115, 2026-10-24 to 2026-10-25)
+
+- `flat.py screen` derived the frame from the exclusions filed `no grouping structure`: 842 read
+  and 185 prescreened tables. It flagged 362 read tables for a second reading, 219 by the filing
+  line and 211 by an id-like column (#116; ADR 0007, amended 2026-10-24).
+- Seven reading runs by `prompts/flat.md` gave the 362 their verdicts: 203 `flat`, 125 `wide`,
+  34 `hidden grouping` (#118). The hidden groupings re-filed 22 rows of 20 tables into the
+  registry, 13 more were excluded for another reason, and GSSvocab stays excluded, its authors
+  fitting the wave as fixed. 153 copies of another frame table left the frame, 125 by script
+  and 28 read. The rules the reading added are under Reading rulings.
+- The hand sample of 50 over four strata, seed 2, stood at 0.92, each stratum at 0.9 or above
+  against the bar of 0.8 (#120). congress, BEPS and candidate_effects were corrected to `wide`,
+  and heights.dta was excluded as derived. Of the 22 re-filed rows 8 stood and 12 were corrected
+  by hand; divorce3 went back to the frame as `wide` and openml_40916 as `flat`. The hierarchical
+  VAR's three rows open their notes with `RULE GAP:`, and `suite/admit.py` refuses them as
+  `lagged_predictors`.
+- The 16 re-filed rows with a fitted response type were fitted on the cluster and collected into
+  `fits.csv`; the four ordinal ones have no fit (#121). #129 lists the 116 `wide` tables still
+  in the frame for their long forms.
+- The screen rerun over the frame's 846 tables flagged 294 of its 675 read ones, each with a
+  verdict, and `flat.py measure` wrote 729 tables (559 read, 170 prescreened) and 43,826 columns
+  into `registry/flat.csv` and `flat_columns.csv`, in five minutes at 7.8 GB on the laptop
+  (#122). `quantiles.yaml` gained the `flat` blocks and the flat type mix; no other value moved.
+- Each of the 729 tables was read again by `prompts/response.md` for its response, the outcome of
+  its first documented model, or `none` (#130). Twelve runs named 199, but they split on whether
+  the source's files count beside the help page and whether an outcome named in words counts. The
+  rules ADR 0007 took on 2026-10-25 settle both. The source's own files at its pin document a
+  table, and nothing recalled from a book does. An outcome named in words counts, a model on a
+  subset, renaming or re-export of the rows documents the table, a distribution fit has an
+  outcome, and test code documents nothing. Seven runs over the page-only `none` rows and six rows
+  set by rule brought the count to 299.
+- The response check of 25, seed 3, stood at 0.84, but its `none` stratum at 11 of 15 (0.733)
+  missed the bar of 0.8. Three of its four corrections rested on the authors' material outside
+  the pinned files, so the documentation was widened to the authors' or publisher's own material
+  wherever it is hosted. The 73 T, O and E `none` tables of book- and site-documented sources were
+  read again with web access, and 43 were named. A recheck of 15 fresh `none` tables, seed 4,
+  stood at 15 of 15. 346 of the 729 tables name a response.
+- `flat.py measure` now measures each table without its response column, so `flat_columns.csv`
+  holds 43,480 columns; only the `flat` blocks of `quantiles.yaml` moved. 35 tables' evidence opens
+  with `NOT FLAT:` (24 `wide`, 11 `hidden grouping`), listed on #130 for an issue of their own,
+  and 61 rows' evidence still names a `RULE GAP:` the amended rules mostly settle.
+- After main's constant columns (#131) were merged, `suite/admit.py` admitted 16 of the 20
+  re-filed rows as candidates and refused four, the VAR's three equations as `lagged_predictors`
+  and Peacekeeping's cox model as censored. The 608 earlier candidates kept main's hashes.
+  `measure.py` moved main's 25 condition indexes and `condition_all` of the three Storable tables.
+- The 35 tables the response reading found not flat had no verdict, since the screen had not
+  flagged them, so a `NOT FLAT:` evidence now flags a table as the screen does (#133; ADR 0007,
+  amended 2026-10-25). pefr.dta was a copy. Two runs by `prompts/flat.md` read the other 34:
+  22 `wide`, 10 `hidden grouping` and 2 `flat`, toothpaste's arm summaries and rock, whose
+  cores only the response marks. The ten hidden groupings were re-filed and checked by hand:
+  all stood, with heady.fertilizer's fit on its corn plots and fastball's response
+  standardized. An LDA's documents and a multi-output GP's pitchers group, though the first
+  reading had filed such posteriors as having no grouping. The five rows of a fitted response
+  type were fitted: heady.fertilizer and Cars93 by lme4, the three in words without a formula.
+  The registry holds 724 rows over 649 datasets.
+- 21 tables left the frame. 16 are wide copies of a registry object (fitzmaurice's `dental.dta`
+  is nlme's `Orthodont`) and two are the wide twins of simulated tables. Three copy another
+  frame table: lead.dta is tlc.dta's succimer arm, Ch.10's candidate_effects Ch.14's less
+  the row read as its header, and openml_43452 ros' `student-mat.csv` recoded. The
+  frame holds 815 tables, `flat.py wide` lists 118 for #129, and the measure over the sample's
+  696 tables moved only the `flat` blocks of `quantiles.yaml` and the flat type mix.
+
 ## Constant design columns (#131, 2026-10-25)
 
 - The contract drops a design column with one value over the kept rows and refuses a covariate
@@ -533,8 +595,9 @@ object and the deciding issue.
   hospitals, ROS; m3#24, m3#25); a month or observer with enough levels and rows (Squid,
   Sparrows; m3#25); a repeating dyad the book fits (Crofoot; m3#25); a design level the first
   reading missed (lawn's `machine:speed`; m3#23); a genotype-by-environment term fitted as
-  random (salmon.bunt; m3#22).
-- Not counted: strata and waves modeled as fixed (CES11; m3#23); field coordinates
+  random (salmon.bunt; m3#22); a survey wave no documented model fits (Vocab; #118).
+- Not counted: strata and waves a documented model fits as fixed or per wave (CES11,
+  GSSvocab, NES; m3#23, #118); field coordinates
   (connolly.potato; m3#22), though a Latin square's rows and columns are blocks (OrchardSprays;
   m3#23); a factor that classifies rather than clusters (singer; m3#23); a dyad with one row
   per pair (Monks; m3#25).
@@ -581,16 +644,21 @@ object and the deciding issue.
 **Exclusions**
 
 - `simulated data` only where the source says so (Stata's chicken, hox SocsLong; m3#24, #12);
-  a guessed "constructed" stays (SASmixed Animal; m3#22).
+  a guessed "constructed" stays (SASmixed Animal; m3#22). A wide twin of a simulated table
+  shares its exclusion (socscors; #133).
 - `no grouping structure`: wide repeated-measures tables (nitrofen), replication without a
   replicate column (faraway rats), a uniformity trial without a random term, coordinates as the
   only grouping (besag.checks); m3#22, m3#23. A fixed-effects fit over blocks is rendered with
   random blocks at `low` (mead.germination; m3#22).
 - `derived or duplicated table`: a subset with its own model (wages_small_pp), a
   multiple-membership reshape (star_mm), Stan's censored and uncensored halves, read as the
-  modal one (BUGS kidney); m3#24, m3#25.
+  modal one (BUGS kidney); m3#24, m3#25. A wide table whose stacked measures all occur in a
+  registry object or another frame table is a copy, a subset too, and the superset stays
+  (dental.dta, lead.dta; #133). The same tokens split into other documents keep a row each
+  (three_men; #133).
 - Stan: pure GP, time-series, CAR and mixture posteriors have no grouping; a GP beside random
-  intercepts stays (m3#24).
+  intercepts stays (m3#24). A column that indexes a unit the rows repeat within groups whatever
+  the model, an LDA's documents or a multi-output GP's pitchers (prideprejudice, fastball; #133).
 - Kept: ARM's raw tables of an early chapter, with a later chapter's multilevel fit at `medium`
   when the grouping column is in the table (m3#24).
 

@@ -320,8 +320,8 @@ def test_the_census_lands_in_the_registry_and_the_bookkeeping_in_the_survey(spli
     mergeShard(merger, FIXTURES / 'registry_cattle.csv')  # flags the pair with herds
     registryFiles = sorted(p.name for p in merger.registry.iterdir() if p.is_file())
     surveyFiles = sorted(p.name for p in merger.survey.iterdir() if p.is_file())
-    assert registryFiles == ['SUMMARY.md', 'column_factors.csv', 'columns.csv', 'dimensions.csv', 'excluded.csv', 'factor_pairs.csv', 'fits.csv', 'manifest.csv', 'quantiles.yaml', 'registry.csv', 'sources.yaml']  # fmt: skip
-    assert surveyFiles == ['dropped.csv', 'duplicates.csv']
+    assert registryFiles == ['SUMMARY.md', 'column_factors.csv', 'columns.csv', 'dimensions.csv', 'excluded.csv', 'factor_pairs.csv', 'fits.csv', 'flat.csv', 'flat_columns.csv', 'manifest.csv', 'quantiles.yaml', 'registry.csv', 'sources.yaml']  # fmt: skip
+    assert surveyFiles == ['dropped.csv', 'duplicates.csv', 'flat_agreement.csv', 'flat_response_agreement.csv', 'flat_response_recheck_agreement.csv', 'flat_responses.csv', 'flat_screen.csv', 'flat_verdicts.csv']  # fmt: skip
 
 
 def test_a_composite_grouping_factor_merges_and_gets_its_own_dimension_row(merger):
@@ -393,6 +393,18 @@ def test_a_merge_leaves_fits_csv_as_the_last_fits_pass_wrote_it(merger):
     assert (merger.registry / 'fits.csv').read_bytes() == fits
 
 
+def test_a_merge_leaves_the_flat_files_as_the_last_flat_pass_wrote_them(merger):
+    """The flat pass loads a thousand tables and refuses while a flagged one has no verdict,
+    so a shard merged during the second reading neither reruns it nor fails (#115)."""
+    written = {}
+    for name in ('flat.csv', 'flat_columns.csv'):
+        written[name] = (FIXTURES / name).read_bytes()
+        (merger.registry / name).write_bytes(written[name])
+    mergeShard(merger, FIXTURES / 'registry_herds.csv')
+    for name, text in written.items():
+        assert (merger.registry / name).read_bytes() == text
+
+
 def test_the_measure_script_writes_what_the_merge_writes(merger):
     """`measure.py` reruns the merge's measure pass without a shard to merge, so a changed
     statistic reaches the whole registry in one run (#98). It loads from the cache the merge
@@ -417,3 +429,89 @@ def test_every_merge_names_each_registry_objects_file_in_the_manifest(merger):
     assert rows == [
         {'source': 'herds', 'object': 'herds.csv', 'file': 'herds.csv', 'sha256': sha256, 'size': str(len(herds))}
     ]  # fmt: skip
+
+
+VERDICT = {'source': 'cattle', 'object': 'cattle.csv', 'verdict': 'wide', 'evidence': 'calvings as columns'}  # fmt: skip
+
+
+def test_a_verdict_shard_merges_into_the_survey_with_its_tier_filled_in(splitMerger):
+    """The second reading's verdicts are survey bookkeeping, beside dropped.csv; a verdict
+    decides its flat table and moves the object out of no file."""
+    merger = splitMerger
+    mergeShard(merger, FIXTURES / 'excluded_cattle.csv')
+    mergeShard(merger, writeShard(merger.survey / 'shards' / 'flat_second.csv', [VERDICT]))
+    assert readRows(merger.survey / 'flat_verdicts.csv') == [VERDICT | {'tier': 'R'}]
+    assert [r['object'] for r in readRows(merger.registry / 'excluded.csv')] == ['cattle.csv']
+
+
+@pytest.mark.parametrize(
+    'edit, column, problem',
+    [
+        ({'verdict': 'grouped'}, 'verdict', 'not allowed'),
+        ({'evidence': ''}, 'evidence', 'required'),
+        ({'object': 'cattle.old'}, 'object', 'not in registry.csv or excluded.csv'),
+    ],
+    ids=['a-verdict-outside-the-glossary', 'no-evidence', 'an-object-the-census-lacks'],
+)
+def test_a_verdict_outside_the_vocabulary_or_on_an_unknown_object_is_refused_naming_the_row(
+    merger, edit, column, problem
+):
+    """Checked as a dropped shard is: the glossary's three verdicts, a line of evidence each,
+    and an object the census holds."""
+    mergeShard(merger, FIXTURES / 'excluded_cattle.csv')
+    verdict = VERDICT | edit
+    problems = refusal(merger, writeShard(merger.survey / 'shards' / 'flat_bad.csv', [verdict]))
+    assert problems[['line', 'key', 'column', 'problem']].values.tolist() == [
+        [2, f'cattle {verdict["object"]}', column, problem]
+    ]
+    assert readRows(merger.survey / 'flat_verdicts.csv') == []
+
+
+RESPONSE = {'source': 'cattle', 'object': 'cattle.csv', 'response': 'kg', 'evidence': 'lm(kg ~ diet + calving) in its help page'}  # fmt: skip
+
+
+@pytest.mark.parametrize('response', ['kg', 'none'])
+def test_a_response_shard_merges_into_the_survey_with_its_tier_filled_in(splitMerger, response):
+    """A flat table's response is survey bookkeeping, beside the verdicts; `none` is a reading
+    too, for a table no documented model fits."""
+    merger = splitMerger
+    mergeShard(merger, FIXTURES / 'excluded_cattle.csv')
+    reading = RESPONSE | {'response': response}
+    mergeShard(merger, writeShard(merger.survey / 'shards' / 'response_first.csv', [reading]))
+    assert readRows(merger.survey / 'flat_responses.csv') == [reading | {'tier': 'R'}]
+
+
+@pytest.mark.parametrize(
+    'edit, column, problem',
+    [
+        ({'response': ''}, 'response', 'required'),
+        ({'evidence': ''}, 'evidence', 'required'),
+        ({'object': 'cattle.old'}, 'object', 'not in registry.csv or excluded.csv'),
+        ({'response': 'weight'}, 'response', 'not a column of the table'),
+    ],
+    ids=['no-response', 'no-evidence', 'an-object-the-census-lacks', 'no-column-of-the-table'],
+)
+def test_a_response_without_evidence_on_an_unknown_object_or_no_column_is_refused(
+    merger, edit, column, problem
+):
+    """A response is a column of the loaded table or `none`, read with a line of evidence on an
+    object the census holds."""
+    mergeShard(merger, FIXTURES / 'excluded_cattle.csv')
+    reading = RESPONSE | edit
+    problems = refusal(merger, writeShard(merger.survey / 'shards' / 'response_bad.csv', [reading]))
+    assert problems[['line', 'key', 'column', 'problem']].values.tolist() == [
+        [2, f'cattle {reading["object"]}', column, problem]
+    ]
+    assert readRows(merger.survey / 'flat_responses.csv') == []
+
+
+def test_a_flat_merge_leaves_the_measured_files_and_the_manifest_as_they_are(merger):
+    """A verdict or a response changes no registry row, so its merge skips the measure pass,
+    which loads every registry table."""
+    mergeShard(merger, FIXTURES / 'registry_herds.csv')
+    mergeShard(merger, FIXTURES / 'excluded_cattle.csv')
+    files = [merger.registry / name for name in (*MEASURED, 'manifest.csv')]
+    written = [file.stat().st_mtime_ns for file in files]
+    mergeShard(merger, writeShard(merger.survey / 'shards' / 'flat_second.csv', [VERDICT]))
+    mergeShard(merger, writeShard(merger.survey / 'shards' / 'response_first.csv', [RESPONSE]))
+    assert [file.stat().st_mtime_ns for file in files] == written

@@ -1,8 +1,10 @@
 """File contract of the GLMM dimension survey: what a writer knows of `registry.csv`,
-`excluded.csv`, `duplicates.csv` and `dropped.csv` (agent and script columns, allowed values,
-row keys) and the shape of `sources.yaml`. The registry row's dialect, columns, vocabularies
-and grammars are the package's (`mixedbench.registry.row`). The merge script enforces it;
-agents write shards with exactly the agent columns. Documented for humans in `docs/registry.md` and `README.md`.
+`excluded.csv`, `duplicates.csv`, `dropped.csv`, `flat_verdicts.csv` and `flat_responses.csv`
+(agent and script columns, allowed values, row keys) and the shape of `sources.yaml`.
+The registry row's dialect, columns, vocabularies and grammars are the package's
+(`mixedbench.registry.row`).
+The merge script enforces it, and agents write shards with exactly the agent columns.
+Documented for humans in `docs/registry.md` and `README.md`.
 """
 
 from __future__ import annotations
@@ -61,7 +63,39 @@ DROPPED = Table(
     key=('source', 'object'),
 )
 
-TABLES = {t.name: t for t in (REGISTRY, EXCLUDED, DUPLICATES, DROPPED)}
+# The second reading's verdict on a flat table the screen flagged, or a hand sample's correction.
+FLAT_VERDICTS = Table(
+    name='flat_verdicts',
+    columns=('source', 'tier', 'object', 'verdict', 'evidence'),
+    scriptColumns=('tier',),
+    key=('source', 'object'),
+)
+
+# A flat table's response, the outcome of its first documented model, or `none`.
+FLAT_RESPONSES = Table(
+    name='flat_responses',
+    columns=('source', 'tier', 'object', 'response', 'evidence'),
+    scriptColumns=('tier',),
+    key=('source', 'object'),
+)
+
+TABLES = {
+    'registry': REGISTRY,
+    'excluded': EXCLUDED,
+    'duplicates': DUPLICATES,
+    'dropped': DROPPED,
+    'flat_verdicts': FLAT_VERDICTS,
+    'flat_responses': FLAT_RESPONSES,
+}
+# a shard `<prefix>_<label>.csv` -> the table it merges into
+SHARDS = {
+    'registry': REGISTRY,
+    'excluded': EXCLUDED,
+    'duplicates': DUPLICATES,
+    'dropped': DROPPED,
+    'flat': FLAT_VERDICTS,
+    'response': FLAT_RESPONSES,
+}
 IDENTITY = (
     'source',
     'object',
@@ -111,6 +145,8 @@ ALLOWED: dict[str, dict[str, tuple[str, ...]]] = {
     'excluded': {'reason': EXCLUSION_REASONS},
     'duplicates': {'verdict': ('same', 'different')},
     'dropped': {},
+    'flat_verdicts': {'verdict': ('flat', 'wide', 'hidden grouping')},
+    'flat_responses': {},
 }
 
 REQUIRED = {
@@ -121,6 +157,8 @@ REQUIRED = {
     'excluded': ('source', 'object', 'reason'),
     'duplicates': ('source_a', 'object_a', 'source_b', 'object_b', 'verdict'),
     'dropped': ('source', 'object', 'reason'),
+    'flat_verdicts': ('source', 'object', 'verdict', 'evidence'),
+    'flat_responses': ('source', 'object', 'response', 'evidence'),
 }  # fmt: skip
 MAX_MODELS_PER_OBJECT = 3
 MAX_ORDINAL_LEVELS = 10  # an ordinal response with more distinct values is refused

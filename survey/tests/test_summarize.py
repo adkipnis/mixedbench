@@ -25,6 +25,7 @@ FIT_AXES = (
     'sigma2_fixed', 'sigma2_random', 'sigma2_residual', 'sigma2_distribution', 'sd_eta',
     'r2_marginal', 'r2_conditional', 'q', 'sigma2', 'icc', 'icc_adjusted',
 )  # fmt: skip
+FLAT_AXES = ('n_obs', 'd_all', 'condition_all', 'K', *COLUMN_AXES)  # the axes both samples share
 
 
 def test_quantiles_carry_every_axis_pooled_per_tier_and_without_agridat(merger):
@@ -37,7 +38,7 @@ def test_quantiles_carry_every_axis_pooled_per_tier_and_without_agridat(merger):
     axes = quantiles['axes']
     assert set(axes) == set(FACTOR_AXES) | set(ROW_AXES) | {'K'} | set(QUIRK_AXES) | set(FIT_AXES)
     for name, axis in axes.items():
-        assert set(axis) == {'pooled', 'tiers', 'without_agridat'}
+        assert list(axis)[:3] == ['pooled', 'tiers', 'without_agridat']
         assert set(axis['pooled']) == set(QUANTILE_KEYS)
         if name in FIT_AXES:  # the scratch registry's fits.csv holds no row yet
             assert set(axis['tiers']) <= {'D'}
@@ -119,6 +120,34 @@ def test_fit_statistics_count_once_per_registry_row_or_factor_and_status_is_a_sh
     assert quantiles['shares']['status'] == {'ok': 0.6, 'singular': 0.2, 'error': 0.1, 'warning': 0.05, 'no_formula': 0.05}  # fmt: skip
 
 
+def copyFlatFiles(merger) -> None:
+    """Three flat tables of eight columns, as the flat pass wrote them; a merge leaves them."""
+    for name in ('flat.csv', 'flat_columns.csv'):
+        (merger.registry / name).write_bytes((FIXTURES / name).read_bytes())
+
+
+def test_the_axes_both_samples_share_carry_a_flat_split_counted_once_per_its_key(merger):
+    """The size and design axes count once per flat table (sparse.csv has no complete row, so no
+    condition index), K once per categorical or ordered column (not the binary one), a column
+    statistic once per column that defines it. Grouping factors, pairs and fits have no flat
+    counterpart, and the flat type mix is a share of every flat column."""
+    copyFlatFiles(merger)
+    mergeShard(merger, FIXTURES / 'registry_herds.csv')
+    quantiles = yaml.safe_load((merger.registry / 'quantiles.yaml').read_text())
+    axes = quantiles['axes']
+    assert {name for name, axis in axes.items() if 'flat' in axis} == set(FLAT_AXES)
+    counts = {axis: axes[axis]['flat']['n'] for axis in FLAT_AXES}
+    assert counts == {
+        'n_obs': 3, 'd_all': 3, 'condition_all': 2, 'K': 3, 'skewness': 4, 'excess_kurtosis': 4,
+        'outlier_share': 4, 'zero_share': 4, 'min_share': 5, 'max_share': 5, 'unique_share': 8,
+        'rare_level_share': 4, 'max_abs_rho': 5,
+    }  # fmt: skip
+    assert axes['n_obs']['flat'] == {'n': 3, 'min': 8, 'p5': 8, 'p10': 8, 'p50': 12, 'p90': 30, 'p95': 30, 'max': 30}  # fmt: skip
+    assert axes['K']['flat'] == {'n': 3, 'min': 3, 'p5': 3, 'p10': 3, 'p50': 4, 'p90': 30, 'p95': 30, 'max': 30}  # fmt: skip
+    assert axes['condition_all']['flat'] == {'n': 2, 'min': 1, 'p5': 1, 'p10': 1, 'p50': 2.5, 'p90': 2.5, 'p95': 2.5, 'max': 2.5}  # fmt: skip
+    assert quantiles['shares']['flat_column_type'] == {'continuous': 0.5, 'categorical': 0.25, 'binary': 0.125, 'ordered': 0.125}  # fmt: skip
+
+
 def tableRows(text: str, *starts: str) -> list[list[str]]:
     """The cells of the first Markdown table at or after the last of `starts`, section headings
     or a table's header line found one after the other, one list per body row."""
@@ -177,10 +206,67 @@ def test_summary_tables_end_with_the_practice_p90_read_from_the_practice_file(me
     summary = (merger.registry / 'SUMMARY.md').read_text()
     assert '| K | n | min |' in summary
     observations = tableRows(summary, '| n_obs | n | min |')
-    assert [row[0] for row in observations] == ['pooled', 'tier D', 'without agridat']
+    assert [row[0] for row in observations] == ['pooled', 'tier D', 'without agridat', 'flat']
     assert observations[0] == ['pooled', '2', '14', '14', '14', '14', '14', '14', '14', f'{max(practiceP90s("n_obs"))}']  # fmt: skip
     assert tableRows(summary, '| n_groups | n | min |')[0][-1] == f'{max(practiceP90s("n_groups_per_factor"))}'  # fmt: skip
     assert tableRows(summary, '| group_size_min | n | min |')[0][-1] == f'{min(practiceP90s("group_size_min"))}'  # fmt: skip
     assert tableRows(summary, '| d_doc | n | min |')[0][-1] == f'{max(practiceP90s("n_fixed_effects"))}'  # fmt: skip
     assert tableRows(summary, '| alpha | n | min |')[0][-1] == '–'
     assert 'Excluded: 1 objects' in summary and 'derived or duplicated table 1' in summary
+
+
+def test_summary_axis_tables_end_with_a_flat_row_where_the_axis_has_one(merger):
+    """The flat sample's quantiles follow `without agridat` in the tables of the axes both
+    samples share, with no practice value; a grouping factor's axis has no flat row."""
+    copyFlatFiles(merger)
+    mergeShard(merger, FIXTURES / 'registry_herds.csv')
+    summary = (merger.registry / 'SUMMARY.md').read_text()
+    for axis in ('n_obs', 'd_all', 'K'):
+        rows = tableRows(summary, f'| {axis} | n | min |')
+        assert [row[0] for row in rows] == ['pooled', 'tier D', 'without agridat', 'flat']
+    assert tableRows(summary, '| n_obs | n | min |')[-1] == ['flat', '3', '8', '8', '8', '12', '30', '30', '30']  # fmt: skip
+    assert tableRows(summary, '| n_groups | n | min |')[-1][0] == 'without agridat'
+
+
+def writeFlatBookkeeping(merger) -> None:
+    """The flat pass's files in the survey: a frame of three read tables, two flagged, and one
+    prescreened; two responses, one found not flat; three verdicts, one on a copy that has left
+    the frame; the shares of the hand sample, the response check and its recheck."""
+    screen = [
+        ('plain.csv', 'read', 'no'), ('sparse.csv', 'read', 'yes'), ('stored.csv', 'read', 'yes'),
+        ('labels.csv', 'prescreened', 'no'),
+    ]  # fmt: skip
+    screened = pd.DataFrame(screen, columns=['object', 'stratum', 'flagged'])
+    writeCsv(screened, merger.survey / 'flat_screen.csv')
+    responses = [('plain.csv', 'its help page'), ('labels.csv', 'NOT FLAT: names repeat')]
+    writeCsv(pd.DataFrame(responses, columns=['object', 'evidence']), merger.survey / 'flat_responses.csv')  # fmt: skip
+    verdicts = [('sparse.csv', 'flat'), ('stored.csv', 'wide'), ('folded.csv', 'wide')]
+    writeCsv(pd.DataFrame(verdicts, columns=['object', 'verdict']), merger.survey / 'flat_verdicts.csv')  # fmt: skip
+    agreement = pd.DataFrame([('all', '10', '0.9')], columns=['stratum', 'tables', 'stood'])
+    writeCsv(agreement, merger.survey / 'flat_agreement.csv')
+    responses = pd.DataFrame([('all', '5', '0.6')], columns=['stratum', 'tables', 'stood'])
+    writeCsv(responses, merger.survey / 'flat_response_agreement.csv')
+    recheck = pd.DataFrame([('all', '4', '0.75')], columns=['stratum', 'tables', 'stood'])
+    writeCsv(recheck, merger.survey / 'flat_response_recheck_agreement.csv')
+
+
+def test_summary_closes_with_the_flat_samples_corpus_type_mix_and_statistics(merger):
+    """The flat sample's section reads how the sample came to be from the survey's
+    bookkeeping at merge time, then shows its type mix and the flat quantiles of the condition
+    index and the column statistics, whose tables above have no flat row."""
+    copyFlatFiles(merger)
+    writeFlatBookkeeping(merger)
+    mergeShard(merger, FIXTURES / 'registry_herds.csv')
+    section = (merger.registry / 'SUMMARY.md').read_text().split('## Flat sample\n', 1)[1]
+    assert (
+        '3 flat tables; per stratum read 2, prescreened 1; per tier R 2, D 1. The screen flagged'
+        " 2 of the frame's 3 read tables for a second reading and the response reading found 1"
+        ' not flat; verdicts wide 2, flat 1. The hand'
+        ' sample of 10 tables stood at 0.9. 2 of the 3 tables name a response; the response check'
+        ' of 5 tables stood at 0.6, its recheck of 4 `none` tables at 0.75.'
+    ) in ' '.join(section.split())
+    types = tableRows(section, '| column type | n | share |')
+    assert {row[0]: row[1] for row in types} == {'continuous': '4', 'categorical': '2', 'binary': '1', 'ordered': '1'}  # fmt: skip
+    statistics = tableRows(section, '| statistic |')
+    assert [row[0] for row in statistics] == ['condition_all', *COLUMN_AXES]
+    assert statistics[0] == ['condition_all', '2', '1', '1', '1', '2.5', '2.5', '2.5', '2.5']

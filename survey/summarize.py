@@ -1,6 +1,7 @@
 """Quantiles and summary of the dimension survey from the measured files (#18):
 `quantiles.yaml` from `registry.csv` and the measured files, every axis pooled,
-per tier and with agridat removed; `SUMMARY.md` from the digit-free template, the practice
+per tier and with agridat removed, and an axis the flat sample shares over its two files too;
+`SUMMARY.md` from the digit-free template, the practice
 survey's p90 read at merge time from `practice_quantiles.yaml`, a snapshot of the practice
 survey's `quantiles.yaml`, which stays in metabeta-v3.
 """
@@ -15,6 +16,7 @@ import yaml
 from columns import COLUMN_STATISTICS
 from dimensions import CONDITIONS, pickObserved
 from fits import FACTOR_STATISTICS, FIT_STATISTICS, ROW_STATISTICS
+from flat import CHECKS, NOT_FLAT, HandCheck
 from groups import COLUMN_FACTOR_STATISTICS
 from mixedbench.registry.row import readCsv
 from pairs import FACTOR_PAIR_STATISTICS
@@ -49,6 +51,7 @@ FACTOR_AXES = (
     'group_size_max', 'singleton_share', 'cv', 'alpha',
 )  # fmt: skip
 ROW_AXES = {'n_obs': 'n_obs', 'n_grouping_factors': 'n_factors', 'd_doc': 'd_doc', 'd_all': 'd_all'}  # fmt: skip
+FLAT_TABLE_AXES = ('n_obs', 'd_all', 'condition_all')  # the axes flat.csv measures once per table
 CATEGORICAL_TYPES = ('categorical', 'ordered')
 TERMS = (9, 14)  # the practice survey's p90 and p95 of fixed-effect terms (envelope rule 4)
 K_TAIL = 10  # the summary's K table pools the levels above this (the columns rule's integer cap)
@@ -73,6 +76,12 @@ class Summarizer:
         self.rows = self.dimensions.drop_duplicates(['source', 'object', 'model_index'])
         self.modeled = self.columns[self.columns['in_model'] == 'yes']
         self.categoricals = self.modeled[self.modeled['type'].isin(CATEGORICAL_TYPES)]
+        self.flat = self.numeric(readCsv(self.root / 'flat.csv'), FLAT_TABLE_AXES)
+        flat_columns = readCsv(self.root / 'flat_columns.csv')
+        self.flat_columns = self.numeric(flat_columns, ('K', *COLUMN_STATISTICS))
+        self.flat_categoricals = self.flat_columns[
+            self.flat_columns['type'].isin(CATEGORICAL_TYPES)
+        ]
 
     def flush(self) -> None:
         quantiles = self.quantiles()
@@ -97,6 +106,8 @@ class Summarizer:
         axes |= {axis: self.axis(self.rows, axis) for axis in CONDITIONS}
         axes |= {axis: self.axis(self.fitted, axis) for axis in ROW_STATISTICS}
         axes |= {axis: self.axis(self.fits, axis) for axis in FACTOR_STATISTICS}
+        for axis, values in self.collectFlatValues().items():
+            axes[axis]['flat'] = self.quantilesOf(values)
         return {
             'n_rows': len(self.registry),
             'n_objects': len(self.registry.drop_duplicates(['source', 'object'])),
@@ -113,6 +124,7 @@ class Summarizer:
                 'reader': self.shares(self.registry['reader']),
                 'published_model': self.shares(self.registry['published_model']),
                 'status': self.shares(self.fitted['status']),
+                'flat_column_type': self.shares(self.flat_columns['type']),
             },
             'k_distribution': {int(k): v for k, v in self.shares(self.categoricals['K']).items()},
             'implied_columns': self.impliedColumns(),
@@ -130,6 +142,15 @@ class Summarizer:
             },
             'without_agridat': Summarizer.quantilesOf(without_agridat),
         }
+
+    def collectFlatValues(self) -> dict[str, pd.Series]:
+        """The flat sample's values of each axis both samples share: a size or design axis once
+        per flat table, K once per categorical flat column, a column statistic once per flat
+        column."""
+        values = {axis: self.flat[axis] for axis in FLAT_TABLE_AXES}
+        values['K'] = self.flat_categoricals['K']
+        values |= {axis: self.flat_columns[axis] for axis in COLUMN_STATISTICS}
+        return values
 
     @staticmethod
     def quantilesOf(values: pd.Series) -> dict:
@@ -220,6 +241,13 @@ class Summarizer:
                 self.registry['published_model'], 'published'
             ),
             'tier_d': self.tierD(),
+            'flat_corpus': self.renderFlatCorpus(),
+            'table_flat_column_type': self.renderShareTable(
+                self.flat_columns['type'], 'column type'
+            ),
+            'table_flat_statistics': self.renderStatisticTable(
+                ('condition_all', *COLUMN_STATISTICS), axes, 'flat'
+            ),
         }
         return Template(TEMPLATE.read_text()).substitute(fields)
 
@@ -251,13 +279,44 @@ class Summarizer:
             f'- Papers with a registry row: {papers.nunique()}, over {len(registered)} rows.',
         ])  # fmt: skip
 
+    def renderFlatCorpus(self) -> str:
+        """The flat sample's tables by stratum and tier, the frame's read tables the screen
+        flagged, the tables the response reading found not flat, the verdicts by kind, the share
+        of the hand sample that stood, the tables that name a response and the shares of the
+        response check and its recheck."""
+        screen = readCsv(self.survey / 'flat_screen.csv')
+        read = screen[screen['stratum'] == 'read']
+        flagged = read[read['flagged'] == 'yes']
+        responses = readCsv(self.survey / 'flat_responses.csv')
+        not_flat = responses['evidence'].str.startswith(NOT_FLAT).sum()
+        verdicts = self.counted(readCsv(self.survey / 'flat_verdicts.csv')['verdict'])
+        hand = self.readAgreement(CHECKS['verdict'])
+        check = self.readAgreement(CHECKS['response'])
+        recheck = self.readAgreement(CHECKS['recheck'])
+        named = (self.flat['response'] != 'none').sum()
+        strata = self.counted(self.flat['stratum'])
+        tiers = self.counted(self.flat['tier'])
+        return '\n'.join([
+            f'**Corpus.** {len(self.flat)} flat tables; per stratum {strata}; per tier {tiers}.',
+            f"The screen flagged {len(flagged)} of the frame's {len(read)} read tables for a second reading and the response reading found {not_flat} not flat; verdicts {verdicts}.",
+            f'The hand sample of {hand["tables"]} tables stood at {hand["stood"]}.',
+            f'{named} of the {len(self.flat)} tables name a response; the response check of {check["tables"]} tables stood at {check["stood"]}, its recheck of {recheck["tables"]} `none` tables at {recheck["stood"]}.',
+        ])  # fmt: skip
+
+    def readAgreement(self, check: HandCheck) -> pd.Series:
+        """A hand check's tables and the share of them that stood, over all its strata."""
+        return readCsv(self.survey / check.AGREEMENT).set_index('stratum').loc['all']
+
     @staticmethod
     def renderAxisTable(axis: str, block: dict, practice: dict) -> str:
-        """Rows pooled, per tier and without agridat; the pooled row ends with the practice column."""
+        """Rows pooled, per tier, without agridat and, where the axis has one, the flat sample's;
+        the pooled row ends with the practice column."""
         head = f'| {axis} | ' + ' | '.join(QUANTILE_KEYS) + ' | practice |'
         rows = {'pooled': block['pooled']}
         rows |= {f'tier {t}': q for t, q in block['tiers'].items()}
         rows['without agridat'] = block['without_agridat']
+        if 'flat' in block:
+            rows['flat'] = block['flat']
         last = {'pooled': Summarizer.cell(Summarizer.practiceP90(axis, practice))}
         lines = [head, '|' + '---|' * (len(QUANTILE_KEYS) + 2)]
         for name, q in rows.items():
@@ -270,12 +329,12 @@ class Summarizer:
         return ' | '.join(Summarizer.cell(quantiles[k]) for k in QUANTILE_KEYS)
 
     @staticmethod
-    def renderStatisticTable(statistics: tuple[str, ...], axes: dict) -> str:
-        """One row per statistic, its pooled quantiles as columns."""
+    def renderStatisticTable(statistics: tuple[str, ...], axes: dict, split: str = 'pooled') -> str:
+        """One row per statistic, the quantiles of one split as columns, pooled unless named."""
         head = '| statistic | ' + ' | '.join(QUANTILE_KEYS) + ' |'
         lines = [head, '|' + '---|' * (len(QUANTILE_KEYS) + 1)]
         for statistic in statistics:
-            cells = Summarizer.renderQuantileCells(axes[statistic]['pooled'])
+            cells = Summarizer.renderQuantileCells(axes[statistic][split])
             lines.append(f'| {statistic} | {cells} |')
         return '\n'.join(lines)
 

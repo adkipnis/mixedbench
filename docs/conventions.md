@@ -110,12 +110,17 @@ harder to understand or change; it accrues one small edit at a time.
 - `a if c else b` only on a short line. Lookup tables are literal dicts or `if` chains, not
   built with comprehensions, `dict.fromkeys` or `|`. Cases that read different arguments are a
   `match` over their `Literal`, not a dict of wrappers that share one signature.
+- A condition is tested once: one `if`/`else` sets every value it decides, not a conditional
+  expression per value or a second `if` on the same test. A flag that names the test (`bounded`)
+  may be read again on the next line.
 
 ### Classes
 
-- A class per concept a reader should hold apart (a format family, a distribution), static
-  methods where it holds no state. A helper or constant used by one class lives on it; module
-  functions are for what spans classes.
+- A class per concept a reader should hold apart (a format family, a distribution). A method takes
+  `self` if it calls another method of its class or reads the instance's state, unless it runs
+  before an instance exists (a validator); otherwise it is a class or a static method, as its use
+  needs. A helper or constant used by one class lives on it; module functions are for what spans
+  classes.
 - A pipeline that holds state (a cache, a run directory) is a class; a pipeline without state is
   module functions.
 - A data class holds its fields and the checks across them; the function that builds it is a
@@ -170,7 +175,9 @@ a model specification
 
 - The module docstring: one sentence on what the module defines, optionally a short paragraph
   on how, then the pipeline in run order, one `-> result` line per step with its function on the
-  right. Who imports the module is the [map](#modules)'s.
+  right. A module whose why is not obvious replaces the paragraph with a short pyramid for a
+  reader new to the repository: what it offers and why, then how. Who imports the module is the
+  [map](#modules)'s.
 - `# ====` banners separate globals, classes and main, `# ----` banners subsections. Each is
   named in plain words, with one comment line on why the section exists where neither the name
   nor a class docstring below says it.
@@ -209,6 +216,8 @@ a model specification
   (`test_<what_holds>`), fixtures in a `fixtures/` beside them.
 - Each test says in a sentence or two why it exists, unless obvious. Bind the object under test,
   then call it; small named helpers, not lambdas or repeated comprehensions.
+- A test asserts nothing its object checks itself: no shape its data class validates, no control
+  that rebuilds what the call has just built.
 - Cases of one check are one parametrized table, each case's reason in its id, not one test
   per case.
 - Names listed in two modules (a `Literal`, a catalog, a table's columns) are checked against
@@ -274,7 +283,7 @@ The words are [`CONTEXT.md`](../CONTEXT.md)'s.
 | `datasets/loader.py` | a pinned source to tables: download, checksum on every load, cache, declared column types | `registry/installed.py`, the survey |
 | `datasets/readers.py` | the file formats, a class per format family, and which files are data | `loader.py`, `survey/help.py` |
 | `datasets/deparse.py` | base R's `data/*.R` files, read without R | `readers.py` |
-| `contract/problem.py` | the contract's rules: typing, coding, family, prior, splits, scales, parameter names | `contract`, through it `suite/members.py`, `references`, `suite/admit.py` and the survey |
+| `contract/problem.py` | the contract's rules: typing, coding, family, prior, splits, scales, parameter names | `contract`, through it `suite/members.py`, `references`, `suite/admit.py`, `survey/flat.py` and the rest of the survey |
 | `contract/materialized.py` | a problem's files on disk and the contract hash over them | `contract`, through it `suite/members.py`, `references/runner.py` and `suite/admit.py` |
 | `suite/members.py` | a suite's problems by id: built and materialized on first use, checked against the suite's list in the wheel | `suite`, through it the user and `suite/drive.py` |
 | `suite/admit.py` | the admission of suite 1.1 and its hand decisions; writes `suite/1.1/` | run as a script |

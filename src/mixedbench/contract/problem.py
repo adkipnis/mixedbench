@@ -22,7 +22,7 @@ a typed registry row and its loaded table
 -> refused if outside the contract             _refuseUncovered, _refuseSeparated
 -> composites added, incomplete rows dropped   withComposites, _dropIncomplete
 -> each covariate's kind and coded columns     _typeCovariates, _codeTerms
--> the columns with one value dropped          _dropConstant
+-> the columns with one value dropped          dropConstant
 -> the design, factors and response            _assembleDesign, _codeFactor, _codeResponse
 -> the regimes `rows` and `groups`, in folds   _dealRegimes
 -> each fold's scales                          _measureFolds
@@ -233,7 +233,7 @@ class _Builder:
 
     def build(self) -> Problem:
         kinds = self._typeCovariates()
-        coded, dropped_columns = self._dropConstant(self._codeTerms(kinds))
+        coded, dropped_columns = dropConstant(self._codeTerms())
         design = self._assembleDesign(coded)
         factors = {factor: self._codeFactor(factor) for factor in self.row.grouping_factors}
         regimes = self._dealRegimes(factors)
@@ -293,33 +293,17 @@ class _Builder:
         """Returns each covariate's kind, by the typing rule."""
         kinds = {}
         for column in self.row.covariates:
-            kinds[column], _ = columnType(self.table[column])
+            kinds[column], _ = columnKind(self.table[column])
         return kinds
 
-    def _codeTerms(self, kinds: dict[str, str]) -> Coded:
+    def _codeTerms(self) -> Coded:
         """Returns the coded columns of each covariate, then of each interaction."""
         coded = {}
-        for covariate, kind in kinds.items():
-            coded[covariate] = self._codeCovariate(covariate, kind)
+        for covariate in self.row.covariates:
+            coded[covariate] = codeCovariate(self.table[covariate])
         for term in self.row.interactions:
             coded[term] = self._codeInteraction(term, coded)
         return coded
-
-    def _codeCovariate(self, column: str, kind: str) -> dict[str, pd.Series]:
-        """A continuous covariate stays raw.
-        A binary one becomes 0/1.
-        Any other becomes treatment contrasts `<column>[<level>]`.
-        The first loaded level is the reference."""
-        values = self.table[column]
-        if kind == 'continuous':
-            return {column: values.astype(float)}
-        loaded = self._orderLevels(values)
-        if kind == 'binary':
-            return {column: (values != loaded[0]).astype(float)}
-        contrasts = {}
-        for level in loaded[1:]:
-            contrasts[f'{column}[{level}]'] = (values == level).astype(float)
-        return contrasts
 
     @staticmethod
     def _codeInteraction(term: str, coded: Coded) -> dict[str, pd.Series]:
@@ -334,22 +318,6 @@ class _Builder:
             columns = products
         return columns
 
-    @staticmethod
-    def _dropConstant(coded: Coded) -> tuple[Coded, tuple[str, ...]]:
-        """Drops the coded columns with one value over the kept rows and lists them,
-        as lme4 drops the columns of a rank-deficient model matrix."""
-        # no likelihood identifies a constant column's coefficient
-        kept = {}
-        dropped = []
-        for term, columns in coded.items():
-            kept[term] = {}
-            for name, column in columns.items():
-                if column.nunique() == 1:
-                    dropped.append(name)
-                else:
-                    kept[term][name] = column
-        return kept, tuple(dropped)
-
     def _assembleDesign(self, coded: Coded) -> dict[str, pd.Series]:
         """Returns `Intercept`, then the coded columns in the row's order."""
         design = {'Intercept': pd.Series(1.0, index=self.table.index)}
@@ -360,7 +328,7 @@ class _Builder:
     def _codeFactor(self, column: str) -> pd.Series:
         """Returns the column's 0-based codes, in the loaded level order."""
         values = self.table[column]
-        levels = self._orderLevels(values)
+        levels = _orderLevels(values)
         codes = pd.Categorical(values, categories=levels).codes
         return pd.Series(codes, index=self.table.index)
 
@@ -368,7 +336,7 @@ class _Builder:
         """Codes the response by its type. A binomial response comes with its trials."""
         values = self.table[self.row.response]  # continuous, count and binomial: as loaded
         if self.row.response_type == 'binary':  # 0/1, with the first loaded level as 0
-            first = self._orderLevels(values)[0]
+            first = _orderLevels(values)[0]
             values = (values != first).astype(int)
         if self.row.response_type == 'ordinal':  # 1-based, in the loaded level order
             values = self._codeFactor(self.row.response) + 1
@@ -383,7 +351,7 @@ class _Builder:
         if self.row.response_type in ('binary', 'ordinal'):
             recoded.append(self.row.response)
         recoded += self.row.grouping_factors
-        return {column: self._orderLevels(self.table[column]) for column in recoded}
+        return {column: _orderLevels(self.table[column]) for column in recoded}
 
     def _dealRegimes(self, factors: dict[str, pd.Series]) -> dict[str, pd.Series]:
         """Deals the regimes `rows` and `groups` into folds, seeded by the problem id."""
@@ -493,7 +461,7 @@ class _Builder:
         """Returns the global parameter names in brms's block order."""
         names = list(design)
         if self.row.response_type == 'ordinal':  # the thresholds replace `Intercept`
-            levels = self._orderLevels(self.table[self.row.response])
+            levels = _orderLevels(self.table[self.row.response])
             thresholds = [f'Intercept[{k}]' for k in range(1, len(levels))]
             names = thresholds + names[1:]
         for factor in self.row.grouping_factors:
@@ -511,25 +479,15 @@ class _Builder:
                 names += [f'sd[{slope}|{factor}]' for slope in coded[term.covariate]]
         return names
 
-    @staticmethod
-    def _orderLevels(values: pd.Series) -> tuple:
-        """Returns the loaded level order.
-        A plain column orders as the loader orders a declared one."""
-        if not isinstance(values.dtype, pd.CategoricalDtype):
-            values = values.astype('category')
-        return tuple(values.cat.remove_unused_categories().cat.categories)
-
 
 # =====================================================================================
 # the rules shared with the survey
 # =====================================================================================
-# the survey uses these rules too, so its design widths match the builds
+# the survey uses these rules too, so its design widths and coded columns match the builds
 
 
-def columnType(values: pd.Series) -> tuple[str, int | str]:
-    """Returns a column's kind and its level count k, blank if continuous.
-    The loader has applied the row's declared types, so the dtype decides.
-    The first rule that matches wins."""
+def columnKind(values: pd.Series) -> tuple[str, int | str]:
+    """Returns a column's kind and optionally its level count k."""
     distinct = values.dropna().nunique()
     dtype = values.dtype
     categorical = isinstance(dtype, pd.CategoricalDtype)
@@ -540,6 +498,49 @@ def columnType(values: pd.Series) -> tuple[str, int | str]:
     if categorical or pd.api.types.is_string_dtype(dtype):
         return 'categorical', distinct
     return 'continuous', ''
+
+
+def codeCovariate(values: pd.Series) -> dict[str, pd.Series]:
+    """Returns a covariate's design columns:
+    - A continuous covariate stays raw.
+    - A binary one becomes 0/1.
+    - Any other becomes treatment contrasts `<column>[<level>]`.
+    The first loaded level is used as the reference."""
+    column = values.name
+    kind, _ = columnKind(values)
+    if kind == 'continuous':
+        return {column: values.astype(float)}
+    loaded = _orderLevels(values)
+    if kind == 'binary':
+        return {column: (values != loaded[0]).astype(float)}
+    contrasts = {}
+    for level in loaded[1:]:
+        contrasts[f'{column}[{level}]'] = (values == level).astype(float)
+    return contrasts
+
+
+def _orderLevels(values: pd.Series) -> tuple:
+    """Returns the loaded level order.
+    A plain column orders as the loader orders a declared one."""
+    if not isinstance(values.dtype, pd.CategoricalDtype):
+        values = values.astype('category')
+    return tuple(values.cat.remove_unused_categories().cat.categories)
+
+
+def dropConstant(coded: Coded) -> tuple[Coded, tuple[str, ...]]:
+    """Drops the coded columns with one value over the kept rows and lists them,
+    as lme4 drops the columns of a rank-deficient model matrix."""
+    # no likelihood identifies a constant column's coefficient
+    kept = {}
+    dropped = []
+    for term, columns in coded.items():
+        kept[term] = {}
+        for name, column in columns.items():
+            if column.nunique() == 1:
+                dropped.append(name)
+            else:
+                kept[term][name] = column
+    return kept, tuple(dropped)
 
 
 def withComposites(table: pd.DataFrame, factors: tuple[str, ...]) -> pd.DataFrame:

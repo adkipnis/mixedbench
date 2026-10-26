@@ -1,0 +1,3 @@
+"source","object","verdict","evidence"
+"rabe_hesketh","divorce3.dta","wide","time1-time17 and numkid1-numkid17 hold each marriage's fertility spans as columns; id 'Respondent's id' repeats over marnum, and wide wins over grouped (hand check #120)."
+"openml_40916","dataset_40916.pq","flat","one row per country; Region holds ten exhaustive world regions, a design factor, not a sampled grouping factor (hand check #120)."

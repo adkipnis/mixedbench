@@ -5,9 +5,10 @@ A shard is `shards/<table>_<label>.csv` with exactly the agent columns of its ta
 validates the shard against the table it returns, refuses a failing shard printing the
 offending rows, and otherwise upserts on the table's row key, so merging the same shard twice
 changes nothing and a corrected shard replaces its earlier rows. Every merge then folds
-confirmed duplicates, measures the whole registry and rewrites the manifest and the summary.
-The census tables land in `registry/`, the survey's bookkeeping tables (duplicates, dropped)
-in `survey/`. Run from the repo root:
+confirmed duplicates, measures the whole registry and rewrites the manifest and the summary;
+a merge about the flat sample measures nothing.
+The census tables land in `registry/`, the survey's bookkeeping tables (duplicates, dropped,
+flat verdicts and responses) in `survey/`. Run from the repo root:
 
     uv run python survey/merge.py survey/shards/registry_lme4.csv
 """
@@ -39,6 +40,7 @@ from schema import (
     MAX_MODELS_PER_OBJECT,
     MAX_ORDINAL_LEVELS,
     REQUIRED,
+    SHARDS,
     TABLES,
     Table,
 )
@@ -51,15 +53,19 @@ from summarize import Summarizer
 HERE = Path(__file__).parent
 # An object is in the registry or in the exclusions, never both: the second shard is refused.
 RIVALS = {'registry': 'excluded', 'excluded': 'registry'}
+ON_CENSUS = ('dropped', 'flat_verdicts', 'flat_responses')  # about an object the census holds
 # A dropped object leaves both files; re-filing it leaves dropped.csv. The later merge wins.
 SUPERSEDES = {
     'registry': ('dropped',),
     'excluded': ('dropped',),
     'dropped': ('registry', 'excluded'),
     'duplicates': (),
+    'flat_verdicts': (),
+    'flat_responses': (),
 }
 RECONCILED = ('registry', 'duplicates', 'dropped')  # merges that can change the duplicate fold
-CENSUS = ('registry', 'excluded')  # shard tables in registry/; duplicates, dropped in survey/
+FLAT = ('flat_verdicts', 'flat_responses')  # merges about the flat sample, never a registry row
+CENSUS = ('registry', 'excluded')  # shard tables in registry/; the others in survey/
 MANIFEST_COLUMNS = ['source', 'object', 'file', 'sha256', 'size']
 
 
@@ -88,7 +94,7 @@ class Merger:
     # ---------------------------------------------------------------------------------
     def load(self, shard: Path) -> None:
         shard = Path(shard)
-        self.table = TABLES[shard.stem.split('_')[0]]
+        self.table = SHARDS[shard.stem.split('_')[0]]
         self.shard = readCsv(shard)
         self.shard.columns = [c.strip() for c in self.shard.columns]
         self.shard = self.shard.apply(lambda col: col.str.strip())
@@ -118,9 +124,11 @@ class Merger:
             problems += self.licenseProblems()
         if self.table.name in RIVALS:
             problems += self.rivalProblems()
-        if self.table.name == 'dropped':
+        if self.table.name in ON_CENSUS:
             problems += self.unknownObjects()
         self.refuse(problems)
+        if self.table.name == 'flat_responses':  # every object loads, the census holds it
+            self.refuse(self.flatResponseProblems())
 
     @staticmethod
     def refuse(problems: list[dict]) -> None:
@@ -203,10 +211,21 @@ class Merger:
         return self.flag(self.keysOf(self.shard).isin(taken), 'object', f'also in {rival.name}.csv')
 
     def unknownObjects(self) -> list[dict]:
-        """A dropped object must be somewhere to drop it from."""
+        """An object is dropped or given a verdict only where the census holds it."""
         known = self.objectsIn(TABLES['registry']) | self.objectsIn(TABLES['excluded'])
         unknown = ~self.keysOf(self.shard).isin(known)
         return self.flag(unknown, 'object', 'not in registry.csv or excluded.csv')
+
+    def flatResponseProblems(self) -> list[dict]:
+        """A flat table's response is a column of its loaded table, or `none`."""
+        problems = []
+        for line, row in self.shard.iterrows():
+            if row['response'] == 'none':
+                continue
+            table = self.loader.load(self.frame.sources[row['source']], row['object'])
+            if row['response'] not in table.columns:
+                problems.append(self.problem(line, 'response', 'not a column of the table'))
+        return problems
 
     def objectsIn(self, table: Table) -> set[Key]:
         return set(self.keysOf(self.canonical(table)))
@@ -469,8 +488,15 @@ class Merger:
         return (len(table), tuple(sorted(table.nunique())))
 
     # ---------------------------------------------------------------------------------
-    # manifest: registry objects -> manifest.csv
+    # measure: registry -> measured files -> manifest.csv
     # ---------------------------------------------------------------------------------
+    def measure(self) -> None:
+        """A flat verdict or response changes no registry row, so its merge measures nothing."""
+        if self.table.name in FLAT:
+            return
+        measureRegistry(self.registry, self.loader)
+        self.writeManifest()
+
     def writeManifest(self) -> None:
         """The file each registry object loads from, with its digest and size (#4)."""
         registry = self.canonical(TABLES['registry'])
@@ -512,7 +538,6 @@ if __name__ == '__main__':
     merger.upsert()
     merger.supersede()
     merger.reconcile()
-    measureRegistry(merger.registry, merger.loader)
-    merger.writeManifest()
+    merger.measure()
     Summarizer(args.registry, args.survey).flush()
     merger.report()

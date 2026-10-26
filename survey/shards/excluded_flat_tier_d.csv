@@ -1,0 +1,2 @@
+"source","object","reason","detail"
+"walker_2021b_zenodo","FeedingsAssays_Site_2018_crab_g.csv","response missing or undocumented","Site and Trial within it hold several feeding-assay replicates each, a grouping the first reading missed, but Crab is the crab's mass per replicate, which neither documented model uses as response: the feeding LMEM runs on FeedingAssays_Site_2018.csv's Consumption, the crab-impact model on log response ratios."

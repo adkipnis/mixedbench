@@ -18,6 +18,7 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
+from columns import codeColumn
 from schema import IDENTITY
 
 if TYPE_CHECKING:  # only a type: measure.py imports this module
@@ -60,7 +61,7 @@ def measureColumnGroups(measurer: Measurer, column: str, grouping_factor: str) -
         statistics['absent_level_share'] = absent
     if kind == 'categorical':
         return statistics
-    values = measurer.codeColumn(column, kind)[both]
+    values = codeColumn(table[column], kind)[both]
     if values.nunique() < 2:  # a constant column has nothing to share, rank, spread or explain
         return statistics
     statistics |= measureBetweenGroupShare(values, groups) | measureSizeRho(values, groups)
@@ -115,7 +116,7 @@ def measureGroupLevelR2(measurer: Measurer, column: str, grouping_factor: str, k
         c for c in measurer.group_level[grouping_factor] if c != column and table[c].notna().any()
     ]
     complete = table[[column, grouping_factor, *partners]].dropna().index
-    y = measurer.codeColumn(column, kind)[complete].to_numpy(float)
+    y = codeColumn(table[column], kind)[complete].to_numpy(float)
     design = codeDesign(measurer, partners, complete)
     m = table.loc[complete, grouping_factor].nunique()
     coefficients, _, rank, _ = np.linalg.lstsq(design, y)

@@ -105,22 +105,29 @@ def measureConditionIndexes(measurer: Measurer) -> dict:
         documented = Problem.build(measurer.row, measurer.table)
     except Refused:
         return {}
-    conditions = {'condition_doc': computeConditionIndex(documented)}
+    conditions = {'condition_doc': computeConditionIndex(_standardizeDesign(documented))}
     everything = dataclasses.replace(measurer.row, covariates=tuple(measurer.column_names))
     try:
         measured = Problem.build(everything, measurer.table)
     except Refused:  # no complete row
         return conditions
-    return conditions | {'condition_all': computeConditionIndex(measured)}
+    return conditions | {'condition_all': computeConditionIndex(_standardizeDesign(measured))}
 
 
-def computeConditionIndex(problem: Problem) -> float:
-    """σ_max / σ_min of the standardized design with each column scaled to unit length
+def _standardizeDesign(problem: Problem) -> pd.DataFrame:
+    return problem.standardized()[list(problem.design)]
+
+
+def computeConditionIndex(design: pd.DataFrame) -> float:
+    """σ_max / σ_min of a standardized design with each column scaled to unit length
     (Belsley, Kuh and Welsch 1980), inf when rank-deficient."""
-    design = problem.standardized()[list(problem.design)]
+    n, d = design.shape
+    # more columns than rows are dependent, and so wide a design is costly to scale and takes
+    # hours to decompose
+    if d > n:
+        return float('inf')
     scaled = (design / np.sqrt((design**2).sum())).to_numpy()
-    scaled = np.nan_to_num(scaled)  # a constant or empty-cell column scales to 0/0: zeros
-    if np.linalg.matrix_rank(scaled) < scaled.shape[1]:
+    if np.linalg.matrix_rank(scaled) < d:
         return float('inf')
     singular = np.linalg.svd(scaled, compute_uv=False)
     return round(float(singular[0] / singular[-1]), 4)

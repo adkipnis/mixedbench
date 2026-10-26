@@ -72,11 +72,13 @@ class Puller:
             self.rows.extend(rows)
 
     def copyHelp(self) -> None:
-        """One page per object to read; a source's folder is rewritten, so a changed cap or
-        frame leaves no stale page behind."""
+        """One page per object to read, and per object stopped at `no repeated column`, which
+        the flat sample reads for its response.
+        A source's folder is rewritten, so a changed cap or frame leaves no stale page behind."""
         for label in self.labels:
             shutil.rmtree(self.registry / 'help' / label, ignore_errors=True)
         to_read = [row for row in self.rows if row['screen'] == 'pass' and row['capped'] == 'no']
+        to_read += [row for row in self.rows if row['screen'] == 'no repeated column']
         for row in to_read:
             source = self.frame.sources[row['source']]
             file = self.registry / 'help' / row['source'] / f'{row["object"]}.txt'
@@ -111,9 +113,20 @@ class Puller:
         if table.shape[1] < MIN_COLS:
             return 'one column'
         for column in table.columns:
-            if Puller._canGroup(table[column]):
+            if Puller.canGroup(table[column]):
                 return 'pass'
         return 'no repeated column'
+
+    @staticmethod
+    def canGroup(values: pd.Series) -> bool:
+        """Whether a column's values could index groups: not fractional (R stores integer codes
+        as doubles), two or more distinct values, and some value repeated."""
+        if pd.api.types.is_float_dtype(values):
+            present = values.dropna()
+            if len(present) == 0 or not (present == present.round()).all():
+                return False
+        distinct = values.nunique(dropna=True)
+        return 2 <= distinct < len(values)
 
     # ---------------------------------------------------------------------------------
     # pipeline: deposit pages -> object -> row -> draw -> kept rows -> shard row -> csv
@@ -170,17 +183,6 @@ class Puller:
             else:
                 counts['n_other'] += 1
         return counts
-
-    @staticmethod
-    def _canGroup(values: pd.Series) -> bool:
-        """Whether a column's values could index groups: not fractional (R stores integer codes
-        as doubles), two or more distinct values, and some value repeated."""
-        if pd.api.types.is_float_dtype(values):
-            present = values.dropna()
-            if len(present) == 0 or not (present == present.round()).all():
-                return False
-        distinct = values.nunique(dropna=True)
-        return 2 <= distinct < len(values)
 
     @staticmethod
     def _firstRows(table: pd.DataFrame) -> str:

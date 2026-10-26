@@ -5,7 +5,9 @@ from mixedbench.contract.problem import (
     Problem,
     Refused,
     Scale,
-    columnType,
+    codeCovariate,
+    columnKind,
+    dropConstant,
     withComposites,
 )
 
@@ -15,8 +17,10 @@ __all__ = [
     'Problem',
     'Refused',
     'Scale',
-    'columnType',
+    'codeCovariate',
+    'columnKind',
     'contractHash',
+    'dropConstant',
     'load',
     'materialize',
     'storedHash',

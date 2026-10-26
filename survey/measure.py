@@ -1,8 +1,8 @@
 """measure.py runs the measurement pass: the dimension survey's numbers that no agent types,
 measured on each registry row's loaded table and written to the four measured files.
 The Measurer holds what the four share: the rows with a response, the covariate columns
-with their types, each grouping factor's group-level columns, a column's codes, two factors' holders
-and the empty cells of two columns' levels.
+with their types, each grouping factor's group-level columns, two factors' holders and the empty
+cells of two columns' levels.
 
 pipeline:
 ---------
@@ -30,7 +30,7 @@ import groups
 import pairs
 import pandas as pd
 from mixedbench import registry
-from mixedbench.contract import columnType, withComposites
+from mixedbench.contract import columnKind, withComposites
 from mixedbench.datasets import Loader
 from mixedbench.registry.row import Row, writeCsv
 from schema import IDENTITY
@@ -51,7 +51,7 @@ class Measurer:
         self.identity = {k: getattr(row, k) for k in IDENTITY}
         taken = {row.response, row.trials, *self.grouping_factors, *row.ignore}
         self.column_names = [c for c in table.columns if c not in taken]
-        self.column_types = {c: columnType(self.table[c]) for c in self.column_names}
+        self.column_types = {c: columnKind(self.table[c]) for c in self.column_names}
         self.group_level = self.findGroupLevel()
 
     def findGroupLevel(self) -> dict[str, list[str]]:
@@ -63,16 +63,6 @@ class Measurer:
                 c for c in self.column_names if grouped[c].nunique().max() <= 1
             ]
         return group_level
-
-    def codeColumn(self, column: str, kind: str) -> pd.Series:
-        """A continuous column as loaded, a binary or ordered one by the codes of its present
-        levels. A missing value stays missing."""
-        values = self.table[column]
-        if kind == 'continuous':
-            return values.astype(float)
-        levels = pd.Categorical(values).remove_unused_categories()
-        codes = pd.Series(levels.codes, index=values.index)
-        return codes.where(codes >= 0)  # -1 codes a missing value
 
     def findHolders(self, a: str, b: str) -> list[str]:
         """The factors whose groups hold whole groups of the other: none when the two cross,

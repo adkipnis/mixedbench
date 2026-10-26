@@ -4,9 +4,11 @@ column namings, so that duplicate flagging has a real pair to find, and a CRAN p
 (Tier R) holding the herds table as `herds.rds`, whose DESCRIPTION states its license. The
 table: region > herd nested, herd `h4` a singleton, `breed` a four-level categorical, `feed`
 herd-level, `weight` continuous, `sick` binary, `cases` out of `trials` binomial, `id` a column
-to ignore. Also the one recipe that merges a shard, the one reader of a written CSV, and what
-the measured files' tests share: the herds table and rows, a registry row parsed as the merge
-parses it, the measured rows of one registry row by key, and the generated tables.
+to ignore. Also the one recipe that merges a shard, the one reader of a written CSV, a url
+source `plots` serving hand-made tables, one source per kind a handoff links, and what the
+measured files' tests share: the herds
+table and rows, a registry row parsed as the merge parses it, the measured rows of one registry
+row by key, and the generated tables.
 """
 
 import hashlib
@@ -15,6 +17,7 @@ import sys
 import tarfile
 import tempfile
 import zipfile
+from collections.abc import Callable
 from functools import partial
 from pathlib import Path
 
@@ -33,12 +36,13 @@ import columns
 import groups
 from columns import COLUMN_COLUMNS
 from fits import FIT_COLUMNS
+from flat import CHECKS, FLAT_COLUMN_COLUMNS, FLAT_COLUMNS, SCREEN_COLUMNS
 from groups import COLUMN_FACTOR_COLUMNS
-from measure import Measurer, measureRegistry
+from measure import Measurer
 from merge import Merger
 from mixedbench.datasets import Loader
 from mixedbench.registry.row import Row, readCsv, writeCsv
-from schema import EXCLUDED, REGISTRY
+from schema import EXCLUDED, FLAT_RESPONSES, FLAT_VERDICTS, REGISTRY
 from summarize import Summarizer
 
 FIXTURES = HERE / 'fixtures'
@@ -46,13 +50,15 @@ HERDS_URL = 'https://example.org/herds.zip'
 CATTLE_URL = 'https://example.org/cattle.zip'
 PENS_URL = 'https://cloud.r-project.org/src/contrib/pens_1.0.tar.gz'
 PENS_LICENSE = 'GPL (>= 2)'
+PLOTS_URL = 'https://example.org/plots.zip'
 RENAMED = 'row,area,farm,type,diet,calving,kg,ill,positives,tested'
 
 
-def zipped(folder: str, filename: str, text: str) -> bytes:
+def zippedFiles(folder: str, files: dict[str, str]) -> bytes:
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, 'w') as archive:
-        archive.writestr(f'{folder}/{filename}', text)
+        for filename, text in files.items():
+            archive.writestr(f'{folder}/{filename}', text)
     return buffer.getvalue()
 
 
@@ -74,6 +80,38 @@ def sha(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
+def servePlots(files: dict[str, str]) -> tuple[dict, Callable[[str], bytes | None]]:
+    """A url source `plots` serving `files` from memory: its `sources.yaml` entry and the
+    loader's fetch."""
+    archive = zippedFiles('plots', files)
+    entry = {'kind': 'url', 'name': PLOTS_URL, 'pin': sha(archive), 'license': 'CC0 1.0 Universal'}  # fmt: skip
+    return entry, {PLOTS_URL: archive}.get
+
+
+ZEROS = '0' * 64  # the pin of a url source no test downloads
+
+
+def writeLinkedSources(registry: Path, survey: Path) -> None:
+    """One source per kind a handoff links: a CRAN package, a git tree, a url archive and two
+    Tier D deposits, one linked by a DOI."""
+    (registry / 'sources.yaml').write_text(
+        'seed: 0\n'
+        'tiers:\n'
+        '  R:\n'
+        "    pens: {kind: cran, pin: '1.0'}\n"
+        '  T:\n'
+        '    ros: {kind: git, name: https://github.com/avehtari/ROS-Examples, pin: abc123}\n'
+        f'    rabe_hesketh: {{kind: url, name: https://www.stata-press.com/data/mlmus4/mlmus4.zip, pin: {ZEROS}}}\n'
+        '  D:\n'
+        f'    arriero_2017_dryad: {{kind: url, name: https://datadryad.org/api/v2/files/51526/download, pin: {ZEROS}}}\n'
+        f'    leder_2020_osf: {{kind: url, name: https://osf.io/download/znb6c/, pin: {ZEROS}}}\n'
+    )
+    (survey / 'deposit_files.csv').write_text(
+        'label,link\n,osf.io/unlabelled\narriero_2017_dryad,10.5061/dryad.110pk\n'
+        'leder_2020_osf,osf.io/txb9c\n'
+    )
+
+
 def mergeShard(merger: Merger, shard: Path) -> Merger:
     """The steps of `merge.py`'s `__main__`, in its order."""
     merger.load(shard)
@@ -81,8 +119,7 @@ def mergeShard(merger: Merger, shard: Path) -> Merger:
     merger.upsert()
     merger.supersede()
     merger.reconcile()
-    measureRegistry(merger.registry, merger.loader)
-    merger.writeManifest()
+    merger.measure()
     Summarizer(merger.registry, merger.survey).flush()
     merger.report()
     return merger
@@ -93,11 +130,24 @@ def readRows(path: Path) -> list[dict]:
 
 
 def emptyCensus(registry: Path) -> None:
-    """The repository's registry/ always holds both census files and fits.csv, which no merge
-    writes; a scratch one starts with them empty."""
+    """The repository's registry/ always holds both census files, fits.csv and the two flat
+    files, which no merge writes; a scratch one starts with them empty."""
     for table in (REGISTRY, EXCLUDED):
         writeCsv(pd.DataFrame(columns=table.columns), registry / f'{table.name}.csv')
     writeCsv(pd.DataFrame(columns=FIT_COLUMNS), registry / 'fits.csv')
+    writeCsv(pd.DataFrame(columns=FLAT_COLUMNS), registry / 'flat.csv')
+    writeCsv(pd.DataFrame(columns=FLAT_COLUMN_COLUMNS), registry / 'flat_columns.csv')
+
+
+def emptyFlatPass(survey: Path) -> None:
+    """The repository's survey/ always holds the flat pass's screen, verdicts, responses and
+    agreement files; a scratch one starts with them empty, each hand check with no table drawn."""
+    writeCsv(pd.DataFrame(columns=SCREEN_COLUMNS), survey / 'flat_screen.csv')
+    for table in (FLAT_VERDICTS, FLAT_RESPONSES):
+        writeCsv(pd.DataFrame(columns=table.columns), survey / f'{table.name}.csv')
+    undrawn = pd.DataFrame([{'stratum': 'all', 'tables': 0, 'stood': ''}])
+    for check in CHECKS.values():
+        writeCsv(undrawn, survey / check.AGREEMENT)
 
 
 def scratchMerger(registry: Path, survey: Path) -> Merger:
@@ -105,8 +155,8 @@ def scratchMerger(registry: Path, survey: Path) -> Merger:
     herdsText = (FIXTURES / 'herds.csv').read_text()
     cattleText = RENAMED + herdsText[herdsText.index('\n') :]
     archives = {
-        HERDS_URL: zipped('herds', 'herds.csv', herdsText),
-        CATTLE_URL: zipped('cattle', 'cattle.csv', cattleText),
+        HERDS_URL: zippedFiles('herds', {'herds.csv': herdsText}),
+        CATTLE_URL: zippedFiles('cattle', {'cattle.csv': cattleText}),
         PENS_URL: cranTarball('pens', PENS_LICENSE, pd.read_csv(FIXTURES / 'herds.csv'), 'herds'),
     }
     sources = {
@@ -135,6 +185,7 @@ def scratchMerger(registry: Path, survey: Path) -> Merger:
     (registry / 'sources.yaml').write_text(yaml.safe_dump(sources, sort_keys=False))
     emptyCensus(registry)
     (survey / 'shards').mkdir(parents=True)
+    emptyFlatPass(survey)
 
     def serve(url: str) -> bytes | None:
         return archives.get(url)

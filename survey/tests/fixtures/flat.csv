@@ -1,0 +1,4 @@
+"source","object","tier","stratum","basis","evidence","response","n_obs","n_columns","n_continuous","n_binary","n_categorical","n_ordered","n_id_columns","d_all","condition_all"
+"pens","plain.csv","R","read","first reading","one row per plot","y","12","3","2","1","0","0","0","3","2.5"
+"pens","labels.csv","R","prescreened","prescreen","no repeated column","none","30","2","1","0","1","0","1","1","1.0"
+"herds","sparse.csv","D","read","second reading","one row per farm, and no farm repeats","milk","8","3","1","0","1","1","0","6",""

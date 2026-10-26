@@ -44,10 +44,15 @@ File the object in the excluded shard with its reason when:
    - An observation-level effect (`(1|obs)`) is no grouping factor: its column goes in
      `ignore`, its term stays in the formula.
    - A column is a grouping factor or a covariate, never both.
+   - A grouping factor the documentation does not fit needs at least five levels (Harrison et
+     al. 2018) sampled from a larger population (Bolker et al. 2009); fewer levels, or a few
+     exhaustive ones (a city's boroughs, a country's regions), make a design factor.
    - What is no column of the table (a group mean, a recode) stays in the formula only, written
      as its expression of the columns (`ave(IQ, class)`).
 5. **Ignore** row ids, weights, offsets, alternate responses, derived columns and field
    coordinates (`row`, `col`, latitude). An offset stays in the formula as `offset(log(area))`.
+   Coordinates that identify one plot observed on several occasions on the same land are the
+   grouping factor `row:col`.
 6. **Types the file cannot carry**, for covariates only. Text, Excel and JSON: `categorical`,
    `ordered` or `continuous` in `types` as documented. R, Stata and SPSS: only `ordered`
    factors, and `categorical` for a numeric column the model wraps in `factor()`.
