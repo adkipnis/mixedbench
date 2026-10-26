@@ -2,8 +2,9 @@
 `excluded.csv`, `duplicates.csv`, `dropped.csv`, `flat_verdicts.csv` and `flat_responses.csv`
 (agent and script columns, allowed values, row keys) and the shape of `sources.yaml`.
 The registry row's dialect, columns, vocabularies and grammars are the package's
-(`mixedbench.registry.row`). The merge script enforces it;
-agents write shards with exactly the agent columns. Documented for humans in `docs/registry.md` and `README.md`.
+(`mixedbench.registry.row`).
+The merge script enforces it, and agents write shards with exactly the agent columns.
+Documented for humans in `docs/registry.md` and `README.md`.
 """
 
 from __future__ import annotations
@@ -79,7 +80,12 @@ FLAT_RESPONSES = Table(
 )
 
 TABLES = {
-    t.name: t for t in (REGISTRY, EXCLUDED, DUPLICATES, DROPPED, FLAT_VERDICTS, FLAT_RESPONSES)
+    'registry': REGISTRY,
+    'excluded': EXCLUDED,
+    'duplicates': DUPLICATES,
+    'dropped': DROPPED,
+    'flat_verdicts': FLAT_VERDICTS,
+    'flat_responses': FLAT_RESPONSES,
 }
 # a shard `<prefix>_<label>.csv` -> the table it merges into
 SHARDS = {
