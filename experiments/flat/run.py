@@ -1,14 +1,10 @@
-"""run.py compares the registry's grouped tables with the flat sample's, the table its unit (#123).
+"""flat/run.py compares the registry's grouped tables with flat tables.
 
-A table is summarized by its sizes, the shares of its column types,
-and per column statistic its median over its columns.
-A registry object counts its first model's columns, every column but the response, trials and
-grouping factors.
-A flat table counts every column but its id columns, the categoricals whose present values are all
-distinct.
-The flat side is tested twice, with all its tables and with those whose documentation names a
-response, since a table without one may count its outcome among its columns.
-It reads the measured files at the commit that wrote its outputs, the files mixedbench 1.0.10 ships.
+Comparison axes:
+- ...
+
+The sets are compared by the Mann-Whitney-U test, which ...
+We test against two sets of flat tables: (1) all, and (2) only tables with a documented response.
 
 pipeline:
 ---------
