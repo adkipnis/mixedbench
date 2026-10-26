@@ -29,13 +29,14 @@ Per object of the worklist:
    else the first in its authors' or publisher's material, each in the order the source
    presents them (a book's chapters, a vignette's sections): a model the documentation fits or
    states on this table (an example in the help page, a vignette, a chapter script, the paper's
-   analysis, a Stan program's likelihood). A regression of any
-   family, an ANOVA, a test of one outcome across groups, a survival or a time-series model each
-   have an outcome, and so does a fit of one column's distribution. A model fitted on a subset,
-   a renaming or a re-export of this table's rows documents this table too; test code does
-   not. Without a model, an outcome the documentation names in words counts: a column it calls
-   the response or the outcome, or the quantity it says an analysis of this table relates to
-   the other columns.
+   analysis, a Stan program's likelihood).
+   A regression of any family, an ANOVA, a test of one outcome across groups, a survival or a
+   time-series model each have an outcome, and so does a fit of one column's distribution.
+   A model fitted on a subset, a renaming or a re-export of this table's rows documents this
+   table too; test code does not.
+   Without a model, an outcome the documentation names in words counts: a column it calls the
+   response or the outcome, or the quantity it says an analysis of this table relates to the
+   other columns.
 2. **Its outcome** is the response, named exactly as the dtypes at the page's end name the
    column. A transformed outcome (`log(y)`) names the raw column `y`; successes out of trials
    name the successes, and the trials stay a column.
@@ -51,8 +52,8 @@ Per object of the worklist:
 A response is never inferred: a table whose documentation neither models nor names an outcome
 is `none`, even where one column is plainly the outcome. A model recalled from a book that
 neither the source's files nor its authors' or publisher's material hold is no documentation,
-and nor is an analysis by others (a blog, another author's course). `RULE GAP:` opens the evidence of any case
-these rules do not settle.
+and nor is an analysis by others (a blog, another author's course).
+`RULE GAP:` opens the evidence of any case these rules do not settle.
 
 ## Not flat
 
