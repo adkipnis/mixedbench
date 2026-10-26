@@ -5,7 +5,8 @@ column namings, so that duplicate flagging has a real pair to find, and a CRAN p
 table: region > herd nested, herd `h4` a singleton, `breed` a four-level categorical, `feed`
 herd-level, `weight` continuous, `sick` binary, `cases` out of `trials` binomial, `id` a column
 to ignore. Also the one recipe that merges a shard, the one reader of a written CSV, a url
-source `plots` serving hand-made tables, and what the measured files' tests share: the herds
+source `plots` serving hand-made tables, one source per kind a handoff links, and what the
+measured files' tests share: the herds
 table and rows, a registry row parsed as the merge parses it, the measured rows of one registry
 row by key, and the generated tables.
 """
@@ -85,6 +86,30 @@ def servePlots(files: dict[str, str]) -> tuple[dict, Callable[[str], bytes | Non
     archive = zippedFiles('plots', files)
     entry = {'kind': 'url', 'name': PLOTS_URL, 'pin': sha(archive), 'license': 'CC0 1.0 Universal'}  # fmt: skip
     return entry, {PLOTS_URL: archive}.get
+
+
+ZEROS = '0' * 64  # the pin of a url source no test downloads
+
+
+def writeLinkedSources(registry: Path, survey: Path) -> None:
+    """One source per kind a handoff links: a CRAN package, a git tree, a url archive and two
+    Tier D deposits, one linked by a DOI."""
+    (registry / 'sources.yaml').write_text(
+        'seed: 0\n'
+        'tiers:\n'
+        '  R:\n'
+        "    pens: {kind: cran, pin: '1.0'}\n"
+        '  T:\n'
+        '    ros: {kind: git, name: https://github.com/avehtari/ROS-Examples, pin: abc123}\n'
+        f'    rabe_hesketh: {{kind: url, name: https://www.stata-press.com/data/mlmus4/mlmus4.zip, pin: {ZEROS}}}\n'
+        '  D:\n'
+        f'    arriero_2017_dryad: {{kind: url, name: https://datadryad.org/api/v2/files/51526/download, pin: {ZEROS}}}\n'
+        f'    leder_2020_osf: {{kind: url, name: https://osf.io/download/znb6c/, pin: {ZEROS}}}\n'
+    )
+    (survey / 'deposit_files.csv').write_text(
+        'label,link\n,osf.io/unlabelled\narriero_2017_dryad,10.5061/dryad.110pk\n'
+        'leder_2020_osf,osf.io/txb9c\n'
+    )
 
 
 def mergeShard(merger: Merger, shard: Path) -> Merger:

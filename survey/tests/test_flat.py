@@ -9,7 +9,15 @@ import pandas as pd
 import pytest
 import yaml
 from columns import COLUMN_STATISTICS
-from conftest import asOrdered, measuredColumns, parsed, readRows, scratchMerger, servePlots
+from conftest import (
+    asOrdered,
+    measuredColumns,
+    parsed,
+    readRows,
+    scratchMerger,
+    servePlots,
+    writeLinkedSources,
+)
 from flat import COLUMN_TYPES, FlatPass, ResponseCheck, ResponseRecheck, VerdictCheck
 from measure import Measurer
 from mixedbench.contract import columnType
@@ -455,7 +463,6 @@ def test_draw_allocates_fifty_sample_tables_over_four_strata_in_two_batches(tmp_
     assert path.read_text() == drawn
 
 
-ZEROS = '0' * 64
 # one drawn table per kind of source; a row's columns as the verdict check's sample orders them
 DRAWN = [
     ('pens', 'herds', 'R', 'data/herds.rda', 'read/unflagged', '1', 'first reading',
@@ -475,27 +482,11 @@ DRAWN = [
 
 
 def handoffPass(tmp_path: Path) -> FlatPass:
-    """A drawn sample with one table per kind of source, a CRAN package, a git tree, a url
-    archive and two Tier D deposits, each with its help page."""
+    """A drawn sample with one table per kind of source, each with its help page."""
     registry, survey = tmp_path / 'registry', tmp_path / 'survey'
     registry.mkdir()
     survey.mkdir()
-    (registry / 'sources.yaml').write_text(
-        'seed: 0\n'
-        'tiers:\n'
-        '  R:\n'
-        "    pens: {kind: cran, pin: '1.0'}\n"
-        '  T:\n'
-        '    ros: {kind: git, name: https://github.com/avehtari/ROS-Examples, pin: abc123}\n'
-        f'    rabe_hesketh: {{kind: url, name: https://www.stata-press.com/data/mlmus4/mlmus4.zip, pin: {ZEROS}}}\n'
-        '  D:\n'
-        f'    arriero_2017_dryad: {{kind: url, name: https://datadryad.org/api/v2/files/51526/download, pin: {ZEROS}}}\n'
-        f'    leder_2020_osf: {{kind: url, name: https://osf.io/download/znb6c/, pin: {ZEROS}}}\n'
-    )
-    (survey / 'deposit_files.csv').write_text(
-        'label,link\n,osf.io/unlabelled\narriero_2017_dryad,10.5061/dryad.110pk\n'
-        'leder_2020_osf,osf.io/txb9c\n'
-    )
+    writeLinkedSources(registry, survey)
     writeCsv(pd.DataFrame(DRAWN, columns=VerdictCheck.COLUMNS), survey / 'flat_sample.csv')
     pages = {
         'pens/herds.txt': '\\name{herds}\n\\title{Weights of pigs by herd}\n',

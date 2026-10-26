@@ -6,6 +6,7 @@ from collections import Counter
 from pathlib import Path
 
 import pytest
+from conftest import writeLinkedSources
 from schema import REGISTRY
 from verify import SAMPLE_COLUMNS, Links, Verifier, _allocate, renderHelpPage
 
@@ -204,29 +205,9 @@ def test_handoff_names_page_and_download_urls_and_no_local_path(tmp_path):
     assert 'cache' not in text
 
 
-ZEROS = '0' * 64
-
-
 @pytest.fixture
 def links(tmp_path: Path) -> Links:
-    """One source per kind: a CRAN package, a git tree, a url archive and two Tier D deposits,
-    one linked by a DOI."""
-    (tmp_path / 'sources.yaml').write_text(
-        'seed: 0\n'
-        'tiers:\n'
-        '  R:\n'
-        "    pens: {kind: cran, pin: '1.0'}\n"
-        '  T:\n'
-        '    ros: {kind: git, name: https://github.com/avehtari/ROS-Examples, pin: abc123}\n'
-        f'    rabe_hesketh: {{kind: url, name: https://www.stata-press.com/data/mlmus4/mlmus4.zip, pin: {ZEROS}}}\n'
-        '  D:\n'
-        f'    arriero_2017_dryad: {{kind: url, name: https://datadryad.org/api/v2/files/51526/download, pin: {ZEROS}}}\n'
-        f'    leder_2020_osf: {{kind: url, name: https://osf.io/download/znb6c/, pin: {ZEROS}}}\n'
-    )
-    (tmp_path / 'deposit_files.csv').write_text(
-        'label,link\n,osf.io/unlabelled\narriero_2017_dryad,10.5061/dryad.110pk\n'
-        'leder_2020_osf,osf.io/txb9c\n'
-    )
+    writeLinkedSources(tmp_path, tmp_path)
     return Links(tmp_path, tmp_path)
 
 
