@@ -79,15 +79,16 @@ the registry. Grilled on 2026-10-24 ([#72](https://github.com/adkipnis/mixedbenc
 
 - Decision: two files beside the registry, written by script from the survey's files (the
   candidates' screen, the exclusions' reason, the verdict shard), never by hand: `flat.csv`, one
-  row per flat table with its sizes, `d_all`, `condition_all`, its verdict and evidence; and
+  row per flat table with the basis and evidence that put it in, its sizes, `d_all` and
+  `condition_all`; and
   `flat_columns.csv`, the per-column statistics with `columns.csv`'s columns less the ones a
   model binds (`model_index`, `in_model`, `level`, `constant_within`).
 - Rejected: a `sample` column in `columns.csv` and `dimensions.csv`, which would make every
   reader of the registry filter on every read, the registry being defined over grouped tables.
 - Decision: every statistic both samples share keeps its axis in `quantiles.yaml` under `axes`
   and gains a `flat` split beside `pooled`, the tiers and `without agridat`; `SUMMARY.md`'s
-  tables gain a `flat` row. For the size axes, `n_obs` is every row of a flat table and
-  `n_design_columns` is `d_all`.
+  tables gain a `flat` row. The size axes they share are `n_obs`, every row of a flat table,
+  and `d_all`.
 - Why: one home per statistic, and the comparison is visible in the summary without a notebook;
   MetaBeta's contract test pins the file's top-level keys, which stay as they are.
 - Decision: the comparison for the paper is an experiment, `experiments/flat/`, committed with
