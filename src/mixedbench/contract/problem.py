@@ -521,6 +521,14 @@ def codeCovariate(values: pd.Series) -> dict[str, pd.Series]:
     return contrasts
 
 
+def _orderLevels(values: pd.Series) -> tuple:
+    """Returns the loaded level order.
+    A plain column orders as the loader orders a declared one."""
+    if not isinstance(values.dtype, pd.CategoricalDtype):
+        values = values.astype('category')
+    return tuple(values.cat.remove_unused_categories().cat.categories)
+
+
 def dropConstant(coded: Coded) -> tuple[Coded, tuple[str, ...]]:
     """Drops the coded columns with one value over the kept rows and lists them,
     as lme4 drops the columns of a rank-deficient model matrix."""
@@ -535,14 +543,6 @@ def dropConstant(coded: Coded) -> tuple[Coded, tuple[str, ...]]:
             else:
                 kept[term][name] = column
     return kept, tuple(dropped)
-
-
-def _orderLevels(values: pd.Series) -> tuple:
-    """Returns the loaded level order.
-    A plain column orders as the loader orders a declared one."""
-    if not isinstance(values.dtype, pd.CategoricalDtype):
-        values = values.astype('category')
-    return tuple(values.cat.remove_unused_categories().cat.categories)
 
 
 def withComposites(table: pd.DataFrame, factors: tuple[str, ...]) -> pd.DataFrame:
