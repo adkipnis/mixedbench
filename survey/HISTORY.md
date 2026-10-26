@@ -584,6 +584,24 @@ reading's open disagreements, four to eight per tier.
   value, 5 of the documented design and 20 of the design over every column, since a constant
   column no longer makes a design rank-deficient. No other measured column moved.
 
+## Five-level recheck (#127, 2026-10-26)
+
+- A second reading checked the registry's `low` grouping factors of at most ten groups against
+  step 4 of `prompts/read.md` (Harrison et al. 2018, Bolker et al. 2009): first the 21 objects
+  with a factor under five groups, then the 49 with five to ten, with a web search for documented
+  fits. Every change was checked by hand.
+- A factor the documentation fits as random stays, and its notes say where. A kept factor of five
+  or more levels whose sampling no source establishes says so in its notes. A factor that fails
+  becomes a covariate.
+- 26 tables lost their last grouping factor and are re-filed `no grouping structure`, which takes
+  32 rows out of the registry (724 to 692) and out of suite 1.1's candidates (628 to 596).
+- weiss.lattice, cane, tai.potato, vargas.wheat2.yield, coop and HDI keep a grouping factor but
+  turned another into a covariate, so their formulas and contract hashes moved. No other hash
+  moved. `fits.py` refitted five of them, since cane's response type is not fitted.
+- The re-filed tables entered the flat sample. The 13 the screen flagged carry a `flat` verdict on
+  their exclusion detail, and each table's response is the one its registry row named (model 1's
+  where it had several).
+
 ## Reading rulings (m3#22 to #15)
 
 The rulings [`prompts/read.md`](prompts/read.md) does not carry, from the agents' `RULE GAP` notes and Alex's checks, each with an example
