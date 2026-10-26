@@ -20,7 +20,7 @@ from conftest import (
 )
 from flat import COLUMN_TYPES, FlatPass, ResponseCheck, ResponseRecheck, VerdictCheck
 from measure import Measurer
-from mixedbench.contract import columnType
+from mixedbench.contract import columnKind
 from mixedbench.datasets import Loader
 from mixedbench.registry.row import writeCsv
 from schema import CANDIDATE_COLUMNS, EXCLUDED, FLAT_RESPONSES, FLAT_VERDICTS
@@ -224,7 +224,7 @@ def test_the_type_counts_name_every_kind_the_typing_rule_gives():
         'categorical': ['a', 'b', 'c'],
         'ordered': pd.Categorical(['a', 'b', 'c'], ordered=True),
     }
-    kinds = [columnType(pd.Series(values))[0] for values in columns.values()]
+    kinds = [columnKind(pd.Series(values))[0] for values in columns.values()]
     assert kinds == list(COLUMN_TYPES)
 
 

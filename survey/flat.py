@@ -37,7 +37,7 @@ from pathlib import Path
 import pandas as pd
 from columns import COLUMN_STATISTICS, measureMaxAbsRho, measureShape
 from dimensions import computeConditionIndex, countWidth
-from mixedbench.contract import codeCovariate, columnType, dropConstant
+from mixedbench.contract import codeCovariate, columnKind, dropConstant
 from mixedbench.datasets import Loader
 from mixedbench.registry.row import readCsv, splitList, writeCsv
 from pull import Puller
@@ -71,7 +71,7 @@ NOT_FLAT = 'NOT FLAT:'
 UNSCREENED = {'words': '', 'id_columns': '', 'integer_columns': '', 'flagged': 'no'}
 # flat_screen.csv: one row per frame table; a list of words or columns is `;`-separated
 SCREEN_COLUMNS = ('source', 'object', 'tier', 'stratum', *UNSCREENED)
-COLUMN_TYPES = ('continuous', 'binary', 'categorical', 'ordered')  # the kinds `columnType` gives
+COLUMN_TYPES = ('continuous', 'binary', 'categorical', 'ordered')  # the kinds `columnKind` gives
 # flat.csv: one row per table of the flat sample, how it got in, its response, its sizes and
 # its design
 FLAT_COLUMNS = (
@@ -471,7 +471,7 @@ class FlatPass:
     def measureTable(self, table: pd.DataFrame) -> tuple[dict, list[dict]]:
         """A flat table's sizes and design statistics, and each column's statistics by the
         functions that measure the registry's."""
-        column_types = {c: columnType(table[c]) for c in table.columns}
+        column_types = {c: columnKind(table[c]) for c in table.columns}
         rho = measureMaxAbsRho(table, column_types)
         columns, designed = [], []
         for column, (kind, levels) in column_types.items():
@@ -522,7 +522,7 @@ class FlatPass:
         kept, _ = dropConstant(coded)
         design = {'Intercept': pd.Series(1.0, index=complete.index)}
         for column, columns in kept.items():
-            kind, _ = columnType(complete[column])
+            kind, _ = columnKind(complete[column])
             if kind == 'continuous' and columns:  # empty when dropped
                 raw = columns[column]
                 columns = {column: (raw - raw.mean()) / raw.std()}

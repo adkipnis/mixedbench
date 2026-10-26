@@ -30,7 +30,7 @@ import groups
 import pairs
 import pandas as pd
 from mixedbench import registry
-from mixedbench.contract import columnType, withComposites
+from mixedbench.contract import columnKind, withComposites
 from mixedbench.datasets import Loader
 from mixedbench.registry.row import Row, writeCsv
 from schema import IDENTITY
@@ -51,7 +51,7 @@ class Measurer:
         self.identity = {k: getattr(row, k) for k in IDENTITY}
         taken = {row.response, row.trials, *self.grouping_factors, *row.ignore}
         self.column_names = [c for c in table.columns if c not in taken]
-        self.column_types = {c: columnType(self.table[c]) for c in self.column_names}
+        self.column_types = {c: columnKind(self.table[c]) for c in self.column_names}
         self.group_level = self.findGroupLevel()
 
     def findGroupLevel(self) -> dict[str, list[str]]:

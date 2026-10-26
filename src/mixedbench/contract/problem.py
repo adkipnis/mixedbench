@@ -293,7 +293,7 @@ class _Builder:
         """Returns each covariate's kind, by the typing rule."""
         kinds = {}
         for column in self.row.covariates:
-            kinds[column], _ = columnType(self.table[column])
+            kinds[column], _ = columnKind(self.table[column])
         return kinds
 
     def _codeTerms(self) -> Coded:
@@ -486,7 +486,7 @@ class _Builder:
 # the survey uses these rules too, so its design widths and coded columns match the builds
 
 
-def columnType(values: pd.Series) -> tuple[str, int | str]: # TODO: rename to columnKind
+def columnKind(values: pd.Series) -> tuple[str, int | str]:
     """Returns a column's kind and optionally its level count k."""
     distinct = values.dropna().nunique()
     dtype = values.dtype
@@ -507,7 +507,7 @@ def codeCovariate(values: pd.Series) -> dict[str, pd.Series]:
     - Any other becomes treatment contrasts `<column>[<level>]`.
     The first loaded level is used as the reference."""
     column = values.name
-    kind, _ = columnType(values)
+    kind, _ = columnKind(values)
     if kind == 'continuous':
         return {column: values.astype(float)}
     loaded = _orderLevels(values)
