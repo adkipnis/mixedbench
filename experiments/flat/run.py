@@ -7,9 +7,8 @@ Comparison axes, one number per table each:
 - column statistics: each statistic's median over the table's columns
 
 The sets are compared by the two-sided Mann–Whitney U test, which asks whether a table of one set
-tends to lie above a table of the other, with the rank-biserial correlation as its effect size.
-We test against two sets of flat tables: (1) all, and (2) only tables with a documented response,
-since a table without one may count its outcome among its columns.
+tends to lie above a table of the other. The rank-biserial correlation quantifies its effect size.
+We test against two sets of flat tables: (1) all, and (2) only tables with a documented response.
 
 pipeline:
 ---------
