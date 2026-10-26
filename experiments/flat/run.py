@@ -64,6 +64,12 @@ def summarizeRegistry(dir: Path) -> pd.DataFrame:
     return summarizeTables(tables, columns)
 
 
+def _readNumbers(path: Path, columns: tuple[str, ...]) -> pd.DataFrame:
+    table = readCsv(path)
+    converted = {c: pd.to_numeric(table[c].replace('', np.nan)) for c in columns}
+    return table.assign(**converted)
+
+
 def summarizeFlat(dir: Path) -> pd.DataFrame:
     """Per flat table: its response, n_obs and condition_all as flat.csv holds them, the rest over
     its columns in flat_columns.csv but the id columns."""
@@ -73,12 +79,6 @@ def summarizeFlat(dir: Path) -> pd.DataFrame:
     summary = summarizeTables(tables, columns)
     summary.insert(3, 'response', tables['response'])
     return summary
-
-
-def _readNumbers(path: Path, columns: tuple[str, ...]) -> pd.DataFrame:
-    table = readCsv(path)
-    converted = {c: pd.to_numeric(table[c].replace('', np.nan)) for c in columns}
-    return table.assign(**converted)
 
 
 def summarizeTables(tables: pd.DataFrame, columns: pd.DataFrame) -> pd.DataFrame:
