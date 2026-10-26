@@ -1,4 +1,4 @@
-"""run.py's U test against scipy's, whose values are hard-coded, since scipy is no dependency.
+"""Checks run.py's U test against scipy, whose values are hard-coded since scipy is no dependency.
 Run by hand from the repo root:
 
     uv run pytest experiments/flat/test_run.py
