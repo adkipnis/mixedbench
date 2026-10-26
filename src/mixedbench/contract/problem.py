@@ -486,10 +486,8 @@ class _Builder:
 # the survey uses these rules too, so its design widths and coded columns match the builds
 
 
-def columnType(values: pd.Series) -> tuple[str, int | str]:
-    """Returns a column's kind and its level count k, blank if continuous.
-    The loader has applied the row's declared types, so the dtype decides.
-    The first rule that matches wins."""
+def columnType(values: pd.Series) -> tuple[str, int | str]: # TODO: rename to columnKind
+    """Returns a column's kind and optionally its level count k."""
     distinct = values.dropna().nunique()
     dtype = values.dtype
     categorical = isinstance(dtype, pd.CategoricalDtype)
@@ -503,11 +501,11 @@ def columnType(values: pd.Series) -> tuple[str, int | str]:
 
 
 def codeCovariate(values: pd.Series) -> dict[str, pd.Series]:
-    """Returns a covariate's design columns, by its kind.
-    A continuous covariate stays raw.
-    A binary one becomes 0/1.
-    Any other becomes treatment contrasts `<column>[<level>]`.
-    The first loaded level is the reference."""
+    """Returns a covariate's design columns:
+    - A continuous covariate stays raw.
+    - A binary one becomes 0/1.
+    - Any other becomes treatment contrasts `<column>[<level>]`.
+    The first loaded level is used as the reference."""
     column = values.name
     kind, _ = columnType(values)
     if kind == 'continuous':
