@@ -26,14 +26,14 @@ the registry. Grilled on 2026-10-24 ([#72](https://github.com/adkipnis/mixedbenc
   pre-screen passed and a reading agent filed, and the tables the pre-screen stopped at `no
   repeated column` (no column with a repeated value that could index groups) with at least
   three rows and two columns. Objects stopped at `one column` or `under 3 rows` stay out.
-- Why the survey's own frame: the same sources, pins, loader, licence terms and reading brief
+- Why the survey's own frame: the same sources, pins, loader, license terms and reading brief
   as the registry's rows, so the only difference between a flat table and a registry row is
   that no documented model has a random effect; nothing is gathered.
 - Rejected: an outside repository (OpenML, UCI, a curated list such as TabArena's) minus its
   overlap with the registry. Those tables were curated for supervised learning, one target
   column and thousands of rows, so a difference to the registry would mix flat against grouped
   with benchmark against statistics source; and the frame would need its own reading and
-  licence pass. Open repositories are in the frame already, as one tier.
+  license pass. Open repositories are in the frame already, as one tier.
 - Rejected: the pre-screened stratum alone. Its tables have no categorical column by
   construction (every column is constant or all-unique), so the sample's type mix would be an
   artifact of the pre-screen.
@@ -89,7 +89,7 @@ the registry. Grilled on 2026-10-24 ([#72](https://github.com/adkipnis/mixedbenc
   tables gain a `flat` row. For the size axes, `n_obs` is every row of a flat table and
   `n_design_columns` is `d_all`.
 - Why: one home per statistic, and the comparison is visible in the summary without a notebook;
-  metabeta's contract test pins the file's top-level keys, which stay as they are.
+  MetaBeta's contract test pins the file's top-level keys, which stay as they are.
 - Decision: the comparison for the paper is an experiment, `experiments/flat/`, committed with
   its outputs. Its unit is the table, one value per statistic (its median over columns, its type
   shares), with a two-sample test and an effect size per statistic; `SUMMARY.md` keeps the
