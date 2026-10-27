@@ -603,6 +603,14 @@ reading's open disagreements, four to eight per tier.
   by hand: nine became `none`, since their documentation fits no model or a joint one, and
   sesame's became `watched`, its first fit.
 
+## Response marginals (#128, 2026-10-27)
+
+- `measure.py` writes a fifth file, `registry/responses.csv`: a row per registry row with its
+  response measured by the kind its type gives (ADR 0006, amended 2026-10-27).
+- `quantiles.yaml` gained the `response_` axes after the fit statistics, and `SUMMARY.md` their
+  table. `dimensions.csv`, `columns.csv`, `column_factors.csv`, `factor_pairs.csv` and
+  `fits.csv` are unchanged byte for byte, and no other axis moved.
+
 ## Reading rulings (m3#22 to #15)
 
 The rulings [`prompts/read.md`](prompts/read.md) does not carry, from the agents' `RULE GAP` notes and Alex's checks, each with an example
