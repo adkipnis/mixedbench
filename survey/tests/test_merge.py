@@ -15,7 +15,7 @@ from sources import readFrame
 
 RENAMED_TYPES = 'area=categorical;farm=categorical;type=categorical;diet=categorical'
 SURVEY = Path(__file__).resolve().parents[1]
-MEASURED = ('dimensions.csv', 'columns.csv', 'column_factors.csv', 'factor_pairs.csv')
+MEASURED = ('dimensions.csv', 'columns.csv', 'column_factors.csv', 'factor_pairs.csv', 'responses.csv')  # fmt: skip
 
 
 def test_passing_registry_shard_merges_with_tier_and_reader_filled_in(merger):
@@ -320,7 +320,7 @@ def test_the_census_lands_in_the_registry_and_the_bookkeeping_in_the_survey(spli
     mergeShard(merger, FIXTURES / 'registry_cattle.csv')  # flags the pair with herds
     registryFiles = sorted(p.name for p in merger.registry.iterdir() if p.is_file())
     surveyFiles = sorted(p.name for p in merger.survey.iterdir() if p.is_file())
-    assert registryFiles == ['SUMMARY.md', 'column_factors.csv', 'columns.csv', 'dimensions.csv', 'excluded.csv', 'factor_pairs.csv', 'fits.csv', 'flat.csv', 'flat_columns.csv', 'manifest.csv', 'quantiles.yaml', 'registry.csv', 'sources.yaml']  # fmt: skip
+    assert registryFiles == ['SUMMARY.md', 'column_factors.csv', 'columns.csv', 'dimensions.csv', 'excluded.csv', 'factor_pairs.csv', 'fits.csv', 'flat.csv', 'flat_columns.csv', 'manifest.csv', 'quantiles.yaml', 'registry.csv', 'responses.csv', 'sources.yaml']  # fmt: skip
     assert surveyFiles == ['dropped.csv', 'duplicates.csv', 'flat_agreement.csv', 'flat_response_agreement.csv', 'flat_response_recheck_agreement.csv', 'flat_responses.csv', 'flat_screen.csv', 'flat_verdicts.csv']  # fmt: skip
 
 
@@ -403,6 +403,19 @@ def test_a_merge_leaves_the_flat_files_as_the_last_flat_pass_wrote_them(merger):
     mergeShard(merger, FIXTURES / 'registry_herds.csv')
     for name, text in written.items():
         assert (merger.registry / name).read_bytes() == text
+
+
+def test_every_registry_row_has_one_measured_response(merger):
+    """responses.csv is keyed like dimensions.csv, one row per registry row and its response."""
+    mergeShard(merger, FIXTURES / 'registry_herds.csv')
+    responses = readRows(merger.registry / 'responses.csv')
+    keys = [
+        (r['source'], r['object'], r['model_index'], r['tier'], r['response']) for r in responses
+    ]
+    assert keys == [
+        ('herds', 'herds.csv', '1', 'D', 'weight'),
+        ('herds', 'herds.csv', '2', 'D', 'cases'),
+    ]
 
 
 def test_the_measure_script_writes_what_the_merge_writes(merger):
