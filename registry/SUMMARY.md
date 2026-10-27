@@ -185,7 +185,7 @@ Levels of the categorical covariates:
 | tier D | 51 | 3 | 3 | 3 | 4 | 47 | 76 | 117 |  |
 | tier O | 35 | 2 | 2 | 3 | 5 | 26 | 73 | 717 |  |
 | without agridat | 321 | 2 | 2 | 2 | 4 | 10 | 17 | 717 |  |
-| flat | 1055 | 0 | 1 | 3 | 11 | 107 | 307 | 59548 |  |
+| flat | 1056 | 0 | 1 | 3 | 11 | 107 | 307 | 59548 |  |
 
 | K | n | share |
 |---|---|---|
@@ -356,24 +356,24 @@ its table above with the flat sample's row.
 **Corpus.** 722 flat tables; per stratum read 569, prescreened 153; per tier R 373, E 142, T 140, D 58, O 9.
 The screen flagged 289 of the frame's 674 read tables for a second reading and the response reading found 35 not flat; verdicts flat 218, wide 151, hidden grouping 43.
 The hand sample of 50 tables stood at 0.92.
-362 of the 722 tables name a response; the response check of 25 tables stood at 0.84, its recheck of 15 `none` tables at 1.0.
+353 of the 722 tables name a response; the response check of 25 tables stood at 0.84, its recheck of 15 `none` tables at 1.0.
 
 | column type | n | share |
 |---|---|---|
-| continuous | 36800 | 85% |
-| binary | 5459 | 13% |
-| categorical | 917 | 2% |
+| continuous | 36809 | 85% |
+| binary | 5458 | 13% |
+| categorical | 918 | 2% |
 | ordered | 138 | 0% |
 
 | statistic | n | min | p5 | p10 | p50 | p90 | p95 | max |
 |---|---|---|---|---|---|---|---|---|
-| condition_all | 698 | 1 | 1 | 1.1115 | 4.821 | inf | inf | inf |
-| skewness | 36020 | -11.1669 | -0.5451 | -0.0284 | 1.4166 | 3.5352 | 3.9586 | 244.6948 |
-| excess_kurtosis | 35985 | -5.6896 | -1.8923 | -1.6617 | 1.1862 | 12.0888 | 15.7992 | 59915.5349 |
-| outlier_share | 36020 | 0 | 0 | 0 | 0 | 0.02 | 0.0318 | 0.0565 |
-| zero_share | 36738 | 0 | 0 | 0 | 0.7032 | 0.9152 | 0.9364 | 1 |
-| min_share | 36876 | 0 | 0.0098 | 0.0185 | 0.7314 | 0.9187 | 0.9399 | 1 |
-| max_share | 36876 | 0 | 0.0035 | 0.0098 | 0.053 | 0.371 | 0.4452 | 1 |
-| unique_share | 43246 | 0 | 0.0063 | 0.0071 | 0.0106 | 0.6863 | 0.8571 | 1 |
+| condition_all | 698 | 1 | 1 | 1.1115 | 4.8395 | inf | inf | inf |
+| skewness | 36029 | -11.1669 | -0.5451 | -0.0285 | 1.4166 | 3.5352 | 3.9586 | 244.6948 |
+| excess_kurtosis | 35994 | -5.6896 | -1.8923 | -1.6617 | 1.1862 | 12.0888 | 15.7992 | 59915.5349 |
+| outlier_share | 36029 | 0 | 0 | 0 | 0 | 0.02 | 0.0318 | 0.0565 |
+| zero_share | 36747 | 0 | 0 | 0 | 0.7032 | 0.9152 | 0.9364 | 1 |
+| min_share | 36885 | 0 | 0.0098 | 0.0185 | 0.7314 | 0.9187 | 0.9399 | 1 |
+| max_share | 36885 | 0 | 0.0035 | 0.0098 | 0.053 | 0.371 | 0.4452 | 1 |
+| unique_share | 43255 | 0 | 0.0063 | 0.0071 | 0.0106 | 0.6863 | 0.8585 | 1 |
 | rare_level_share | 6508 | 0 | 0.0022 | 0.01 | 0.1343 | 0.435 | 0.4839 | 1 |
-| max_abs_rho | 41530 | 0 | 0.2635 | 0.3321 | 0.9059 | 0.9956 | 0.9999 | 1 |
+| max_abs_rho | 41538 | 0 | 0.2635 | 0.3319 | 0.9059 | 0.9956 | 0.9999 | 1 |
