@@ -26,6 +26,11 @@ FIT_AXES = (
     'r2_marginal', 'r2_conditional', 'q', 'sigma2', 'icc', 'icc_adjusted',
 )  # fmt: skip
 FLAT_AXES = ('n_obs', 'd_all', 'condition_all', 'K', *COLUMN_AXES)  # the axes both samples share
+RESPONSE_AXES = (
+    'response_K', 'response_skewness', 'response_excess_kurtosis', 'response_outlier_share',
+    'response_zero_share', 'response_min_share', 'response_max_share', 'response_unique_share',
+    'response_rare_level_share', 'response_max_abs_rho',
+)  # fmt: skip
 
 
 def test_quantiles_carry_every_axis_pooled_per_tier_and_without_agridat(merger):
@@ -36,7 +41,7 @@ def test_quantiles_carry_every_axis_pooled_per_tier_and_without_agridat(merger):
     quantiles = yaml.safe_load((merger.registry / 'quantiles.yaml').read_text())
     assert (quantiles['n_rows'], quantiles['n_objects'], quantiles['n_factor_rows']) == (2, 1, 3)
     axes = quantiles['axes']
-    assert set(axes) == set(FACTOR_AXES) | set(ROW_AXES) | {'K'} | set(QUIRK_AXES) | set(FIT_AXES)
+    assert set(axes) == set(FACTOR_AXES) | set(ROW_AXES) | {'K'} | set(QUIRK_AXES) | set(FIT_AXES) | set(RESPONSE_AXES)  # fmt: skip
     for name, axis in axes.items():
         assert list(axis)[:3] == ['pooled', 'tiers', 'without_agridat']
         assert set(axis['pooled']) == set(QUANTILE_KEYS)
@@ -77,7 +82,8 @@ def test_quirk_statistics_follow_the_released_axes_counted_once_per_their_key(me
     quantiles = yaml.safe_load((merger.registry / 'quantiles.yaml').read_text())
     assert list(quantiles) == ['n_rows', 'n_objects', 'n_factor_rows', 'axes', 'imbalance', 'shares', 'k_distribution', 'implied_columns']  # fmt: skip
     axes = quantiles['axes']
-    assert tuple(axes)[-len(QUIRK_AXES + FIT_AXES) :] == QUIRK_AXES + FIT_AXES
+    released = QUIRK_AXES + FIT_AXES + RESPONSE_AXES
+    assert tuple(axes)[-len(released) :] == released
     counts = {axis: axes[axis]['pooled']['n'] for axis in QUIRK_AXES}
     assert counts == {
         'skewness': 2, 'excess_kurtosis': 2, 'outlier_share': 2, 'zero_share': 3, 'min_share': 3,
@@ -86,6 +92,22 @@ def test_quirk_statistics_follow_the_released_axes_counted_once_per_their_key(me
         'within_sd_cv': 7, 'empty_cell_share': 0, 'condition_doc': 2, 'condition_all': 2,
     }  # fmt: skip
     assert axes['between_group_share']['pooled']['min'] == -0.2986  # negatives kept
+
+
+def test_response_statistics_count_once_per_registry_row(merger):
+    """A response's statistics take axes of their own, beside the covariates' of the same name:
+    model 1's weight and model 2's share of cases, both continuous, so neither has levels."""
+    mergeShard(merger, FIXTURES / 'registry_herds.csv')
+    axes = yaml.safe_load((merger.registry / 'quantiles.yaml').read_text())['axes']
+    counts = {axis: axes[axis]['pooled']['n'] for axis in RESPONSE_AXES}
+    assert counts == {
+        'response_K': 0, 'response_skewness': 2, 'response_excess_kurtosis': 2,
+        'response_outlier_share': 2, 'response_zero_share': 2, 'response_min_share': 2,
+        'response_max_share': 2, 'response_unique_share': 2, 'response_rare_level_share': 0,
+        'response_max_abs_rho': 2,
+    }  # fmt: skip
+    skewness = axes['response_skewness']['pooled']
+    assert (skewness['min'], skewness['max']) == (0.5207, 0.6362)
 
 
 def test_factor_pairs_share_their_relation_and_the_side_of_their_superior(merger):
@@ -178,6 +200,7 @@ def test_summary_shows_one_pooled_table_per_measured_file(merger):
         '## Quirk statistics per column\n': COLUMN_AXES,
         '## Quirk statistics per column and grouping factor\n': COLUMN_FACTOR_AXES,
         '## Quirk statistics per factor pair\n': FACTOR_PAIR_AXES,
+        '## Quirk statistics per response\n': RESPONSE_AXES,
     }
     for heading, axes in statistics.items():
         assert [row[0] for row in tableRows(summary, heading)] == list(axes)
