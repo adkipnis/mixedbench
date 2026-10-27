@@ -15,6 +15,10 @@ A benchmark of posterior approximation and prediction for real grouped data.
 - A fixed set of rules turns each dataset into an inference problem ready to fit. Results of different methods are comparable.
 - From release 1.1, suites add reference posteriors to score against.
 
+## Overview
+
+<img src="https://raw.githubusercontent.com/adkipnis/mixedbench/main/assets/pipeline.png" width="100%" alt="We searched several publicly available sources for grouped tabular data. Duplicates across sources were removed. The registry contains every dataset and their documented metadata. The contract transforms each dataset into an inference problem. MixedBench currently has two tracks: the posterior track compares a method's posterior with a documented converged NUTS posterior. The predictive track does a 5-fold CV on left out rows or groups.">
+
 ## Install
 
 ```
