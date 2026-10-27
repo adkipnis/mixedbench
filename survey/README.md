@@ -63,7 +63,7 @@ uv run python survey/mirror.py --tag mirror-<n>
 | `flat.py`, `prompts/flat.md`, `prompts/response.md` | the flat pass, the second reading's brief and the response reading's brief |
 | `fits_preparation.csv` | the rows a source fitted where they are not the whole table: a subset or a frequency weight, read by `fits.py` |
 | `schema.py`, `sources.py`, `help.py`, `summarize.py` | the survey's file contract, the frame, the help pages, the summary |
-| `dimensions.py`, `columns.py`, `groups.py`, `pairs.py` | one module per measured file |
+| `dimensions.py`, `columns.py`, `groups.py`, `pairs.py`, `responses.py` | one module per measured file |
 | `SUMMARY.template.md` | the digit-free template of `registry/SUMMARY.md` |
 | `prompts/read.md` | the reading agent's brief |
 | `shards/<table>_<label>.csv` | one shard per reading run; `table` ∈ `registry`, `excluded`, `duplicates`, `dropped`, `flat` (the verdicts), `response` (the flat tables' responses) |
