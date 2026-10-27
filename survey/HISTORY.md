@@ -599,8 +599,9 @@ reading's open disagreements, four to eight per tier.
   turned another into a covariate, so their formulas and contract hashes moved. No other hash
   moved. `fits.py` refitted five of them, since cane's response type is not fitted.
 - The re-filed tables entered the flat sample. The 13 the screen flagged carry a `flat` verdict on
-  their exclusion detail, and each table's response is the one its registry row named (model 1's
-  where it had several).
+  their exclusion detail. Their responses, first the ones their registry rows named, were checked
+  by hand: nine became `none`, since their documentation fits no model or a joint one, and
+  sesame's became `watched`, its first fit.
 
 ## Reading rulings (m3#22 to #15)
 
