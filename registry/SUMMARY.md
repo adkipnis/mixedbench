@@ -285,6 +285,24 @@ which factor of a nested pair is the superior, the one listed first, second or n
 | factor_a | 100 | 83% |
 | factor_b | 20 | 17% |
 
+## Quirk statistics per response
+
+Every registry row's response, by the statistics its type defines: a binomial one as its
+successes' share of the trials, an ordinal one by its levels.
+
+| statistic | n | min | p5 | p10 | p50 | p90 | p95 | max |
+|---|---|---|---|---|---|---|---|---|
+| response_K | 179 | 2 | 2 | 2 | 2 | 7 | 8 | 1495 |
+| response_skewness | 513 | -4.9838 | -0.7826 | -0.5537 | 0.3278 | 2.972 | 4.2001 | 24.8707 |
+| response_excess_kurtosis | 513 | -1.9502 | -1.1626 | -0.9208 | 0.3242 | 11.2133 | 22.775 | 836.648 |
+| response_outlier_share | 513 | 0 | 0 | 0 | 0 | 0.01 | 0.0143 | 0.0312 |
+| response_zero_share | 552 | 0 | 0 | 0 | 0 | 0.1948 | 0.4549 | 0.8942 |
+| response_min_share | 561 | 0 | 0.0002 | 0.0004 | 0.0125 | 0.2604 | 0.4865 | 0.8942 |
+| response_max_share | 561 | 0 | 0.0001 | 0.0004 | 0.0063 | 0.1215 | 0.2675 | 0.7792 |
+| response_unique_share | 692 | 0 | 0.0003 | 0.001 | 0.1525 | 0.95 | 1 | 1 |
+| response_rare_level_share | 179 | 0.0002 | 0.0021 | 0.014 | 0.2208 | 0.4465 | 0.4664 | 0.5 |
+| response_max_abs_rho | 591 | 0 | 0.0437 | 0.0835 | 0.3494 | 0.8165 | 0.9225 | 1 |
+
 ## Fits of the documented models
 
 Every registry row with a continuous, binary or count response, its documented model fitted as
