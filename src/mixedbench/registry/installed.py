@@ -31,6 +31,7 @@ RegistryFile = Literal[
     'column_factors.csv',
     'factor_pairs.csv',
     'fits.csv',
+    'responses.csv',
     'flat.csv',
     'flat_columns.csv',
     'quantiles.yaml',
