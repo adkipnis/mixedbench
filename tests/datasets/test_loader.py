@@ -12,6 +12,7 @@ from __future__ import annotations
 import hashlib
 import io
 import tarfile
+import time
 import urllib.error
 import urllib.request
 import zipfile
@@ -383,13 +384,18 @@ def test_a_cran_or_url_archive_object_loads_its_file_from_the_extracted_tree(tmp
 # ==============================================================================================
 
 
-def test_fetch_waits_and_retries_after_a_429(monkeypatch):
-    """OSF answers 429 to a burst of downloads; the default fetch waits the `Retry-After`
-    seconds and tries again instead of failing the pull."""
-    answers = [
-        urllib.error.HTTPError('u', 429, 'Too Many Requests', {'Retry-After': '0'}, None),
-        io.BytesIO(b'content'),
-    ]
+@pytest.mark.parametrize(
+    'codes',
+    [
+        pytest.param([429], id='osf_answers_a_burst_with_429'),
+        pytest.param([522] * 4, id='cloudflare_answers_522_while_stata_press_times_out'),
+    ],
+)
+def test_fetch_waits_and_retries_after_a_429_or_a_server_error(monkeypatch, codes):
+    """The default fetch waits the `Retry-After` seconds, or ten, and tries again up to five
+    times instead of failing the pull."""
+    answers = [urllib.error.HTTPError('u', code, 'Error', {}, None) for code in codes]
+    answers.append(io.BytesIO(b'content'))
 
     def urlopen(req, timeout, context):
         answer = answers.pop(0)
@@ -397,8 +403,12 @@ def test_fetch_waits_and_retries_after_a_429(monkeypatch):
             raise answer
         return answer
 
+    def sleep(seconds):
+        pass
+
     monkeypatch.setattr(urllib.request, 'urlopen', urlopen)
-    assert fetch('https://osf.io/x/download') == b'content'
+    monkeypatch.setattr(time, 'sleep', sleep)
+    assert fetch('https://www.stata-press.com/data/r18/union.dta') == b'content'
 
 
 @pytest.mark.parametrize('code', [401, 403])
