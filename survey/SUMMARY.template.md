@@ -119,6 +119,13 @@ ${table_pair_relation}
 
 ${table_superior}
 
+## Quirk statistics per response
+
+Every registry row's response, by the statistics its type defines: a binomial one as its
+successes' share of the trials, an ordinal one by its levels.
+
+${table_response_statistics}
+
 ## Fits of the documented models
 
 Every registry row with a continuous, binary or count response, its documented model fitted as
