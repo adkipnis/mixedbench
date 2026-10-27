@@ -50,14 +50,16 @@ TLS.load_verify_locations(Path(__file__).parent / 'intermediates.pem')
 
 def fetch(url: str) -> bytes | None:
     req = urllib.request.Request(url, headers={'User-Agent': 'mixedbench'})
-    for attempt in range(3):
+    for attempt in range(5):
         try:
             with urllib.request.urlopen(req, timeout=120, context=TLS) as r:
                 return r.read()
         except urllib.error.HTTPError as e:
             if e.code in (401, 403, 404):
                 return None
-            if e.code != 429 or attempt == 2:
+            # a burst limit (429) or a server error passes, e.g. Cloudflare's 522 for a slow origin
+            passing = e.code == 429 or e.code >= 500
+            if not passing or attempt == 4:
                 raise
             time.sleep(int(e.headers.get('Retry-After', 10)))
 
