@@ -165,6 +165,20 @@ Measured over the rows with a measured response, since dosing rows are no observ
   - `empty_cell_share`: the share of the m_a × m_b group × group cells that hold no row, blank
     for a nested pair.
 
+## `responses.csv`
+
+- Key `source`, `object`, `model_index`, with `tier`, a row per registry row: its `response`,
+  its `response_type` and the response's marginal, written by the measurement pass.
+- The response is measured as the column kind its type gives: `continuous` and `count` as
+  loaded and `binomial` as its successes' share of the trials, all three as continuous columns,
+  `binary` and `categorical` as loaded, and `ordinal` as an ordered column, its levels in the
+  order the contract codes them.
+- `K`: the present levels of a binary, ordinal or categorical response, blank otherwise.
+- `missing_share`: the share of every loaded row without a response, dosing rows included. A
+  binomial row of zero trials has no share and counts as missing.
+- The quirk statistics as `columns.csv` defines them for that kind, over the response's
+  non-missing values. `max_abs_rho` is the largest |Spearman| with a column of `columns.csv` of
+  the same registry row.
 
 ## `fits.csv`
 
@@ -254,6 +268,9 @@ registry row's.
 - A quirk statistic is an axis named as its column, after `K`, and a fit statistic of
   `fits.csv` one after the quirk statistics. Each counts once per row of its file that defines
   it, a per-row fit statistic once per registry row.
+- A statistic of `responses.csv` is an axis named `response_` and its column, after the fit
+  statistics, once per registry row that defines it: `response_K` per binary, ordinal or
+  categorical response.
 - An axis the flat sample shares gains a `flat` block after `without_agridat`: `n_obs`, `d_all`
   and `condition_all` once per table of `flat.csv`, `K` once per categorical or ordered column
   of `flat_columns.csv`, and a quirk statistic once per column of it that defines it.
