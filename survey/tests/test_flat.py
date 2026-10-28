@@ -447,6 +447,20 @@ def test_the_pass_refuses_naming_every_sample_table_without_a_response(plots):
     assert readRows(plots.registry / 'flat.csv') == []
 
 
+def test_the_pass_refuses_naming_every_sample_table_whose_named_response_has_no_type(plots):
+    """A type arrives by shard, as the typing pass added them after the responses, so a named
+    response can lack one, which the measure cannot code. The pass then writes nothing."""
+    writeSurvey(plots, [
+        ('plots', 'plain.csv', 'pass', NO_GROUPING, 'one row per plot'),
+        ('plots', 'decided.csv', 'pass', NO_GROUPING, 'one row per plot'),
+    ])  # fmt: skip
+    responses = [('plots', 'plain.csv', 'response'), ('plots', 'decided.csv', 'response')]
+    writeResponses(plots, responses, types={'plain.csv': ('', '')})
+    with pytest.raises(ValueError, match='1 named responses without a type:\nplots plain.csv$'):
+        plots.measure()
+    assert readRows(plots.registry / 'flat.csv') == []
+
+
 # ---------------------------------------------------------------------------------
 # the hand sample: the sample drawn, a batch handed off, the share that stood
 # ---------------------------------------------------------------------------------
