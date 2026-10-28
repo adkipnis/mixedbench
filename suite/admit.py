@@ -142,6 +142,9 @@ REFUSED = {
     'rabe_hesketh/ecls_child.dta/1': (
         'joined_covariate: nbhoodcl comes from ecls_school.dta, merged by s4_id (#82)'
     ),
+    'liutu_2026_zenodo_3/Measurement_plots.xlsx/1': (
+        'recoded_covariate: a two-level peat thickness, the table nine measured classes (#151)'
+    ),
     # a vector autoregression, whose predictors are the series' lags, no columns of the table (#120)
     'pymc_examples/examples/data/gdp_data_hierarchical_clean.csv/1': (
         'lagged_predictors: a hierarchical VAR(2) of dl_gdp, dl_cons and dl_gfcf (#120)'
