@@ -286,7 +286,8 @@ def writeFlatBookkeeping(merger) -> None:
 def test_summary_closes_with_the_flat_samples_corpus_type_mix_and_statistics(merger):
     """The flat sample's section reads how the sample came to be from the survey's
     bookkeeping at merge time, then shows its type mix and the flat quantiles of the condition
-    index and the column statistics, whose tables above have no flat row."""
+    index, the column statistics and the response statistics, whose tables above have no flat
+    row."""
     copyFlatFiles(merger)
     writeFlatBookkeeping(merger)
     mergeShard(merger, FIXTURES / 'registry_herds.csv')
@@ -303,3 +304,6 @@ def test_summary_closes_with_the_flat_samples_corpus_type_mix_and_statistics(mer
     statistics = tableRows(section, '| statistic |')
     assert [row[0] for row in statistics] == ['condition_all', *COLUMN_AXES]
     assert statistics[0] == ['condition_all', '2', '1', '1', '1', '2.5', '2.5', '2.5', '2.5']
+    responses = tableRows(section, 'The named responses', '| statistic |')
+    assert [row[0] for row in responses] == list(RESPONSE_AXES)
+    assert responses[0] == ['response_K', '1', '3', '3', '3', '3', '3', '3', '3']
