@@ -29,9 +29,10 @@ deposits of the practice survey's papers, `O` open tabular repositories):
    `no grouping structure` and flags read tables for a second reading
    ([`flat_screen.csv`](#bookkeeping)). Agents give each flagged table a verdict by
    [`prompts/flat.md`](prompts/flat.md), and each sample table its response by
-   [`prompts/response.md`](prompts/response.md). `flat.py measure` measures the flat sample
-   without its responses into `registry/flat.csv` and `flat_columns.csv`, then rewrites the
-   summary; a merge leaves the two files as they are. `draw`, `handoff` and `agree` run a hand
+   [`prompts/response.md`](prompts/response.md), with its type. `flat.py measure` measures the
+   flat sample without its responses into `registry/flat.csv` and `flat_columns.csv`, and the
+   named responses into `flat_response_statistics.csv`, then rewrites the summary; a merge
+   leaves the three files as they are. `draw`, `handoff` and `agree` run a hand
    check, `--check verdict`, `response` or `recheck`, and `wide` lists the tables judged `wide` for
    the issue of their long forms ([ADR 0007](../docs/adr/0007-flat-sample.md)).
 
