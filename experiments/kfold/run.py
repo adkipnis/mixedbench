@@ -1,4 +1,4 @@
-"""run.py scores a GLM and a mixed model under the single split and grouped K-fold (#47).
+"""kfold/run.py scores a GLM and a mixed model under the single split and grouped K-fold (#47).
 
 The single split is the contract's, redrawn under other seeds; its first seed is the problem's own,
 checked against the problem's `rows` and `groups` columns.
