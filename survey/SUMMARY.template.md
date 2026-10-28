@@ -163,3 +163,7 @@ ${flat_corpus}
 ${table_flat_column_type}
 
 ${table_flat_statistics}
+
+The named responses, by the statistics `responses.csv` defines for their type:
+
+${table_flat_response_statistics}
