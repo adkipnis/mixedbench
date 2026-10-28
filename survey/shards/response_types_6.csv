@@ -1,0 +1,2 @@
+"source","object","response","evidence","response_type","trials"
+"pymc_examples","examples/data/marketing.csv","sales","pm.Gamma('y', mu=pm.math.exp(w[0]), sigma=pm.math.exp(w[1]), observed=Y) with Y = df['sales'] and w a BART of youtube (model_marketing_full), in bart_heteroscedasticity.myst.md.","continuous",""
