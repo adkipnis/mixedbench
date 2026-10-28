@@ -353,7 +353,8 @@ class FlatPass:
     def measure(self) -> None:
         """flat.csv and flat_columns.csv: every table of the flat sample, measured without its
         response; flat_responses.csv: each named response, measured by its type. Refuses, naming
-        them, while a flagged table has no verdict or a sample table has no response."""
+        them, while a flagged table has no verdict, a sample table no response or a named
+        response no type."""
         tables, columns, responses = [], [], []
         for _, row in self._selectResponded().iterrows():
             table = self.loader.load(self.sources[row['source']], row['object'])
@@ -471,9 +472,11 @@ class FlatPass:
 
     def _selectResponded(self) -> pd.DataFrame:
         """The sample, refused while a table has no response, so that a blank never counts as
-        named. The merge refused a response its table lacks."""
+        named, or a named response no type. The merge refused a response its table lacks."""
         sample = self._selectSample()
         self._refuseUnread(sample[sample['response'] == ''], 'sample tables without a response')
+        untyped = (sample['response'] != 'none') & (sample['response_type'] == '')
+        self._refuseUnread(sample[untyped], 'named responses without a type')
         return sample
 
     def _readBookkeeping(self, table: Table) -> pd.DataFrame:
