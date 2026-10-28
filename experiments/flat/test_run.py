@@ -54,8 +54,9 @@ def summary(offset: float, **columns: list) -> pd.DataFrame:
 def test_the_response_is_compared_only_against_the_flat_tables_that_name_one():
     """A flat table without a response has no response statistics or type, so the response's
     tests run on the `response` side alone. For a 0/1 type indicator, the rank-biserial r is
-    the registry's share minus the flat one's: 2/3 binary against 1/2."""
-    registry = summary(0.0, response_type=['binary', 'binary', 'continuous'])
+    the registry's share minus the flat one's: 1/6 binary against 1/2."""
+    types = ['continuous', 'binary', 'count', 'binomial', 'ordinal', 'categorical']
+    registry = summary(0.0, response_type=types)
     flat = summary(0.5, response=['y', 'z', 'none'], response_type=['binary', 'count', ''])
     flat.loc[2, list(RESPONSE_STATISTICS)] = math.nan
 
@@ -64,5 +65,5 @@ def test_the_response_is_compared_only_against_the_flat_tables_that_name_one():
     responses = tests[tests['statistic'].str.startswith('response_')]
     assert set(responses['flat']) == {'response'}
     binary = responses[responses['statistic'] == 'response_binary_share'].iloc[0]
-    assert (binary['n_registry'], binary['n_flat']) == (3, 2)
-    assert binary['rank_biserial'] == pytest.approx(2 / 3 - 1 / 2)
+    assert (binary['n_registry'], binary['n_flat']) == (6, 2)
+    assert binary['rank_biserial'] == pytest.approx(1 / 6 - 1 / 2)
