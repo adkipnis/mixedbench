@@ -308,18 +308,8 @@ class Loader:
         declared = {}
         for column, kind in types.items():
             if kind == 'continuous':
-                declared[column] = readers.numbers(Loader._decimalPoint(table[column]))
+                declared[column] = readers.numbers(table[column])
             else:  # a categorical keeps its levels under a CategoricalDtype without categories
                 dtype = pd.CategoricalDtype(ordered=kind == 'ordered')
                 declared[column] = table[column].astype(dtype)
         return declared
-
-    @staticmethod
-    def _decimalPoint(values: pd.Series) -> pd.Series:
-        """Commas become points only in a column without points,
-        so a thousands separator fails loudly."""
-        if not pd.api.types.is_string_dtype(values):
-            return values
-        if values.str.contains('.', regex=False).any():
-            return values
-        return values.str.replace(',', '.', regex=False)
