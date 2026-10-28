@@ -3,7 +3,7 @@ status: accepted, amended 2026-10-08 and 2026-10-09
 date: 2026-10-08
 ---
 
-# 0003 — Fetch-only: pins and checksums, no redistribution, no R in the loader
+# 0003 - Fetch-only: pins and checksums, no redistribution, no R in the loader
 
 The package ships pins, checksums, the registry and the reference posteriors; a user's
 first use fetches each source and verifies its digest. Nothing is mirrored.

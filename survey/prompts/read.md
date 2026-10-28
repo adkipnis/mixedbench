@@ -1,4 +1,4 @@
-# Read prompt — dimension survey
+# Read prompt - dimension survey
 
 ## Role
 
@@ -102,7 +102,7 @@ File the object in the excluded shard with its reason when:
   - Files split by study or experiment are one row each; files split by coder, session or
     participant whose pooled table is in no file are `derived or duplicated table`.
 
-## Output — shards only
+## Output - shards only
 
 - `shards/registry_<label>.csv` with exactly the agent columns of the registry;
   `shards/excluded_<label>.csv` with `source,object,reason,detail`.

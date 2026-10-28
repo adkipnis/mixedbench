@@ -136,9 +136,9 @@ Four rules settle the edge cases:
 
 One bullet per table in this order, nothing else:
 
-- `<n> · <source> · <object>: stands — <what makes it flat>`
-- `<n> · <source> · <object>: wide — <the columns that repeat a measure>`
-- `<n> · <source> · <object>: hidden grouping <column or a:b> — <its levels, rows per level,
+- `<n> · <source> · <object>: stands - <what makes it flat>`
+- `<n> · <source> · <object>: wide - <the columns that repeat a measure>`
+- `<n> · <source> · <object>: hidden grouping <column or a:b> - <its levels, rows per level,
   the documented model and its link if any>`
 
 Take the evidence from the source, not from the filing or the screen alone.
@@ -193,10 +193,10 @@ does an analysis by others (a blog, another author's course).
 
 One bullet per table in this order, nothing else:
 
-- `<n> · <source> · <object>: stands — <the documented model, or why there is none>`
-- `<n> · <source> · <object>: response <column> — <the first documented model and where it
+- `<n> · <source> · <object>: stands - <the documented model, or why there is none>`
+- `<n> · <source> · <object>: response <column> - <the first documented model and where it
   stands>`
-- `<n> · <source> · <object>: none — <no model, a joint analysis, or no column, and why>`
+- `<n> · <source> · <object>: none - <no model, a joint analysis, or no column, and why>`
 
 Take the evidence from the source, not from the reading alone.
 """
@@ -249,7 +249,7 @@ class VerdictCheck:
         return 'read/unflagged'
 
     def renderLines(self, row: pd.Series) -> list[str]:
-        second_reading = row['evidence'] if row['basis'] == 'second reading' else '—'
+        second_reading = row['evidence'] if row['basis'] == 'second reading' else '-'
         return [
             f'- filing: {row["detail"]}',
             f'- screen: {self._renderScreen(row)}',
@@ -263,7 +263,7 @@ class VerdictCheck:
             names = [f'`{c}`' for c in splitList(row[column])]
             if names:
                 reasons.append(f'{name} {", ".join(names)}')
-        return '; '.join(reasons) or '—'
+        return '; '.join(reasons) or '-'
 
     @staticmethod
     def findStood(flat: FlatPass, drawn: pd.DataFrame) -> pd.Series:

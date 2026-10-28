@@ -3,7 +3,7 @@ status: accepted, amended 2026-10-23
 date: 2026-10-20
 ---
 
-# 0006 — The measurement pass: quirk statistics per column, per column × factor, per factor pair and per row
+# 0006 - The measurement pass: quirk statistics per column, per column × factor, per factor pair and per row
 
 The registry measures sizes (ADR 0002's census: observations, groups, group sizes, design
 columns) and little else about a table's columns. TabDGP ([adkipnis/tabdgp](https://github.com/adkipnis/tabdgp))

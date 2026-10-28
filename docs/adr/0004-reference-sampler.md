@@ -3,7 +3,7 @@ status: accepted, amended 2026-10-10 and 2026-10-16
 date: 2026-10-08
 ---
 
-# 0004 — brms over Stan is the single reference sampler; ladder, bar and what a reference is not
+# 0004 - brms over Stan is the single reference sampler; ladder, bar and what a reference is not
 
 **Sampler.**
 

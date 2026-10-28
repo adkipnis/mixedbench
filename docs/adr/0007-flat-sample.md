@@ -3,7 +3,7 @@ status: accepted
 date: 2026-10-24
 ---
 
-# 0007 — The flat sample: the survey's own flat tables, measured like the registry
+# 0007 - The flat sample: the survey's own flat tables, measured like the registry
 
 The registry holds grouped tables alone, so a generator's flat case, a table with no grouping
 factor, has no real reference to be matched to, and the question whether grouped tables differ

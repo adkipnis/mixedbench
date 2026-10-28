@@ -3,7 +3,7 @@ status: accepted, amended 2026-10-09, 2026-10-10, 2026-10-20 and 2026-10-21
 date: 2026-10-08
 ---
 
-# 0001 — The contract: one frozen rule set turns a registry row into a problem
+# 0001 - The contract: one frozen rule set turns a registry row into a problem
 
 A benchmark of posterior approximation needs every problem's posterior to be one
 well-defined distribution that any sampler can target. The contract fixes it; a change to

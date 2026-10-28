@@ -3,7 +3,7 @@ status: accepted, amended 2026-10-09, 2026-10-10, 2026-10-18, 2026-10-19 and 202
 date: 2026-10-08
 ---
 
-# 0002 — Registry and suite are two things; versioning, admission, citation and licenses
+# 0002 - Registry and suite are two things; versioning, admission, citation and licenses
 
 The registry is a growing census of documented problems over public grouped data; the suite
 is a frozen subset with reference posteriors. Conflating them would make every registry
