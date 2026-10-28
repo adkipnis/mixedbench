@@ -9,7 +9,7 @@ the model formula, model family, prior, train/test splits, scales, and parameter
    One prior serves every problem.
    One typing rule decides each column's kind.
 3. Complete cases only: a row that misses a model value is dropped.
-   A design column with one value over the kept rows is dropped and recorded.
+   A design column the columns before it span over the kept rows is dropped and recorded.
    A row outside the contract (a categorical response, a censored model,
    doses on rows without a response) raises `Refused`.
 4. Scaled per fold: the table stays in raw units.
@@ -22,7 +22,7 @@ a typed registry row and its loaded table
 -> refused if outside the contract             _refuseUncovered, _refuseSeparated
 -> composites added, incomplete rows dropped   withComposites, _dropIncomplete
 -> each covariate's kind and coded columns     _typeCovariates, _codeTerms
--> the columns with one value dropped          dropConstant
+-> the columns the earlier ones span dropped   _dropAliased
 -> the design, factors and response            _assembleDesign, _codeFactor, _codeResponse
 -> the regimes `rows` and `groups`, in folds   _dealRegimes
 -> each fold's scales                          _measureFolds
@@ -72,7 +72,7 @@ class Problem:
     # sees, with `full` as one fold that holds nothing out
     scales: dict[Regime, tuple[dict[str, Scale], ...]]
     dropped_share: float  # the share of loaded rows dropped for a missing model value
-    dropped_columns: tuple[str, ...]  # the coded columns dropped for one value over the kept rows
+    dropped_columns: tuple[str, ...]  # the coded columns the columns before them span
     trials: str | None  # the trials column of a binomial response
     family: str  # brms's name, set by the family rule
     link: str
@@ -219,6 +219,7 @@ class _Builder:
         'sigma': Prior('student_t', (3, 0, 2.5)),
     }
     FOLDS = 5  # per split regime, or G in `groups` if fewer
+    TOLERANCE = 1e-7  # R's qr default, which lme4's rank check passes on
 
     def __init__(self, row: Row, table: pd.DataFrame) -> None:
         self.row = row
@@ -233,7 +234,7 @@ class _Builder:
 
     def build(self) -> Problem:
         kinds = self._typeCovariates()
-        coded, dropped_columns = dropConstant(self._codeTerms())
+        coded, dropped_columns = self._dropAliased(self._codeTerms())
         design = self._assembleDesign(coded)
         factors = {factor: self._codeFactor(factor) for factor in self.row.grouping_factors}
         regimes = self._dealRegimes(factors)
@@ -317,6 +318,28 @@ class _Builder:
                     products[f'{name}:{part_name}'] = column * part_column
             columns = products
         return columns
+
+    def _dropAliased(self, coded: Coded) -> tuple[Coded, tuple[str, ...]]:
+        """Drops each coded column that `Intercept` and the columns kept before it span over the
+        kept rows, and lists it, as lme4 drops the columns of a rank-deficient model matrix."""
+        # R's qr, as lme4 calls it, moves a column to the end when the norm it keeps beyond the
+        # columns before it falls under the tolerance times its own (LINPACK's dqrdc2)
+        basis = [np.ones(len(self.table))]
+        kept = {}
+        dropped = []
+        for term, columns in coded.items():
+            kept[term] = {}
+            for name, column in columns.items():
+                values = column.to_numpy(dtype=float)
+                spanned = np.column_stack(basis)
+                weights, *_ = np.linalg.lstsq(spanned, values, rcond=None)
+                residual = values - spanned @ weights
+                if np.linalg.norm(residual) <= self.TOLERANCE * np.linalg.norm(values):
+                    dropped.append(name)
+                else:
+                    kept[term][name] = column
+                    basis.append(values)
+        return kept, tuple(dropped)
 
     def _assembleDesign(self, coded: Coded) -> dict[str, pd.Series]:
         """Returns `Intercept`, then the coded columns in the row's order."""

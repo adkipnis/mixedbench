@@ -10,12 +10,14 @@ in `x`, one in `block`); every expected value below is computed by hand from it.
 from __future__ import annotations
 
 from dataclasses import replace
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
 import pytest
 from hypothesis import given
 from hypothesis import strategies as st
+from mixedbench import frequentist
 from mixedbench.contract import Prior, Problem, Refused, Scale, codeCovariate
 from mixedbench.registry.row import Row, SlopeTerm
 
@@ -28,6 +30,8 @@ N = [0, 3, 1, 2, 5, 2, 4, 1, 0, 7, 3, 6]
 WINS = [0, 2, 1, 1, 4, 2, 3, 1, 0, 5, 2, 4]
 GAMES = [4, 5, 3, 4, 6, 5, 5, 3, 2, 8, 4, 6]
 RATING = [1, 5, 3, 1, 5, 3, 5, 1, 3, 5, 3, 5]  # three levels, not 1..3
+# a Latin square against diet's `a b c` repeats, so no grade contrast is a diet contrast
+GRADE = ['lo', 'mid', 'hi', 'mid', 'hi', 'lo', 'hi', 'lo', 'mid', 'lo', 'mid', 'hi']
 ROW = Row(
     source='fixture', tier='R', sources=('fixture:trial',), object='trial', reader='pandas',
     license='MIT', model_index=1, response='y', response_type='continuous', trials='', family='',
@@ -49,7 +53,7 @@ def fixtureTable() -> pd.DataFrame:
             'sex': ['fm'[s] for s in SEX] + ['f', 'm'],
             'diet': pd.Categorical(['a', 'b', 'c'] * 4 + ['a', 'b'], categories=['a', 'b', 'c']),
             'grade': pd.Categorical(
-                ['lo', 'mid', 'hi'] * 4 + ['lo', 'mid'],
+                GRADE + ['lo', 'mid'],
                 categories=['lo', 'mid', 'hi'],
                 ordered=True,
             ),
@@ -84,8 +88,8 @@ def test_the_design_has_the_coded_columns_in_order_with_the_intercept_first() ->
     assert design['sex'].tolist() == SEX
     assert design['diet[b]'].tolist() == [0, 1, 0] * 4
     assert design['diet[c]'].tolist() == [0, 0, 1] * 4
-    assert design['grade[mid]'].tolist() == [0, 1, 0] * 4
-    assert design['grade[hi]'].tolist() == [0, 0, 1] * 4
+    assert design['grade[mid]'].tolist() == [0, 1, 0, 1, 0, 0, 0, 0, 1, 0, 1, 0]
+    assert design['grade[hi]'].tolist() == [0, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 1]
     assert design['x:sex'].tolist() == [x * s for x, s in zip(X, SEX)]
     assert all(design[c].dtype == np.float64 for c in problem.design)
 
@@ -168,38 +172,104 @@ def test_a_grouping_factor_is_integer_coded_with_its_levels_listed() -> None:
     assert list(problem.table.columns) == [*problem.design, 'y', 'block', 'block:plot', 'rows', 'groups']  # fmt: skip
 
 
+# the widths whose columns the columns before them span, over the kept rows 0-11
+SUMMED = [x + s for x, s in zip(X, SEX)] + [0.0, 0.0]  # x + sex, as Hoogland's AllKin
+PARTNERED = [s * y for s, y in zip(SEX, Y)] + [0.0, 0.0]  # 0 without sex m, as Incentives' v
+# no `u` among sex f, the empty cell at width's first level, as shanahan's conventional message
+CELLED = pd.Categorical(list('vuwvwvuwvvwwuu'), categories=['u', 'v', 'w'])
+
+
 @pytest.mark.parametrize(
     'width, interactions, design, dropped',
     [
         pytest.param(
-            [4.6] * 14, ('x:sex',), (), ('width',),
+            [4.6] * 14, ('x:sex',), ('x:sex',), ('width',),
             id='a covariate with one value over every row, as ros Helicopters',
         ),
         pytest.param(
-            [0.0] * 12 + [5.0, 0.0], ('x:sex',), (), ('width',),
+            [0.0] * 12 + [5.0, 0.0], ('x:sex',), ('x:sex',), ('width',),
             id='a covariate whose other value sits on the row dropped for a missing x',
         ),
         pytest.param(
-            [4.6] * 14, ('x:sex', 'sex:diet'), ('sex:diet[b]',), ('width', 'sex:diet[c]'),
+            [4.6] * 14, ('x:sex', 'sex:diet'), ('x:sex', 'sex:diet[b]'), ('width', 'sex:diet[c]'),
             id='an interaction contrast of an empty cell, no diet c among sex m',
+        ),
+        pytest.param(
+            SUMMED, ('x:sex',), ('x:sex',), ('width',),
+            id='a covariate that sums earlier ones',
+        ),
+        pytest.param(
+            PARTNERED, ('x:sex', 'sex:width'), ('width', 'x:sex'), ('sex:width',),
+            id='an interaction repeating a covariate that is 0 without its partner',
+        ),
+        pytest.param(
+            CELLED, ('x:sex', 'sex:width'), ('width[v]', 'width[w]', 'x:sex', 'sex:width[v]'), ('sex:width[w]',),
+            id='an empty cell at a first level, its contrasts not constant',
         ),
     ],
 )  # fmt: skip
-def test_a_design_column_with_one_value_over_the_kept_rows_is_dropped_and_recorded(
-    width: list[float], interactions: tuple[str, ...], design: tuple[str, ...], dropped: tuple
+def test_a_design_column_aliased_by_the_columns_before_it_is_dropped_and_recorded(
+    width: list, interactions: tuple[str, ...], design: tuple[str, ...], dropped: tuple
 ) -> None:
-    """No likelihood identifies the coefficient of a constant column (#131).
-    Z-scored it is rounding noise or NaN, and an all-zero contrast never meets the likelihood.
-    `build` drops it, as lme4 drops the columns of a rank-deficient model matrix, and says so."""
+    """No likelihood identifies a coefficient whose column the columns before it span:
+    a constant column (#131), a sum, a product equal to one of its parts, an empty cell (#151).
+    Z-scored a constant is rounding noise or NaN, and the others leave a ridge the prior fills.
+    `build` drops the later column, as lme4 drops the columns of a rank-deficient model matrix,
+    and says so."""
     row = fixtureRow(covariates=(*ROW.covariates, 'width'), interactions=interactions)
     problem = Problem.build(row, fixtureTable().assign(width=width))
-    expected = ('Intercept', 'x', 'sex', 'diet[b]', 'diet[c]', 'grade[mid]', 'grade[hi]', 'x:sex', *design)  # fmt: skip
+    expected = ('Intercept', 'x', 'sex', 'diet[b]', 'diet[c]', 'grade[mid]', 'grade[hi]', *design)  # fmt: skip
     assert problem.design == expected
     assert problem.dropped_columns == dropped
     assert list(problem.table.columns) == [*expected, 'y', 'block', 'block:plot', 'rows', 'groups']  # fmt: skip
-    assert set(problem.scales['full'][0]) == {'x', 'y'}
+    assert np.linalg.matrix_rank(problem.table[list(expected)].to_numpy()) == len(expected)
+    assert not set(dropped) & set(problem.scales['full'][0])
     assert not set(dropped) & set(problem.parameters)
     assert not problem.standardized().isna().any().any()
+
+
+@pytest.mark.lme4
+@pytest.mark.parametrize(
+    'width, interactions',
+    [
+        pytest.param(SUMMED, ('x:sex',), id='a covariate that sums earlier ones'),
+        pytest.param(
+            PARTNERED, ('x:sex', 'sex:width'),
+            id='an interaction repeating a covariate that is 0 without its partner',
+        ),
+        pytest.param(
+            CELLED, ('x:sex', 'sex:width'),
+            id='an empty cell at a first level, its contrasts not constant',
+        ),
+    ],
+)  # fmt: skip
+def test_lme4_estimates_the_design_columns_the_contract_keeps(
+    tmp_path: Path, width: list, interactions: tuple[str, ...]
+) -> None:
+    """The drop rewrites R's pivoted QR, so lme4, which runs it on its model matrix, keeps the
+    same columns. The row leaves out the ordered `grade`, which R codes as polynomials."""
+    row = fixtureRow(
+        covariates=('x', 'sex', 'diet', 'width'), interactions=interactions,
+        grouping_factors=('block',), random_slopes=(),
+    )  # fmt: skip
+    table = fixtureTable().assign(width=width)
+    problem = Problem.build(row, table)
+    terms = ' + '.join([*row.covariates, *interactions])
+    fitted = frequentist.fit(table, f'y ~ {terms} + (1 | block)', 'gaussian', tmp_path, 60)
+    assert list(fitted.fixed) == [_lme4Name(column) for column in problem.design]
+
+
+def _lme4Name(column: str) -> str:
+    """lme4's name of a design column of the fixture: `sex` is `sexm`, `diet[b]` is `dietb`."""
+    if column == 'Intercept':
+        return '(Intercept)'
+    names = []
+    for part in column.split(':'):
+        if part == 'sex':
+            names.append('sexm')
+        else:
+            names.append(part.replace('[', '').replace(']', ''))
+    return ':'.join(names)
 
 
 # ==============================================================================================
