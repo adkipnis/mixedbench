@@ -10,8 +10,9 @@ Documented for humans in `docs/registry.md` and `README.md`.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import get_args
 
-from mixedbench.registry.row import COLUMNS
+from mixedbench.registry.row import COLUMNS, ResponseType
 
 
 # =====================================================================================
@@ -71,10 +72,11 @@ FLAT_VERDICTS = Table(
     key=('source', 'object'),
 )
 
-# A flat table's response, the outcome of its first documented model, or `none`.
+# A flat table's response, the outcome of its first documented model, or `none`; a named one
+# with its type, and a binomial one with its trials, as a registry row records them.
 FLAT_RESPONSES = Table(
     name='flat_responses',
-    columns=('source', 'tier', 'object', 'response', 'evidence'),
+    columns=('source', 'tier', 'object', 'response', 'evidence', 'response_type', 'trials'),
     scriptColumns=('tier',),
     key=('source', 'object'),
 )
@@ -146,7 +148,7 @@ ALLOWED: dict[str, dict[str, tuple[str, ...]]] = {
     'duplicates': {'verdict': ('same', 'different')},
     'dropped': {},
     'flat_verdicts': {'verdict': ('flat', 'wide', 'hidden grouping')},
-    'flat_responses': {},
+    'flat_responses': {'response_type': get_args(ResponseType)},
 }
 
 REQUIRED = {
