@@ -166,6 +166,12 @@ class Row:
                     refusals.append((column, f'a term with an empty part: {term}'))
         for term in splitList(cells['random_slopes']):
             refusals += Row.slopeRefusals(cells, term)
+        terms = [term for term in splitList(cells['random_slopes']) if SLOPE_TERM.fullmatch(term)]
+        slopes = [SlopeTerm.parse(term) for term in terms]
+        for factor in splitList(cells['grouping_factors']):
+            kinds = {slope.correlated for slope in slopes if slope.factor == factor}
+            if len(kinds) == 2:
+                refusals.append(('random_slopes', f'{factor} mixes | and || slopes'))
         covariates = splitList(cells['covariates'])
         for term in splitList(cells['interactions']):
             for part in parts(term):

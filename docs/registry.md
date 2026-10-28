@@ -66,7 +66,7 @@ Key `source`, `object`, `model_index`. Agent columns, in order:
 | `grouping_factors` | `;`-list of columns whose levels index random effects; `Block:Variety` for a term on two columns, built by the merge |
 | `covariates` | `;`-list of the main-effect columns |
 | `interactions` | `;`-list of `a:b` terms |
-| `random_slopes` | `;`-list of `x\|g` (correlated with the intercept of `g`) and `x\|\|g` (uncorrelated) terms, `x` a covariate and `g` a grouping factor of the row; blank for an intercept-only model (ADR 0001) |
+| `random_slopes` | `;`-list of `x\|g` (correlated with the intercept of `g`) and `x\|\|g` (uncorrelated) terms, `x` a covariate and `g` a grouping factor of the row, a factor's terms all of one kind; blank for an intercept-only model (ADR 0001) |
 | `ignore` | `;`-list of columns no model should use: ids, weights, alternate responses, coordinates |
 | `types` | `;`-list of `column=categorical` / `ordered` / `continuous` where the file carries no type, and `ordered` for an R ordered factor; covariates only |
 | `formula` | the documented model, lme4 syntax where given, its columns named as the table names them and a variable the source derives from columns written as its expression (`I(age - 12)`); a nonlinear model in words; a remark goes to `notes` |

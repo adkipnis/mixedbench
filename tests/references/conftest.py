@@ -38,12 +38,12 @@ def fixtureProblem(row: Row = ROW) -> Problem:
 # the shapes of #63's fixtures
 # ==============================================================================================
 # a problem per model shape, which the real-R tests fit.
-# `fixtures/` holds brms's draws of each but `binomialTrials`.
+# `fixtures/` holds brms's draws of each but `binomialTrials` and the uncorrelated `gaussianSlopes`.
 # a problem keeps its fixture's columns, factors and group counts, so brms's labels name its aliases
 
 
-def gaussianMixed() -> Problem:
-    """Two correlated slopes and an uncorrelated one on `school`, 12 groups of 15 rows:
+def gaussianSlopes(correlated: bool) -> Problem:
+    """Three slopes on `school`, all correlated with its intercept or none, 12 groups of 15 rows:
     `dose`, `sex` and `age` are aliased `x1`, `x2` and `x3`, `school` is `g1`."""
     rng = np.random.default_rng(1)
     school = np.repeat(np.arange(12), 15)
@@ -56,15 +56,18 @@ def gaussianMixed() -> Problem:
         'school': [f's{j:02d}' for j in school], 'dose': dose, 'sex': np.array(['f', 'm'])[sex],
         'age': age, 'y': y + rng.normal(0, 1, len(school)),
     })  # fmt: skip
+    if correlated:
+        name, bars = 'gaussian_correlated', '|'
+    else:
+        name, bars = 'gaussian_uncorrelated', '||'
     slopes = (
-        SlopeTerm('dose', 'school', correlated=True),
-        SlopeTerm('sex', 'school', correlated=True),
-        SlopeTerm('age', 'school', correlated=False),
+        SlopeTerm('dose', 'school', correlated),
+        SlopeTerm('sex', 'school', correlated),
+        SlopeTerm('age', 'school', correlated),
     )
     row = replace(
-        ROW, object='gaussian_mixed', grouping_factors=('school',),
-        covariates=('dose', 'sex', 'age'), random_slopes=slopes,
-        formula='y ~ dose + sex + age + (1 + dose + sex | school) + (0 + age || school)',
+        ROW, object=name, grouping_factors=('school',), covariates=('dose', 'sex', 'age'),
+        random_slopes=slopes, formula=f'y ~ dose + sex + age + (dose + sex + age {bars} school)',
     )  # fmt: skip
     return Problem.build(row, table)
 
