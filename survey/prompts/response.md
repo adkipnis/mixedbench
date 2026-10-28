@@ -40,7 +40,10 @@ Per object of the worklist:
 2. **Its outcome** is the response, named exactly as the dtypes at the page's end name the
    column. A transformed outcome (`log(y)`) names the raw column `y`; successes out of trials
    name the successes, and the trials stay a column.
-3. **`none`** when:
+3. **Its type** in `response_type`, as `prompts/read.md` records a registry row's response: what
+   the column holds, not the family. A `binomial` response names its trials column in `trials`.
+   Both stay blank for `none`.
+4. **`none`** when:
    - no model is documented and no outcome named: the table is only described, plotted or
      summarized, or the documentation names a topic of interest but no column, or two outcomes
      without an order;
@@ -69,8 +72,8 @@ vignette's section, the paper's table); for `none`, which of the three cases hol
 
 ## Output — shards only
 
-- `shards/response_<label>.csv` with `source,object,response,evidence`, one row per object in
-  the worklist's order.
+- `shards/response_<label>.csv` with `source,object,response,evidence,response_type,trials`,
+  one row per object in the worklist's order.
 - Every field double-quoted, internal `"` doubled, no line breaks inside a field.
 - Never write `flat_responses.csv`, `flat.csv` or any file but the shard; never type a measured
   number; run nothing.
