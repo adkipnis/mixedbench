@@ -70,8 +70,9 @@ def test_a_run_records_its_seed_aliases_and_r_stack(ran) -> None:
 
 @pytest.mark.brms
 def test_a_run_records_each_level_with_its_settings_time_and_diagnostics(ran) -> None:
-    """The bar gates on R-hat, ESS and divergences, so a passing level shows them within it;
-    tree depth, E-BFMI per chain and the random effects' R-hat are recorded for a reviewer."""
+    """The bar gates on R-hat, ESS and divergences, the random effects' too,
+    so a passing level shows them within it; tree depth and E-BFMI per chain are recorded for a
+    reviewer."""
     _, _, dir = ran
     [level] = record(dir)['levels']
     assert (level['level'], level['outcome']) == (0, 'passed')
@@ -84,6 +85,7 @@ def test_a_run_records_each_level_with_its_settings_time_and_diagnostics(ran) ->
     assert len(level['ebfmi']) == 4
     assert min(level['ebfmi']) > 0.3  # a healthy fit, above the usual warning threshold
     assert 1 <= level['rhat_locals'] < 1.05
+    assert min(level['ess_bulk_locals'], level['ess_tail_locals']) >= 400
 
 
 @pytest.mark.brms
@@ -156,7 +158,15 @@ def test_a_pin_mismatch_raises_before_any_level(
 # the ladder and the ends of a run
 # ==============================================================================================
 
-PASSING = {'rhat': 1.009, 'ess_bulk': 400.0, 'ess_tail': 400.0, 'divergences': 0}  # at the edge
+PASSING = {  # at the edge
+    'rhat': 1.009,
+    'ess_bulk': 400.0,
+    'ess_tail': 400.0,
+    'divergences': 0,
+    'rhat_locals': 1.049,
+    'ess_bulk_locals': 400.0,
+    'ess_tail_locals': 400.0,
+}
 
 
 @pytest.mark.parametrize(
@@ -169,6 +179,12 @@ PASSING = {'rhat': 1.009, 'ess_bulk': 400.0, 'ess_tail': 400.0, 'divergences': 0
         ('ess_tail', 399.0),
         ('ess_tail', math.nan),
         ('divergences', 1),
+        ('rhat_locals', 1.05),
+        ('rhat_locals', math.nan),
+        ('ess_bulk_locals', 399.0),
+        ('ess_bulk_locals', math.nan),
+        ('ess_tail_locals', 399.0),
+        ('ess_tail_locals', math.nan),
     ],
 )
 def test_the_bar_fails_past_a_threshold_and_on_nan(diagnostic: str, value: float) -> None:
