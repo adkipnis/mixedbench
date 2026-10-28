@@ -15,7 +15,7 @@ from sources import readFrame
 
 RENAMED_TYPES = 'area=categorical;farm=categorical;type=categorical;diet=categorical'
 SURVEY = Path(__file__).resolve().parents[1]
-MEASURED = ('dimensions.csv', 'columns.csv', 'column_factors.csv', 'factor_pairs.csv')
+MEASURED = ('dimensions.csv', 'columns.csv', 'column_factors.csv', 'factor_pairs.csv', 'responses.csv')  # fmt: skip
 
 
 def test_passing_registry_shard_merges_with_tier_and_reader_filled_in(merger):
@@ -320,7 +320,7 @@ def test_the_census_lands_in_the_registry_and_the_bookkeeping_in_the_survey(spli
     mergeShard(merger, FIXTURES / 'registry_cattle.csv')  # flags the pair with herds
     registryFiles = sorted(p.name for p in merger.registry.iterdir() if p.is_file())
     surveyFiles = sorted(p.name for p in merger.survey.iterdir() if p.is_file())
-    assert registryFiles == ['SUMMARY.md', 'column_factors.csv', 'columns.csv', 'dimensions.csv', 'excluded.csv', 'factor_pairs.csv', 'fits.csv', 'flat.csv', 'flat_columns.csv', 'manifest.csv', 'quantiles.yaml', 'registry.csv', 'sources.yaml']  # fmt: skip
+    assert registryFiles == ['SUMMARY.md', 'column_factors.csv', 'columns.csv', 'dimensions.csv', 'excluded.csv', 'factor_pairs.csv', 'fits.csv', 'flat.csv', 'flat_columns.csv', 'flat_response_statistics.csv', 'manifest.csv', 'quantiles.yaml', 'registry.csv', 'responses.csv', 'sources.yaml']  # fmt: skip
     assert surveyFiles == ['dropped.csv', 'duplicates.csv', 'flat_agreement.csv', 'flat_response_agreement.csv', 'flat_response_recheck_agreement.csv', 'flat_responses.csv', 'flat_screen.csv', 'flat_verdicts.csv']  # fmt: skip
 
 
@@ -405,6 +405,19 @@ def test_a_merge_leaves_the_flat_files_as_the_last_flat_pass_wrote_them(merger):
         assert (merger.registry / name).read_bytes() == text
 
 
+def test_every_registry_row_has_one_measured_response(merger):
+    """responses.csv is keyed like dimensions.csv, one row per registry row and its response."""
+    mergeShard(merger, FIXTURES / 'registry_herds.csv')
+    responses = readRows(merger.registry / 'responses.csv')
+    keys = [
+        (r['source'], r['object'], r['model_index'], r['tier'], r['response']) for r in responses
+    ]
+    assert keys == [
+        ('herds', 'herds.csv', '1', 'D', 'weight'),
+        ('herds', 'herds.csv', '2', 'D', 'cases'),
+    ]
+
+
 def test_the_measure_script_writes_what_the_merge_writes(merger):
     """`measure.py` reruns the merge's measure pass without a shard to merge, so a changed
     statistic reaches the whole registry in one run (#98). It loads from the cache the merge
@@ -467,16 +480,24 @@ def test_a_verdict_outside_the_vocabulary_or_on_an_unknown_object_is_refused_nam
     assert readRows(merger.survey / 'flat_verdicts.csv') == []
 
 
-RESPONSE = {'source': 'cattle', 'object': 'cattle.csv', 'response': 'kg', 'evidence': 'lm(kg ~ diet + calving) in its help page'}  # fmt: skip
+RESPONSE = {'source': 'cattle', 'object': 'cattle.csv', 'response': 'kg', 'evidence': 'lm(kg ~ diet + calving) in its help page', 'response_type': 'continuous', 'trials': ''}  # fmt: skip
 
 
-@pytest.mark.parametrize('response', ['kg', 'none'])
-def test_a_response_shard_merges_into_the_survey_with_its_tier_filled_in(splitMerger, response):
+@pytest.mark.parametrize(
+    'reading',
+    [
+        {},
+        {'response': 'positives', 'response_type': 'binomial', 'trials': 'tested'},
+        {'response': 'none', 'response_type': ''},
+    ],
+    ids=['a-continuous-response', 'a-binomial-one-with-its-trials', 'none-without-a-type'],
+)
+def test_a_response_shard_merges_into_the_survey_with_its_tier_filled_in(splitMerger, reading):
     """A flat table's response is survey bookkeeping, beside the verdicts; `none` is a reading
     too, for a table no documented model fits."""
     merger = splitMerger
     mergeShard(merger, FIXTURES / 'excluded_cattle.csv')
-    reading = RESPONSE | {'response': response}
+    reading = RESPONSE | reading
     mergeShard(merger, writeShard(merger.survey / 'shards' / 'response_first.csv', [reading]))
     assert readRows(merger.survey / 'flat_responses.csv') == [reading | {'tier': 'R'}]
 
@@ -488,14 +509,30 @@ def test_a_response_shard_merges_into_the_survey_with_its_tier_filled_in(splitMe
         ({'evidence': ''}, 'evidence', 'required'),
         ({'object': 'cattle.old'}, 'object', 'not in registry.csv or excluded.csv'),
         ({'response': 'weight'}, 'response', 'not a column of the table'),
+        ({'response_type': ''}, 'response_type', 'required'),
+        ({'response_type': 'gaussian'}, 'response_type', 'not allowed'),
+        ({'response_type': 'count'}, 'response_type', 'kg is not integer-valued'),
+        (
+            {'response': 'positives', 'response_type': 'binomial'},
+            'trials',
+            'binomial names its trials',
+        ),  # fmt: skip
     ],
-    ids=['no-response', 'no-evidence', 'an-object-the-census-lacks', 'no-column-of-the-table'],
+    ids=[
+        'no-response',
+        'no-evidence',
+        'an-object-the-census-lacks',
+        'no-column-of-the-table',
+        'a-named-response-without-its-type',
+        'a-type-outside-the-vocabulary',
+        'a-type-its-column-contradicts',
+        'a-binomial-response-without-its-trials',
+    ],  # fmt: skip
 )
-def test_a_response_without_evidence_on_an_unknown_object_or_no_column_is_refused(
-    merger, edit, column, problem
-):
+def test_a_response_the_table_or_its_type_contradicts_is_refused(merger, edit, column, problem):
     """A response is a column of the loaded table or `none`, read with a line of evidence on an
-    object the census holds."""
+    object the census holds. A named response carries its type, checked against its column as
+    a registry row's is."""
     mergeShard(merger, FIXTURES / 'excluded_cattle.csv')
     reading = RESPONSE | edit
     problems = refusal(merger, writeShard(merger.survey / 'shards' / 'response_bad.csv', [reading]))

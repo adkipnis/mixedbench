@@ -52,6 +52,19 @@ FACTOR_AXES = (
 )  # fmt: skip
 ROW_AXES = {'n_obs': 'n_obs', 'n_grouping_factors': 'n_factors', 'd_doc': 'd_doc', 'd_all': 'd_all'}  # fmt: skip
 FLAT_TABLE_AXES = ('n_obs', 'd_all', 'condition_all')  # the axes flat.csv measures once per table
+# a response's axes, once per registry row, apart from the covariates' axes of the same statistic
+RESPONSE_AXES = {
+    'response_K': 'K',
+    'response_skewness': 'skewness',
+    'response_excess_kurtosis': 'excess_kurtosis',
+    'response_outlier_share': 'outlier_share',
+    'response_zero_share': 'zero_share',
+    'response_min_share': 'min_share',
+    'response_max_share': 'max_share',
+    'response_unique_share': 'unique_share',
+    'response_rare_level_share': 'rare_level_share',
+    'response_max_abs_rho': 'max_abs_rho',
+}
 CATEGORICAL_TYPES = ('categorical', 'ordered')
 TERMS = (9, 14)  # the practice survey's p90 and p95 of fixed-effect terms (envelope rule 4)
 K_TAIL = 10  # the summary's K table pools the levels above this (the columns rule's integer cap)
@@ -73,6 +86,7 @@ class Summarizer:
         self.pairs = self.numeric(readCsv(self.root / 'factor_pairs.csv'), FACTOR_PAIR_STATISTICS)
         self.fits = self.numeric(readCsv(self.root / 'fits.csv'), FIT_STATISTICS)
         self.fitted = self.fits.drop_duplicates(['source', 'object', 'model_index'])  # per row
+        self.responses = self.numeric(readCsv(self.root / 'responses.csv'), ('K', *COLUMN_STATISTICS))  # fmt: skip
         self.rows = self.dimensions.drop_duplicates(['source', 'object', 'model_index'])
         self.modeled = self.columns[self.columns['in_model'] == 'yes']
         self.categoricals = self.modeled[self.modeled['type'].isin(CATEGORICAL_TYPES)]
@@ -82,6 +96,8 @@ class Summarizer:
         self.flat_categoricals = self.flat_columns[
             self.flat_columns['type'].isin(CATEGORICAL_TYPES)
         ]
+        flat_responses = readCsv(self.root / 'flat_response_statistics.csv')
+        self.flat_responses = self.numeric(flat_responses, ('K', *COLUMN_STATISTICS))
 
     def flush(self) -> None:
         quantiles = self.quantiles()
@@ -106,6 +122,7 @@ class Summarizer:
         axes |= {axis: self.axis(self.rows, axis) for axis in CONDITIONS}
         axes |= {axis: self.axis(self.fitted, axis) for axis in ROW_STATISTICS}
         axes |= {axis: self.axis(self.fits, axis) for axis in FACTOR_STATISTICS}
+        axes |= {axis: self.axis(self.responses, column) for axis, column in RESPONSE_AXES.items()}
         for axis, values in self.collectFlatValues().items():
             axes[axis]['flat'] = self.quantilesOf(values)
         return {
@@ -146,10 +163,11 @@ class Summarizer:
     def collectFlatValues(self) -> dict[str, pd.Series]:
         """The flat sample's values of each axis both samples share: a size or design axis once
         per flat table, K once per categorical flat column, a column statistic once per flat
-        column."""
+        column, a response axis once per named flat response."""
         values = {axis: self.flat[axis] for axis in FLAT_TABLE_AXES}
         values['K'] = self.flat_categoricals['K']
         values |= {axis: self.flat_columns[axis] for axis in COLUMN_STATISTICS}
+        values |= {axis: self.flat_responses[column] for axis, column in RESPONSE_AXES.items()}
         return values
 
     @staticmethod
@@ -226,6 +244,7 @@ class Summarizer:
             ),
             'table_pair_statistics': self.renderStatisticTable(FACTOR_PAIR_STATISTICS, axes),
             'table_fit_statistics': self.renderStatisticTable(FIT_STATISTICS, axes),
+            'table_response_statistics': self.renderStatisticTable(tuple(RESPONSE_AXES), axes),
             'table_status': self.renderShareTable(self.fitted['status'], 'status'),
             'table_pair_relation': self.renderShareTable(self.pairs['relation'], 'pair relation'),
             'table_superior': self.renderShareTable(self.findSuperiorSides(), 'superior'),
@@ -247,6 +266,9 @@ class Summarizer:
             ),
             'table_flat_statistics': self.renderStatisticTable(
                 ('condition_all', *COLUMN_STATISTICS), axes, 'flat'
+            ),
+            'table_flat_response_statistics': self.renderStatisticTable(
+                tuple(RESPONSE_AXES), axes, 'flat'
             ),
         }
         return Template(TEMPLATE.read_text()).substitute(fields)

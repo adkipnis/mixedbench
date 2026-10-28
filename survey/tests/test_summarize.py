@@ -26,6 +26,11 @@ FIT_AXES = (
     'r2_marginal', 'r2_conditional', 'q', 'sigma2', 'icc', 'icc_adjusted',
 )  # fmt: skip
 FLAT_AXES = ('n_obs', 'd_all', 'condition_all', 'K', *COLUMN_AXES)  # the axes both samples share
+RESPONSE_AXES = (
+    'response_K', 'response_skewness', 'response_excess_kurtosis', 'response_outlier_share',
+    'response_zero_share', 'response_min_share', 'response_max_share', 'response_unique_share',
+    'response_rare_level_share', 'response_max_abs_rho',
+)  # fmt: skip
 
 
 def test_quantiles_carry_every_axis_pooled_per_tier_and_without_agridat(merger):
@@ -36,7 +41,7 @@ def test_quantiles_carry_every_axis_pooled_per_tier_and_without_agridat(merger):
     quantiles = yaml.safe_load((merger.registry / 'quantiles.yaml').read_text())
     assert (quantiles['n_rows'], quantiles['n_objects'], quantiles['n_factor_rows']) == (2, 1, 3)
     axes = quantiles['axes']
-    assert set(axes) == set(FACTOR_AXES) | set(ROW_AXES) | {'K'} | set(QUIRK_AXES) | set(FIT_AXES)
+    assert set(axes) == set(FACTOR_AXES) | set(ROW_AXES) | {'K'} | set(QUIRK_AXES) | set(FIT_AXES) | set(RESPONSE_AXES)  # fmt: skip
     for name, axis in axes.items():
         assert list(axis)[:3] == ['pooled', 'tiers', 'without_agridat']
         assert set(axis['pooled']) == set(QUANTILE_KEYS)
@@ -77,7 +82,8 @@ def test_quirk_statistics_follow_the_released_axes_counted_once_per_their_key(me
     quantiles = yaml.safe_load((merger.registry / 'quantiles.yaml').read_text())
     assert list(quantiles) == ['n_rows', 'n_objects', 'n_factor_rows', 'axes', 'imbalance', 'shares', 'k_distribution', 'implied_columns']  # fmt: skip
     axes = quantiles['axes']
-    assert tuple(axes)[-len(QUIRK_AXES + FIT_AXES) :] == QUIRK_AXES + FIT_AXES
+    released = QUIRK_AXES + FIT_AXES + RESPONSE_AXES
+    assert tuple(axes)[-len(released) :] == released
     counts = {axis: axes[axis]['pooled']['n'] for axis in QUIRK_AXES}
     assert counts == {
         'skewness': 2, 'excess_kurtosis': 2, 'outlier_share': 2, 'zero_share': 3, 'min_share': 3,
@@ -86,6 +92,22 @@ def test_quirk_statistics_follow_the_released_axes_counted_once_per_their_key(me
         'within_sd_cv': 7, 'empty_cell_share': 0, 'condition_doc': 2, 'condition_all': 2,
     }  # fmt: skip
     assert axes['between_group_share']['pooled']['min'] == -0.2986  # negatives kept
+
+
+def test_response_statistics_count_once_per_registry_row(merger):
+    """A response's statistics take axes of their own, beside the covariates' of the same name:
+    model 1's weight and model 2's share of cases, both continuous, so neither has levels."""
+    mergeShard(merger, FIXTURES / 'registry_herds.csv')
+    axes = yaml.safe_load((merger.registry / 'quantiles.yaml').read_text())['axes']
+    counts = {axis: axes[axis]['pooled']['n'] for axis in RESPONSE_AXES}
+    assert counts == {
+        'response_K': 0, 'response_skewness': 2, 'response_excess_kurtosis': 2,
+        'response_outlier_share': 2, 'response_zero_share': 2, 'response_min_share': 2,
+        'response_max_share': 2, 'response_unique_share': 2, 'response_rare_level_share': 0,
+        'response_max_abs_rho': 2,
+    }  # fmt: skip
+    skewness = axes['response_skewness']['pooled']
+    assert (skewness['min'], skewness['max']) == (0.5207, 0.6362)
 
 
 def test_factor_pairs_share_their_relation_and_the_side_of_their_superior(merger):
@@ -121,21 +143,23 @@ def test_fit_statistics_count_once_per_registry_row_or_factor_and_status_is_a_sh
 
 
 def copyFlatFiles(merger) -> None:
-    """Three flat tables of eight columns, as the flat pass wrote them; a merge leaves them."""
-    for name in ('flat.csv', 'flat_columns.csv'):
+    """Three flat tables of eight columns and two named responses, as the flat pass wrote them;
+    a merge leaves them."""
+    for name in ('flat.csv', 'flat_columns.csv', 'flat_response_statistics.csv'):
         (merger.registry / name).write_bytes((FIXTURES / name).read_bytes())
 
 
 def test_the_axes_both_samples_share_carry_a_flat_split_counted_once_per_its_key(merger):
     """The size and design axes count once per flat table (sparse.csv has no complete row, so no
     condition index), K once per categorical or ordered column (not the binary one), a column
-    statistic once per column that defines it. Grouping factors, pairs and fits have no flat
-    counterpart, and the flat type mix is a share of every flat column."""
+    statistic once per column that defines it, a response axis once per named response that
+    defines it (milk is ordinal, its rank correlation blank). Grouping factors, pairs and fits
+    have no flat counterpart, and the flat type mix is a share of every flat column."""
     copyFlatFiles(merger)
     mergeShard(merger, FIXTURES / 'registry_herds.csv')
     quantiles = yaml.safe_load((merger.registry / 'quantiles.yaml').read_text())
     axes = quantiles['axes']
-    assert {name for name, axis in axes.items() if 'flat' in axis} == set(FLAT_AXES)
+    assert {name for name, axis in axes.items() if 'flat' in axis} == {*FLAT_AXES, *RESPONSE_AXES}
     counts = {axis: axes[axis]['flat']['n'] for axis in FLAT_AXES}
     assert counts == {
         'n_obs': 3, 'd_all': 3, 'condition_all': 2, 'K': 3, 'skewness': 4, 'excess_kurtosis': 4,
@@ -145,6 +169,14 @@ def test_the_axes_both_samples_share_carry_a_flat_split_counted_once_per_its_key
     assert axes['n_obs']['flat'] == {'n': 3, 'min': 8, 'p5': 8, 'p10': 8, 'p50': 12, 'p90': 30, 'p95': 30, 'max': 30}  # fmt: skip
     assert axes['K']['flat'] == {'n': 3, 'min': 3, 'p5': 3, 'p10': 3, 'p50': 4, 'p90': 30, 'p95': 30, 'max': 30}  # fmt: skip
     assert axes['condition_all']['flat'] == {'n': 2, 'min': 1, 'p5': 1, 'p10': 1, 'p50': 2.5, 'p90': 2.5, 'p95': 2.5, 'max': 2.5}  # fmt: skip
+    response_counts = {axis: axes[axis]['flat']['n'] for axis in RESPONSE_AXES}
+    assert response_counts == {
+        'response_K': 1, 'response_skewness': 1, 'response_excess_kurtosis': 1,
+        'response_outlier_share': 1, 'response_zero_share': 1, 'response_min_share': 2,
+        'response_max_share': 2, 'response_unique_share': 2, 'response_rare_level_share': 1,
+        'response_max_abs_rho': 1,
+    }  # fmt: skip
+    assert axes['response_K']['flat'] == {'n': 1, 'min': 3, 'p5': 3, 'p10': 3, 'p50': 3, 'p90': 3, 'p95': 3, 'max': 3}  # fmt: skip
     assert quantiles['shares']['flat_column_type'] == {'continuous': 0.5, 'categorical': 0.25, 'binary': 0.125, 'ordered': 0.125}  # fmt: skip
 
 
@@ -178,6 +210,7 @@ def test_summary_shows_one_pooled_table_per_measured_file(merger):
         '## Quirk statistics per column\n': COLUMN_AXES,
         '## Quirk statistics per column and grouping factor\n': COLUMN_FACTOR_AXES,
         '## Quirk statistics per factor pair\n': FACTOR_PAIR_AXES,
+        '## Quirk statistics per response\n': RESPONSE_AXES,
     }
     for heading, axes in statistics.items():
         assert [row[0] for row in tableRows(summary, heading)] == list(axes)
@@ -253,7 +286,8 @@ def writeFlatBookkeeping(merger) -> None:
 def test_summary_closes_with_the_flat_samples_corpus_type_mix_and_statistics(merger):
     """The flat sample's section reads how the sample came to be from the survey's
     bookkeeping at merge time, then shows its type mix and the flat quantiles of the condition
-    index and the column statistics, whose tables above have no flat row."""
+    index, the column statistics and the response statistics, whose tables above have no flat
+    row."""
     copyFlatFiles(merger)
     writeFlatBookkeeping(merger)
     mergeShard(merger, FIXTURES / 'registry_herds.csv')
@@ -270,3 +304,6 @@ def test_summary_closes_with_the_flat_samples_corpus_type_mix_and_statistics(mer
     statistics = tableRows(section, '| statistic |')
     assert [row[0] for row in statistics] == ['condition_all', *COLUMN_AXES]
     assert statistics[0] == ['condition_all', '2', '1', '1', '1', '2.5', '2.5', '2.5', '2.5']
+    responses = tableRows(section, 'The named responses', '| statistic |')
+    assert [row[0] for row in responses] == list(RESPONSE_AXES)
+    assert responses[0] == ['response_K', '1', '3', '3', '3', '3', '3', '3', '3']

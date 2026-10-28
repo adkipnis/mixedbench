@@ -185,7 +185,7 @@ Levels of the categorical covariates:
 | tier D | 51 | 3 | 3 | 3 | 4 | 47 | 76 | 117 |  |
 | tier O | 35 | 2 | 2 | 3 | 5 | 26 | 73 | 717 |  |
 | without agridat | 321 | 2 | 2 | 2 | 4 | 10 | 17 | 717 |  |
-| flat | 1056 | 0 | 1 | 3 | 11 | 107 | 307 | 59548 |  |
+| flat | 1057 | 0 | 1 | 3 | 11 | 107 | 307 | 59548 |  |
 
 | K | n | share |
 |---|---|---|
@@ -285,6 +285,24 @@ which factor of a nested pair is the superior, the one listed first, second or n
 | factor_a | 100 | 83% |
 | factor_b | 20 | 17% |
 
+## Quirk statistics per response
+
+Every registry row's response, by the statistics its type defines: a binomial one as its
+successes' share of the trials, an ordinal one by its levels.
+
+| statistic | n | min | p5 | p10 | p50 | p90 | p95 | max |
+|---|---|---|---|---|---|---|---|---|
+| response_K | 179 | 2 | 2 | 2 | 2 | 7 | 8 | 1495 |
+| response_skewness | 513 | -4.9838 | -0.7826 | -0.5537 | 0.3278 | 2.972 | 4.2001 | 24.8707 |
+| response_excess_kurtosis | 513 | -1.9502 | -1.1626 | -0.9208 | 0.3242 | 11.2133 | 22.775 | 836.648 |
+| response_outlier_share | 513 | 0 | 0 | 0 | 0 | 0.01 | 0.0143 | 0.0312 |
+| response_zero_share | 552 | 0 | 0 | 0 | 0 | 0.1948 | 0.4549 | 0.8942 |
+| response_min_share | 561 | 0 | 0.0002 | 0.0004 | 0.0125 | 0.2604 | 0.4865 | 0.8942 |
+| response_max_share | 561 | 0 | 0.0001 | 0.0004 | 0.0063 | 0.1215 | 0.2675 | 0.7792 |
+| response_unique_share | 692 | 0 | 0.0003 | 0.001 | 0.1525 | 0.95 | 1 | 1 |
+| response_rare_level_share | 179 | 0.0002 | 0.0021 | 0.014 | 0.2208 | 0.4465 | 0.4664 | 0.5 |
+| response_max_abs_rho | 591 | 0 | 0.0437 | 0.0835 | 0.3494 | 0.8165 | 0.9225 | 1 |
+
 ## Fits of the documented models
 
 Every registry row with a continuous, binary or count response, its documented model fitted as
@@ -356,13 +374,13 @@ its table above with the flat sample's row.
 **Corpus.** 722 flat tables; per stratum read 569, prescreened 153; per tier R 373, E 142, T 140, D 58, O 9.
 The screen flagged 289 of the frame's 674 read tables for a second reading and the response reading found 35 not flat; verdicts flat 218, wide 151, hidden grouping 43.
 The hand sample of 50 tables stood at 0.92.
-353 of the 722 tables name a response; the response check of 25 tables stood at 0.84, its recheck of 15 `none` tables at 1.0.
+352 of the 722 tables name a response; the response check of 25 tables stood at 0.84, its recheck of 15 `none` tables at 1.0.
 
 | column type | n | share |
 |---|---|---|
 | continuous | 36809 | 85% |
 | binary | 5458 | 13% |
-| categorical | 918 | 2% |
+| categorical | 919 | 2% |
 | ordered | 138 | 0% |
 
 | statistic | n | min | p5 | p10 | p50 | p90 | p95 | max |
@@ -374,6 +392,21 @@ The hand sample of 50 tables stood at 0.92.
 | zero_share | 36747 | 0 | 0 | 0 | 0.7032 | 0.9152 | 0.9364 | 1 |
 | min_share | 36885 | 0 | 0.0098 | 0.0185 | 0.7314 | 0.9187 | 0.9399 | 1 |
 | max_share | 36885 | 0 | 0.0035 | 0.0098 | 0.053 | 0.371 | 0.4452 | 1 |
-| unique_share | 43255 | 0 | 0.0063 | 0.0071 | 0.0106 | 0.6863 | 0.8585 | 1 |
-| rare_level_share | 6508 | 0 | 0.0022 | 0.01 | 0.1343 | 0.435 | 0.4839 | 1 |
+| unique_share | 43256 | 0 | 0.0063 | 0.0071 | 0.0106 | 0.6863 | 0.8585 | 1 |
+| rare_level_share | 6509 | 0 | 0.0022 | 0.01 | 0.1343 | 0.435 | 0.4839 | 1 |
 | max_abs_rho | 41538 | 0 | 0.2635 | 0.3319 | 0.9059 | 0.9956 | 0.9999 | 1 |
+
+The named responses, by the statistics `responses.csv` defines for their type:
+
+| statistic | n | min | p5 | p10 | p50 | p90 | p95 | max |
+|---|---|---|---|---|---|---|---|---|
+| response_K | 83 | 2 | 2 | 2 | 2 | 7 | 7 | 10 |
+| response_skewness | 269 | -3.6156 | -0.9929 | -0.6077 | 0.4485 | 2.585 | 3.455 | 18.0723 |
+| response_excess_kurtosis | 268 | -2.0824 | -1.2961 | -1.1184 | 0.1673 | 10.3938 | 15.314 | 506.2884 |
+| response_outlier_share | 269 | 0 | 0 | 0 | 0 | 0.0082 | 0.0144 | 0.0435 |
+| response_zero_share | 278 | 0 | 0 | 0 | 0 | 0.0616 | 0.2139 | 0.9418 |
+| response_min_share | 286 | 0.0002 | 0.0009 | 0.0025 | 0.0283 | 0.2139 | 0.3333 | 0.9418 |
+| response_max_share | 286 | 0 | 0.0008 | 0.0013 | 0.0213 | 0.1308 | 0.1745 | 0.4231 |
+| response_unique_share | 352 | 0.0001 | 0.0017 | 0.0033 | 0.5321 | 1 | 1 | 1 |
+| response_rare_level_share | 83 | 0.0089 | 0.0368 | 0.0556 | 0.3103 | 0.4857 | 0.4955 | 0.5 |
+| response_max_abs_rho | 326 | 0.0092 | 0.1405 | 0.1859 | 0.5979 | 0.9637 | 0.9992 | 1 |

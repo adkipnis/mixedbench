@@ -1,8 +1,8 @@
 """measure.py runs the measurement pass: the dimension survey's numbers that no agent types,
-measured on each registry row's loaded table and written to the four measured files.
-The Measurer holds what the four share: the rows with a response, the covariate columns
-with their types, each grouping factor's group-level columns, two factors' holders and the empty
-cells of two columns' levels.
+measured on each registry row's loaded table and written to the five measured files.
+The Measurer holds what the five share: the loaded rows, those with a response,
+the covariate columns with their types, each grouping factor's group-level columns,
+two factors' holders and the empty cells of two columns' levels.
 
 pipeline:
 ---------
@@ -12,7 +12,8 @@ registry.csv and each row's loaded table
 -> a row per covariate column                        columns.measure
 -> a row per covariate column and grouping factor    groups.measure
 -> a row per pair of grouping factors                pairs.measure
--> the four measured files                           measureRegistry
+-> a row per registry row's response                 responses.measure
+-> the five measured files                           measureRegistry
 
 Every merge runs the pass; run it alone, and the summary after it, from the repo root:
 
@@ -29,6 +30,7 @@ import dimensions
 import groups
 import pairs
 import pandas as pd
+import responses
 from mixedbench import registry
 from mixedbench.contract import columnKind, withComposites
 from mixedbench.datasets import Loader
@@ -46,6 +48,7 @@ class Measurer:
     def __init__(self, table: pd.DataFrame, row: Row) -> None:
         self.row = row
         self.grouping_factors = row.grouping_factors
+        self.loaded = table  # the response's missing share counts every loaded row
         measured = table[table[row.response].notna()]  # a PK table's dosing rows carry no response
         self.table = withComposites(measured, self.grouping_factors)
         self.identity = {k: getattr(row, k) for k in IDENTITY}
@@ -90,11 +93,17 @@ class Measurer:
 
 
 # =====================================================================================
-# pass: registry.csv -> each row's loaded table -> the four measured files
+# pass: registry.csv -> each row's loaded table -> the five measured files
 # =====================================================================================
 def measureRegistry(root: Path, loader: Loader) -> None:
     frame = readFrame(root)
-    measured = {'dimensions': [], 'columns': [], 'column_factors': [], 'factor_pairs': []}
+    measured = {
+        'dimensions': [],
+        'columns': [],
+        'column_factors': [],
+        'factor_pairs': [],
+        'responses': [],
+    }
     for row in registry.rows(root / 'registry.csv'):
         table = loader.load(frame.sources[row.source], row.object, row.types)
         measurer = Measurer(table, row)
@@ -102,11 +111,13 @@ def measureRegistry(root: Path, loader: Loader) -> None:
         measured['columns'] += columns.measure(measurer)
         measured['column_factors'] += groups.measure(measurer)
         measured['factor_pairs'] += pairs.measure(measurer)
+        measured['responses'].append(responses.measure(measurer))
     headers = {
         'dimensions': dimensions.DIMENSION_COLUMNS,
         'columns': columns.COLUMN_COLUMNS,
         'column_factors': groups.COLUMN_FACTOR_COLUMNS,
         'factor_pairs': pairs.FACTOR_PAIR_COLUMNS,
+        'responses': responses.RESPONSE_COLUMNS,
     }
     for name, rows in measured.items():
         writeCsv(pd.DataFrame(rows, columns=headers[name]), root / f'{name}.csv')

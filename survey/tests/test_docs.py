@@ -15,6 +15,7 @@ from groups import COLUMN_FACTOR_COLUMNS
 from mixedbench.frequentist import Status
 from mixedbench.registry.row import Family, ResponseType, Verified
 from pairs import FACTOR_PAIR_COLUMNS
+from responses import RESPONSE_COLUMNS
 from schema import ALLOWED, CANDIDATE_COLUMNS, SCREENS, TABLES
 
 HERE = Path(__file__).resolve().parents[1]
@@ -35,6 +36,7 @@ MEASURED_COLUMNS = {
     'columns': COLUMN_COLUMNS,
     'column_factors': COLUMN_FACTOR_COLUMNS,
     'factor_pairs': FACTOR_PAIR_COLUMNS,
+    'responses': RESPONSE_COLUMNS,
     'fits': FIT_COLUMNS,
     'flat': FLAT_COLUMNS,
     'flat_columns': FLAT_COLUMN_COLUMNS,

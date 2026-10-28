@@ -603,6 +603,32 @@ reading's open disagreements, four to eight per tier.
   by hand: nine became `none`, since their documentation fits no model or a joint one, and
   sesame's became `watched`, its first fit.
 
+## Response marginals (#128, 2026-10-27)
+
+- `measure.py` writes a fifth file, `registry/responses.csv`: a row per registry row with its
+  response measured by the kind its type gives (ADR 0006, amended 2026-10-27).
+- `quantiles.yaml` gained the `response_` axes after the fit statistics, and `SUMMARY.md` their
+  table. `dimensions.csv`, `columns.csv`, `column_factors.csv`, `factor_pairs.csv` and
+  `fits.csv` are unchanged byte for byte, and no other axis moved.
+
+## Flat responses' types (#143, 2026-10-28)
+
+- The response reading records a named response's `response_type`, and a binomial one's
+  `trials`, as a registry row does (`prompts/response.md`). Five typing runs read them for the
+  352 named sample responses from each table's recorded evidence and help page
+  (`shards/response_types_1.csv` to `_5.csv`), and the merge checked them as a registry row's.
+- Two types failed the check: `risky.csv`'s `fupacts` holds non-integers, so it is
+  `continuous`, and `marketing.csv`'s `sales` loads as text (decimal commas), so its response is
+  `none` until #144.
+- Rulings by the registry's precedent: a censored duration is `continuous`, as the registry's
+  Weibull and Cox rows are; a score of more than ten values is `continuous`, past the ordinal
+  cap; successes stored beside their failures without a trials column are `count`, as
+  `faraway · soybean` is.
+- `flat.py measure` writes `registry/flat_response_statistics.csv`; `quantiles.yaml` gained
+  the `response_` axes' flat blocks, and `SUMMARY.md` their table. `flat.csv` and
+  `flat_columns.csv` changed only in `marketing.csv`'s row and its `sales` column, which moved
+  three flat counts by one.
+
 ## Reading rulings (m3#22 to #15)
 
 The rulings [`prompts/read.md`](prompts/read.md) does not carry, from the agents' `RULE GAP` notes and Alex's checks, each with an example

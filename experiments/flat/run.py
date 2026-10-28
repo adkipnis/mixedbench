@@ -5,6 +5,8 @@ Comparison axes, one number per table each:
 - type mix: the shares of continuous, binary, categorical and ordered columns, and the median K
   of the categorical and ordered ones
 - column statistics: each statistic's median over the table's columns
+- the response: its type, as a 0/1 indicator per type, and its statistics, against the flat
+  tables that name one
 
 The sets are compared by the two-sided Mann-Whitney U test, which asks whether a table of one set
 tends to lie above a table of the other. The rank-biserial correlation quantifies its effect size.
@@ -13,10 +15,11 @@ We test against two sets of flat tables: (1) all, and (2) only tables with a doc
 pipeline:
 ---------
 the measured files of registry/
--> per registry object, its first model's columns            summarizeRegistry
--> per flat table, its columns but the id columns            summarizeFlat
--> per table: sizes, type shares, each statistic's median    summarizeTables
--> per flat side and statistic: the U test, rank-biserial r  compareSamples
+-> per registry object, its first model's columns and response   summarizeRegistry
+-> per flat table, its columns but the id columns and response   summarizeFlat
+-> per table: sizes, type shares, each statistic's median        summarizeTables
+-> per table: its response's type and statistics                 _joinResponse
+-> per flat side and statistic: the U test, rank-biserial r      compareSamples
 -> registry_tables.csv, flat_tables.csv and tests.csv
 
 Run from the repo root:
@@ -30,9 +33,11 @@ import argparse
 import math
 from pathlib import Path
 
+from typing import get_args
+
 import numpy as np
 import pandas as pd
-from mixedbench.registry.row import readCsv
+from mixedbench.registry.row import ResponseType, readCsv
 
 HERE = Path(__file__).parent
 KEY = ['source', 'object']
@@ -47,6 +52,12 @@ STATISTICS = (
     'continuous_share', 'binary_share', 'categorical_share', 'ordered_share',
     'K', *COLUMN_STATISTICS,
 )  # fmt: skip
+# a response's statistics, as responses.csv measures them, apart from the columns' medians
+RESPONSE_STATISTICS = (
+    'response_K', 'response_missing_share', 'response_skewness', 'response_excess_kurtosis',
+    'response_outlier_share', 'response_zero_share', 'response_min_share', 'response_max_share',
+    'response_unique_share', 'response_rare_level_share', 'response_max_abs_rho',
+)  # fmt: skip
 
 # =====================================================================================
 # the summary tables
@@ -60,7 +71,9 @@ def summarizeRegistry(dir: Path) -> pd.DataFrame:
     tables = first.drop_duplicates(KEY)  # n_obs of the first factor, as quantiles.yaml counts it
     columns = _readNumbers(dir / 'columns.csv', ('K', *COLUMN_STATISTICS))
     columns = columns[columns['model_index'] == '1']
-    return summarizeTables(tables, columns)
+    responses = _readNumbers(dir / 'responses.csv', ('K', *COLUMN_STATISTICS))
+    responses = responses[responses['model_index'] == '1']
+    return _joinResponse(summarizeTables(tables, columns), responses)
 
 
 def _readNumbers(path: Path, columns: tuple[str, ...]) -> pd.DataFrame:
@@ -74,7 +87,8 @@ def summarizeFlat(dir: Path) -> pd.DataFrame:
     tables = _readNumbers(dir / 'flat.csv', ('n_obs', 'condition_all'))
     columns = _readNumbers(dir / 'flat_columns.csv', ('K', *COLUMN_STATISTICS))
     columns = columns[columns['id_column'] == 'no']
-    summary = summarizeTables(tables, columns)
+    responses = _readNumbers(dir / 'flat_response_statistics.csv', ('K', *COLUMN_STATISTICS))
+    summary = _joinResponse(summarizeTables(tables, columns), responses)
     summary.insert(3, 'response', tables['response'])
     return summary
 
@@ -98,31 +112,42 @@ def summarizeTables(tables: pd.DataFrame, columns: pd.DataFrame) -> pd.DataFrame
     return summary.astype({'n_columns': int, 'd_all': int}).reset_index()
 
 
+def _joinResponse(summary: pd.DataFrame, responses: pd.DataFrame) -> pd.DataFrame:
+    """Each table's response type and statistics, blank where it names no response."""
+    responses = responses.set_index(KEY)
+    statistics = responses[['K', *COLUMN_STATISTICS]].add_prefix('response_')
+    return summary.join(responses[['response_type']].join(statistics), on=KEY)
+
+
 # =====================================================================================
 # the tests
 # =====================================================================================
 
 
 def compareSamples(registry: pd.DataFrame, flat: pd.DataFrame) -> pd.DataFrame:
-    """Tests every statistic against both flat sets, leaving out blanks but keeping inf."""
-    sides = {'all': flat, 'response': flat[flat['response'] != 'none']}
+    """Tests every statistic against both flat sets, and the response's type and statistics
+    against the flat tables that name one, leaving out blanks but keeping inf."""
+    named = flat[flat['response'] != 'none']
     records = []
-    for side, tables in sides.items():
-        for statistic in STATISTICS:
-            x = registry[statistic].dropna()
-            y = tables[statistic].dropna()
-            records.append(
-                {
-                    'flat': side,
-                    'statistic': statistic,
-                    'n_registry': len(x),
-                    'n_flat': len(y),
-                    'median_registry': x.median(),
-                    'median_flat': y.median(),
-                }
-                | _testMannWhitney(x, y)
-            )
+    for statistic in STATISTICS:
+        records.append(_compareStatistic('all', statistic, registry[statistic], flat[statistic]))
+    for statistic in (*STATISTICS, *RESPONSE_STATISTICS):
+        records.append(
+            _compareStatistic('response', statistic, registry[statistic], named[statistic])
+        )
+    for response_type in get_args(ResponseType):
+        x = (registry['response_type'] == response_type).astype(float)
+        y = (named['response_type'] == response_type).astype(float)
+        records.append(_compareStatistic('response', f'response_{response_type}_share', x, y))
     return pd.DataFrame(records)
+
+
+def _compareStatistic(side: str, statistic: str, x: pd.Series, y: pd.Series) -> dict:
+    x = x.dropna()
+    y = y.dropna()
+    sizes = {'n_registry': len(x), 'n_flat': len(y)}
+    medians = {'median_registry': x.median(), 'median_flat': y.median()}
+    return {'flat': side, 'statistic': statistic} | sizes | medians | _testMannWhitney(x, y)
 
 
 def _testMannWhitney(x: pd.Series, y: pd.Series) -> dict:

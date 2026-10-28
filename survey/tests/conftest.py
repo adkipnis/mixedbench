@@ -36,7 +36,13 @@ import columns
 import groups
 from columns import COLUMN_COLUMNS
 from fits import FIT_COLUMNS
-from flat import CHECKS, FLAT_COLUMN_COLUMNS, FLAT_COLUMNS, SCREEN_COLUMNS
+from flat import (
+    CHECKS,
+    FLAT_COLUMN_COLUMNS,
+    FLAT_COLUMNS,
+    FLAT_RESPONSE_STATISTIC_COLUMNS,
+    SCREEN_COLUMNS,
+)
 from groups import COLUMN_FACTOR_COLUMNS
 from measure import Measurer
 from merge import Merger
@@ -137,6 +143,7 @@ def emptyCensus(registry: Path) -> None:
     writeCsv(pd.DataFrame(columns=FIT_COLUMNS), registry / 'fits.csv')
     writeCsv(pd.DataFrame(columns=FLAT_COLUMNS), registry / 'flat.csv')
     writeCsv(pd.DataFrame(columns=FLAT_COLUMN_COLUMNS), registry / 'flat_columns.csv')
+    writeCsv(pd.DataFrame(columns=FLAT_RESPONSE_STATISTIC_COLUMNS), registry / 'flat_response_statistics.csv')  # fmt: skip
 
 
 def emptyFlatPass(survey: Path) -> None:

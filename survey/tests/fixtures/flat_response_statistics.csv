@@ -1,0 +1,3 @@
+"source","object","tier","response","response_type","K","missing_share","skewness","excess_kurtosis","outlier_share","zero_share","min_share","max_share","unique_share","rare_level_share","max_abs_rho"
+"pens","plain.csv","R","y","continuous","","0.0","0.7","0.1","0.0","0.0","0.0833","0.0833","1.0","","0.6"
+"herds","sparse.csv","D","milk","ordinal","3","0.125","","","","","0.2857","0.1429","0.4286","0.1429",""

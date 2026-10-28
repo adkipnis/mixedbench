@@ -1,5 +1,5 @@
 ---
-status: accepted, amended 2026-10-23
+status: accepted, amended 2026-10-27
 date: 2026-10-20
 ---
 
@@ -113,3 +113,29 @@ be computed here, from the cached tables, and shipped in a pinned release. Grill
   The registry keeps its columns, and the contract its whole table.
 - Decision: 1.0.8 carries these 67 rows, in `formula` and `notes` alone. The contract never
   reads `formula`, so no hash moves.
+
+## Amendment 2026-10-27: the response's marginal
+
+- Decision: a sixth measured file, `responses.csv`, a row per registry row keyed like
+  `dimensions.csv`, holds the response's type, `K`, missing share and the quirk statistics
+  `columns.csv` defines for its kind, computed by the same functions, as
+  [`docs/registry.md`](../registry.md) defines them. Its statistics are axes of their own in
+  `quantiles.yaml`, named `response_` and the statistic, and a table of their own in
+  `SUMMARY.md`.
+- Why: TabDGP's outcome node draws y as a GLM and then as a GLMM, and `fits.csv` covers the
+  documented model but not the response's own type, support, zero share or skewness.
+- Decision: the row's `response_type` gives the kind, not the loaded column. Continuous, count
+  and binomial responses are continuous, a binomial one as its successes' share of the trials;
+  binary and categorical ones are measured as loaded, and an ordinal one as ordered, its levels
+  in the order the contract codes them.
+- Why: 37 ordinal responses load as integers, which the columns rule would measure by their
+  moments and without levels, and nine categorical ones load as integers or ordered factors.
+- Decision: the missing share counts every loaded row, and the other statistics only the rows
+  with a response. A binomial row of zero trials has no share and counts as missing.
+- Why: over the rows with a response the share would be zero by construction, but 101 of 692
+  registry rows miss the response on some loaded rows, up to 0.79 (Phenobarb's dosing rows).
+- Rejected: a row of `columns.csv` flagged as the response, which the covariates'
+  `max_abs_rho`, `d_all`, `condition_all`, `column_factors.csv` and the pooled axes would each
+  have to filter out, or their numbers move.
+- Decision: the file ships as a registry patch, 1.0.11, and the other measured files stay as
+  they are, byte for byte.

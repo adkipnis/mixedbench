@@ -217,14 +217,20 @@ class Merger:
         return self.flag(unknown, 'object', 'not in registry.csv or excluded.csv')
 
     def flatResponseProblems(self) -> list[dict]:
-        """A flat table's response is a column of its loaded table, or `none`."""
+        """A flat table's response is `none`, or a column of its loaded table that shows what its
+        type says."""
         problems = []
         for line, row in self.shard.iterrows():
-            if row['response'] == 'none':
+            response, response_type, trials = row['response'], row['response_type'], row['trials']
+            if response == 'none':
                 continue
             table = self.loader.load(self.frame.sources[row['source']], row['object'])
-            if row['response'] not in table.columns:
+            if response not in table.columns:
                 problems.append(self.problem(line, 'response', 'not a column of the table'))
+            elif response_type == '':
+                problems.append(self.problem(line, 'response_type', 'required'))
+            else:
+                problems += self.responseProblems(line, table, response, response_type, trials)
         return problems
 
     def objectsIn(self, table: Table) -> set[Key]:
@@ -287,7 +293,7 @@ class Merger:
         loaded = self.loader.load(source, row.object, row.types)
         table = withComposites(loaded, row.grouping_factors)
         problems += self.groupingProblems(line, row, table)
-        problems += self.responseProblems(line, row, table)
+        problems += self.responseProblems(line, table, row.response, row.response_type, row.trials)
         return problems
 
     def objects(self, label: str) -> dict[str, DataObject]:
@@ -321,15 +327,16 @@ class Merger:
                 )
         return problems
 
-    def responseProblems(self, line: int, row: Row, table: pd.DataFrame) -> list[dict]:
+    def responseProblems(
+        self, line: int, table: pd.DataFrame, response: str, response_type: str, trials: str
+    ) -> list[dict]:
         """The response column shows what its declared type says."""
-        response, kind = row.response, row.response_type
-        complaint = self.responseComplaint(kind, table[response].dropna())
+        complaint = self.responseComplaint(response_type, table[response].dropna())
         problems = []
         if complaint is not None:
             problems.append(self.problem(line, 'response_type', f'{response} {complaint}'))
-        if kind == 'binomial':
-            problems += self.trialsProblems(line, row, table)
+        if response_type == 'binomial':
+            problems += self.trialsProblems(line, table, response, trials)
         return problems
 
     @staticmethod
@@ -353,9 +360,10 @@ class Merger:
             return False
         return bool(((values >= 0) & (values == values.round())).all())
 
-    def trialsProblems(self, line: int, row: Row, table: pd.DataFrame) -> list[dict]:
+    def trialsProblems(
+        self, line: int, table: pd.DataFrame, response: str, trials: str
+    ) -> list[dict]:
         """A binomial response names integer trials it never exceeds."""
-        response, trials = row.response, row.trials
         if trials == '':
             return [self.problem(line, 'trials', 'binomial names its trials')]
         if not self.isCount(table[trials].dropna()):

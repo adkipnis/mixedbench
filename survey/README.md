@@ -29,9 +29,10 @@ deposits of the practice survey's papers, `O` open tabular repositories):
    `no grouping structure` and flags read tables for a second reading
    ([`flat_screen.csv`](#bookkeeping)). Agents give each flagged table a verdict by
    [`prompts/flat.md`](prompts/flat.md), and each sample table its response by
-   [`prompts/response.md`](prompts/response.md). `flat.py measure` measures the flat sample
-   without its responses into `registry/flat.csv` and `flat_columns.csv`, then rewrites the
-   summary; a merge leaves the two files as they are. `draw`, `handoff` and `agree` run a hand
+   [`prompts/response.md`](prompts/response.md), with its type. `flat.py measure` measures the
+   flat sample without its responses into `registry/flat.csv` and `flat_columns.csv`, and the
+   named responses into `flat_response_statistics.csv`, then rewrites the summary; a merge
+   leaves the three files as they are. `draw`, `handoff` and `agree` run a hand
    check, `--check verdict`, `response` or `recheck`, and `wide` lists the tables judged `wide` for
    the issue of their long forms ([ADR 0007](../docs/adr/0007-flat-sample.md)).
 
@@ -63,7 +64,7 @@ uv run python survey/mirror.py --tag mirror-<n>
 | `flat.py`, `prompts/flat.md`, `prompts/response.md` | the flat pass, the second reading's brief and the response reading's brief |
 | `fits_preparation.csv` | the rows a source fitted where they are not the whole table: a subset or a frequency weight, read by `fits.py` |
 | `schema.py`, `sources.py`, `help.py`, `summarize.py` | the survey's file contract, the frame, the help pages, the summary |
-| `dimensions.py`, `columns.py`, `groups.py`, `pairs.py` | one module per measured file |
+| `dimensions.py`, `columns.py`, `groups.py`, `pairs.py`, `responses.py` | one module per measured file |
 | `SUMMARY.template.md` | the digit-free template of `registry/SUMMARY.md` |
 | `prompts/read.md` | the reading agent's brief |
 | `shards/<table>_<label>.csv` | one shard per reading run; `table` ∈ `registry`, `excluded`, `duplicates`, `dropped`, `flat` (the verdicts), `response` (the flat tables' responses) |
