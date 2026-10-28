@@ -61,6 +61,8 @@ GitHub walks through the fork, the branch and the pull request in
 - Add a test with each change; mark a test that downloads with `@pytest.mark.network`.
 - Run `uv run ruff format .` and `uv run pytest`. CI runs the tests on Linux, macOS and Windows.
 - Please follow the style [conventions](docs/conventions.md).
+- No AI slop allowed. If you use AI to assist you in coding (which you are welcome to), always
+  make sure that you have read, reviewed, and understood your code.
 
 Three rules keep results comparable:
 

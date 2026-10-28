@@ -150,7 +150,7 @@ Measured over the rows with a measured response, since dosing rows are no observ
   - `group_level_r2`: the row-level R² of the column on the factor's other group-level columns,
     coded as the contract codes them, over the rows that observe them all, adjusted by the
     group count, 1 − (1 − R²)(m − 1) / (m − p − 1) with p the design's rank beyond the
-    intercept. Blank when p = 0, when m − p − 1 ≤ 0 or for a constant column.
+    intercept. Blank when p = 0, when m − p − 1 <= 0 or for a constant column.
   - `absent_level_share`: the share of the m × K group × level cells that hold no row.
   - `size_rho`: Spearman's ρ of the groups' sizes with their means, blank when either is
     constant.

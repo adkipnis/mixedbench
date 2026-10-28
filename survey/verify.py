@@ -129,9 +129,9 @@ Four rules settle what groups:
 
 One bullet per row in this order, nothing else:
 
-- `<n> · <source> · <object> · model <k>: stands — <the source's model in one line>`
-- `<n> · <source> · <object> · model <k>: <field> <corrected value>; … — <the reason>`
-- `<n> · <source> · <object> · model <k>: no grouping, flat or wide — <the reason>`
+- `<n> · <source> · <object> · model <k>: stands - <the source's model in one line>`
+- `<n> · <source> · <object> · model <k>: <field> <corrected value>; ... - <the reason>`
+- `<n> · <source> · <object> · model <k>: no grouping, flat or wide - <the reason>`
 
 Take the evidence from the source, not from the reading or its notes alone.
 The help page is the one the reader saw.
@@ -278,7 +278,7 @@ class Verifier:
         heading = (
             f'{row["source"]} · {row["object"]} · model {row["model_index"]} ({row["stratum"]})'
         )
-        reading = ''.join(f'- {field}: {row[field] or "—"}\n' for field in READING)
+        reading = ''.join(f'- {field}: {row[field] or "-"}\n' for field in READING)
         details = renderHelpPage(self.registry, row['source'], row['object'])
         urls = f'- page: {page}\n- download: {download} (file `{row["file"]}`)\n'
         return f'\n## {number}. {heading}\n\n{urls}{reading}\n{details}'

@@ -1,4 +1,4 @@
-# Flat prompt — second reading
+# Flat prompt - second reading
 
 ## Role
 
@@ -61,7 +61,7 @@ A hidden grouping whose only repeated unit is a wave that a documented model fit
 separately per wave keeps its filing, with no re-file shard; the verdict keeps it out of the
 sample. A wave that no documented model fits groups.
 
-## Output — shards only
+## Output - shards only
 
 - `shards/flat_<label>.csv` with `source,object,verdict,evidence`, one row per object in the
   worklist's order; for a hidden grouping also the shards above.

@@ -1,4 +1,4 @@
-# Dimension survey — summary
+# Dimension survey - summary
 
 Public grouped datasets measured by script from [`registry.csv`](registry.csv); the files in
 [`docs/registry.md`](../docs/registry.md), the method in [`README.md`](../survey/README.md). Evidence for the envelope in metabeta's
@@ -19,7 +19,7 @@ How to read the tables:
   [`docs/registry.md`](../docs/registry.md).
 - The last column of an axis table, `practice`, is the practice survey's upper decile, the
   maximum over the v1 families in [`practice_quantiles.yaml`](../survey/practice_quantiles.yaml)
-  (the minimum for the smallest group size), read at merge time; `–` where the practice survey
+  (the minimum for the smallest group size), read at merge time; `-` where the practice survey
   has no such axis.
 
 **Corpus.** ${n_rows} registry rows over ${n_objects} datasets and ${n_factor_rows} grouping

@@ -1,4 +1,4 @@
-# Dimension survey — summary
+# Dimension survey - summary
 
 Public grouped datasets measured by script from [`registry.csv`](registry.csv); the files in
 [`docs/registry.md`](../docs/registry.md), the method in [`README.md`](../survey/README.md). Evidence for the envelope in metabeta's
@@ -19,7 +19,7 @@ How to read the tables:
   [`docs/registry.md`](../docs/registry.md).
 - The last column of an axis table, `practice`, is the practice survey's upper decile, the
   maximum over the v1 families in [`practice_quantiles.yaml`](../survey/practice_quantiles.yaml)
-  (the minimum for the smallest group size), read at merge time; `–` where the practice survey
+  (the minimum for the smallest group size), read at merge time; `-` where the practice survey
   has no such axis.
 
 **Corpus.** 692 registry rows over 623 datasets and 909 grouping
@@ -85,7 +85,7 @@ Rows with a measured response; a pharmacokinetic table's dosing rows are not obs
 
 | group_size_p10 | n | min | p5 | p10 | p50 | p90 | p95 | max | practice |
 |---|---|---|---|---|---|---|---|---|---|
-| pooled | 909 | 1 | 1 | 1 | 7 | 113 | 300 | 18180 | – |
+| pooled | 909 | 1 | 1 | 1 | 7 | 113 | 300 | 18180 | - |
 | tier R | 319 | 1 | 1 | 2 | 6 | 37 | 81 | 961 |  |
 | tier E | 158 | 1 | 1 | 2 | 7 | 282 | 500 | 2442 |  |
 | tier T | 259 | 1 | 1 | 1 | 6 | 58 | 135 | 1098 |  |
@@ -95,7 +95,7 @@ Rows with a measured response; a pharmacokinetic table's dosing rows are not obs
 
 | group_size_p50 | n | min | p5 | p10 | p50 | p90 | p95 | max | practice |
 |---|---|---|---|---|---|---|---|---|---|
-| pooled | 909 | 1 | 2 | 3 | 10 | 162 | 500 | 18180 | – |
+| pooled | 909 | 1 | 2 | 3 | 10 | 162 | 500 | 18180 | - |
 | tier R | 319 | 1 | 2 | 2 | 8 | 56 | 135 | 1395 |  |
 | tier E | 158 | 1 | 3 | 3 | 12 | 504 | 660 | 4200 |  |
 | tier T | 259 | 1 | 2 | 2 | 9 | 84 | 228 | 2037 |  |
@@ -105,7 +105,7 @@ Rows with a measured response; a pharmacokinetic table's dosing rows are not obs
 
 | group_size_p90 | n | min | p5 | p10 | p50 | p90 | p95 | max | practice |
 |---|---|---|---|---|---|---|---|---|---|
-| pooled | 909 | 1 | 2 | 3 | 14 | 263 | 762 | 20425 | – |
+| pooled | 909 | 1 | 2 | 3 | 14 | 263 | 762 | 20425 | - |
 | tier R | 319 | 1 | 2 | 3 | 8 | 64 | 217 | 1849 |  |
 | tier E | 158 | 2 | 3 | 4 | 18 | 773 | 1309 | 4650 |  |
 | tier T | 259 | 2 | 2 | 3 | 13 | 139 | 336 | 4014 |  |
@@ -132,7 +132,7 @@ coefficient of variation are readable companions.
 
 | alpha | n | min | p5 | p10 | p50 | p90 | p95 | max | practice |
 |---|---|---|---|---|---|---|---|---|---|
-| pooled | 909 | 0.0251 | 0.9384 | 1.7108 | 43.5581 | inf | inf | inf | – |
+| pooled | 909 | 0.0251 | 0.9384 | 1.7108 | 43.5581 | inf | inf | inf | - |
 | tier R | 319 | 0.0251 | 1.0905 | 2.2449 | inf | inf | inf | inf |  |
 | tier E | 158 | 0.1733 | 0.3236 | 0.9384 | 15.3433 | inf | inf | inf |  |
 | tier T | 259 | 0.0438 | 1.0972 | 1.8839 | 12.0721 | inf | inf | inf |  |
@@ -142,7 +142,7 @@ coefficient of variation are readable companions.
 
 | singleton_share | n | min | p5 | p10 | p50 | p90 | p95 | max | practice |
 |---|---|---|---|---|---|---|---|---|---|
-| pooled | 909 | 0 | 0 | 0 | 0 | 0.1 | 0.2588 | 0.9964 | – |
+| pooled | 909 | 0 | 0 | 0 | 0 | 0.1 | 0.2588 | 0.9964 | - |
 | tier R | 319 | 0 | 0 | 0 | 0 | 0.0672 | 0.2519 | 0.9964 |  |
 | tier E | 158 | 0 | 0 | 0 | 0 | 0.0909 | 0.1525 | 0.5329 |  |
 | tier T | 259 | 0 | 0 | 0 | 0 | 0.1293 | 0.3182 | 0.8448 |  |
@@ -152,7 +152,7 @@ coefficient of variation are readable companions.
 
 | cv | n | min | p5 | p10 | p50 | p90 | p95 | max | practice |
 |---|---|---|---|---|---|---|---|---|---|
-| pooled | 909 | 0 | 0 | 0 | 0.1428 | 0.7439 | 1.0049 | 5.899 | – |
+| pooled | 909 | 0 | 0 | 0 | 0.1428 | 0.7439 | 1.0049 | 5.899 | - |
 | tier R | 319 | 0 | 0 | 0 | 0 | 0.6637 | 0.9104 | 5.899 |  |
 | tier E | 158 | 0 | 0 | 0 | 0.2463 | 1.0108 | 1.5292 | 1.9835 |  |
 | tier T | 259 | 0 | 0 | 0 | 0.273 | 0.7041 | 0.9348 | 3.5667 |  |
@@ -178,7 +178,7 @@ Levels of the categorical covariates:
 
 | K | n | min | p5 | p10 | p50 | p90 | p95 | max | practice |
 |---|---|---|---|---|---|---|---|---|---|
-| pooled | 351 | 2 | 2 | 3 | 4 | 10 | 17 | 717 | – |
+| pooled | 351 | 2 | 2 | 3 | 4 | 10 | 17 | 717 | - |
 | tier R | 144 | 2 | 3 | 3 | 4 | 8 | 10 | 56 |  |
 | tier E | 36 | 2 | 2 | 2 | 3 | 4 | 10 | 13 |  |
 | tier T | 85 | 2 | 2 | 2 | 3 | 9 | 11 | 24 |  |
@@ -222,7 +222,7 @@ its levels less one, an interaction the product.
 
 | d_all | n | min | p5 | p10 | p50 | p90 | p95 | max | practice |
 |---|---|---|---|---|---|---|---|---|---|
-| pooled | 692 | 0 | 0 | 1 | 5 | 21 | 53 | 23759 | – |
+| pooled | 692 | 0 | 0 | 1 | 5 | 21 | 53 | 23759 | - |
 | tier R | 241 | 0 | 0 | 1 | 5 | 20 | 32 | 440 |  |
 | tier E | 115 | 0 | 0 | 0 | 3 | 12 | 20 | 543 |  |
 | tier T | 220 | 0 | 1 | 1 | 4 | 12 | 16 | 11030 |  |

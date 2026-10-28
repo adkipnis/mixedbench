@@ -109,7 +109,7 @@ def measureWithinSdCv(values: pd.Series, groups: pd.Series) -> dict:
 def measureGroupLevelR2(measurer: Measurer, column: str, grouping_factor: str, kind: str) -> dict:
     """The adjusted R² of the column on the factor's other group-level columns,
     1 − (1 − R²)(m − 1) / (m − p − 1) with p the design's rank beyond the intercept.
-    Blank when p = 0, m − p − 1 ≤ 0 or the column is constant."""
+    Blank when p = 0, m − p − 1 <= 0 or the column is constant."""
     table = measurer.table
     # a column with no observed value is constant within groups, but would complete no row
     partners = [

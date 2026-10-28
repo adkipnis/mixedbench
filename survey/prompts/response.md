@@ -1,4 +1,4 @@
-# Response prompt — flat tables
+# Response prompt - flat tables
 
 ## Role
 
@@ -70,7 +70,7 @@ One line per object: the model as the documentation writes it (the call or the f
 its words naming the outcome, and where it stands (the help page's examples, a script's path, a
 vignette's section, the paper's table); for `none`, which of the three cases holds and why.
 
-## Output — shards only
+## Output - shards only
 
 - `shards/response_<label>.csv` with `source,object,response,evidence,response_type,trials`,
   one row per object in the worklist's order.

@@ -8,7 +8,7 @@ Comparison axes, one number per table each:
 - the response: its type, as a 0/1 indicator per type, and its statistics, against the flat
   tables that name one
 
-The sets are compared by the two-sided Mann–Whitney U test, which asks whether a table of one set
+The sets are compared by the two-sided Mann-Whitney U test, which asks whether a table of one set
 tends to lie above a table of the other. The rank-biserial correlation quantifies its effect size.
 We test against two sets of flat tables: (1) all, and (2) only tables with a documented response.
 
@@ -151,7 +151,7 @@ def _compareStatistic(side: str, statistic: str, x: pd.Series, y: pd.Series) -> 
 
 
 def _testMannWhitney(x: pd.Series, y: pd.Series) -> dict:
-    """The Mann–Whitney U test as scipy's `mannwhitneyu(method='asymptotic')` computes it, and the
+    """The Mann-Whitney U test as scipy's `mannwhitneyu(method='asymptotic')` computes it, and the
     rank-biserial r = 2U / (n_x n_y) − 1, the probability that x lies above y minus the reverse
     (Kerby 2014, https://doi.org/10.2466/11.IT.3.1)."""
     n_x = len(x)

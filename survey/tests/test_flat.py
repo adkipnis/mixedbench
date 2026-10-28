@@ -704,7 +704,7 @@ def test_the_response_check_hands_off_each_tables_response_its_evidence_and_its_
     text = flat.handoff(ResponseCheck(), 1)
 
     assert text.count('\n- page: https://') == text.count('\n- download: https://') == 3
-    assert ': response <column> — ' in text and ': none — ' in text
+    assert ': response <column> - ' in text and ': none - ' in text
     assert '- response: weight\n- evidence: lm(weight ~ breed + feed)' in text
     assert '- response: none\n' in text
     assert 'NOT FLAT: trap indexes repeated captures' in text

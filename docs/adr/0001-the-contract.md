@@ -3,7 +3,7 @@ status: accepted, amended 2026-10-09, 2026-10-10, 2026-10-20 and 2026-10-21
 date: 2026-10-08
 ---
 
-# 0001 — The contract: one frozen rule set turns a registry row into a problem
+# 0001 - The contract: one frozen rule set turns a registry row into a problem
 
 A benchmark of posterior approximation needs every problem's posterior to be one
 well-defined distribution that any sampler can target. The contract fixes it; a change to
@@ -34,8 +34,8 @@ any rule is a new suite version, never a recomputation.
 
 **Family rule.**
 
-- Decision: by response type, continuous → Gaussian identity, binary → Bernoulli logit,
-  count → Poisson log, binomial → Binomial logit with the trials column, ordinal → cumulative
+- Decision: by response type, continuous -> Gaussian identity, binary -> Bernoulli logit,
+  count -> Poisson log, binomial -> Binomial logit with the trials column, ordinal -> cumulative
   logit. Negative binomial and probit, where the registry's `family` column names them,
   replace the rule from suite 1.2 on; Gamma, zero-inflated and hurdle families stay on the
   rule until a lab note settles their scaling. Categorical responses are outside suite 1.1.

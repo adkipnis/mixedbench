@@ -3,7 +3,7 @@ status: accepted, amended 2026-10-10 and 2026-10-16
 date: 2026-10-08
 ---
 
-# 0004 — brms over Stan is the single reference sampler; ladder, bar and what a reference is not
+# 0004 - brms over Stan is the single reference sampler; ladder, bar and what a reference is not
 
 **Sampler.**
 
@@ -26,7 +26,7 @@ date: 2026-10-08
 
 **Bar.**
 
-- Decision: rank-normalized R-hat < 1.01, bulk and tail ESS ≥ 400 on every global parameter,
+- Decision: rank-normalized R-hat < 1.01, bulk and tail ESS >= 400 on every global parameter,
   zero divergences.
 - Why stricter than v0.5's escalation trigger (1.05, 100): these draws are published, not
   consumed once.

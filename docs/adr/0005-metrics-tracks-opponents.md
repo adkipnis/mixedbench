@@ -3,7 +3,7 @@ status: accepted, amended 2026-10-10
 date: 2026-10-08
 ---
 
-# 0005 — Three tracks, scale-free metrics, opponent lines that target the same posterior
+# 0005 - Three tracks, scale-free metrics, opponent lines that target the same posterior
 
 **Posterior track.**
 
