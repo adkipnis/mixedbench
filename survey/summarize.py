@@ -267,6 +267,9 @@ class Summarizer:
             'table_flat_statistics': self.renderStatisticTable(
                 ('condition_all', *COLUMN_STATISTICS), axes, 'flat'
             ),
+            'table_flat_response_statistics': self.renderStatisticTable(
+                tuple(RESPONSE_AXES), axes, 'flat'
+            ),
         }
         return Template(TEMPLATE.read_text()).substitute(fields)
 
