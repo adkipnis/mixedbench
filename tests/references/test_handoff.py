@@ -308,7 +308,10 @@ def recordedDiagnostics(dir: Path, summary: pd.DataFrame) -> dict:
     """`Handoff.diagnostics` of the fixture problem, from files written as run.R writes them."""
     pyreadr.write_rds(dir / 'summary.rds', summary)
     pyreadr.write_rds(dir / 'chains.rds', CHAINS)
-    pyreadr.write_rds(dir / 'meta.rds', pd.DataFrame({'rhat_locals': [1.003]}))
+    meta = pd.DataFrame(
+        {'rhat_locals': [1.003], 'ess_bulk_locals': [450.0], 'ess_tail_locals': [520.0]}
+    )
+    pyreadr.write_rds(dir / 'meta.rds', meta)
     return Handoff(fixtureProblem()).diagnostics(dir)
 
 
@@ -330,13 +333,18 @@ def test_diagnostics_read_back_as_the_worst_over_parameters_with_nan_kept(tmp_pa
     diagnostics = recordedDiagnostics(tmp_path, summary)
     assert np.isnan(diagnostics['rhat'])
     assert np.isnan(diagnostics['ess_tail'])
-    keys = ('ess_bulk', 'divergences', 'treedepth_hits', 'ebfmi', 'rhat_locals')
+    keys = (
+        'ess_bulk', 'divergences', 'treedepth_hits', 'ebfmi', 'rhat_locals', 'ess_bulk_locals',
+        'ess_tail_locals',
+    )  # fmt: skip
     assert picked(diagnostics, keys) == {
         'ess_bulk': 500.0,
         'divergences': 3,
         'treedepth_hits': 2,
         'ebfmi': [0.9, 1.1],
         'rhat_locals': 1.003,
+        'ess_bulk_locals': 450.0,
+        'ess_tail_locals': 520.0,
     }
 
 
