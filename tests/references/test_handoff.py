@@ -20,7 +20,7 @@ from .conftest import (
     ROW,
     binomialTrials,
     fixtureProblem,
-    gaussianMixed,
+    gaussianSlopes,
     manyGroups,
     nestedProblem,
     ordinalProblem,
@@ -58,7 +58,7 @@ def test_the_table_reaches_r_standardized_under_aliases_without_the_intercept(
 def test_the_model_reaches_r_as_formula_family_prior_settings_and_seed(tmp_path: Path) -> None:
     """The seed is the first 4 bytes of sha256 of `fixture/trial/1`, modulo 2³¹."""
     assert writtenModel(fixtureProblem(), tmp_path) == {
-        'formula': 'y ~ 1 + x1 + x2 + (1 | g1)',
+        'formula': 'y ~ x1 + x2 + (1 | g1)',
         'family': 'gaussian',
         'link': 'identity',
         'prior': {
@@ -124,18 +124,17 @@ def test_a_binomial_response_reaches_r_with_its_trials(tmp_path: Path) -> None:
     handoff.write(tmp_path, LEVELS[0])
     model = json.loads((tmp_path / 'input.json').read_text())
     table = pd.read_csv(tmp_path / 'table.csv')
-    assert model['formula'] == 'y | trials(n) ~ 1 + x1 + (1 + x1 | g1)'
+    assert model['formula'] == 'y | trials(n) ~ x1 + (x1 | g1)'
     assert handoff.aliases == {'y': 'deaths', 'n': 'animals', 'x1': 'dose', 'g1': 'farm'}
     assert list(table.columns) == ['y', 'n', 'x1', 'g1']
 
 
-def test_uncorrelated_slopes_take_their_own_term_beside_the_correlated_ones(
-    tmp_path: Path,
-) -> None:
-    """`||` keeps `age`'s slope independent of the intercept and of the other slopes on `school`.
-    The correlated ones share the intercept's term."""
-    model = writtenModel(gaussianMixed(), tmp_path)
-    assert model['formula'] == 'y ~ 1 + x1 + x2 + x3 + (1 + x1 + x2 | g1) + (0 + x3 || g1)'
+def test_a_1_stands_only_where_no_covariate_or_slope_does(tmp_path: Path) -> None:
+    """brms implies both intercepts, as in `y ~ x + (x | g)`.
+    So the formula writes a `1` only for a model without covariates or a factor without slopes."""
+    row = replace(ROW, covariates=(), formula='y ~ 1 + (1 | block)')
+    model = writtenModel(fixtureProblem(row), tmp_path)
+    assert model['formula'] == 'y ~ 1 + (1 | g1)'
 
 
 def test_a_slope_on_a_categorical_covariate_takes_all_its_contrast_columns(
@@ -145,7 +144,7 @@ def test_a_slope_on_a_categorical_covariate_takes_all_its_contrast_columns(
     table = pd.DataFrame(
         {'block': ['A', 'B'] * 6, 'diet': ['a', 'b', 'c'] * 4, 'y': np.arange(12.0)}
     )
-    for bars, term in (('|', '(1 + x1 + x2 | g1)'), ('||', '(1 | g1) + (0 + x1 + x2 || g1)')):
+    for bars, term in (('|', '(x1 + x2 | g1)'), ('||', '(x1 + x2 || g1)')):
         row = replace(
             ROW,
             covariates=('diet',),
@@ -153,13 +152,13 @@ def test_a_slope_on_a_categorical_covariate_takes_all_its_contrast_columns(
             formula=f'y ~ diet + (1 + diet {bars} block)',
         )
         model = writtenModel(Problem.build(row, table), tmp_path)
-        assert model['formula'] == f'y ~ 1 + x1 + x2 + {term}'
+        assert model['formula'] == f'y ~ x1 + x2 + {term}'
 
 
 def test_an_ordinal_models_thresholds_take_brms_default_prior(tmp_path: Path) -> None:
     """The contract states no threshold prior, so no `Intercept` class reaches brms."""
     model = writtenModel(ordinalProblem(), tmp_path)
-    assert model['formula'] == 'y ~ 1 + x1 + (1 | g1)'
+    assert model['formula'] == 'y ~ x1 + (1 | g1)'
     assert (model['family'], model['link']) == ('cumulative', 'logit')
     assert list(model['prior']) == ['b', 'sd']
 
@@ -207,10 +206,11 @@ def test_brms_draws_read_back_under_the_contracts_global_names_in_order() -> Non
 
 
 def test_slopes_and_correlation_pairs_read_back_by_brms_label() -> None:
-    """`sd_g1__x3` is `age`'s uncorrelated slope, and `cor_g1__x1__x2` the pair of `dose` and
-    `sex`, wherever brms puts them; `age` has no correlation."""
-    draws = Handoff(gaussianMixed()).read(FIXTURES / 'gaussian_mixed')['globals']
-    raw = rawDraws('gaussian_mixed')
+    """brms orders `school`'s six pairs column by column, the contract row by row.
+    So `cor[school][Intercept,age]` is read from `cor_g1__Intercept__x3`, brms's fourth pair."""
+    problem = gaussianSlopes(correlated=True)
+    draws = Handoff(problem).read(FIXTURES / 'gaussian_correlated')['globals']
+    raw = rawDraws('gaussian_correlated')
     assert list(draws.columns) == [
         'chain',
         'draw',
@@ -224,11 +224,14 @@ def test_slopes_and_correlation_pairs_read_back_by_brms_label() -> None:
         'sd[age|school]',
         'cor[school][Intercept,dose]',
         'cor[school][Intercept,sex]',
+        'cor[school][Intercept,age]',
         'cor[school][dose,sex]',
+        'cor[school][dose,age]',
+        'cor[school][sex,age]',
         'sigma',
     ]
     assert draws['sd[age|school]'].tolist() == raw['sd_g1__x3'].tolist()
-    assert draws['cor[school][Intercept,sex]'].tolist() == raw['cor_g1__Intercept__x2'].tolist()
+    assert draws['cor[school][Intercept,age]'].tolist() == raw['cor_g1__Intercept__x3'].tolist()
     assert draws['cor[school][dose,sex]'].tolist() == raw['cor_g1__x1__x2'].tolist()
 
 
@@ -253,7 +256,7 @@ def test_random_effects_read_back_by_brms_label_in_factor_slope_and_group_order(
     """`r_g1[7,x3]` is the `age` slope of school 7.
     A factor of at most 1,000 groups keeps its full draws.
     So `locals` holds every factor, and no summary is written."""
-    files = Handoff(gaussianMixed()).read(FIXTURES / 'gaussian_mixed')
+    files = Handoff(gaussianSlopes(correlated=True)).read(FIXTURES / 'gaussian_correlated')
     effects = ['school', 'dose|school', 'sex|school', 'age|school']
     assert list(files) == ['globals', 'locals']
     assert list(files['locals'].columns) == [
@@ -261,7 +264,7 @@ def test_random_effects_read_back_by_brms_label_in_factor_slope_and_group_order(
         'draw',
         *[f'r[{effect}][{j}]' for effect in effects for j in range(12)],
     ]
-    raw = rawDraws('gaussian_mixed')
+    raw = rawDraws('gaussian_correlated')
     assert files['locals']['r[age|school][7]'].tolist() == raw['r_g1[7,x3]'].tolist()
     assert files['locals']['chain'].tolist() == files['globals']['chain'].tolist()
 
