@@ -14021,6 +14021,7 @@
 "pymc_examples","examples/data/marketing.csv","E","youtube","categorical","190","no","0.0","","","","","","","0.95","0.005",""
 "pymc_examples","examples/data/marketing.csv","E","facebook","categorical","167","no","0.0","","","","","","","0.835","0.005",""
 "pymc_examples","examples/data/marketing.csv","E","newspaper","categorical","172","no","0.0","","","","","","","0.86","0.005",""
+"pymc_examples","examples/data/marketing.csv","E","sales","categorical","121","no","0.0","","","","","","","0.605","0.005",""
 "pymc_examples","examples/data/meps_bayes_np_health.csv","E","Unnamed: 0","continuous","","no","0.0","0.0","-1.2","0.0","0.0","0.0","0.0","1.0","","0.0201"
 "pymc_examples","examples/data/meps_bayes_np_health.csv","E","age","continuous","","no","0.0","0.3501","-0.7831","0.0","0.0","0.0142","0.0182","0.0033","","0.4048"
 "pymc_examples","examples/data/meps_bayes_np_health.csv","E","bmi","continuous","","no","0.0","-1.0836","7.3731","0.0225","0.0","0.0215","0.0","0.0212","","0.1153"
