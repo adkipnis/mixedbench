@@ -72,6 +72,7 @@ def verbAggCells() -> dict[str, str]:
         # a cell checked against another column of its row
         ('random_slopes', 'resp|id', 'resp is not a covariate'),
         ('random_slopes', 'Anger|Gender', 'Gender is not a grouping factor'),
+        ('random_slopes', 'Anger|id;Gender||id', 'id mixes | and || slopes'),  # two intercepts
         ('interactions', 'Anger:resp', 'resp is not a covariate'),
         ('grouping_factors', 'id;item;Anger', 'Anger is also a covariate'),
         ('covariates', 'Anger;Gender;btype;situ;r2', 'r2 is also the response'),
