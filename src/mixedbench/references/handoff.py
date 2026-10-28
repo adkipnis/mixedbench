@@ -216,7 +216,7 @@ class Handoff:
         summary = self._readSummary(dir / 'summary.rds')  # per global variable R summarized
         parameters = summary.loc[list(self.problem.globalDraws())]
         chains = pyreadr.read_r(dir / 'chains.rds')[None]  # per chain, over every iteration
-        meta = pyreadr.read_r(dir / 'meta.rds')[None]  # the largest R-hat over the random effects
+        meta = pyreadr.read_r(dir / 'meta.rds')[None]  # the random effects' worst R-hat and ESS
         return {
             'rhat': float(summary['rhat'].max(skipna=False)),
             'ess_bulk': float(summary['ess_bulk'].min(skipna=False)),
@@ -230,5 +230,7 @@ class Handoff:
             'warmup_seconds': chains['warmup_seconds'].tolist(),
             'sampling_seconds': chains['sampling_seconds'].tolist(),
             'rhat_locals': float(meta['rhat_locals'].iloc[0]),
+            'ess_bulk_locals': float(meta['ess_bulk_locals'].iloc[0]),
+            'ess_tail_locals': float(meta['ess_tail_locals'].iloc[0]),
             'by_parameter': parameters.to_dict(orient='index'),
         }
