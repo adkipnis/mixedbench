@@ -41,6 +41,7 @@ from mixedbench.contract import codeCovariate, columnKind, dropConstant
 from mixedbench.datasets import Loader
 from mixedbench.registry.row import readCsv, splitList, writeCsv
 from pull import Puller
+from responses import codeResponse, measureResponse
 from schema import FLAT_RESPONSES, FLAT_VERDICTS, Table
 from sources import readFrame
 from verify import Links, drawSample, renderHelpPage
@@ -83,6 +84,12 @@ FLAT_COLUMNS = (
 # the column labels its rows
 FLAT_COLUMN_COLUMNS = (
     'source', 'object', 'tier', 'column', 'type', 'K', 'id_column', 'missing_share',
+    *COLUMN_STATISTICS,
+)  # fmt: skip
+# flat_responses.csv: responses.csv's columns for each table that names a response, less the
+# registry row's model index
+FLAT_RESPONSE_COLUMNS = (
+    'source', 'object', 'tier', 'response', 'response_type', 'K', 'missing_share',
     *COLUMN_STATISTICS,
 )  # fmt: skip
 # a batch's handoff opens with a prompt that a checker who knows neither the survey nor the
@@ -345,15 +352,18 @@ class FlatPass:
 
     def measure(self) -> None:
         """flat.csv and flat_columns.csv: every table of the flat sample, measured without its
-        response. Refuses, naming them, while a flagged table has no verdict or a sample table
-        has no response."""
-        tables, columns = [], []
+        response; flat_responses.csv: each named response, measured by its type. Refuses, naming
+        them, while a flagged table has no verdict or a sample table has no response."""
+        tables, columns, responses = [], [], []
         for _, row in self._selectResponded().iterrows():
             table = self.loader.load(self.sources[row['source']], row['object'])
-            response = row['response']
-            covariates = table if response == 'none' else table.drop(columns=response)
-            measured, measured_columns = self.measureTable(covariates)
             identity = {c: row[c] for c in ('source', 'object', 'tier')}
+            response = row['response']
+            covariates = table
+            if response != 'none':
+                covariates = table.drop(columns=response)
+                responses.append(identity | self._measureResponse(table, covariates, row))
+            measured, measured_columns = self.measureTable(covariates)
             how = {'stratum': row['stratum']} | self._findBasis(row) | {'response': response}
             tables.append(identity | how | measured)
             for column in measured_columns:
@@ -361,6 +371,8 @@ class FlatPass:
         writeCsv(pd.DataFrame(tables, columns=FLAT_COLUMNS), self.registry / 'flat.csv')
         flat_columns = pd.DataFrame(columns, columns=FLAT_COLUMN_COLUMNS)
         writeCsv(flat_columns, self.registry / 'flat_columns.csv')
+        flat_responses = pd.DataFrame(responses, columns=FLAT_RESPONSE_COLUMNS)
+        writeCsv(flat_responses, self.registry / 'flat_responses.csv')
 
     # ---------------------------------------------------------------------------------
     # pipeline: merged files -> frame -> a read table's screen
@@ -467,6 +479,15 @@ class FlatPass:
     def _readBookkeeping(self, table: Table) -> pd.DataFrame:
         """A merged table of the survey, in its agent columns."""
         return readCsv(self.survey / f'{table.name}.csv')[list(table.agentColumns)]
+
+    @staticmethod
+    def _measureResponse(table: pd.DataFrame, covariates: pd.DataFrame, row: pd.Series) -> dict:
+        """A named response measured as responses.csv measures a registry row's of its type,
+        against every other column of its table."""
+        response_type = row['response_type']
+        values = codeResponse(table, row['response'], response_type, row['trials'])
+        column_types = {c: columnKind(covariates[c]) for c in covariates.columns}
+        return measureResponse(values, response_type, table, column_types)
 
     def measureTable(self, table: pd.DataFrame) -> tuple[dict, list[dict]]:
         """A flat table's sizes and design statistics, and each column's statistics by the
