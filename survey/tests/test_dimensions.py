@@ -121,17 +121,18 @@ def test_the_condition_index_of_the_documented_design(herds, rows):
     assert dimension['condition_all'] == dimension['condition_doc']
 
 
-def test_a_rank_deficient_design_has_an_infinite_condition_index(herds, rows):
-    """Breed and feed leave cells empty: no hereford or jersey eats grain, the reference feed,
+def test_a_column_the_columns_before_it_span_is_left_out_of_the_condition_index(herds, rows):
+    """The index is of the contract's design, which drops such a column (#151).
+    Breed and feed leave cells empty: no hereford or jersey eats grain, the reference feed,
     so each of their contrasts is the sum of their interaction columns.
-    Weight in pounds repeats weight in kilograms, among every measured column only."""
+    Weight in pounds repeats weight in kilograms, so every measured column gives the documented
+    design."""
     interacting = rows[0] | {'interactions': 'breed:feed'}
-    assert dimensions.measure(Measurer(herds, parsed(interacting)))[0]['condition_doc'] == np.inf
+    assert dimensions.measure(Measurer(herds, parsed(interacting)))[0]['condition_doc'] < np.inf
     pounds = herds.assign(pounds=herds['weight'] * 2.2046)
     alone = rows[1] | {'covariates': 'weight;breed', 'ignore': 'id;region;feed;parity;sick'}
     dimension = dimensions.measure(Measurer(pounds, parsed(alone)))[0]
-    assert dimension['condition_doc'] < np.inf
-    assert dimension['condition_all'] == np.inf
+    assert dimension['condition_all'] == dimension['condition_doc']
 
 
 @pytest.mark.parametrize(
