@@ -39,8 +39,8 @@ class Handoff:
     `y` for the response, `n` for a binomial model's trials,
     `x1`, `x2`, ... for the design columns after `Intercept`,
     `g1`, `g2`, ... for the grouping factors.
-    Each grouping factor takes its intercept with the correlated slopes, `(1 + x1 | g1)`.
-    Uncorrelated slopes go in a term of their own, `(0 + x2 || g1)`.
+    Each grouping factor is one term: `(x1 | g1)` for slopes correlated with its intercept,
+    `(x1 || g1)` for uncorrelated ones and `(1 | g1)` without slopes.
     brms labels a variable by its class and aliases, such as `sd_g1__x1` or `r_g1[j,x1]`,
     where `j` is a group's code. The draws are renamed by these labels.
     Random effects for more than `FULL_GROUPS` groups are summarized instead of saving the draws.
@@ -100,28 +100,23 @@ class Handoff:
         (dir / 'input.json').write_text(json.dumps(model, indent=2))
 
     def _formula(self) -> str:
+        """Writes the model in brms syntax."""
         response = 'y | trials(n)' if self.problem.trials else 'y'
         covariates = [self._aliasOf[column] for column in self.problem.design[1:]]
-        terms = ['1', *covariates]
-        for factor in self.problem.factors:
-            terms += self._randomTerms(factor)
-        predictors = ' + '.join(terms)
+        fixed = covariates if covariates else ['1']
+        random = [self._randomTerm(factor) for factor in self.problem.factors]
+        predictors = ' + '.join(fixed + random)
         return f'{response} ~ {predictors}'
 
-    def _randomTerms(self, factor: str) -> list[str]:
-        alias = self._aliasOf
-        g = alias[factor]
-        correlated = self.problem.correlations.get(factor, ())[1:]  # after `Intercept`
-        uncorrelated = [
-            column for column in self.problem.slopes(factor) if column not in correlated
-        ]
-        slopes = [alias[column] for column in correlated]
-        effects = ' + '.join(['1', *slopes])
-        terms = [f'({effects} | {g})']
-        if uncorrelated:
-            independent = ' + '.join(alias[column] for column in uncorrelated)
-            terms.append(f'(0 + {independent} || {g})')
-        return terms
+    def _randomTerm(self, factor: str) -> str:
+        """`(x | g)` for slopes correlated with the intercept, `(x || g)` for uncorrelated ones."""
+        g = self._aliasOf[factor]
+        slopes = [self._aliasOf[column] for column in self.problem.slopes(factor)]
+        if not slopes:
+            return f'(1 | {g})'
+        bars = '|' if factor in self.problem.correlations else '||'
+        effects = ' + '.join(slopes)
+        return f'({effects} {bars} {g})'
 
     @staticmethod
     def _brmsPrior(prior: Prior) -> str:
