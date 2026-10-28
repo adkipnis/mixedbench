@@ -10,6 +10,7 @@ import pytest
 import yaml
 from columns import COLUMN_STATISTICS
 from conftest import (
+    FIXTURES,
     asOrdered,
     measuredColumns,
     parsed,
@@ -281,15 +282,21 @@ def writeVerdicts(flat: FlatPass, verdicts: list[tuple[str, str, str, str]]) -> 
 
 
 def writeResponses(
-    flat: FlatPass, responses: list[tuple[str, str, str]], not_flat: tuple[str, ...] = ()
+    flat: FlatPass,
+    responses: list[tuple[str, str, str]],
+    not_flat: tuple[str, ...] = (),
+    types: dict[str, tuple[str, str]] = {},
 ) -> None:
     """The responses as the merge leaves them in `flat_responses.csv`, the tier filled; the
-    evidence of an object in `not_flat` opens as a reader who found it grouped writes it."""
+    evidence of an object in `not_flat` opens as a reader who found it grouped writes it. A
+    named response is continuous unless `types` gives an object's type and trials."""
     tiers = readFrame(flat.registry).tiers
     rows = []
     for source, object, response in responses:
         evidence = 'NOT FLAT: cows repeat within herds' if object in not_flat else 'its help page'
-        rows.append({'source': source, 'tier': tiers[source], 'object': object, 'response': response, 'evidence': evidence})  # fmt: skip
+        response_type, trials = ('', '') if response == 'none' else ('continuous', '')
+        response_type, trials = types.get(object, (response_type, trials))
+        rows.append({'source': source, 'tier': tiers[source], 'object': object, 'response': response, 'evidence': evidence, 'response_type': response_type, 'trials': trials})  # fmt: skip
     path = flat.survey / 'flat_responses.csv'
     writeCsv(pd.DataFrame(rows, columns=FLAT_RESPONSES.columns), path)
 
@@ -391,6 +398,36 @@ def test_the_response_leaves_flat_columns_and_every_count_and_design_statistic_o
     assert [table[s] for s in sizes] == ['response', '3', '1', '1', '0', '1', '1.0']
     columns = readRows(flat.registry / 'flat_columns.csv')
     assert [(c['column'], c['max_abs_rho']) for c in columns] == [('dose', '')]
+
+
+def test_the_pass_measures_each_named_response_as_responses_csv_measures_one_of_its_type(
+    tmp_path,
+):
+    """A flat table's response is measured by its read type as a registry row's is: the herds
+    table's cases as their share of the trials, whose statistics test_responses works by scipy.
+    The trials stay a covariate of the flat table, ranking 0.2306 with the share, below weight's
+    0.8921. A table whose response is `none` has no row."""
+    cows = pd.read_csv(FIXTURES / 'herds.csv').drop(columns=['id', 'region', 'herd'])
+    flat = plotsPass(tmp_path, {'cows.csv': cows.to_csv(index=False), 'plain.csv': PLAIN})
+    writeSurvey(flat, [
+        ('plots', 'cows.csv', 'pass', NO_GROUPING, 'one row per cow'),
+        ('plots', 'plain.csv', 'pass', NO_GROUPING, 'one row per plot'),
+    ])  # fmt: skip
+    writeVerdicts(flat, [('plots', 'cows.csv', 'flat', 'one row per cow')])  # trials is id-like
+    responses = [('plots', 'cows.csv', 'cases'), ('plots', 'plain.csv', 'none')]
+    writeResponses(flat, responses, types={'cows.csv': ('binomial', 'trials')})
+
+    flat.measure()
+
+    assert readRows(flat.registry / 'flat_responses.csv') == [
+        {
+            'source': 'plots', 'object': 'cows.csv', 'tier': 'O', 'response': 'cases',
+            'response_type': 'binomial', 'K': '', 'missing_share': '0.0', 'skewness': '0.6362',
+            'excess_kurtosis': '-0.4856', 'outlier_share': '0.0', 'zero_share': '0.1429',
+            'min_share': '0.1429', 'max_share': '0.0714', 'unique_share': '0.8571',
+            'rare_level_share': '', 'max_abs_rho': '0.8921',
+        }
+    ]  # fmt: skip
 
 
 def test_the_pass_refuses_naming_every_sample_table_without_a_response(plots):
