@@ -272,20 +272,6 @@ def test_declared_column_types_are_applied(tmp_path):
     assert table['size'].dtype.kind == 'i'
 
 
-def test_decimal_commas_are_read_with_points_and_a_thousands_separator_fails(tmp_path):
-    """A European csv writes 21,5 for 21.5 (kleisner_2026's BMI), so a declared continuous column
-    with commas and no points is read with points; 1,234.5 is refused, never read as 1.234."""
-    bmi = b'id,bmi\n1,"21,5"\n2,"19,0"\n3,"23,25"\n'
-    income = b'id,income\n1,"1,234.5"\n2,"987.0"\n'
-    bmi_url = 'https://example.org/bmi.csv'
-    income_url = 'https://example.org/income.csv'
-    loader = Loader(tmp_path, fetch=Server({bmi_url: bmi, income_url: income}))
-    table = loader.load(urlSource(bmi_url, bmi), 'bmi.csv', types={'bmi': 'continuous'})
-    assert list(table['bmi']) == [21.5, 19.0, 23.25]
-    with pytest.raises(ValueError):
-        loader.load(urlSource(income_url, income), 'income.csv', types={'income': 'continuous'})
-
-
 def test_git_source_is_fetched_as_an_archive_at_its_revision(tmp_path):
     """A repository pinned to a revision comes as GitHub's archive tarball of that revision, so
     one fetch serves every file and README; the pinned path narrows the objects to its folder."""

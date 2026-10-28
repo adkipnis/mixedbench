@@ -32,7 +32,6 @@ from __future__ import annotations
 import argparse
 import math
 from pathlib import Path
-
 from typing import get_args
 
 import numpy as np
@@ -47,17 +46,14 @@ COLUMN_STATISTICS = (
     'missing_share', 'skewness', 'excess_kurtosis', 'outlier_share', 'zero_share', 'min_share',
     'max_share', 'unique_share', 'rare_level_share', 'max_abs_rho',
 )  # fmt: skip
+MEASURED = ('K', *COLUMN_STATISTICS)  # a column's or a response's numbers, as measured
 STATISTICS = (
     'n_obs', 'n_columns', 'd_all', 'condition_all',
     'continuous_share', 'binary_share', 'categorical_share', 'ordered_share',
-    'K', *COLUMN_STATISTICS,
+    *MEASURED,
 )  # fmt: skip
 # a response's statistics, as responses.csv measures them, apart from the columns' medians
-RESPONSE_STATISTICS = (
-    'response_K', 'response_missing_share', 'response_skewness', 'response_excess_kurtosis',
-    'response_outlier_share', 'response_zero_share', 'response_min_share', 'response_max_share',
-    'response_unique_share', 'response_rare_level_share', 'response_max_abs_rho',
-)  # fmt: skip
+RESPONSE_STATISTICS = tuple(f'response_{statistic}' for statistic in MEASURED)
 
 # =====================================================================================
 # the summary tables
@@ -69,9 +65,9 @@ def summarizeRegistry(dir: Path) -> pd.DataFrame:
     dimensions = _readNumbers(dir / 'dimensions.csv', ('n_obs', 'condition_all'))
     first = dimensions[dimensions['model_index'] == '1']
     tables = first.drop_duplicates(KEY)  # n_obs of the first factor, as quantiles.yaml counts it
-    columns = _readNumbers(dir / 'columns.csv', ('K', *COLUMN_STATISTICS))
+    columns = _readNumbers(dir / 'columns.csv', MEASURED)
     columns = columns[columns['model_index'] == '1']
-    responses = _readNumbers(dir / 'responses.csv', ('K', *COLUMN_STATISTICS))
+    responses = _readNumbers(dir / 'responses.csv', MEASURED)
     responses = responses[responses['model_index'] == '1']
     return _joinResponse(summarizeTables(tables, columns), responses)
 
@@ -85,9 +81,9 @@ def _readNumbers(path: Path, columns: tuple[str, ...]) -> pd.DataFrame:
 def summarizeFlat(dir: Path) -> pd.DataFrame:
     """One row per flat table with its response, from every column but the id columns."""
     tables = _readNumbers(dir / 'flat.csv', ('n_obs', 'condition_all'))
-    columns = _readNumbers(dir / 'flat_columns.csv', ('K', *COLUMN_STATISTICS))
+    columns = _readNumbers(dir / 'flat_columns.csv', MEASURED)
     columns = columns[columns['id_column'] == 'no']
-    responses = _readNumbers(dir / 'flat_response_statistics.csv', ('K', *COLUMN_STATISTICS))
+    responses = _readNumbers(dir / 'flat_response_statistics.csv', MEASURED)
     summary = _joinResponse(summarizeTables(tables, columns), responses)
     summary.insert(3, 'response', tables['response'])
     return summary
@@ -115,7 +111,7 @@ def summarizeTables(tables: pd.DataFrame, columns: pd.DataFrame) -> pd.DataFrame
 def _joinResponse(summary: pd.DataFrame, responses: pd.DataFrame) -> pd.DataFrame:
     """Each table's response type and statistics, blank where it names no response."""
     responses = responses.set_index(KEY)
-    statistics = responses[['K', *COLUMN_STATISTICS]].add_prefix('response_')
+    statistics = responses[[*MEASURED]].set_axis(RESPONSE_STATISTICS, axis='columns')
     return summary.join(responses[['response_type']].join(statistics), on=KEY)
 
 

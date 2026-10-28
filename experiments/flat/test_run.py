@@ -46,7 +46,7 @@ def test_the_u_test_is_scipys_asymptotic_one(x, y, u, p):
 def summary(offset: float, **columns: list) -> pd.DataFrame:
     """A summary table, one row per value of `columns`, whose every statistic counts up from
     `offset`, so that no test sees only ties."""
-    n = len(next(iter(columns.values())))
+    n = len(columns['response_type'])
     counted = {s: [offset + i for i in range(n)] for s in (*STATISTICS, *RESPONSE_STATISTICS)}
     return pd.DataFrame(counted | columns)
 

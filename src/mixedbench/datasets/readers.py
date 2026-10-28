@@ -401,13 +401,16 @@ class PandasFile:
         sep, engine = None, 'python'
         if not any(mark in header for mark in ',;\t|'):  # columns aligned with runs of spaces
             sep, engine = r'\s+', 'c'
+        decimal = '.'
+        if ';' in header:  # R's write.csv2 writes decimal commas
+            decimal = ','
         try:  # pandas opens a `.gz` itself
             table = _readText(
                 pd.read_csv, file, sep=sep, skiprows=len(lines), engine=engine, **options
             )
         except pd.errors.ParserError:
             return None
-        return PandasFile._tidyText(table)
+        return PandasFile._tidyText(table, decimal)
 
     @staticmethod
     def banner(file: Path) -> tuple[list[str], str]:
@@ -416,25 +419,26 @@ class PandasFile:
         if file.suffix.lower() == '.gz':
             opener = gzip.open
         lines = []
-        with opener(file, 'rb') as f:
-            for raw in f:
-                line = raw.decode('utf-8', errors='replace')
+        # text mode ends a line at `\r` too, as classic Mac OS wrote them
+        with opener(file, 'rt', encoding='utf-8', errors='replace') as f:
+            for line in f:
                 if not line.startswith('#'):
                     return lines, line
                 lines.append(line.rstrip())
         return lines, ''
 
     @staticmethod
-    def _tidyText(table: pd.DataFrame) -> pd.DataFrame:
+    def _tidyText(table: pd.DataFrame, decimal: str) -> pd.DataFrame:
         """Padded names and fields (`NA       `) stripped,
         so that a column of numbers with `NA` is numeric with missing values."""
         table = table.rename(columns=lambda name: str(name).strip())
         tidy = {}
         for column in table.columns[table.dtypes.map(pd.api.types.is_string_dtype)]:
             values = table[column].str.strip().replace({'': None, 'NA': None})
-            parsed = pd.to_numeric(values, errors='coerce')
+            points = values.str.replace(decimal, '.', regex=False)
+            parsed = pd.to_numeric(points, errors='coerce')
             if parsed.notna().sum() == values.notna().sum():  # every present value a number
-                values = numbers(values)
+                values = numbers(points)
             tidy[column] = values
         return table.assign(**tidy)
 

@@ -86,7 +86,8 @@ class Summarizer:
         self.pairs = self.numeric(readCsv(self.root / 'factor_pairs.csv'), FACTOR_PAIR_STATISTICS)
         self.fits = self.numeric(readCsv(self.root / 'fits.csv'), FIT_STATISTICS)
         self.fitted = self.fits.drop_duplicates(['source', 'object', 'model_index'])  # per row
-        self.responses = self.numeric(readCsv(self.root / 'responses.csv'), ('K', *COLUMN_STATISTICS))  # fmt: skip
+        responses = readCsv(self.root / 'responses.csv')
+        self.responses = self.numeric(responses, ('K', *COLUMN_STATISTICS))
         self.rows = self.dimensions.drop_duplicates(['source', 'object', 'model_index'])
         self.modeled = self.columns[self.columns['in_model'] == 'yes']
         self.categoricals = self.modeled[self.modeled['type'].isin(CATEGORICAL_TYPES)]

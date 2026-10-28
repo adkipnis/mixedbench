@@ -42,7 +42,7 @@ from mixedbench.contract import codeCovariate, columnKind, dropConstant
 from mixedbench.datasets import Loader
 from mixedbench.registry.row import readCsv, splitList, writeCsv
 from pull import Puller
-from responses import codeResponse, measureResponse
+from responses import MARGINAL_COLUMNS, codeResponse, measureResponse
 from schema import FLAT_RESPONSES, FLAT_VERDICTS, Table
 from sources import readFrame
 from verify import Links, drawSample, renderHelpPage
@@ -89,10 +89,7 @@ FLAT_COLUMN_COLUMNS = (
 )  # fmt: skip
 # flat_response_statistics.csv: responses.csv's columns for each table that names a response,
 # less the registry row's model index
-FLAT_RESPONSE_STATISTIC_COLUMNS = (
-    'source', 'object', 'tier', 'response', 'response_type', 'K', 'missing_share',
-    *COLUMN_STATISTICS,
-)  # fmt: skip
+FLAT_RESPONSE_STATISTIC_COLUMNS = ('source', 'object', 'tier', *MARGINAL_COLUMNS)
 # a batch's handoff opens with a prompt that a checker who knows neither the survey nor the
 # repository can act on, one for the verdicts and one for the responses
 VERDICT_HEAD = """# Flat tables, {title}, batch {batch}

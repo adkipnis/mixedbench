@@ -263,6 +263,15 @@ def test_a_banner_of_hash_lines_above_the_table_is_skipped(example):
     assert list(cd4['id']) == [1, 1, 2]
 
 
+def test_a_file_whose_lines_end_in_carriage_returns_keeps_its_quoted_commas_as_text(tmp_path):
+    """lagisz_2020_osf's MA_dataset_2019_updated.csv ends its lines in `\\r` alone and holds a
+    `;` in a quoted field. Its header is its first line, so that `;` makes no decimal comma."""
+    file = tmp_path / 'plots.csv'
+    file.write_bytes(b'plot,items,note\r1,"1,2",dry\r2,"3",dry; windy\r3,"2,4",wet\r')
+    plots = readers.read(file, 'plots.csv')[0]['plots.csv']
+    assert list(plots['items']) == ['1,2', '3', '2,4']
+
+
 def test_r_write_table_output_reads_with_its_quotes_and_row_names(example):
     """ARM's ideo2.dat is R's write.table output: quoted strings, one holding a space, and row
     names under a header one field short. Quotes delimit a field, as read.table reads them, and
@@ -374,8 +383,15 @@ def lines(
     return '\n'.join(rows) + '\n' + tail
 
 
+def commaLines(scores: Sequence[str]) -> str:
+    """A `;`-separated file with decimal commas, as R's write.csv2 writes it."""
+    return lines([score.replace('.', ',') for score in scores], separator=';')
+
+
 TEXT_ROUTES = {  # route: file name, the text it holds, read's options
     'sniffed separator': ('scores.csv', partial(lines, separator=','), {}),
+    'decimal commas': ('scores.csv', commaLines, {}),  # pymc-examples' marketing.csv
+    'semicolons, decimal points': ('scores.csv', partial(lines, separator=';'), {}),  # rethinking
     'whitespace': ('scores.txt', partial(lines, separator='  '), {}),
     'cran data folder': ('scores.txt', lines, {'cran': True}),
     'layout of spans': (  # 24 characters hold the longest repr of a double

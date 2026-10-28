@@ -185,7 +185,7 @@ Levels of the categorical covariates:
 | tier D | 51 | 3 | 3 | 3 | 4 | 47 | 76 | 117 |  |
 | tier O | 35 | 2 | 2 | 3 | 5 | 26 | 73 | 717 |  |
 | without agridat | 321 | 2 | 2 | 2 | 4 | 10 | 17 | 717 |  |
-| flat | 1057 | 0 | 1 | 3 | 11 | 107 | 307 | 59548 |  |
+| flat | 1053 | 0 | 1 | 3 | 11 | 98 | 307 | 59548 |  |
 
 | K | n | share |
 |---|---|---|
@@ -226,10 +226,10 @@ its levels less one, an interaction the product.
 | tier R | 241 | 0 | 0 | 1 | 5 | 20 | 32 | 440 |  |
 | tier E | 115 | 0 | 0 | 0 | 3 | 12 | 20 | 543 |  |
 | tier T | 220 | 0 | 1 | 1 | 4 | 12 | 16 | 11030 |  |
-| tier D | 104 | 1 | 2 | 3 | 10 | 156 | 163 | 4580 |  |
+| tier D | 104 | 1 | 2 | 3 | 10 | 120 | 163 | 4580 |  |
 | tier O | 12 | 2 | 2 | 2 | 19 | 79 | 23759 | 23759 |  |
 | without agridat | 663 | 0 | 0 | 1 | 5 | 20 | 55 | 23759 |  |
-| flat | 722 | 0 | 1 | 2 | 5 | 22 | 78 | 29573 |  |
+| flat | 722 | 0 | 1 | 2 | 5 | 22 | 72 | 29573 |  |
 
 The condition index of the documented design and of the design over every column.
 
@@ -244,15 +244,15 @@ Every column of `columns.csv`, documented or not, by the statistics its type def
 
 | statistic | n | min | p5 | p10 | p50 | p90 | p95 | max |
 |---|---|---|---|---|---|---|---|---|
-| skewness | 2201 | -4.9042 | -0.7861 | -0.4935 | 0.1583 | 2.1906 | 3.5499 | 22.8556 |
-| excess_kurtosis | 2201 | -1.9902 | -1.36 | -1.2173 | -0.3109 | 6.4063 | 18.2569 | 1191.6867 |
-| outlier_share | 2201 | 0 | 0 | 0 | 0 | 0.0077 | 0.0135 | 0.0341 |
-| zero_share | 2220 | 0 | 0 | 0 | 0 | 0.1249 | 0.4061 | 1 |
-| min_share | 2387 | 0 | 0.0004 | 0.0011 | 0.0383 | 0.5159 | 0.6842 | 1 |
-| max_share | 2387 | 0 | 0.0002 | 0.0005 | 0.0172 | 0.2249 | 0.3333 | 1 |
+| skewness | 2216 | -4.9042 | -0.7861 | -0.4923 | 0.1646 | 2.1866 | 3.5499 | 22.8556 |
+| excess_kurtosis | 2216 | -1.9902 | -1.36 | -1.2173 | -0.3108 | 6.1845 | 18.2569 | 1191.6867 |
+| outlier_share | 2216 | 0 | 0 | 0 | 0 | 0.0075 | 0.0135 | 0.0341 |
+| zero_share | 2235 | 0 | 0 | 0 | 0 | 0.12 | 0.4061 | 1 |
+| min_share | 2402 | 0 | 0.0004 | 0.0011 | 0.038 | 0.5157 | 0.6841 | 1 |
+| max_share | 2402 | 0 | 0.0002 | 0.0005 | 0.0169 | 0.2236 | 0.3333 | 1 |
 | unique_share | 3957 | 0 | 0.0001 | 0.0003 | 0.0117 | 0.2581 | 0.7353 | 1 |
-| rare_level_share | 1740 | 0 | 0.0019 | 0.0042 | 0.2358 | 0.4968 | 0.5 | 1 |
-| max_abs_rho | 3220 | 0 | 0.007 | 0.036 | 0.4167 | 0.9106 | 0.9857 | 1 |
+| rare_level_share | 1725 | 0 | 0.0019 | 0.0041 | 0.2403 | 0.4968 | 0.5 | 1 |
+| max_abs_rho | 3235 | 0 | 0.007 | 0.0365 | 0.4183 | 0.9248 | 0.9956 | 1 |
 
 ## Quirk statistics per column and grouping factor
 
@@ -260,11 +260,11 @@ Every column against every grouping factor of its registry row.
 
 | statistic | n | min | p5 | p10 | p50 | p90 | p95 | max |
 |---|---|---|---|---|---|---|---|---|
-| between_group_share | 4495 | -1.6916 | -0.1136 | -0.0137 | 0.2871 | 1 | 1 | 1 |
+| between_group_share | 4510 | -1.6916 | -0.1129 | -0.0136 | 0.291 | 1 | 1 | 1 |
 | group_level_r2 | 2501 | -29.5505 | -1.6025 | -0.1471 | 0.0015 | 1 | 1 | 1 |
-| absent_level_share | 2490 | 0 | 0 | 0 | 0.3969 | 0.8453 | 0.9586 | 0.9983 |
+| absent_level_share | 2475 | 0 | 0 | 0 | 0.3905 | 0.8333 | 0.9587 | 0.9983 |
 | size_rho | 3499 | -1 | -0.8208 | -0.4228 | 0.0273 | 0.5 | 0.7826 | 1 |
-| within_sd_cv | 3253 | 0 | 0 | 0.0002 | 0.2863 | 1.5582 | 2.8022 | 129.5068 |
+| within_sd_cv | 3268 | 0 | 0 | 0.0002 | 0.2912 | 1.5569 | 2.7247 | 129.5068 |
 
 ## Quirk statistics per factor pair
 
@@ -374,39 +374,39 @@ its table above with the flat sample's row.
 **Corpus.** 722 flat tables; per stratum read 569, prescreened 153; per tier R 373, E 142, T 140, D 58, O 9.
 The screen flagged 289 of the frame's 674 read tables for a second reading and the response reading found 35 not flat; verdicts flat 218, wide 151, hidden grouping 43.
 The hand sample of 50 tables stood at 0.92.
-352 of the 722 tables name a response; the response check of 25 tables stood at 0.84, its recheck of 15 `none` tables at 1.0.
+353 of the 722 tables name a response; the response check of 25 tables stood at 0.84, its recheck of 15 `none` tables at 1.0.
 
 | column type | n | share |
 |---|---|---|
-| continuous | 36809 | 85% |
+| continuous | 36812 | 85% |
 | binary | 5458 | 13% |
-| categorical | 919 | 2% |
+| categorical | 915 | 2% |
 | ordered | 138 | 0% |
 
 | statistic | n | min | p5 | p10 | p50 | p90 | p95 | max |
 |---|---|---|---|---|---|---|---|---|
-| condition_all | 698 | 1 | 1 | 1.1115 | 4.8395 | inf | inf | inf |
-| skewness | 36029 | -11.1669 | -0.5451 | -0.0285 | 1.4166 | 3.5352 | 3.9586 | 244.6948 |
-| excess_kurtosis | 35994 | -5.6896 | -1.8923 | -1.6617 | 1.1862 | 12.0888 | 15.7992 | 59915.5349 |
-| outlier_share | 36029 | 0 | 0 | 0 | 0 | 0.02 | 0.0318 | 0.0565 |
-| zero_share | 36747 | 0 | 0 | 0 | 0.7032 | 0.9152 | 0.9364 | 1 |
-| min_share | 36885 | 0 | 0.0098 | 0.0185 | 0.7314 | 0.9187 | 0.9399 | 1 |
-| max_share | 36885 | 0 | 0.0035 | 0.0098 | 0.053 | 0.371 | 0.4452 | 1 |
-| unique_share | 43256 | 0 | 0.0063 | 0.0071 | 0.0106 | 0.6863 | 0.8585 | 1 |
-| rare_level_share | 6509 | 0 | 0.0022 | 0.01 | 0.1343 | 0.435 | 0.4839 | 1 |
-| max_abs_rho | 41538 | 0 | 0.2635 | 0.3319 | 0.9059 | 0.9956 | 0.9999 | 1 |
+| condition_all | 698 | 1 | 1 | 1.1115 | 4.821 | inf | inf | inf |
+| skewness | 36032 | -11.1669 | -0.5451 | -0.0285 | 1.4166 | 3.5352 | 3.9586 | 244.6948 |
+| excess_kurtosis | 35997 | -5.6896 | -1.8923 | -1.6617 | 1.1862 | 12.0888 | 15.7992 | 59915.5349 |
+| outlier_share | 36032 | 0 | 0 | 0 | 0 | 0.02 | 0.0318 | 0.0565 |
+| zero_share | 36750 | 0 | 0 | 0 | 0.7032 | 0.9152 | 0.9364 | 1 |
+| min_share | 36888 | 0 | 0.0098 | 0.0185 | 0.7314 | 0.9187 | 0.9399 | 1 |
+| max_share | 36888 | 0 | 0.0035 | 0.0098 | 0.053 | 0.371 | 0.4452 | 1 |
+| unique_share | 43255 | 0 | 0.0063 | 0.0071 | 0.0106 | 0.6863 | 0.8585 | 1 |
+| rare_level_share | 6505 | 0 | 0.0022 | 0.01 | 0.1343 | 0.435 | 0.4839 | 1 |
+| max_abs_rho | 41541 | 0 | 0.2635 | 0.3318 | 0.9059 | 0.9956 | 0.9999 | 1 |
 
 The named responses, by the statistics `responses.csv` defines for their type:
 
 | statistic | n | min | p5 | p10 | p50 | p90 | p95 | max |
 |---|---|---|---|---|---|---|---|---|
 | response_K | 83 | 2 | 2 | 2 | 2 | 7 | 7 | 10 |
-| response_skewness | 269 | -3.6156 | -0.9929 | -0.6077 | 0.4485 | 2.585 | 3.455 | 18.0723 |
-| response_excess_kurtosis | 268 | -2.0824 | -1.2961 | -1.1184 | 0.1673 | 10.3938 | 15.314 | 506.2884 |
-| response_outlier_share | 269 | 0 | 0 | 0 | 0 | 0.0082 | 0.0144 | 0.0435 |
-| response_zero_share | 278 | 0 | 0 | 0 | 0 | 0.0616 | 0.2139 | 0.9418 |
-| response_min_share | 286 | 0.0002 | 0.0009 | 0.0025 | 0.0283 | 0.2139 | 0.3333 | 0.9418 |
-| response_max_share | 286 | 0 | 0.0008 | 0.0013 | 0.0213 | 0.1308 | 0.1745 | 0.4231 |
-| response_unique_share | 352 | 0.0001 | 0.0017 | 0.0033 | 0.5321 | 1 | 1 | 1 |
+| response_skewness | 270 | -3.6156 | -0.9929 | -0.6077 | 0.4485 | 2.585 | 3.455 | 18.0723 |
+| response_excess_kurtosis | 269 | -2.0824 | -1.2961 | -1.1184 | 0.1633 | 10.3938 | 15.314 | 506.2884 |
+| response_outlier_share | 270 | 0 | 0 | 0 | 0 | 0.0082 | 0.0144 | 0.0435 |
+| response_zero_share | 279 | 0 | 0 | 0 | 0 | 0.0616 | 0.2139 | 0.9418 |
+| response_min_share | 287 | 0.0002 | 0.0009 | 0.0025 | 0.0278 | 0.2139 | 0.3333 | 0.9418 |
+| response_max_share | 287 | 0 | 0.0008 | 0.0013 | 0.0213 | 0.1308 | 0.1745 | 0.4231 |
+| response_unique_share | 353 | 0.0001 | 0.0017 | 0.0033 | 0.5321 | 1 | 1 | 1 |
 | response_rare_level_share | 83 | 0.0089 | 0.0368 | 0.0556 | 0.3103 | 0.4857 | 0.4955 | 0.5 |
-| response_max_abs_rho | 326 | 0.0092 | 0.1405 | 0.1859 | 0.5979 | 0.9637 | 0.9992 | 1 |
+| response_max_abs_rho | 327 | 0.0092 | 0.1405 | 0.1859 | 0.5979 | 0.9637 | 0.9992 | 1 |

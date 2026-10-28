@@ -294,8 +294,8 @@ def writeResponses(
     rows = []
     for source, object, response in responses:
         evidence = 'NOT FLAT: cows repeat within herds' if object in not_flat else 'its help page'
-        response_type, trials = ('', '') if response == 'none' else ('continuous', '')
-        response_type, trials = types.get(object, (response_type, trials))
+        default = ('', '') if response == 'none' else ('continuous', '')
+        response_type, trials = types.get(object, default)
         rows.append({'source': source, 'tier': tiers[source], 'object': object, 'response': response, 'evidence': evidence, 'response_type': response_type, 'trials': trials})  # fmt: skip
     path = flat.survey / 'flat_responses.csv'
     writeCsv(pd.DataFrame(rows, columns=FLAT_RESPONSES.columns), path)

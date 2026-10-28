@@ -258,6 +258,7 @@
 "pymc_examples","examples/data/body_fat.csv","E","siri","continuous","","0.0","0.1437","-0.316","0.0","0.004","0.004","0.004","0.6972","","0.8141"
 "pymc_examples","examples/data/hbk.csv","E","Y","continuous","","0.0","2.1107","2.7271","0.0","0.04","0.0133","0.0133","0.3467","","0.3891"
 "pymc_examples","examples/data/heating_data_r.csv","E","depvar","categorical","5","0.0","","","","","","","0.0056","0.0556",""
+"pymc_examples","examples/data/marketing.csv","E","sales","continuous","","0.0","0.4076","-0.4089","0.0","0.0","0.005","0.005","0.605","","0.8006"
 "pymc_examples","examples/data/meps_bayes_np_health.csv","E","smoke","binary","2","0.0","","","","","","","0.0001","0.1772","0.1721"
 "pymc_examples","examples/data/milk.csv","E","kcal.per.g","continuous","","0.0","0.5085","-1.1642","0.0","0.0","0.0588","0.0588","0.8824","","0.2726"
 "pymc_examples","examples/data/muscle-percent-males-interaction.csv","E","mperc","continuous","","0.0","0.3291","0.4809","0.0","0.0","0.0082","0.0041","0.0823","","0.2741"
