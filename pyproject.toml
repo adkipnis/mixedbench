@@ -1,6 +1,6 @@
 [project]
 name = "mixedbench"
-version = "1.0.10"
+version = "1.0.11"
 description = "A benchmark of posterior approximation and prediction on real grouped data for GLMMs"
 readme = "README.md"
 license = "Apache-2.0 AND CC-BY-4.0"
