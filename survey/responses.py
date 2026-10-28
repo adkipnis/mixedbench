@@ -21,7 +21,6 @@ from schema import IDENTITY
 
 if TYPE_CHECKING:  # only a type: measure.py imports this module
     from measure import Measurer
-    from mixedbench.registry.row import Row
 
 # =====================================================================================
 # globals
@@ -43,22 +42,33 @@ KINDS = {
 # =====================================================================================
 def measure(measurer: Measurer) -> dict:
     row = measurer.row
-    kind = KINDS[row.response_type]
-    values = codeResponse(measurer.loaded, row)
+    values = codeResponse(measurer.loaded, row.response, row.response_type, row.trials)
+    measured = measureResponse(values, row.response_type, measurer.table, measurer.column_types)
+    return measurer.identity | measured
+
+
+def measureResponse(
+    values: pd.Series, response_type: str, table: pd.DataFrame, column_types: dict[str, tuple]
+) -> dict:
+    """A coded response's marginal, which flat.py measures too: its levels, missing share and
+    quirk statistics by the kind its type gives, and its largest rank correlation with a column
+    of `column_types` over the table's rows."""
+    response = values.name
+    kind = KINDS[response_type]
     levels = '' if kind == 'continuous' else values.nunique()
-    ranked = measurer.column_types | {row.response: (kind, levels)}
-    table = measurer.table.assign(**{row.response: values})  # aligned to the measured rows
-    rho = columns.measureMaxAbsRho(table, ranked)[row.response]
-    measured = {'response': row.response, 'response_type': row.response_type, 'K': levels}
-    return measurer.identity | measured | columns.measureShape(values, kind) | {'max_abs_rho': rho}
+    ranked = column_types | {response: (kind, levels)}
+    table = table.assign(**{response: values})  # aligned to the table's rows
+    rho = columns.measureMaxAbsRho(table, ranked)[response]
+    measured = {'response': response, 'response_type': response_type, 'K': levels}
+    return measured | columns.measureShape(values, kind) | {'max_abs_rho': rho}
 
 
-def codeResponse(table: pd.DataFrame, row: Row) -> pd.Series:
-    """The response as measured: a binomial one as its successes' share of the trials, an
-    ordinal one as ordered levels, in the order the contract codes them."""
-    values = table[row.response]
-    if row.response_type == 'binomial':
-        return values / table[row.trials]
-    if row.response_type == 'ordinal':  # a plain column orders as the loader orders a declared one
+def codeResponse(table: pd.DataFrame, response: str, response_type: str, trials: str) -> pd.Series:
+    """The response as measured, under its column's name: a binomial one as its successes' share
+    of the trials, an ordinal one as ordered levels, in the order the contract codes them."""
+    values = table[response]
+    if response_type == 'binomial':
+        return (values / table[trials]).rename(response)
+    if response_type == 'ordinal':  # a plain column orders as the loader orders a declared one
         return values.astype('category').cat.as_ordered()
     return values
