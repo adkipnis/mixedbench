@@ -96,6 +96,8 @@ class Summarizer:
         self.flat_categoricals = self.flat_columns[
             self.flat_columns['type'].isin(CATEGORICAL_TYPES)
         ]
+        flat_responses = readCsv(self.root / 'flat_response_statistics.csv')
+        self.flat_responses = self.numeric(flat_responses, ('K', *COLUMN_STATISTICS))
 
     def flush(self) -> None:
         quantiles = self.quantiles()
@@ -161,10 +163,11 @@ class Summarizer:
     def collectFlatValues(self) -> dict[str, pd.Series]:
         """The flat sample's values of each axis both samples share: a size or design axis once
         per flat table, K once per categorical flat column, a column statistic once per flat
-        column."""
+        column, a response axis once per named flat response."""
         values = {axis: self.flat[axis] for axis in FLAT_TABLE_AXES}
         values['K'] = self.flat_categoricals['K']
         values |= {axis: self.flat_columns[axis] for axis in COLUMN_STATISTICS}
+        values |= {axis: self.flat_responses[column] for axis, column in RESPONSE_AXES.items()}
         return values
 
     @staticmethod
