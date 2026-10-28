@@ -194,3 +194,25 @@ the registry. Grilled on 2026-10-24 ([#72](https://github.com/adkipnis/mixedbenc
   changes none of its tables.
 - Rejected: no reshape ever, which leaves out every grouped table a source stores wide; the
   reshape before this sample ships.
+
+## Amendment 2026-10-28: the response's type and marginal ([#143](https://github.com/adkipnis/mixedbench/issues/143))
+
+- Decision: the response reading records a named response's `response_type`, and a binomial
+  one's `trials`, as a registry row records them, and the merge checks them against the column
+  as it checks a registry row's. A typing pass read them for the sample's named responses from
+  each table's recorded evidence and help page.
+- Why the read type: on the registry, the loaded column's kind matches the type the reading
+  gave on 634 of 692 rows, and 37 of the misses are ordinal responses that load as integers. A
+  rule that calls an integer of at most ten levels ordinal catches those but mislabels 32
+  counts and measurements, which gains five rows.
+- Decision: `flat_response_statistics.csv` measures each named response by the functions that
+  measure a registry row's into `responses.csv`, its `max_abs_rho` against every other column
+  of the table. Its statistics give the `response_` axes their `flat` blocks.
+- Why the name: `survey/flat_responses.csv` holds the readings, and one folder serving as both
+  the registry and the survey, as in the merge's tests, would hold one file for the two.
+- Decision: a response whose column fails its type's check as it loads is `none` until the
+  loader reads it (`marketing.csv`'s `sales`, written with decimal commas,
+  [#144](https://github.com/adkipnis/mixedbench/issues/144)). Successes stored beside their
+  failures without a trials column are `count`, as `faraway · soybean` is in the registry.
+- Rejected: a hand check of the types, since the merge refuses a type its column contradicts,
+  and only an ordinal response read as a count or a measurement changes how it is measured.
