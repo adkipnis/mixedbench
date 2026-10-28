@@ -361,4 +361,4 @@ class Summarizer:
 
     @staticmethod
     def cell(value: float | None) -> str:
-        return '–' if value is None else str(value)
+        return '-' if value is None else str(value)

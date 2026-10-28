@@ -34,8 +34,8 @@ any rule is a new suite version, never a recomputation.
 
 **Family rule.**
 
-- Decision: by response type, continuous → Gaussian identity, binary → Bernoulli logit,
-  count → Poisson log, binomial → Binomial logit with the trials column, ordinal → cumulative
+- Decision: by response type, continuous -> Gaussian identity, binary -> Bernoulli logit,
+  count -> Poisson log, binomial -> Binomial logit with the trials column, ordinal -> cumulative
   logit. Negative binomial and probit, where the registry's `family` column names them,
   replace the rule from suite 1.2 on; Gamma, zero-inflated and hurdle families stay on the
   rule until a lab note settles their scaling. Categorical responses are outside suite 1.1.

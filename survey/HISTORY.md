@@ -4,7 +4,7 @@
 
 What each pass of the dimension survey did and found, as dated bullets. The method is in
 [`README.md`](README.md), the files in [`docs/registry.md`](../docs/registry.md), the current counts in [`SUMMARY.md`](../registry/SUMMARY.md). `m3#` is an issue of
-metabeta-v3, a private repository where the survey ran until 2026-10-08 (spec m3#14, tickets m3#15–m3#27); `#` is an
+metabeta-v3, a private repository where the survey ran until 2026-10-08 (spec m3#14, tickets m3#15-m3#27); `#` is an
 issue of this repository. The finished scripts named here (`deposits.py`, `resolve.py`,
 `net.py`, `verify.py`) and the files only they wrote were in `archive/`, reproducible at tag
 `survey-archive` and kept at tag [`survey-archive-3`](https://github.com/adkipnis/mixedbench/tree/survey-archive-3/survey/archive).
@@ -225,7 +225,7 @@ reading's open disagreements, four to eight per tier.
   `UKLungDeaths`, `Harman23.cor`, `Harman74.cor`, `ability.cov`, `EXP2_3_LMM`, all no frame),
   the two pymc_examples objects no reader had seen (`Guber1999data.txt`, one row per state;
   `hurdat2-...txt`, HURDAT2's storm blocks, no table) and re-filed `hibbs.dat` and `hdi.dat`.
-  Exclusions 2142 → 2132.
+  Exclusions 2142 -> 2132.
 - `tests/test_census.py` asserts both directions: every exclusion is a census object, every
   uncapped census object is a registry row, an exclusion or a confirmed duplicate of either.
 
@@ -262,7 +262,7 @@ reading's open disagreements, four to eight per tier.
   line endings of the ASCII `fits.rda`, whose magic then did not parse; CI is green on all
   three systems.
 - The readings #10's code read questioned were checked at the source by four agents, Alex
-  deciding; `shards/registry_code_read.csv` replaced 54 rows and added 3 (registry 712 → 715).
+  deciding; `shards/registry_code_read.csv` replaced 54 rows and added 3 (registry 712 -> 715).
 - Left open: valdebenito's MCMCglmm `categorical` fits with residual variance fixed at 1 (a
   logit with an observation-level term) keep `family` blank; fims' item parameters have fixed
   priors and no estimated scale, `ii` stays a grouping factor.
@@ -631,8 +631,8 @@ object and the deciding issue.
 
 **Response**
 
-- Totals are `count`, 1–5 ratings `ordinal`, non-integer abundances `continuous`, a bounded
-  score without trials `count` (eggprod, InstEval; m3#22–m3#26); a float-coded nominal stays
+- Totals are `count`, 1-5 ratings `ordinal`, non-integer abundances `continuous`, a bounded
+  score without trials `count` (eggprod, InstEval; m3#22-m3#26); a float-coded nominal stays
   `ordinal` (antibiotics; #11).
 - A documented normalized score is its own column (jsp_728; m3#25).
 - Survival: `continuous`, the event indicator in `ignore` and `Surv(time, event)` in the

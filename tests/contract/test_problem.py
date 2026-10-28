@@ -40,7 +40,7 @@ ROW = Row(
 
 
 def fixtureTable() -> pd.DataFrame:
-    """Rows 0–11 are kept; row 12 misses `x`, row 13 misses `block`."""
+    """Rows 0-11 are kept; row 12 misses `x`, row 13 misses `block`."""
     return pd.DataFrame(
         {
             'block': ['A'] * 4 + ['B'] * 4 + ['C'] * 4 + ['A', None],

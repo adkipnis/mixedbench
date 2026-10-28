@@ -74,7 +74,7 @@ scoreMixed <- function(fit, train, test, family) {
 
 # log ∫ p(y | η + s t) φ(t) dt per row, by adaptive Gauss-Kronrod quadrature (R's integrate) on
 # either side of the integrand's mode. The links are canonical, so the integrand's log l(t) has
-# l''(t) = -s² Var(y | η + s t) - 1 ≤ -1: the integrand lies below exp(l(mode) - (t - mode)² / 2),
+# l''(t) = -s² Var(y | η + s t) - 1 <= -1: the integrand lies below exp(l(mode) - (t - mode)² / 2),
 # and mode ± 10 holds all but e^-50 of it. Gauss-Hermite nodes, placed by the curvature at the
 # mode, miss most of the mass when s is large and p(y | η + s t) falls steeply on one side.
 integrateEffect <- function(family, test, eta, s) {

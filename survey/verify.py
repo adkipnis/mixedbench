@@ -130,7 +130,7 @@ Four rules settle what groups:
 One bullet per row in this order, nothing else:
 
 - `<n> · <source> · <object> · model <k>: stands - <the source's model in one line>`
-- `<n> · <source> · <object> · model <k>: <field> <corrected value>; … - <the reason>`
+- `<n> · <source> · <object> · model <k>: <field> <corrected value>; ... - <the reason>`
 - `<n> · <source> · <object> · model <k>: no grouping, flat or wide - <the reason>`
 
 Take the evidence from the source, not from the reading or its notes alone.

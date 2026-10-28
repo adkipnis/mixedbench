@@ -211,7 +211,7 @@ def test_summary_tables_end_with_the_practice_p90_read_from_the_practice_file(me
     assert tableRows(summary, '| n_groups | n | min |')[0][-1] == f'{max(practiceP90s("n_groups_per_factor"))}'  # fmt: skip
     assert tableRows(summary, '| group_size_min | n | min |')[0][-1] == f'{min(practiceP90s("group_size_min"))}'  # fmt: skip
     assert tableRows(summary, '| d_doc | n | min |')[0][-1] == f'{max(practiceP90s("n_fixed_effects"))}'  # fmt: skip
-    assert tableRows(summary, '| alpha | n | min |')[0][-1] == '–'
+    assert tableRows(summary, '| alpha | n | min |')[0][-1] == '-'
     assert 'Excluded: 1 objects' in summary and 'derived or duplicated table 1' in summary
 
 

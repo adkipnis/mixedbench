@@ -110,7 +110,7 @@ def _rowFolds(rng: np.random.Generator, factors: list[np.ndarray], n: int) -> np
 
 
 def _groupFolds(rng: np.random.Generator, codes: np.ndarray) -> np.ndarray:
-    """Deals the groups into min(FOLDS, G) folds in seeded order: one group each where G ≤ FOLDS."""
+    """Deals the groups into min(FOLDS, G) folds in seeded order: one group each where G <= FOLDS."""
     groups = codes.max() + 1
     folds = min(FOLDS, groups)
     order = _seededOrder(rng, groups)  # (m,) group codes
