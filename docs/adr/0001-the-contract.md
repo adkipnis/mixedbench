@@ -246,3 +246,22 @@ any rule is a new suite version, never a recomputation.
 **Hashes.**
 
 - Decision: none moves, since the formula is not part of the materialized problem.
+
+## Amendment 2026-10-28: aliased design columns (#151)
+
+**Coding.**
+
+- Decision: a design column that `Intercept` and the columns before it span over the kept rows
+  is dropped and listed in `dropped_columns`, as lme4 drops it through R's `qr` with the
+  tolerance 1e-7, which keeps the earlier column of an aliased set. A constant column is the
+  special case, so the rule replaces the amendment of 2026-10-25.
+- Why: seven candidates kept a rank-deficient design without a constant column. Their tables
+  hold a column derived from others (Hoogland's `AllKin` sums three kin counts), a product equal
+  to one of its parts (Incentives' `v` is 0 without an incentive) or an empty cell (shanahan's
+  conventional message has no characters section). The aliased directions never meet the
+  likelihood, so the reference would sample them from the prior along a ridge.
+
+**Hashes.**
+
+- Decision: the seven contract hashes move, as a patch, since no suite is frozen before
+  release 1.1.
