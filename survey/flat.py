@@ -86,9 +86,9 @@ FLAT_COLUMN_COLUMNS = (
     'source', 'object', 'tier', 'column', 'type', 'K', 'id_column', 'missing_share',
     *COLUMN_STATISTICS,
 )  # fmt: skip
-# flat_responses.csv: responses.csv's columns for each table that names a response, less the
-# registry row's model index
-FLAT_RESPONSE_COLUMNS = (
+# flat_response_statistics.csv: responses.csv's columns for each table that names a response,
+# less the registry row's model index
+FLAT_RESPONSE_STATISTIC_COLUMNS = (
     'source', 'object', 'tier', 'response', 'response_type', 'K', 'missing_share',
     *COLUMN_STATISTICS,
 )  # fmt: skip
@@ -352,9 +352,9 @@ class FlatPass:
 
     def measure(self) -> None:
         """flat.csv and flat_columns.csv: every table of the flat sample, measured without its
-        response; flat_responses.csv: each named response, measured by its type. Refuses, naming
-        them, while a flagged table has no verdict, a sample table no response or a named
-        response no type."""
+        response; flat_response_statistics.csv: each named response, measured by its type.
+        Refuses, naming them, while a flagged table has no verdict, a sample table no response or
+        a named response no type."""
         tables, columns, responses = [], [], []
         for _, row in self._selectResponded().iterrows():
             table = self.loader.load(self.sources[row['source']], row['object'])
@@ -372,8 +372,8 @@ class FlatPass:
         writeCsv(pd.DataFrame(tables, columns=FLAT_COLUMNS), self.registry / 'flat.csv')
         flat_columns = pd.DataFrame(columns, columns=FLAT_COLUMN_COLUMNS)
         writeCsv(flat_columns, self.registry / 'flat_columns.csv')
-        flat_responses = pd.DataFrame(responses, columns=FLAT_RESPONSE_COLUMNS)
-        writeCsv(flat_responses, self.registry / 'flat_responses.csv')
+        statistics = pd.DataFrame(responses, columns=FLAT_RESPONSE_STATISTIC_COLUMNS)
+        writeCsv(statistics, self.registry / 'flat_response_statistics.csv')
 
     # ---------------------------------------------------------------------------------
     # pipeline: merged files -> frame -> a read table's screen

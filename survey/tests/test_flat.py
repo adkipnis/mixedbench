@@ -419,7 +419,7 @@ def test_the_pass_measures_each_named_response_as_responses_csv_measures_one_of_
 
     flat.measure()
 
-    assert readRows(flat.registry / 'flat_responses.csv') == [
+    assert readRows(flat.registry / 'flat_response_statistics.csv') == [
         {
             'source': 'plots', 'object': 'cows.csv', 'tier': 'O', 'response': 'cases',
             'response_type': 'binomial', 'K': '', 'missing_share': '0.0', 'skewness': '0.6362',
