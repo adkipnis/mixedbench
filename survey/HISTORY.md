@@ -629,6 +629,17 @@ reading's open disagreements, four to eight per tier.
   `flat_columns.csv` changed only in `marketing.csv`'s row and its `sales` column, which moved
   three flat counts by one.
 
+## Decimal commas (#144, 2026-10-28)
+
+- The loader reads decimal commas in a `;`-separated file, as R's `read.csv2` does, which
+  turned text columns into numbers in four cached files and moved no contract hash.
+- `marketing.csv`'s four columns load as numbers, so `shards/response_types_6.csv` types its
+  `sales` `continuous`. `flat.csv`, `flat_columns.csv` and `flat_response_statistics.csv`
+  changed only in its rows.
+- `naranowicz_2024_osf_4`'s ignored mood scores (`panas_sum`, `fear_prc`) became
+  continuous, so its `d_all` fell from 163 to 84, and the registry's measured files changed only
+  in its rows. `kleisner_2026_osf`'s `BMI`, declared continuous, loads as before.
+
 ## Reading rulings (m3#22 to #15)
 
 The rulings [`prompts/read.md`](prompts/read.md) does not carry, from the agents' `RULE GAP` notes and Alex's checks, each with an example
