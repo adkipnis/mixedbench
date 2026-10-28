@@ -9,8 +9,9 @@ excluded.csv and candidates.csv
 -> flat_screen.csv, the second reading's worklist           FlatPass.screen
 -> the sample: the screened frame decided by the verdicts   FlatPass._selectSample
 -> each sample table with its response, or none             FlatPass._selectResponded
+-> a named response's statistics, by its type               FlatPass._measureResponse
 -> a table's sizes, design and column statistics            FlatPass.measureTable
--> flat.csv and flat_columns.csv, without the responses     FlatPass.measure
+-> flat.csv, flat_columns.csv, flat_response_statistics.csv FlatPass.measure
 -> quantiles.yaml and SUMMARY.md with the flat split        Summarizer.flush
 -> a hand check's sample: 50 verdicts, 25 or 15 responses   FlatPass.draw
 -> one batch as a prompt with page and download URLs        FlatPass.handoff
