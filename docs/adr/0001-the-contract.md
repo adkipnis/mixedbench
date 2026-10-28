@@ -129,6 +129,8 @@ any rule is a new suite version, never a recomputation.
   source's zero. This is a benchmark assumption of suite 1.1. A slope that maps the source's structure into another basis is equivalent in structure, not
   in prior. Keeping the source's own blocks is a contract extension (#46).
 
+> Amended 2026-10-28 below: a factor's slopes are all `x|g` or all `x||g`.
+
 **Family rule, two cases.**
 
 - Decision: a censored response (`family` `cox` or `weibull`, 7 rows) is outside suite 1.1
@@ -230,3 +232,17 @@ any rule is a new suite version, never a recomputation.
 
 - Decision: every contract hash moves, as a patch, since no suite is frozen before
   release 1.1. Every record gains `dropped_columns`.
+
+## Amendment 2026-10-28: one random-effect term per factor (#147)
+
+**Random slopes.**
+
+- Decision: a factor's slopes are all `x|g` or all `x||g`, and the reference formula writes
+  each factor as one term, `(x | g)`, `(x || g)` or `(1 | g)`, as a brms user does.
+- Why: brms rejects `(a | g) + (b || g)` for its duplicated intercept, so a factor with both
+  kinds needed `(a | g) + (0 + b || g)`, whose `0 +` reads as a dropped random intercept. No
+  registry row mixes the two kinds.
+
+**Hashes.**
+
+- Decision: none moves, since the formula is not part of the materialized problem.
