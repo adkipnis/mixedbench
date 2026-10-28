@@ -162,8 +162,8 @@ _Avoid_: retry, escalation schedule
 
 **Diagnostics bar**:
 The convergence a run must reach to become a reference posterior, judged by rank-normalized
-R-hat and the bulk and tail effective sample size of every global parameter, with no
-divergences.
+R-hat and the bulk and tail effective sample size of every global parameter and random effect,
+with no divergences.
 _Avoid_: threshold, convergence check
 
 **Chain-split null**:
