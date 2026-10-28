@@ -8,6 +8,7 @@ import json
 import math
 import subprocess
 from dataclasses import asdict, fields
+from functools import partial
 from pathlib import Path
 
 import numpy as np
@@ -18,7 +19,7 @@ from mixedbench.contract import Problem, contractHash
 from mixedbench.references import runner
 from mixedbench.references.handoff import Handoff
 
-from .conftest import binomialTrials, fixtureProblem, gaussianMixed, nestedProblem, ordinalProblem
+from .conftest import binomialTrials, fixtureProblem, gaussianSlopes, nestedProblem, ordinalProblem
 
 FOUR_CHAINS = {chain: list(range(1000)) for chain in range(4)}  # 1,000 draws each, from 0
 
@@ -318,10 +319,13 @@ def test_an_r_error_ends_the_run_as_error_and_keeps_r_log(
 
 
 @pytest.mark.brms
-@pytest.mark.parametrize('shape', [gaussianMixed, binomialTrials, ordinalProblem])
+@pytest.mark.parametrize(
+    'shape', [partial(gaussianSlopes, correlated=False), binomialTrials, ordinalProblem]
+)
 def test_each_model_shape_writes_its_draws_stan_program_and_data(shape, tmp_path: Path) -> None:
-    """Mixed `|` and `||` slopes, a binomial with trials and an ordinal model: every factor has
-    at most 1,000 groups, so the random effects are kept in full and no summary is written."""
+    """Uncorrelated slopes, a binomial with trials and an ordinal model: every factor has
+    at most 1,000 groups, so the random effects are kept in full and no summary is written.
+    brms names the parameters of `(x1 + x2 + x3 || g1)` as the contract does, with no `cor`."""
     problem = shape()
     outcome = runner.run(problem, tmp_path)
     dir = problemDir(tmp_path, problem)
