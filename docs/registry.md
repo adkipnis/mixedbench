@@ -229,8 +229,9 @@ The survey's tables filed `no grouping structure`, screened, read again and meas
 `survey/flat.py` ([ADR 0007](adr/0007-flat-sample.md)).
 A frame table is in the sample when it is prescreened, read and unflagged without a verdict, or
 judged `flat`.
-Neither flat file measures a table's response, as `columns.csv` and `dimensions.csv` leave out a
-registry row's.
+Neither `flat.csv` nor `flat_columns.csv` measures a table's response, as `columns.csv` and
+`dimensions.csv` leave out a registry row's; `flat_response_statistics.csv` measures it as
+`responses.csv` does.
 
 - `flat_verdicts.csv`, in `survey/`: key `source`, `object`. Agent columns `source`, `object`,
   `verdict` and `evidence`, and the merge adds `tier`. A verdict of the second reading or of a
@@ -241,9 +242,10 @@ registry row's.
     sample and on the [list for a long form](https://github.com/adkipnis/mixedbench/issues/129).
   - `hidden grouping`: a column indexes a unit the rows repeat within. The table is re-filed
     into the registry.
-- `flat_responses.csv`, in `survey/`: as `flat_verdicts.csv`, with `response` for `verdict`.
-  The response is the outcome of the table's first documented model, never inferred, else
-  `none`.
+- `flat_responses.csv`, in `survey/`: as `flat_verdicts.csv`, with `response` for `verdict`,
+  and `response_type` and `trials`. The response is the outcome of the table's first documented
+  model, never inferred, else `none`. A named response carries its `response_type`, and a
+  binomial one its `trials`, as a registry row does; both are blank for `none`.
 - `flat.csv`: key `source`, `object`, with `tier`, a row per sample table in frame order.
   - `stratum`: `read` (filed by a reading agent) or `prescreened` (stopped by the pre-screen at
     `no repeated column`).
@@ -258,6 +260,10 @@ registry row's.
 - `flat_columns.csv`: key `source`, `object`, `column`, with `tier`, a row per column of each
   table of `flat.csv`. `type`, `K`, `missing_share` and the quirk statistics as `columns.csv`
   defines them, over every row of the table. `id_column` is `yes` for an id column, else `no`.
+- `flat_response_statistics.csv`: key `source`, `object`, with `tier`, a row per table of
+  `flat.csv` that names a response: its `response`, its `response_type` and the response's
+  marginal as `responses.csv` defines it, over every row of the table. `max_abs_rho` is the
+  largest |Spearman| with another column of the table, the trials included.
 
 ## `quantiles.yaml` and `SUMMARY.md`
 
@@ -273,7 +279,8 @@ registry row's.
   categorical response.
 - An axis the flat sample shares gains a `flat` block after `without_agridat`: `n_obs`, `d_all`
   and `condition_all` once per table of `flat.csv`, `K` once per categorical or ordered column
-  of `flat_columns.csv`, and a quirk statistic once per column of it that defines it.
+  of `flat_columns.csv`, a quirk statistic once per column of it that defines it, and a
+  `response_` axis once per row of `flat_response_statistics.csv` that defines it.
 - `shares`: `pair_relation` over the rows of `factor_pairs.csv`, `superior` over its nested
   pairs as `factor_a`, `factor_b` or `none`, the side that is superior, `status` over the
   registry rows of `fits.csv`, and `flat_column_type` over the rows of `flat_columns.csv`.
