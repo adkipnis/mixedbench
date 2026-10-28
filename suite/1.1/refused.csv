@@ -74,6 +74,7 @@
 "gumundsdottir_2026_osf_6/Questionnaire_data_long/1","non_affine_feature: time is a non-linear recode of wave (#27)"
 "lagisz_2020_osf_3/MA_dataset_with_ES.csv/2","covariance_structured_effect: gr(Species_Latin, cov = ...) (#45)"
 "marton_2022_figshare/OS_pigmentation_data.csv/1","covariance_structured_effect: (1 | phylogeny) (#45)"
+"liutu_2026_zenodo_3/Measurement_plots.xlsx/1","recoded_covariate: a two-level peat thickness, the table nine measured classes (#151)"
 "grey_2026_osf_2/WrangledData.csv/1","nonlinear_model: the documented model is nonlinear in its parameters"
 "verberk_2022_zenodo/Data/Pcrit data for 195 fish species ( 2022_02_14).csv/1","covariance_structured_effect: (1 | animal), phylogenetically correlated (#45)"
 "kappers_2018_osf_4/phenotypic_data_for_animal_model.xlsx/1","covariance_structured_effect: (1 | animal), the pedigree effect (#45)"
