@@ -69,9 +69,12 @@ LEVELS = {
     },
 }
 CAP = 12 * 60 * 60  # seconds over the whole ladder
-# the bar: R-hat and both ESS on the stored draws of the global parameters, and no divergence
-# in any iteration
+# the bar: R-hat and both ESS on the stored draws of every parameter, and no divergence
+# in any iteration.
+# the random effects' R-hat is rstan's warning threshold, since the largest of thousands
+# crosses 1.01 by chance more often than one does
 RHAT = 1.01
+RHAT_LOCALS = 1.05
 ESS = 400
 _HERE = Path(__file__).parent
 
@@ -232,6 +235,9 @@ class _Runner:
             diagnostics['rhat'] < RHAT
             and diagnostics['ess_bulk'] >= ESS
             and diagnostics['ess_tail'] >= ESS
+            and diagnostics['rhat_locals'] < RHAT_LOCALS
+            and diagnostics['ess_bulk_locals'] >= ESS
+            and diagnostics['ess_tail_locals'] >= ESS
             and diagnostics['divergences'] == 0
         )
 

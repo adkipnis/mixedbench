@@ -1,5 +1,5 @@
 ---
-status: accepted, amended 2026-10-10 and 2026-10-16
+status: accepted, amended 2026-10-10, 2026-10-16 and 2026-10-28
 date: 2026-10-08
 ---
 
@@ -30,6 +30,8 @@ date: 2026-10-08
   zero divergences.
 - Why stricter than v0.5's escalation trigger (1.05, 100): these draws are published, not
   consumed once.
+
+> Amended 2026-10-28 below: every random effect meets a looser R-hat bar and the same ESS.
 
 **Storage.**
 
@@ -101,3 +103,16 @@ date: 2026-10-08
 - Decision: `references/<suite>/<the first 16 hex characters of sha256 of the id>/`, since an id
   holds `/`; `run.json` inside carries the id. A rerun replaces the directory, so no file of an
   earlier run sits beside a later record.
+
+## Amendment 2026-10-28: the random effects' bar (#148)
+
+**Bar.**
+
+- Decision: a level passes only if every random effect also has R-hat < 1.05 and bulk and tail
+  ESS >= 400; one that misses it climbs the ladder, as a global parameter does. `run.json`
+  records the largest R-hat and the smallest bulk and tail ESS over the random effects.
+- Why: the random-effect draws are published and used, so a reference needs them converged.
+  rstan warns at R-hat > 1.05 and at bulk or tail ESS < 100 per chain over every parameter,
+  400 for four chains. R-hat stays looser than the global 1.01, since the largest of thousands
+  crosses 1.01 by chance more often than one does. Every random effect of the nine passing
+  pilot runs met even the global bar.

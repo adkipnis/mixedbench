@@ -12,7 +12,8 @@
 #   locals_summary.rds  per random effect of a summarized factor its mean, sd and 5/25/50/75/95%
 #                       quantiles, written only where a factor is summarized
 #   summary.rds         per global variable its rank-normalized R-hat, bulk and tail ESS
-#   meta.rds            the largest R-hat over the random effects
+#   meta.rds            the largest R-hat and the smallest bulk and tail ESS over the random
+#                       effects
 #   chains.rds          per chain its divergences, tree-depth hits, E-BFMI, step size,
 #                       leapfrog steps, mean acceptance statistic and warmup and sampling seconds
 #   model.stan          brms's Stan program
@@ -95,8 +96,14 @@ writeSummary <- function(draws, dir) {
   summary <- summarise_draws(global, "rhat", "ess_bulk", "ess_tail")
   saveRDS(as.data.frame(summary), file.path(dir, "summary.rds"))
   local <- subset_draws(draws, variable = localsOf(draws))
-  rhat_locals <- max(summarise_draws(local, "rhat")$rhat)
-  saveRDS(data.frame(rhat_locals = rhat_locals), file.path(dir, "meta.rds"))
+  effects <- summarise_draws(local, "rhat", "ess_bulk", "ess_tail")
+  # the worst over the random effects, NA where posterior could not compute one
+  meta <- data.frame(
+    rhat_locals = max(effects$rhat),
+    ess_bulk_locals = min(effects$ess_bulk),
+    ess_tail_locals = min(effects$ess_tail)
+  )
+  saveRDS(meta, file.path(dir, "meta.rds"))
 }
 
 writeChains <- function(model, max_treedepth, dir) {
