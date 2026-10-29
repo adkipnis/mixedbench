@@ -38,7 +38,7 @@ from pathlib import Path
 import pandas as pd
 from columns import COLUMN_STATISTICS, measureMaxAbsRho, measureShape
 from dimensions import computeConditionIndex, countWidth
-from mixedbench.contract import codeCovariate, columnKind, dropConstant
+from mixedbench.contract import codeCovariate, columnKind, dropAliased
 from mixedbench.datasets import Loader
 from mixedbench.registry.row import readCsv, splitList, writeCsv
 from pull import Puller
@@ -534,14 +534,17 @@ class FlatPass:
     @staticmethod
     def _measureCondition(table: pd.DataFrame) -> dict:
         """condition_all over the rows complete in every column: the intercept and each column
-        coded as the contract codes it, a coded column of one value dropped and a continuous one
-        standardized as the contract's full regime standardizes it. Blank when no row is
-        complete."""
+        coded as the contract codes it, a coded column the columns before it span dropped and a
+        continuous one standardized as the contract's full regime standardizes it. Blank when no
+        row is complete, `inf` when the coded columns outnumber the rows."""
         complete = table.dropna()
         if complete.empty:
             return {}
         coded = {column: codeCovariate(complete[column]) for column in complete.columns}
-        kept, _ = dropConstant(coded)
+        width = 1 + sum(len(columns) for columns in coded.values())  # with `Intercept`
+        if width > len(complete):  # singular by count, and the widest takes hours to drop
+            return {'condition_all': float('inf')}
+        kept, _ = dropAliased(coded, len(complete))
         design = {'Intercept': pd.Series(1.0, index=complete.index)}
         for column, columns in kept.items():
             kind, _ = columnKind(complete[column])
