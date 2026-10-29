@@ -163,6 +163,7 @@ REQUIRED = {
     'flat_responses': ('source', 'object', 'response', 'evidence'),
 }  # fmt: skip
 MAX_MODELS_PER_OBJECT = 3
+MIN_ORDINAL_LEVELS = 3  # an ordinal response with fewer distinct values is binary
 MAX_ORDINAL_LEVELS = 10  # an ordinal response with more distinct values is refused
 
 # A source's license as `sources.yaml` or its CRAN DESCRIPTION states it, verbatim -> the

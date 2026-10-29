@@ -39,6 +39,7 @@ from schema import (
     LICENSES,
     MAX_MODELS_PER_OBJECT,
     MAX_ORDINAL_LEVELS,
+    MIN_ORDINAL_LEVELS,
     REQUIRED,
     SHARDS,
     TABLES,
@@ -348,6 +349,8 @@ class Merger:
             return 'does not have two distinct values'
         if kind in ('count', 'binomial') and not Merger.isCount(values):
             return 'is not integer-valued'
+        if kind == 'ordinal' and values.nunique() < MIN_ORDINAL_LEVELS:
+            return f'has fewer than {MIN_ORDINAL_LEVELS} levels'
         if kind == 'ordinal' and values.nunique() > MAX_ORDINAL_LEVELS:
             return f'has more than {MAX_ORDINAL_LEVELS} levels'
         if kind == 'categorical' and pd.api.types.is_float_dtype(values):

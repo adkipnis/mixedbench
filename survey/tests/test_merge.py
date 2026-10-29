@@ -68,6 +68,7 @@ def refusal(merger: Merger, shard: Path) -> pd.DataFrame:
         ({'types': 'breed=factor'}, 'types', 'not a column type: factor'),
         ({'response': 'cases', 'response_type': 'binomial'}, 'trials', 'binomial names its trials'),
         ({'response_type': 'count'}, 'response_type', 'weight is not integer-valued'),
+        ({'response': 'sick', 'response_type': 'ordinal'}, 'response_type', 'sick has fewer than 3 levels'),  # fmt: skip
         ({'model_index': '4'}, 'model_index', 'at most 3 models per object'),
         ({'covariates': 'breed;herd'}, 'grouping_factors', 'herd is also a covariate'),
         ({'family': 'poisson'}, 'family', 'not a family: poisson'),  # the rule is the empty cell
