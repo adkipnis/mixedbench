@@ -22,7 +22,7 @@ a typed registry row and its loaded table
 -> refused if outside the contract             _refuseUncovered, _refuseSeparated
 -> composites added, incomplete rows dropped   withComposites, _dropIncomplete
 -> each covariate's kind and coded columns     _typeCovariates, _codeTerms
--> the columns the earlier ones span dropped   _dropAliased
+-> the columns the earlier ones span dropped   dropAliased
 -> the design, factors and response            _assembleDesign, _codeFactor, _codeResponse
 -> the regimes `rows` and `groups`, in folds   _dealRegimes
 -> each fold's scales                          _measureFolds
@@ -33,6 +33,7 @@ a typed registry row and its loaded table
 from __future__ import annotations
 
 import hashlib
+import math
 from dataclasses import dataclass
 from importlib.metadata import version
 from itertools import combinations
@@ -219,7 +220,6 @@ class _Builder:
         'sigma': Prior('student_t', (3, 0, 2.5)),
     }
     FOLDS = 5  # per split regime, or G in `groups` if fewer
-    TOLERANCE = 1e-7  # R's qr default, which lme4's rank check passes on
 
     def __init__(self, row: Row, table: pd.DataFrame) -> None:
         self.row = row
@@ -234,7 +234,7 @@ class _Builder:
 
     def build(self) -> Problem:
         kinds = self._typeCovariates()
-        coded, dropped_columns = self._dropAliased(self._codeTerms())
+        coded, dropped_columns = dropAliased(self._codeTerms(), len(self.table))
         design = self._assembleDesign(coded)
         factors = {factor: self._codeFactor(factor) for factor in self.row.grouping_factors}
         regimes = self._dealRegimes(factors)
@@ -318,28 +318,6 @@ class _Builder:
                     products[f'{name}:{part_name}'] = column * part_column
             columns = products
         return columns
-
-    def _dropAliased(self, coded: Coded) -> tuple[Coded, tuple[str, ...]]:
-        """Drops each coded column that `Intercept` and the columns kept before it span over the
-        kept rows, and lists it, as lme4 drops the columns of a rank-deficient model matrix."""
-        # R's qr, as lme4 calls it, moves a column to the end when the norm it keeps beyond the
-        # columns before it falls under the tolerance times its own (LINPACK's dqrdc2)
-        basis = [np.ones(len(self.table))]
-        kept = {}
-        dropped = []
-        for term, columns in coded.items():
-            kept[term] = {}
-            for name, column in columns.items():
-                values = column.to_numpy(dtype=float)
-                spanned = np.column_stack(basis)
-                weights, *_ = np.linalg.lstsq(spanned, values, rcond=None)
-                residual = values - spanned @ weights
-                if np.linalg.norm(residual) <= self.TOLERANCE * np.linalg.norm(values):
-                    dropped.append(name)
-                else:
-                    kept[term][name] = column
-                    basis.append(values)
-        return kept, tuple(dropped)
 
     def _assembleDesign(self, coded: Coded) -> dict[str, pd.Series]:
         """Returns `Intercept`, then the coded columns in the row's order."""
@@ -550,19 +528,38 @@ def _orderLevels(values: pd.Series) -> tuple:
     return tuple(values.cat.remove_unused_categories().cat.categories)
 
 
-def dropConstant(coded: Coded) -> tuple[Coded, tuple[str, ...]]:
-    """Drops the coded columns with one value over the kept rows and lists them,
-    as lme4 drops the columns of a rank-deficient model matrix."""
-    # no likelihood identifies a constant column's coefficient
+TOLERANCE = 1e-7  # R's qr default, which lme4's rank check passes on
+
+
+def dropAliased(coded: Coded, rows: int) -> tuple[Coded, tuple[str, ...]]:
+    """Drops each coded column that `Intercept` and the columns kept before it span over the
+    rows, and lists it, as lme4 drops the columns of a rank-deficient model matrix."""
+    # R's qr, as lme4 calls it, moves a column to the end when the norm it keeps beyond the
+    # columns before it falls under the tolerance times its own (LINPACK's dqrdc2).
+    # The kept columns' orthonormal basis grows by Gram-Schmidt, run twice per column
+    # (Giraud, Langou and Rozložník 2005), so a column costs one pass over the basis.
+    width = 1 + sum(len(columns) for columns in coded.values())  # with `Intercept`
+    basis = np.empty((rows, min(rows, width)), order='F')  # (n, d) at most
+    basis[:, 0] = 1 / math.sqrt(rows)  # `Intercept`
+    k = 1  # the columns kept so far
     kept = {}
     dropped = []
     for term, columns in coded.items():
         kept[term] = {}
         for name, column in columns.items():
-            if column.nunique() == 1:
+            values = column.to_numpy(dtype=float)
+            residual = values
+            for _ in range(2):
+                spanned = basis[:, :k]
+                weights = spanned.T @ residual  # (k,)
+                residual = residual - spanned @ weights
+            norm = np.linalg.norm(residual)
+            if norm <= TOLERANCE * np.linalg.norm(values):
                 dropped.append(name)
             else:
                 kept[term][name] = column
+                basis[:, k] = residual / norm
+                k += 1
     return kept, tuple(dropped)
 
 
