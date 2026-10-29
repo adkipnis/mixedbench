@@ -235,8 +235,8 @@ The condition index of the documented design and of the design over every column
 
 | statistic | n | min | p5 | p10 | p50 | p90 | p95 | max |
 |---|---|---|---|---|---|---|---|---|
-| condition_doc | 665 | 1 | 1 | 1 | 3.1463 | 11.9758 | 19.8483 | inf |
-| condition_all | 661 | 1 | 1 | 1 | 4.0675 | 47.8697 | inf | inf |
+| condition_doc | 665 | 1 | 1 | 1 | 3.1463 | 11.742 | 16.5407 | 23252.9688 |
+| condition_all | 661 | 1 | 1 | 1 | 4.0284 | 21.8779 | 45.6401 | inf |
 
 ## Quirk statistics per column
 
@@ -296,9 +296,9 @@ successes' share of the trials, an ordinal one by its levels.
 | response_skewness | 513 | -4.9838 | -0.7826 | -0.5537 | 0.3278 | 2.972 | 4.2001 | 24.8707 |
 | response_excess_kurtosis | 513 | -1.9502 | -1.1626 | -0.9208 | 0.3242 | 11.2133 | 22.775 | 836.648 |
 | response_outlier_share | 513 | 0 | 0 | 0 | 0 | 0.01 | 0.0143 | 0.0312 |
-| response_zero_share | 552 | 0 | 0 | 0 | 0 | 0.1948 | 0.4549 | 0.8942 |
-| response_min_share | 561 | 0 | 0.0002 | 0.0004 | 0.0125 | 0.2604 | 0.4865 | 0.8942 |
-| response_max_share | 561 | 0 | 0.0001 | 0.0004 | 0.0063 | 0.1215 | 0.2675 | 0.7792 |
+| response_zero_share | 550 | 0 | 0 | 0 | 0 | 0.1948 | 0.4549 | 0.8942 |
+| response_min_share | 559 | 0 | 0.0002 | 0.0004 | 0.0123 | 0.2604 | 0.4865 | 0.8942 |
+| response_max_share | 559 | 0 | 0.0001 | 0.0004 | 0.006 | 0.1191 | 0.2503 | 0.7713 |
 | response_unique_share | 692 | 0 | 0.0003 | 0.001 | 0.1525 | 0.95 | 1 | 1 |
 | response_rare_level_share | 179 | 0.0002 | 0.0021 | 0.014 | 0.2208 | 0.4465 | 0.4664 | 0.5 |
 | response_max_abs_rho | 591 | 0 | 0.0437 | 0.0835 | 0.3494 | 0.8165 | 0.9225 | 1 |
@@ -336,9 +336,9 @@ fit, over the fits that ended with estimates; the status of every row.
 | response type | n | share |
 |---|---|---|
 | continuous | 422 | 61% |
-| binary | 114 | 16% |
+| binary | 116 | 17% |
 | count | 77 | 11% |
-| ordinal | 48 | 7% |
+| ordinal | 46 | 7% |
 | categorical | 17 | 2% |
 | binomial | 14 | 2% |
 
@@ -385,7 +385,7 @@ The hand sample of 50 tables stood at 0.92.
 
 | statistic | n | min | p5 | p10 | p50 | p90 | p95 | max |
 |---|---|---|---|---|---|---|---|---|
-| condition_all | 698 | 1 | 1 | 1.1115 | 4.821 | inf | inf | inf |
+| condition_all | 698 | 1 | 1 | 1.1115 | 4.6542 | 93.5414 | inf | inf |
 | skewness | 36032 | -11.1669 | -0.5451 | -0.0285 | 1.4166 | 3.5352 | 3.9586 | 244.6948 |
 | excess_kurtosis | 35997 | -5.6896 | -1.8923 | -1.6617 | 1.1862 | 12.0888 | 15.7992 | 59915.5349 |
 | outlier_share | 36032 | 0 | 0 | 0 | 0 | 0.02 | 0.0318 | 0.0565 |
