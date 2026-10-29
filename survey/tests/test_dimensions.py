@@ -135,6 +135,31 @@ def test_a_column_the_columns_before_it_span_is_left_out_of_the_condition_index(
     assert dimension['condition_all'] == dimension['condition_doc']
 
 
+def test_the_all_column_design_lists_the_documented_covariates_first(herds, rows):
+    """So a column the table holds before a documented covariate, and that spans it, leaves the
+    design instead of the covariate, whose interaction the contract cannot build without it
+    (#155). Pounds repeat weight in kilograms, so every measured column gives the documented
+    design."""
+    pounds = herds.copy()
+    pounds.insert(pounds.columns.get_loc('weight'), 'pounds', herds['weight'] * 2.2046)
+    interacting = rows[1] | {
+        'covariates': 'weight;breed', 'interactions': 'weight:breed',
+        'ignore': 'id;region;feed;parity;sick',
+    }  # fmt: skip
+    dimension = dimensions.measure(Measurer(pounds, parsed(interacting)))[0]
+    assert dimension['condition_all'] == dimension['condition_doc']
+
+
+def test_a_design_wider_than_its_rows_keeps_an_infinite_condition_index(herds, rows):
+    """As in the flat pass, which cannot afford the drop on its widest tables, a design whose
+    coded columns outnumber its rows is singular by count, though the drop would leave a square
+    one. On the first six cows model 2's every measured column codes ten columns with the
+    intercept, its documented design four."""
+    dimension = dimensions.measure(Measurer(herds.head(6), parsed(rows[1])))[0]
+    assert dimension['condition_all'] == np.inf
+    assert dimension['condition_doc'] < np.inf
+
+
 @pytest.mark.parametrize(
     ('design', 'condition'),
     [
