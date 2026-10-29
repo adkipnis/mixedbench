@@ -160,19 +160,24 @@ def test_a_flat_columns_statistics_equal_the_registrys_for_the_same_column(flat,
     pd.testing.assert_frame_equal(flat_columns, registry, check_dtype=False)
 
 
+def _weighPounds(table: pd.DataFrame) -> pd.Series:
+    return table['weight'] * 2.2046
+
+
 @pytest.mark.parametrize(
     'extra',
     [
         pytest.param({}, id='the cut table'),
         pytest.param({'pen': 1.0}, id='a column of one value leaves both designs'),
+        pytest.param({'pounds': _weighPounds}, id='a column the others span leaves both designs'),
     ],
 )
 def test_a_flat_tables_design_statistics_equal_the_registrys_over_the_same_columns(
     flat, herds, rows, extra
 ):
     """d_all and condition_all count and code every measured column as dimensions.csv does,
-    the design centered as the contract centers it and a constant column dropped as the
-    contract drops it, so the cut table gives model 2's."""
+    the design centered as the contract centers it and a column the columns before it span
+    dropped as the contract drops it, so the cut table gives model 2's."""
     table = herds.assign(**extra)
     measured, _ = flat.measureTable(table[[*MODEL_2_COLUMNS, *extra]])
     dimension = dimensions.measure(Measurer(table, parsed(rows[1])))[0]
@@ -214,6 +219,19 @@ def test_a_flat_table_without_a_complete_row_has_no_condition_index(flat, herds)
     empty = pd.Categorical([None] * len(herds), categories=['low', 'high'], ordered=True)
     measured, _ = flat.measureTable(herds[MODEL_2_COLUMNS].assign(empty=empty))
     assert 'condition_all' not in measured
+
+
+def test_a_flat_table_wider_than_its_complete_rows_keeps_an_infinite_condition_index(flat):
+    """A design whose coded columns outnumber its complete rows is singular by count, so it
+    skips the drop, which takes hours on the widest flat table, 29,573 coded columns on 22,356
+    rows. With the intercept, three columns over the three complete rows are four."""
+    table = pd.DataFrame({
+        'a': [0.3, 1.2, 2.9, 4.1],
+        'b': [5.0, 3.1, 2.2, None],
+        'c': [7.7, 1.4, 0.2, 3.3],
+    })  # fmt: skip
+    measured, _ = flat.measureTable(table)
+    assert measured['condition_all'] == float('inf')
 
 
 def test_the_type_counts_name_every_kind_the_typing_rule_gives():
@@ -357,8 +375,8 @@ def test_a_verdict_decides_its_table_and_every_sample_table_records_how_it_got_i
 def test_the_pass_writes_a_row_per_sample_table_and_a_row_per_its_column(plots):
     """flat.csv keys a table by source and object, flat_columns.csv a column, in columns.csv's
     order less what a registry row's model binds. A table without a response keeps every
-    column: the plain table's `response` is linear in its dose, so its design is rank-deficient
-    and its condition index written as `inf`."""
+    column: the plain table's `response` is linear in its dose, so the design drops it and
+    keeps the intercept and the centered dose, orthogonal, whose condition index is 1."""
     writeSurvey(plots, [
         ('plots', 'plain.csv', 'pass', NO_GROUPING, 'one row per plot'),
         ('plots', 'distinct.csv', 'no repeated column', NO_GROUPING, 'no repeated column'),
@@ -368,7 +386,7 @@ def test_the_pass_writes_a_row_per_sample_table_and_a_row_per_its_column(plots):
     tables = readRows(plots.registry / 'flat.csv')
     assert list(tables[0].values()) == [
         'plots', 'plain.csv', 'O', 'read', 'first reading', 'one row per plot', 'none',
-        '3', '2', '2', '0', '0', '0', '0', '2', 'inf',
+        '3', '2', '2', '0', '0', '0', '0', '2', '1.0',
     ]  # fmt: skip
     columns = readRows(plots.registry / 'flat_columns.csv')
     assert [(c['object'], c['column']) for c in columns] == [
