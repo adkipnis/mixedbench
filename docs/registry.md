@@ -112,9 +112,11 @@ Measured over the rows with a measured response, since dosing rows are no observ
     and an interaction the product.
   - `condition_doc` and `condition_all`: the condition index σ_max / σ_min of the design of
     `d_doc` or `d_all` with the intercept, coded and centered as the contract codes and centers
-    it, each column scaled to unit length (Belsley, Kuh and Welsch 1980), on the rows complete
-    in all its columns. Unlike their index, it leaves out the continuous columns' collinearity
-    with the intercept. `inf` when rank-deficient, blank for a row the contract refuses, and
+    it, less the columns it drops, each column scaled to unit length (Belsley, Kuh and Welsch
+    1980), on the rows complete in all its columns. Unlike their index, it leaves out the
+    continuous columns' collinearity with the intercept. The design of `d_all` lists the
+    documented covariates first. `inf` when the coded columns outnumber the rows or the kept
+    ones are singular in floating point, blank for a row the contract refuses, and
     `condition_all` alone blank when no row is complete.
 - `columns.csv`: key `source`, `object`, `model_index`, `column`, with `tier`. Every column but
   the response, trials, grouping factors and ignored ones.
@@ -256,7 +258,7 @@ Neither `flat.csv` nor `flat_columns.csv` measures a table's response, as `colum
     and `n_ordered` count the columns by `type`, and `n_id_columns` the id columns, the
     categoricals whose present values are all distinct.
   - `d_all` and `condition_all` as `dimensions.csv` defines them, over every column but the id
-    columns, without interactions and without a coded column of one value.
+    columns, in table order and without interactions.
 - `flat_columns.csv`: key `source`, `object`, `column`, with `tier`, a row per column of each
   table of `flat.csv`. `type`, `K`, `missing_share` and the quirk statistics as `columns.csv`
   defines them, over every row of the table. `id_column` is `yes` for an id column, else `no`.
