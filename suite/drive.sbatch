@@ -11,6 +11,9 @@
 #SBATCH --time=12:15:00
 #SBATCH --output=references/logs/%A_%a.log
 
+# no sync per task, which concurrent tasks would race on in the shared .venv: run `uv sync` once
+# through Slurm first
+export UV_NO_SYNC=1
 # CmdStan's draws of a large problem reach gigabytes,
 # kept beside the run directories rather than on the node's /tmp or in the home quota
 export TMPDIR="$PWD/references/tmp"
