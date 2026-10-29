@@ -640,6 +640,16 @@ reading's open disagreements, four to eight per tier.
   continuous, so its `d_all` fell from 163 to 84, and the registry's measured files changed only
   in its rows. `kleisner_2026_osf`'s `BMI`, declared continuous, loads as before.
 
+## Two-level ordinals (2026-10-29)
+
+- An ordinal response has at least three levels, since one of two is binary, and the merge
+  refuses one with fewer.
+- `shards/registry_two_level_ordinals.csv` types stan_arm's ARM 17.6 `y` and rabe_hesketh's
+  `cito` as `binary`. brms's cumulative family had refused the first in suite 1.1's reference run.
+- `suite/admit.py`'s rerun moved ARM 17.6's contract hash alone, and cito stays refused.
+- The merge's measurement stopped on six designs over every column, where the contract drops a
+  part of a documented interaction, so the measured files follow at #152's rerun.
+
 ## Reading rulings (m3#22 to #15)
 
 The rulings [`prompts/read.md`](prompts/read.md) does not carry, from the agents' `RULE GAP` notes and Alex's checks, each with an example
