@@ -290,7 +290,7 @@
 "pymc_examples/examples/data/employee.csv/1","8e0b8fbee58ac5f5dae9e39abe3df457e4a91684548e4fe14404de7ce375daf2","hand","0.20317460317460317","structure_equivalent"
 "stan_arm/ARM/Ch.23/sesame.data.json/1","a7d22a325cb748831552e489594f160741bb2d4f9a19d495462fdbf7fbdc414b","second-reading","0.0",""
 "stan_arm/ARM/Ch.23/sesame.data.json/2","8ffb42e86f9a53e1fbbcc2a74a067b95a927ea1ecc24e7783ee75a918418a6bf","hand","0.0",""
-"stan_arm/ARM/Ch.17/multilevel_ordered_categorical_17.6.data.json/1","c410d18b6fd062b6cd0d3be474c8f907cdcd83501e10a406ed6af94325f5f18e","high","0.0",""
+"stan_arm/ARM/Ch.17/multilevel_ordered_categorical_17.6.data.json/1","15c712856814e236a53eef2275a42784631b371eff3c8cf1f4cb372b704d96e1","high","0.0",""
 "posteriordb/posterior_database/data/data/radon_mn.json.zip/1","28114a074cf3469c89a55511ebfdf65b1989d98bc91b3d359ed3ab7e176e1af2","high","0.0",""
 "stata_pisa2000/pisa2000.dta/2","99d5b076cbac5ba189e542555b39995c96caa8da5843ca7b8297a020990f9a66","high","0.0",""
 "fitzmaurice_smoking/smoking.dta/1","0bfb68f87dc30809d25e3ab7ccef6f687e944c06ceb5a4300c6cc72a28df6c9d","second-reading","0.0",""
