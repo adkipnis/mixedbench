@@ -105,17 +105,25 @@ def measureConditionIndexes(measurer: Measurer) -> dict:
         documented = Problem.build(measurer.row, measurer.table)
     except Refused:
         return {}
-    conditions = {'condition_doc': computeConditionIndex(_standardizeDesign(documented))}
-    everything = dataclasses.replace(measurer.row, covariates=tuple(measurer.column_names))
+    conditions = {'condition_doc': _measureCondition(documented)}
+    # the documented covariates first, so the drop keeps the parts of their interactions
+    others = [c for c in measurer.column_names if c not in measurer.row.covariates]
+    covariates = (*measurer.row.covariates, *others)
+    everything = dataclasses.replace(measurer.row, covariates=covariates)
     try:
         measured = Problem.build(everything, measurer.table)
     except Refused:  # no complete row
         return conditions
-    return conditions | {'condition_all': computeConditionIndex(_standardizeDesign(measured))}
+    return conditions | {'condition_all': _measureCondition(measured)}
 
 
-def _standardizeDesign(problem: Problem) -> pd.DataFrame:
-    return problem.standardized()[list(problem.design)]
+def _measureCondition(problem: Problem) -> float:
+    """The condition index of the problem's design, inf when its coded columns before the
+    contract's drop outnumber its rows, as the flat pass measures a design too wide to drop."""
+    width = len(problem.design) + len(problem.dropped_columns)
+    if width > len(problem.table):
+        return float('inf')
+    return computeConditionIndex(problem.standardized()[list(problem.design)])
 
 
 def computeConditionIndex(design: pd.DataFrame) -> float:
