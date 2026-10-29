@@ -1,5 +1,5 @@
 ---
-status: accepted, amended 2026-10-27
+status: accepted, amended 2026-10-29
 date: 2026-10-20
 ---
 
@@ -139,3 +139,21 @@ be computed here, from the cached tables, and shipped in a pinned release. Grill
   have to filter out, or their numbers move.
 - Decision: the file ships as a registry patch, 1.0.11, and the other measured files stay as
   they are, byte for byte.
+
+## Amendment 2026-10-29: the condition index over the contract's drop
+
+- Decision: `condition_doc` and `condition_all` are of the contract's design less the columns it
+  drops (ADR 0001, amended 2026-10-28), and the flat pass's `condition_all` drops them by the
+  same function. The design over every column lists the documented covariates first, so the
+  drop keeps the parts of a documented interaction.
+- Why: the flat pass dropped only constant columns, so the two samples' `condition_all`
+  followed two rules, and an `inf` stood for any aliased column.
+- Decision: a design whose coded columns, with the intercept, outnumber its rows stays `inf` in
+  both passes, without the drop.
+- Why: it is singular by count, and the drop takes hours on the widest flat table, 29,573 coded
+  columns on 22,356 rows.
+- Decision: a design the drop leaves singular in floating point stays `inf` too.
+- Why: a chain of columns each just above the tolerance passes the drop one by one, as a
+  Gaussian process's basis functions do in a flat table (`mcycle_gp`), and its smallest singular
+  value is rounding noise.
+- Decision: both passes are measured again for the next patch, and no contract hash moves.
