@@ -1,5 +1,5 @@
 ---
-status: accepted, amended 2026-10-09, 2026-10-10, 2026-10-18, 2026-10-19 and 2026-10-20
+status: accepted, amended 2026-10-09, 2026-10-10, 2026-10-18, 2026-10-19, 2026-10-20 and 2026-10-30
 date: 2026-10-08
 ---
 
@@ -145,3 +145,10 @@ correction a benchmark change.
   row is a patch, while the next minor release names a suite freeze.
 - Why: semver would call new files a minor bump, but release 1.1 is the name of the first
   suite, and the measurement pass (ADR 0006) ships before it.
+
+## Amendment 2026-10-30: a longer cap (#158)
+
+- Decision: the compute cap is 23 hours 45 minutes over the whole ladder, so a job with 15
+  minutes for its record stays within a day. This replaces the 12 hours above.
+- Why: suite 1.1's first run stopped 8 of 595 candidates at 12 hours, among them the largest
+  tables, and the cluster's standard queue allows a job one day.

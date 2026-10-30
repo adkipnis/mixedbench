@@ -1,5 +1,5 @@
 ---
-status: accepted, amended 2026-10-10, 2026-10-16 and 2026-10-28
+status: accepted, amended 2026-10-10, 2026-10-16, 2026-10-28 and 2026-10-30
 date: 2026-10-08
 ---
 
@@ -23,6 +23,8 @@ date: 2026-10-08
   draws 2000, adapt_delta 0.99, tree depth 12.
 - Decision: escalate until the bar passes; store the passing level's draws thinned to 4,000; a
   problem that fails at level 2 stays registry-only.
+
+> Amended 2026-10-30 below: a level 3 with the dense metric.
 
 **Bar.**
 
@@ -116,3 +118,23 @@ date: 2026-10-08
   400 for four chains. R-hat stays looser than the global 1.01, since the largest of thousands
   crosses 1.01 by chance more often than one does. Every random effect of the nine passing
   pilot runs met even the global bar.
+
+## Amendment 2026-10-30: a dense level (#158)
+
+**Ladder.**
+
+- Decision: a level 3 repeats level 2 with the dense metric (`dense_e`), and every level names
+  its metric (`diag_e` below level 3). `run.json` records per level the metric each chain ran
+  with, read back from CmdStan's output. A problem that fails at level 3 stays registry-only.
+- Why: suite 1.1's first run ended 92 of 595 candidates at `bar`, and 8 of them as Sitka did in
+  #70, with no divergence, every random effect passing and only population-level parameters
+  under the bar. A diagonal metric rescales each parameter but cannot learn the correlation
+  between a group-level covariate and the intercept, which the dense one does. Sitka passed
+  with it at level 0.
+- Rejected: the dense metric at every level, which costs memory and time per step in the square
+  of the parameters, a price a problem with thousands of random effects would pay from level 0.
+- Rejected: level 3 only for the endings that look like Sitka, a choice by hand beside a ladder
+  that every problem climbs.
+- Decision: the first run's `bar` and `cap` endings climb the whole ladder again with their
+  seeds, and its passed runs stand, since neither the new level nor the longer cap of ADR 0002
+  changes a run that passed.

@@ -216,6 +216,7 @@ class Handoff:
             'rhat': float(summary['rhat'].max(skipna=False)),
             'ess_bulk': float(summary['ess_bulk'].min(skipna=False)),
             'ess_tail': float(summary['ess_tail'].min(skipna=False)),
+            'metric': chains['metric'].tolist(),
             'divergences': int(chains['divergences'].sum()),
             'treedepth_hits': int(chains['treedepth_hits'].sum()),
             'ebfmi': chains['ebfmi'].tolist(),

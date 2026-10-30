@@ -156,8 +156,8 @@ which every approximation is scored against.
 _Avoid_: ground truth, gold standard, MCMC posterior unqualified
 
 **Ladder**:
-The sampler settings a reference run climbs, level 0 to 2, each longer and more careful than
-the last, until the diagnostics bar passes or the compute cap ends the run.
+The sampler settings a reference run climbs, level 0 to 3, each more careful than the last,
+until the diagnostics bar passes or the compute cap ends the run.
 _Avoid_: retry, escalation schedule
 
 **Diagnostics bar**:

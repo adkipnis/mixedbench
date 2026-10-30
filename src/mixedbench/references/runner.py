@@ -46,6 +46,7 @@ LEVELS = {
         'thin': 1,
         'adapt_delta': 0.8,
         'max_treedepth': 10,
+        'metric': 'diag_e',
     },
     1: {
         'chains': 4,
@@ -55,6 +56,7 @@ LEVELS = {
         'thin': 1,
         'adapt_delta': 0.9,
         'max_treedepth': 10,
+        'metric': 'diag_e',
     },
     # 2,000 draws per chain, thinned by 2: 4,000 stored, as at the other levels.
     # the divergences count every iteration, before thinning
@@ -66,9 +68,24 @@ LEVELS = {
         'thin': 2,
         'adapt_delta': 0.99,
         'max_treedepth': 12,
+        'metric': 'diag_e',
+    },
+    # level 2 with the dense metric, which also learns the correlations between parameters
+    # that the diagonal one leaves slow, as between a group-level covariate and the intercept
+    3: {
+        'chains': 4,
+        'cores': 4,
+        'warmup': 4000,
+        'draws': 2000,
+        'thin': 2,
+        'adapt_delta': 0.99,
+        'max_treedepth': 12,
+        'metric': 'dense_e',
     },
 }
-CAP = 12 * 60 * 60  # seconds over the whole ladder
+# seconds over the whole ladder: with drive.sbatch's 15 minutes for the record, a job stays
+# within a day
+CAP = (23 * 60 + 45) * 60
 # the bar: R-hat and both ESS on the stored draws of every parameter, and no divergence
 # in any iteration.
 # the random effects' R-hat is rstan's warning threshold, since the largest of thousands
