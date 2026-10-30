@@ -8,7 +8,7 @@
 #SBATCH --job-name=references
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=16G
-#SBATCH --time=12:15:00
+#SBATCH --time=24:00:00
 #SBATCH --output=references/logs/%A_%a.log
 
 # no sync per task, which concurrent tasks would race on in the shared .venv: run `uv sync` once
