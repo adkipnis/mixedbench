@@ -205,7 +205,7 @@ def tinyLevels() -> dict[int, dict]:
 
 
 @pytest.mark.brms
-def test_a_failed_bar_climbs_the_ladder_and_ends_as_bar_at_level_2(
+def test_a_failed_bar_climbs_the_ladder_and_ends_as_bar_at_level_3(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Every level gets its chance; what failed keeps its record and R's log, and no draws.
@@ -215,11 +215,26 @@ def test_a_failed_bar_climbs_the_ladder_and_ends_as_bar_at_level_2(
     outcome = runner.run(problem, tmp_path)
     dir = problemDir(tmp_path, problem)
     levels = record(dir)['levels']
-    assert (outcome.outcome, outcome.level) == ('bar', 2)
-    assert [level['outcome'] for level in levels] == ['bar', 'bar', 'bar']
+    assert (outcome.outcome, outcome.level) == ('bar', 3)
+    assert [level['outcome'] for level in levels] == ['bar', 'bar', 'bar', 'bar']
     assert sorted(path.name for path in dir.iterdir()) == ['R.log', 'run.json']
     for level in levels:
         assert list(level['by_parameter']) == list(problem.globalDraws())
+
+
+@pytest.mark.brms
+def test_each_level_records_the_metric_its_chains_ran_with(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The metric is read back from the fit, not copied from the settings, so the record
+    shows that the last level ran the dense one."""
+    monkeypatch.setattr(runner, 'LEVELS', tinyLevels())
+    problem = fixtureProblem()
+    runner.run(problem, tmp_path)
+    levels = record(problemDir(tmp_path, problem))['levels']
+    diagonal = ['diag_e'] * 4
+    dense = ['dense_e'] * 4
+    assert [level['metric'] for level in levels] == [diagonal, diagonal, diagonal, dense]
 
 
 @pytest.mark.brms
