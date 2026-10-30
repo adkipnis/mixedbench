@@ -79,7 +79,8 @@ def test_each_level_of_the_ladder_reaches_r_with_its_settings_and_the_same_seed(
     """ADR 0004's ladder runs four chains in parallel at every level.
     Level 1 warms up longer at a higher adapt_delta.
     Level 2 also deepens the trees and samples 2,000 draws per chain, thinned by 2.
-    So every level stores 4,000 draws."""
+    So every level stores 4,000 draws.
+    Level 3 is level 2 with the dense metric."""
     settings = {}
     seeds = set()
     for level, ladder in LEVELS.items():
@@ -95,6 +96,7 @@ def test_each_level_of_the_ladder_reaches_r_with_its_settings_and_the_same_seed(
             'thin': 1,
             'adapt_delta': 0.8,
             'max_treedepth': 10,
+            'metric': 'diag_e',
         },
         1: {
             'chains': 4,
@@ -104,6 +106,7 @@ def test_each_level_of_the_ladder_reaches_r_with_its_settings_and_the_same_seed(
             'thin': 1,
             'adapt_delta': 0.9,
             'max_treedepth': 10,
+            'metric': 'diag_e',
         },
         2: {
             'chains': 4,
@@ -113,6 +116,17 @@ def test_each_level_of_the_ladder_reaches_r_with_its_settings_and_the_same_seed(
             'thin': 2,
             'adapt_delta': 0.99,
             'max_treedepth': 12,
+            'metric': 'diag_e',
+        },
+        3: {
+            'chains': 4,
+            'cores': 4,
+            'warmup': 4000,
+            'draws': 2000,
+            'thin': 2,
+            'adapt_delta': 0.99,
+            'max_treedepth': 12,
+            'metric': 'dense_e',
         },
     }
     assert seeds == {75704431}
@@ -296,7 +310,7 @@ def test_a_factor_above_1000_groups_reads_back_as_summaries_without_draws() -> N
 
 
 CHAINS = pd.DataFrame({
-    'chain': [1, 2], 'divergences': [0, 3], 'treedepth_hits': [2, 0], 'ebfmi': [0.9, 1.1],
+    'chain': [1, 2], 'metric': ['diag_e', 'diag_e'], 'divergences': [0, 3], 'treedepth_hits': [2, 0], 'ebfmi': [0.9, 1.1],
     'step_size': [0.31, 0.27], 'leapfrog_steps': [7012.0, 6890.0], 'acceptance': [0.86, 0.91],
     'warmup_seconds': [4.2, 3.9], 'sampling_seconds': [3.1, 3.4],
 })  # fmt: skip

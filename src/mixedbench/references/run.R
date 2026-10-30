@@ -14,7 +14,7 @@
 #   summary.rds         per global variable its rank-normalized R-hat, bulk and tail ESS
 #   meta.rds            the largest R-hat and the smallest bulk and tail ESS over the random
 #                       effects
-#   chains.rds          per chain its divergences, tree-depth hits, E-BFMI, step size,
+#   chains.rds          per chain its metric, divergences, tree-depth hits, E-BFMI, step size,
 #                       leapfrog steps, mean acceptance statistic and warmup and sampling seconds
 #   model.stan          brms's Stan program
 #   standata.json       its Stan data, as CmdStan reads it
@@ -62,7 +62,10 @@ fitModel <- function(dir, input) {
     as.formula(input$formula), data = table, family = family, prior = prior, backend = "cmdstanr",
     chains = settings$chains, cores = settings$cores, warmup = settings$warmup,
     iter = settings$warmup + settings$draws,
-    control = list(adapt_delta = settings$adapt_delta, max_treedepth = settings$max_treedepth),
+    control = list(
+      adapt_delta = settings$adapt_delta, max_treedepth = settings$max_treedepth,
+      metric = settings$metric
+    ),
     seed = input$seed, refresh = 0, silent = 2
   )
 }
@@ -118,6 +121,8 @@ writeChains <- function(model, max_treedepth, dir) {
   seconds <- rstan::get_elapsed_time(model$fit)  # a row per chain, a column per phase
   chains <- data.frame(
     chain = seq_along(sampler),
+    # as CmdStan ran it, from the header of its output
+    metric = sapply(model$fit@stan_args, function(args) args$metric),
     divergences = sapply(sampler, divergences),
     treedepth_hits = sapply(sampler, treedepth_hits),
     ebfmi = rstan::get_bfmi(model$fit),
