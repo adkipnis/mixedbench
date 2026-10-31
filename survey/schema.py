@@ -174,12 +174,25 @@ LICENSES = {
     'https://spdx.org/licenses/CC0-1.0.html': 'CC0-1.0',
     'CC0: Public Domain': 'CC0-1.0',
     'Kaggle, CC0: Public Domain': 'CC0-1.0',
+    'CC0 1.0': 'CC0-1.0',
+    'Public Domain (CC0)': 'CC0-1.0',
     'CC-By Attribution 4.0 International': 'CC-BY-4.0',
     'CC BY 4.0': 'CC-BY-4.0',
     'cc-by-4.0': 'CC-BY-4.0',
+    'Attribution 4.0 International (CC BY 4.0)': 'CC-BY-4.0',
+    'CC BY': 'CC-BY-4.0',  # OpenML names no version
+    'Creative Commons CC-BY (Attribution-only) License': 'CC-BY-4.0',  # DataFirst names no version
+    'CC BY-SA 4.0': 'CC-BY-SA-4.0',
+    'CC-BY-SA 4.0': 'CC-BY-SA-4.0',
     'Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)': 'CC-BY-NC-4.0',
+    'CC BY-NC 3.0': 'CC-BY-NC-3.0',
     'CC_BY-NC-SA': 'CC-BY-NC-SA-4.0',  # OpenML names no version
+    'CC BY-NC-SA 4.0': 'CC-BY-NC-SA-4.0',
     'Database: Open Database, Contents: Database Contents': 'ODbL-1.0',  # Kaggle's ODbL/DbCL
+    'Database Contents License (DbCL) v1.0': 'ODbL-1.0',  # ODbL's license for the contents
+    'Open Database License (ODbL)': 'ODbL-1.0',
+    'ODC Open Database License': 'ODbL-1.0',
+    'Open Government Licence (OGL)': 'OGL-UK-3.0',  # OpenML names no version; 3.0 is current
     'GPL (>= 2)': 'GPL-2.0-or-later',
     'GPL': 'GPL-2.0-or-later',  # R's reading of an unversioned GPL: any version
     'GPL-2 | GPL-3': 'GPL-2.0-or-later',  # the nearest value
@@ -188,15 +201,22 @@ LICENSES = {
     'GPL 2': 'GPL-2.0',
     'GPL (>= 3)': 'GPL-3.0-or-later',
     'GPL-3.0': 'GPL-3.0',
+    'GPLv3': 'GPL-3.0',
     'AGPL-3': 'AGPL-3.0',
     'MIT': 'MIT',
     'mit-license': 'MIT',
     'MIT + file LICENSE': 'MIT',
     'BSD-3-Clause': 'BSD-3-Clause',
     'Unlimited': 'public-domain',  # R: no restriction beyond the law
+    'public domain (U.S. Census Bureau)': 'public-domain',  # a federal work
     'Public': 'other',  # OpenML: access, not a license
     'Publicly available': 'other',
     'other-open': 'other',
+    'Kaggle License': 'other',  # a competition's terms, not an open license
+    'Kaggle Competition License': 'other',
+    'Kaggle Competition Rules': 'other',
+    'per table (data/README.md)': 'other',  # a repository of tables from several sources
     'Kaggle and Federal University of Espirito Santo, Brazil': 'not stated',  # an attribution
+    'Unknown': 'not stated',  # Kaggle's entry where the uploader chose none
     'not stated': 'not stated',
 }
