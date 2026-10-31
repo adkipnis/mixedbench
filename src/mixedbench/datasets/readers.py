@@ -46,7 +46,7 @@ R_FILES = {'.rda', '.rdata', '.rds'}  # meant for pyreadr, or rdata
 DATA_FILES = {'.r', '.tab', '.txt', '.csv'}  # meant for utils::data()
 TABLE_FILES = {  # meant for pandas
     '.csv', '.tsv', '.tab', '.txt', '.dat', '.xlsx', '.xls', '.json', '.dta', '.sav',
-    '.arrow', '.pq',
+    '.arrow', '.pq', '.parquet',
 }  # fmt: skip
 DOC_STEMS = ('readme', 'codebook', 'description', 'notes', 'metadata', 'variables', 'dictionary')
 Reader = Literal['pyreadr', 'rdata', 'pandas', 'deparse']
@@ -361,7 +361,7 @@ class PandasFile:
             return PandasFile._readSpss(file)
         if suffix == '.arrow':
             return pd.read_feather(file)
-        if suffix == '.pq':
+        if suffix in ('.pq', '.parquet'):
             return pd.read_parquet(file)
         return PandasFile._readDelimited(file)
 

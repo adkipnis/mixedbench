@@ -5,6 +5,7 @@ the awkward files met in the pull, plus single R files as deposits serve them.""
 
 from __future__ import annotations
 
+import shutil
 import tarfile
 from collections.abc import Sequence
 from functools import partial
@@ -226,10 +227,15 @@ def test_a_gzipped_tsv_is_read_as_the_tsv_it_wraps():
     assert list(apnea['Subject']) == [1, 1, 2, 2]
 
 
-def test_a_parquet_file_reads():
-    """OpenML serves every dataset as `dataset_<id>.pq`; the Tier O hits come that way."""
-    tables, _ = readFixture('dataset_42.pq')
-    assert list(tables['dataset_42.pq']['school']) == ['GP', 'GP', 'MS']
+@pytest.mark.parametrize('suffix', ['.pq', '.parquet'], ids=['openml', 'zip member'])
+def test_a_parquet_file_is_data_and_reads(tmp_path, suffix):
+    """OpenML serves every dataset as `dataset_<id>.pq`. Kaggle's CTU-13 copy ships
+    `.parquet` files inside a zip, where `file` cannot rename them (#163)."""
+    file = tmp_path / f'dataset_42{suffix}'
+    shutil.copy(FIXTURES / 'dataset_42.pq', file)
+    tables, _ = readers.read(file, file.name)
+    assert readers.isData(file)
+    assert list(tables[file.name]['school']) == ['GP', 'GP', 'MS']
 
 
 def test_whitespace_aligned_text_and_latin1_text_read(example):
