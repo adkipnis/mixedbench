@@ -665,8 +665,9 @@ object and the deciding issue.
 - Not counted: strata and waves a documented model fits as fixed or per wave (CES11,
   GSSvocab, NES; m3#23, #118); field coordinates
   (connolly.potato; m3#22), though a Latin square's rows and columns are blocks (OrchardSprays;
-  m3#23); a factor that classifies rather than clusters (singer; m3#23); a dyad with one row
-  per pair (Monks; m3#25).
+  m3#23); a factor that classifies rather than clusters (singer; m3#23), as a pseudo-panel's
+  cells of income class and household size do (BudgetItaly; #162); a dyad with one row per pair
+  (Monks; m3#25).
 - A term `a:b` has no level where a part is missing (m3#24). Where a column is both a grouping
   factor and a covariate, the grouping stands and the fixed term stays in the formula
   (Cultivation; #12).
@@ -695,6 +696,10 @@ object and the deciding issue.
 - A benchmark task's recode of a column stays in the formula only; `response` and
   `response_type` describe the column as stored, so the contract refuses a categorical one
   (ACS, BRFSS, Cars model 2; #162).
+- A documented response computed from several columns (a score's sum or average, a
+  meta-analysis's effect size) is a response of the table: the formula's left side holds its
+  expression, `response` names its first column, and `suite/admit.py` refuses the row as
+  `computed_response` (CASchools, Star, five metadat tables; #162).
 - A text-coded ordinal response stays `ordinal`, the source's order in notes. While no registry
   field holds a level order, `suite/admit.py` refuses a row whose loaded order differs
   (corporate_rating; #167).
