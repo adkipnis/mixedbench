@@ -690,6 +690,8 @@ object and the deciding issue.
 - Survival: `continuous`, the event indicator in `ignore` and `Surv(time, event)` in the
   formula (catheter; m3#24). Discrete-time hazard: the indicator is the response, `PERIOD` a
   categorical covariate (cigarette; m3#25).
+- A benchmark runtime censored at its cutoff, or scored with a timeout penalty (PAR10), keeps
+  its row, and `suite/admit.py` refuses it as `censored_response` (sat11, CPMP, MIP; #162).
 - A benchmark task's recode of a column stays in the formula only; `response` and
   `response_type` describe the column as stored, so the contract refuses a categorical one
   (ACS, BRFSS, Cars model 2; #162).
