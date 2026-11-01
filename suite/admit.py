@@ -168,6 +168,16 @@ REFUSED = {
     'pymc_examples/examples/data/external_pp.csv/1': (
         'censored_response: a censored score filed as continuous (#61)'
     ),
+    # an ordinal text response, which loads in alphabetical order, not the source's (#167)
+    'kaggle_corporate_credit_rating/corporate_rating.csv/1': (
+        'level_order: Rating loads A < AA < AAA, the scale runs D < ... < AAA (#167)'
+    ),
+    'kaggle_credit_score_classification/train.csv/1': (
+        'level_order: Credit_Score loads Good < Poor < Standard (#167)'
+    ),
+    'beyondarena_ghanas_indigenous_intel/ghanas_indigenous_intel.pq/1': (
+        'level_order: rainfall loads HEAVYRAIN < MEDIUMRAIN < NORAIN < SMALLRAIN (#167)'
+    ),
 }
 
 # The marker that opens the notes of a row whose documented model is nonlinear in its parameters
