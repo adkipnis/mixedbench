@@ -434,6 +434,8 @@ class PandasFile:
         table = table.rename(columns=lambda name: str(name).strip())
         tidy = {}
         for column in table.columns[table.dtypes.map(pd.api.types.is_string_dtype)]:
+            if pd.api.types.infer_dtype(table[column]) == 'boolean':  # TRUE, FALSE and NA
+                continue
             values = table[column].str.strip().replace({'': None, 'NA': None})
             points = values.str.replace(decimal, '.', regex=False)
             parsed = pd.to_numeric(points, errors='coerce')
