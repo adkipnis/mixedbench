@@ -311,6 +311,12 @@ def links(tmp_path: Path) -> Links:
             id='a url archive, its page by label prefix',
         ),
         pytest.param(
+            'osf_blp', 'blp-trials.txt', 'blp-trials.txt',
+            'https://osf.io/b5sdk/',
+            'https://osf.io/download/84efq/',
+            id='a url download, its page by the longest label prefix',
+        ),
+        pytest.param(
             'kaggle_wine_reviews', 'winemag-data-130k-v2.csv', 'winemag-data-130k-v2.csv',
             'https://www.kaggle.com/datasets/zynicide/wine-reviews',
             'https://www.kaggle.com/api/v1/datasets/download/zynicide/wine-reviews',

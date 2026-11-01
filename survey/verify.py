@@ -94,6 +94,14 @@ PAGES = {
     'mendeley_oasis_longitudinal': 'https://data.mendeley.com/datasets/tsy6rbc5d4/1',
     'census_acs_pums_2018': 'https://www.census.gov/programs-surveys/acs/microdata/documentation.2018.html',
     'bodowinter_politeness': 'https://bodowinter.com/tutorial/bw_LME_tutorial2.pdf',
+    'embrace_': 'https://osf.io/d48ce/',
+    'osf_confidence_': 'https://osf.io/s46pr/',
+    'osf_blp': 'https://osf.io/b5sdk/',
+    'osf_dlp1': 'https://osf.io/uw7t6/',
+    'osf_dlp2_': 'https://osf.io/jfkvw/',
+    'osf_manybabies1': 'https://osf.io/arnms/',
+    'osf_manylabs1': 'https://osf.io/pqf9r/',
+    'osf_manylabs3': 'https://osf.io/ct89g/',
 }  # fmt: skip
 # the hosts whose download names its page: a Kaggle dataset's page, a Hugging Face or raw
 # GitHub file's folder at its commit
@@ -270,7 +278,7 @@ class Links:
         prefixes = [prefix for prefix in PAGES if label.startswith(prefix)]
         if not prefixes:
             raise KeyError(f'url source {label!r} has no page; add its prefix to PAGES')
-        prefix = prefixes[0]
+        prefix = max(prefixes, key=len)  # `osf_blp`'s page, not `osf_`'s
         return PAGES[prefix].format(rest=label.removeprefix(prefix))
 
 

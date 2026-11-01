@@ -98,8 +98,9 @@ ZEROS = '0' * 64  # the pin of a url source no test downloads
 
 
 def writeLinkedSources(registry: Path, survey: Path) -> None:
-    """One source per kind a handoff links: a CRAN package, a git tree, a url archive, three url
-    downloads whose host names the page, and two Tier D deposits, one linked by a DOI."""
+    """One source per kind a handoff links: a CRAN package, a git tree, a url archive and a url
+    download paged by label prefix, three url downloads whose host names the page, and two Tier D
+    deposits, one linked by a DOI."""
     (registry / 'sources.yaml').write_text(
         'seed: 0\n'
         'tiers:\n'
@@ -112,6 +113,7 @@ def writeLinkedSources(registry: Path, survey: Path) -> None:
         f'    kaggle_wine_reviews: {{kind: url, name: https://www.kaggle.com/api/v1/datasets/download/zynicide/wine-reviews, pin: {ZEROS}, file: wine-reviews.zip}}\n'
         f'    beyondarena_musk: {{kind: url, name: https://huggingface.co/datasets/TabArena/BeyondArena/resolve/2ecfe88/musk/019d/dataset.parquet, pin: {ZEROS}, file: musk.pq}}\n'
         f'    github_ladal: {{kind: url, name: https://raw.githubusercontent.com/SLCLADAL/SLCLADAL.github.io/cf795bc/data/mblrdata.txt, pin: {ZEROS}}}\n'
+        f'    osf_blp: {{kind: url, name: https://osf.io/download/84efq/, pin: {ZEROS}, file: blp-trials.txt.zip}}\n'
         '  D:\n'
         f'    arriero_2017_dryad: {{kind: url, name: https://datadryad.org/api/v2/files/51526/download, pin: {ZEROS}}}\n'
         f'    leder_2020_osf: {{kind: url, name: https://osf.io/download/znb6c/, pin: {ZEROS}}}\n'
