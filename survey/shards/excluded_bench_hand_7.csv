@@ -1,0 +1,7 @@
+"source","object","reason","detail"
+"afex","md_15.1","simulated data","the page calls the IQ scores of 12 children at four ages hypothetical, Maxwell and Delaney's (2004) Table 15.1 (hand check #162)"
+"afex","md_16.1","simulated data","the page's description is md_12.1's; AMCP ships the same 24 severity ratings as Maxwell, Delaney and Kelley's Table 10.9, data ""we might obtain"" in an assumed clinic study (hand check #162)"
+"afex","md_16.4","simulated data","the page calls it a hypothetical inductive reasoning study, Maxwell and Delaney's (2004) Table 16.4 (hand check #162)"
+"afex","obk.long","simulated data","the page takes carData's OBrienKaiser, contrived data from an imaginary study (O'Brien and Kaiser 1985), adding a random covariate age (hand check #162)"
+"carData","OBrienKaiserLong","simulated data","contrived repeated-measures data from an imaginary study (O'Brien and Kaiser 1985), as the page and OBrienKaiser's say; hand-checked as a registry row in #61, filed out with afex's obk.long (hand check #162)"
+"carData","OBrienKaiser","simulated data","wide form of OBrienKaiserLong, contrived data from an imaginary study (O'Brien and Kaiser 1985), so it shares the long table's exclusion (hand check #162)"
