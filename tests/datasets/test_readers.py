@@ -269,6 +269,17 @@ def test_padded_delimited_text_reads_with_clean_names_and_missing_values(example
     assert padded['recovered'].isna().tolist() == [False, True, False]
 
 
+def test_a_column_of_logicals_with_missing_values_keeps_them(tmp_path):
+    """ManyBabies 1's trial table marks a second session TRUE, FALSE or NA; pandas reads the
+    column as Python booleans beside NaN, which the field stripping leaves alone (#165)."""
+    file = tmp_path / 'trials.csv'
+    file.write_text('lab,second_session\na,TRUE\nb,FALSE\nc,NA\n')
+    tables, _ = readers.read(file, 'trials.csv')
+    sessions = tables['trials.csv']['second_session']
+    assert sessions[:2].tolist() == [True, False]
+    assert sessions.isna().tolist() == [False, False, True]
+
+
 def test_a_banner_of_hash_lines_above_the_table_is_skipped(example):
     """Diggle's course files open with `#` comment lines above a whitespace-aligned table."""
     cd4 = readExample(example, 'formats/cd4.txt')
