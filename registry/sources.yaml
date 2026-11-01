@@ -240,7 +240,6 @@ tiers:
     # among them (its raw per-session files are no table)
     beyondmlr: {kind: git, name: "https://github.com/proback/BeyondMLR", pin: b04814b528955b8f19ac8752ae74e9f108761062, path: data, license: not stated}  # Roback and Legler, Beyond Multiple Linear Regression (2021): the book is CC BY-NC-SA 4.0, its data repository states no license
     embrace_elp_ldt_item: {kind: url, name: "https://osf.io/download/c6gxd/", pin: f851910e1435659ca662ad49cfb8deb6b7cf287e4ce4969103dba11b32ab2e6c, file: ELP_ldt_item.arrow, license: not stated}
-    embrace_elp_ldt_subj: {kind: url, name: "https://osf.io/download/rqenu/", pin: d9c88915681b64fc9db975f9bb2d6f402058fee5cb35887f9de7d07776efdd56, file: ELP_ldt_subj.arrow, license: not stated}
     embrace_elp_ldt_trial: {kind: url, name: "https://osf.io/download/3evhy/", pin: 57a83679f8f458b1d9bb56e05099a556ffdaf15af67464e9ee608c844fc4fa9c, file: ELP_ldt_trial.arrow, license: not stated}
     embrace_box: {kind: url, name: "https://osf.io/download/tkxnh/", pin: 4ac2038735c5286ca0d6a706b4feef5b34bd93560bc4cabc7223addf2366e4c0, file: box.arrow, license: not stated}
     embrace_elstongrizzle: {kind: url, name: "https://osf.io/download/5vrbw/", pin: f33e08ad5a91ab5dd9889953dbb97cc52a299fdac9db8b37ec4f87ad2dacadbd, file: elstongrizzle.arrow, license: not stated}
@@ -1026,6 +1025,7 @@ dropped:
   - {tier: O, name: Many Labs 2 (OSF 8cd4r), reason: wide, detail: "ML2_S1.csv and ML2_S2.csv code a condition by which column holds the answer; the long forms exist only in the analysis scripts"}
   - {tier: O, name: French Lexicon Project (OSF f8kc4), reason: unreadable format, detail: the trial data are one .rar archive}
   - {tier: O, name: "MEGALEX and the Arabic, Hebrew, Malay, Chinese, Vietnamese, Persian, Korean and Portuguese Lexicon Projects", reason: same design, detail: "the subject × item lexical decision design of the English, British and Dutch Lexicon Projects again"}
+  - {tier: T, name: Embrace Uncertainty ELP_ldt_subj.arrow (OSF d48ce), reason: unreadable format, detail: "a per-subject summary of ELP_ldt_trial whose dictionary column holds a null category, which pandas refuses"}
 # Tier O keyword net (#24): OpenML, UCI and PMLB searched for tables with a documented clustering
 # column; the cap applies over the three repositories together, drawn with `seed` where exceeded.
 # The Tier O keyword net (#24): `net.py` ran it on 2026-10-07 over every active OpenML dataset
