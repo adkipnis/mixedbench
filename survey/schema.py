@@ -194,12 +194,15 @@ LICENSES = {
     'ODC Open Database License': 'ODbL-1.0',
     'Open Government Licence (OGL)': 'OGL-UK-3.0',  # OpenML names no version; 3.0 is current
     'GPL (>= 2)': 'GPL-2.0-or-later',
+    'GPL (>= 2.0)': 'GPL-2.0-or-later',
     'GPL': 'GPL-2.0-or-later',  # R's reading of an unversioned GPL: any version
     'GPL-2 | GPL-3': 'GPL-2.0-or-later',  # the nearest value
     'Part of R 4.6.1': 'GPL-2.0-or-later',  # R is GPL-2 | GPL-3 (r-project.org/Licenses)
     'GPL-2': 'GPL-2.0',
     'GPL 2': 'GPL-2.0',
     'GPL (>= 3)': 'GPL-3.0-or-later',
+    'GPL-3': 'GPL-3.0',
+    'GPL-3 | file LICENSE': 'GPL-3.0',  # the file is the GPL-3 text (joineR, joineRML)
     'GPL-3.0': 'GPL-3.0',
     'GPLv3': 'GPL-3.0',
     'AGPL-3': 'AGPL-3.0',
@@ -207,6 +210,7 @@ LICENSES = {
     'mit-license': 'MIT',
     'MIT + file LICENSE': 'MIT',
     'BSD-3-Clause': 'BSD-3-Clause',
+    'CeCILL-2': 'CECILL-2.0',  # SPDX's identifier
     'Unlimited': 'public-domain',  # R: no restriction beyond the law
     'public domain (U.S. Census Bureau)': 'public-domain',  # a federal work
     'Public': 'other',  # OpenML: access, not a license
