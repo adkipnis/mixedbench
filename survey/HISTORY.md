@@ -717,7 +717,8 @@ object and the deciding issue.
 - `published_model` is `no` for all of Tier O (m3#24), unless a paper fits a mixed model on the
   table (LMMNN's Income and Cars; #162).
 - A published model whose predictors the table lacks is no published model of the table, so its
-  random part alone files `no` (BLP, DLP1, DLP2; #162).
+  random part alone files `no` (BLP, DLP1, DLP2; #162). A stand-in for a missing predictor
+  files `no` as well (VietNamH; #162).
 - A robust variance estimation (RVE) meta-regression states its working model, so it files
   `yes`: hierarchical weights as `(1 | study) + (1 | effect)`, correlated weights as
   `(1 | study)` (aksayli2019, sala2019, noble2019, coles2019, maccann2020; #162).
