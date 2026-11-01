@@ -177,9 +177,15 @@ REFUSED = {
     'openml_43071/dataset_43071.pq/1': (
         'censored_response: a PAR10 runtime with a timeout penalty filed as continuous (#162)'
     ),
+    'mixor/SmokeOnset/1': 'censored_response: a censored onset interval filed as continuous (#162)',
+    'mixor/SmokeOnset/2': 'censored_response: a censored onset interval filed as continuous (#162)',
     # a response computed from several columns, which the contract would model as its first (#162)
     'AER/CASchools/1': 'computed_response: the average of math and read (#162)',
     'Ecdat/Star/1': 'computed_response: the sum of tmathssk and treadssk (#162)',
+    'Ecdat/PSID/1': 'computed_response: the log hourly wage from earnings and hours (#162)',
+    'osf_confidence_kvam_2016/data_Kvam_2016.csv/1': (
+        'computed_response: the log odds of Confidence folded by accuracy (#162)'
+    ),
     'metadat/dat.besson2016/1': 'computed_response: a standardized mean difference (#162)',
     'metadat/dat.bornmann2007/1': 'computed_response: a log odds ratio (#162)',
     'metadat/dat.bourassa1996/1': 'computed_response: a log odds ratio (#162)',
