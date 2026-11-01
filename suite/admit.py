@@ -177,6 +177,14 @@ REFUSED = {
     'openml_43071/dataset_43071.pq/1': (
         'censored_response: a PAR10 runtime with a timeout penalty filed as continuous (#162)'
     ),
+    # a response computed from several columns, which the contract would model as its first (#162)
+    'AER/CASchools/1': 'computed_response: the average of math and read (#162)',
+    'Ecdat/Star/1': 'computed_response: the sum of tmathssk and treadssk (#162)',
+    'metadat/dat.besson2016/1': 'computed_response: a standardized mean difference (#162)',
+    'metadat/dat.bornmann2007/1': 'computed_response: a log odds ratio (#162)',
+    'metadat/dat.bourassa1996/1': 'computed_response: a log odds ratio (#162)',
+    'metadat/dat.curtis1998/1': 'computed_response: a log ratio of means (#162)',
+    'metadat/dat.dagostino1998/1': 'computed_response: a standardized mean difference (#162)',
     # an ordinal text response, which loads in alphabetical order, not the source's (#167)
     'kaggle_corporate_credit_rating/corporate_rating.csv/1': (
         'level_order: Rating loads A < AA < AAA, the scale runs D < ... < AAA (#167)'
