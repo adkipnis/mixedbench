@@ -671,7 +671,11 @@ object and the deciding issue.
   factor and a covariate, the grouping stands and the fixed term stays in the formula
   (Cultivation; #12).
 - An area factor with many levels groups; one with a handful is a covariate (LGAclaims,
-  infmort; m3#23).
+  infmort; m3#23). Exhaustive areas group too (ACS's states and PUMAs, BRFSS's states; #162).
+- A Gaussian process over a unit a column holds keeps that column as a grouping factor, the
+  process in words in the formula (US income). Over a unit no column holds (coordinates rounded
+  by the source), the unit is no grouping factor, and its coordinates are covariates where the
+  model takes them (Cars; #162).
 - A random intercept on the matched pair (amlxray; m3#23), the GEE cluster (geepack; m3#22), a
   frontier inefficiency term (xtfrontier1; m3#24); a single-level conditional logit is excluded
   (travel2; m3#25).
@@ -685,6 +689,12 @@ object and the deciding issue.
 - Survival: `continuous`, the event indicator in `ignore` and `Surv(time, event)` in the
   formula (catheter; m3#24). Discrete-time hazard: the indicator is the response, `PERIOD` a
   categorical covariate (cigarette; m3#25).
+- A benchmark task's recode of a column stays in the formula only; `response` and
+  `response_type` describe the column as stored, so the contract refuses a categorical one
+  (ACS, BRFSS, Cars model 2; #162).
+- A text-coded ordinal response stays `ordinal`, the source's order in notes. While no registry
+  field holds a level order, `suite/admit.py` refuses a row whose loaded order differs
+  (corporate_rating; #167).
 
 **Covariates and model rows**
 
@@ -695,7 +705,10 @@ object and the deciding issue.
   contrasts are named in the formula (m3#26).
 - A variant with one row per extra level is the same model (SASmixed, melanoma; m3#22, m3#24).
   posteriordb's ladders render the richest grouping (radon; m3#24).
-- `published_model` is `no` for all of Tier O (m3#24).
+- `published_model` is `no` for all of Tier O (m3#24), unless a paper fits a mixed model on the
+  table (LMMNN's Income and Cars; #162).
+- Every feature of a benchmark task is a covariate, however sparse; the contract's drop of
+  incomplete rows decides what remains (5g, early learning; #162).
 - Priors in deposit files the page lists are filed (verberk; #10).
 
 **Code against prose** (#15)
