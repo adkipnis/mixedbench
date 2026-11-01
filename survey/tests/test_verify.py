@@ -60,6 +60,10 @@ def strataFiles(registry: Path, candidates: Path) -> None:
     refused = cellRows('R', 'high', 40, source='refused')
     writeRegistry(registry, strata + hand + refused)
     writeCandidates(candidates, strata + hand)
+    manifest = ['source,object,file,sha256,size']
+    for row in strata + hand + refused:
+        manifest.append(f'{row["source"]},{row["object"]},{row["object"]}.csv,0,1')
+    (registry / 'manifest.csv').write_text('\n'.join(manifest) + '\n')
 
 
 def test_draw_allocates_the_unchecked_candidates_by_tier_and_verification(tmp_path):
@@ -205,6 +209,80 @@ def test_handoff_names_page_and_download_urls_and_no_local_path(tmp_path):
     assert 'cache' not in text
 
 
+def unmergedVerifier(tmp_path: Path, rows: list[dict]) -> Verifier:
+    """A verifier over a sample of `kaggle_wine_reviews` rows, with no registry row or manifest
+    behind them."""
+    registry = tmp_path / 'registry'
+    survey = tmp_path / 'survey'
+    survey.mkdir()
+    writeRegistry(registry, [])
+    writeLinkedSources(registry, survey)
+    writeHelp(registry, 'kaggle_wine_reviews', 'winemag.csv', '# first rows\npoints: int64\n')
+    writeSample(survey, rows)
+    return Verifier(registry, tmp_path / 'candidates.csv', survey)
+
+
+def test_handoff_renders_a_reading_the_registry_does_not_hold_yet(tmp_path):
+    """A survey pass's rows are checked before the merge writes them into the registry and the
+    manifest, so a batch renders from its sample alone."""
+    wines = reading(
+        'kaggle_wine_reviews', 'winemag.csv', response='points', grouping_factors='winery',
+        formula='points ~ price + (1 | winery)',
+    ) | {'stratum': 'O/low', 'batch': '1', 'file': 'winemag.csv', 'confidence': 'low',
+         'notes': 'Reviews repeat within wineries.'}  # fmt: skip
+    verifier = unmergedVerifier(tmp_path, [wines])
+
+    text = verifier.handoff(1)
+
+    assert 'https://www.kaggle.com/datasets/zynicide/wine-reviews' in text
+    assert '(file `winemag.csv`)' in text
+    assert 'points ~ price + (1 | winery)' in text
+    assert 'Reviews repeat within wineries.' in text
+    assert 'points: int64' in text
+
+
+def test_handoff_renders_an_exclusion_by_its_reason_and_detail(tmp_path):
+    """A pass's exclusions are checked too: a table filed out shows the reader's reason and what
+    it saw, in place of a model."""
+    excluded = {'source': 'kaggle_wine_reviews', 'object': 'winemag.csv', 'stratum': 'O/excluded',
+                'batch': '1', 'file': 'winemag.csv', 'reason': 'no grouping structure',
+                'detail': 'one row per review'}  # fmt: skip
+    verifier = unmergedVerifier(tmp_path, [excluded])
+
+    text = verifier.handoff(1)
+
+    assert '## 1. kaggle_wine_reviews · winemag.csv · excluded (O/excluded)' in text
+    assert '- reason: no grouping structure\n- detail: one row per review\n' in text
+    assert '- formula:' not in text
+    assert 'points: int64' in text
+
+
+def test_handoff_renders_the_documentation_the_call_and_the_source_page_where_a_pass_has_them(
+    tmp_path,
+):
+    """A benchmark table's help page holds little beyond its columns, so a row carries the
+    papers and codebooks of its design, the host's description the reader saw, and the reader's
+    judgment call as a question to answer first. A row without them shows none."""
+    documented = reading('kaggle_wine_reviews', 'winemag.csv') | {
+        'stratum': 'O/low', 'batch': '1', 'file': 'winemag.csv',
+        'documentation': 'https://arxiv.org/abs/2104.00629;https://github.com/slds-lmu/encodings',
+        'call': 'Does taster_name group the reviews?',
+    }  # fmt: skip
+    plain = reading('kaggle_wine_reviews', 'winemag.csv', model_index='2') | {
+        'stratum': 'O/low', 'batch': '1', 'file': 'winemag.csv',
+    }  # fmt: skip
+    verifier = unmergedVerifier(tmp_path, [documented, plain])
+    (tmp_path / 'registry/help/kaggle_wine_reviews/_source.md').write_text('130k wine reviews\n')
+
+    text = verifier.handoff(1)
+
+    urls = '  - https://arxiv.org/abs/2104.00629\n  - https://github.com/slds-lmu/encodings\n'
+    assert text.count('- documentation:\n') == 1
+    assert f'- documentation:\n{urls}' in text
+    assert text.count('- check first: Does taster_name group the reviews?\n') == 1
+    assert text.count('<summary>source documentation</summary>\n\n~~~~\n130k wine reviews') == 2
+
+
 @pytest.fixture
 def links(tmp_path: Path) -> Links:
     writeLinkedSources(tmp_path, tmp_path)
@@ -231,6 +309,24 @@ def links(tmp_path: Path) -> Links:
             'https://www.stata-press.com/data/mlmus4.html',
             'https://www.stata-press.com/data/mlmus4/mlmus4.zip',
             id='a url archive, its page by label prefix',
+        ),
+        pytest.param(
+            'kaggle_wine_reviews', 'winemag-data-130k-v2.csv', 'winemag-data-130k-v2.csv',
+            'https://www.kaggle.com/datasets/zynicide/wine-reviews',
+            'https://www.kaggle.com/api/v1/datasets/download/zynicide/wine-reviews',
+            id='a Kaggle download, its page the dataset\'s',
+        ),
+        pytest.param(
+            'beyondarena_musk', 'musk.pq', 'musk.pq',
+            'https://huggingface.co/datasets/TabArena/BeyondArena/tree/2ecfe88/musk/019d',
+            'https://huggingface.co/datasets/TabArena/BeyondArena/resolve/2ecfe88/musk/019d/dataset.parquet',
+            id='a Hugging Face file at its commit, its folder the page',
+        ),
+        pytest.param(
+            'github_ladal', 'mblrdata.txt', 'mblrdata.txt',
+            'https://github.com/SLCLADAL/SLCLADAL.github.io/tree/cf795bc/data',
+            'https://raw.githubusercontent.com/SLCLADAL/SLCLADAL.github.io/cf795bc/data/mblrdata.txt',
+            id='a raw GitHub file at its commit, its folder the page',
         ),
         pytest.param(
             'arriero_2017_dryad', 'voles.xlsx', 'voles.xlsx',
