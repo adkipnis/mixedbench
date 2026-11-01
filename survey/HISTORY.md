@@ -690,7 +690,8 @@ object and the deciding issue.
 - A documented normalized score is its own column (jsp_728; m3#25).
 - Survival: `continuous`, the event indicator in `ignore` and `Surv(time, event)` in the
   formula (catheter; m3#24). Discrete-time hazard: the indicator is the response, `PERIOD` a
-  categorical covariate (cigarette; m3#25).
+  categorical covariate (cigarette; m3#25). One record per subject, its interval and event, is
+  survival, not a hazard (SmokeOnset; #162).
 - A benchmark runtime censored at its cutoff, or scored with a timeout penalty (PAR10), keeps
   its row, and `suite/admit.py` refuses it as `censored_response` (sat11, CPMP, MIP; #162).
 - A benchmark task's recode of a column stays in the formula only; `response` and
@@ -739,8 +740,9 @@ object and the deciding issue.
 
 - `simulated data` only where the source, or a package shipping the same values, says so
   (Stata's chicken, hox SocsLong, OpenML sensory as dae's Sensory3Phase.dat; m3#24, #12, #162);
-  a guessed "constructed" stays (SASmixed Animal; m3#22). A wide twin of a simulated table
-  shares its exclusion (socscors; #133).
+  a guessed "constructed" stays (SASmixed Animal; m3#22). A source that calls the data
+  hypothetical, contrived or imaginary says so (Maxwell and Delaney's tables in afex, carData's
+  OBrienKaiserLong; #162). A wide twin of a simulated table shares its exclusion (socscors; #133).
 - `no grouping structure`: wide repeated-measures tables (nitrofen), replication without a
   replicate column (faraway rats), a uniformity trial without a random term, coordinates as the
   only grouping (besag.checks); m3#22, m3#23. A fixed-effects fit over blocks is rendered with
