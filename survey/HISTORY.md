@@ -715,6 +715,11 @@ object and the deciding issue.
   posteriordb's ladders render the richest grouping (radon; m3#24).
 - `published_model` is `no` for all of Tier O (m3#24), unless a paper fits a mixed model on the
   table (LMMNN's Income and Cars; #162).
+- A published model whose predictors the table lacks is no published model of the table, so its
+  random part alone files `no` (BLP, DLP1, DLP2; #162).
+- A robust variance estimation (RVE) meta-regression states its working model, so it files
+  `yes`: hierarchical weights as `(1 | study) + (1 | effect)`, correlated weights as
+  `(1 | study)` (aksayli2019, sala2019, noble2019, coles2019, maccann2020; #162).
 - A target encoder's GLMM, one random intercept per feature, is no model of the table: notes
   name it, and it files no row (eucalyptus and eight more of Pargent's tables; #162).
 - Every feature of a benchmark task is a covariate, however sparse; the contract's drop of
