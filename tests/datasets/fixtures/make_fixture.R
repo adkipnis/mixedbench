@@ -67,6 +67,12 @@ saveRDS(roster, file.path(dirname(out), 'roster.rds'), ascii = TRUE)
 fit <- list(coef = c(a = 1, b = 2), call = quote(lm(y ~ x)))
 save(fit, roster, file = file.path(dirname(out), 'fits.rda'), ascii = TRUE)
 saveRDS(compiler::cmpfun(function(x) x + 1), file.path(dirname(out), 'fit.rds'), ascii = TRUE)
+# A Windows-1252 string marked UTF-8 beside a clean one (bayesrules' book_banning): librdata
+# refuses it, and rdata keeps it as bytes, which numpy cannot join to the other strings
+title <- c('Holes', rawToChar(as.raw(c(0x69, 0x74, 0x92, 0x73))))
+Encoding(title) <- 'UTF-8'
+banned <- data.frame(title = title)
+save(banned, file = file.path(dirname(out), 'banned.rda'), version = 2)
 # A data/*.txt beside R's reading of it, as R CMD INSTALL reads lazy data, in the C locale
 writeLines(c('site field plot flag mark yield', 'Ba04 "north A" 1 T T 1.5', 'BT06 west 2 F NA NA',
              'a "south B" 3 T F 2.25'),

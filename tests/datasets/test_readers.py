@@ -133,6 +133,13 @@ def test_a_rejected_rds_is_named_by_its_file_and_one_rdata_cannot_parse_has_no_t
     assert readFixture('fit.rds') == ({'fit': None}, 'rdata')
 
 
+def test_an_r_file_whose_strings_neither_reader_decodes_has_no_table():
+    """bayesrules' book_banning holds a Windows-1252 apostrophe without an encoding mark:
+    pyreadr refuses it and rdata cannot decode it either, so the object stays without a table
+    rather than failing the source (#164)."""
+    assert readFixture('banned.rda') == ({'banned': None}, 'rdata')
+
+
 # ==============================================================================================
 # utils::data() files read without R (#8)
 # ==============================================================================================
