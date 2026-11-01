@@ -249,9 +249,7 @@ tiers:
     embrace_fggk21_score: {kind: url, name: "https://osf.io/download/7fqx3/", pin: 99d73ee705aaf5f4ee696eadbba992d0113ba6f467ce337a62a63853e4617400, file: fggk21_Score.arrow, license: not stated}
     embrace_kkl15: {kind: url, name: "https://osf.io/download/p8cea/", pin: 90d7bb137c8613d7a15c8597c461aee7c7cb0f0989a07c80fc93e1fbe2e5c156, file: kkl15.arrow, license: not stated}
     embrace_kwdyz11: {kind: url, name: "https://osf.io/download/4cv52/", pin: 2fa23aa8aa25e1adb10183c8d29646ae0d19d6baef9d711c9906f7fa1b225571, file: kwdyz11.arrow, license: not stated}
-    embrace_movies: {kind: url, name: "https://osf.io/download/kvdch/", pin: c8fa488be74c368530f38de3c1d3511d2182e3fa07f357d2fa09121adc1cc964, file: movies.arrow, license: not stated}
     embrace_oxboys: {kind: url, name: "https://osf.io/download/cz6g3/", pin: 079f46e404e43c1848a65d3a4e5b6a14b2cb17565c77819d7ee3effe72f5ebd0, file: oxboys.arrow, license: not stated}
-    embrace_ratings: {kind: url, name: "https://osf.io/download/v73ym/", pin: 1d6466b8fd8da2942881c83941077cd2b6c9f7a03fa2d71072a5cd7aaa4ef560, file: ratings.arrow, license: not stated}
     embrace_sizespeed: {kind: url, name: "https://osf.io/download/kazgm/", pin: d3512795afc101445fdd78e183919378ef7d993d66b4fd55307a0bf57fba1e0b, file: sizespeed.arrow, license: not stated}
   D:  # the deposits of `deposits.csv`, written by resolve.py (#26)
     arriero_2017_dryad: {kind: url, name: "https://datadryad.org/api/v2/files/51526/download", pin: c4c18e276745762af86143ed2f91b1aaebe71ccc1ba431d8b31e6820dddb992b, file: "vole_immunological_profiles_data.xlsx", license: "https://spdx.org/licenses/CC0-1.0.html", mirror: "https://github.com/adkipnis/mixedbench/releases/download/mirror-1/arriero_2017_dryad__vole_immunological_profiles_data.xlsx"}  # doi:10.5061/dryad.110pk: vole_immunological_profiles_data.xlsx
@@ -952,6 +950,10 @@ tiers:
     osf_dlp1: {kind: url, name: "https://osf.io/download/zjdbn/", pin: 6ef7a4f18a478a1a60b0b6d0d1de8723dbabb83ba282a23caef8af457f7b1b6b, file: dlp-trials.txt.zip, license: CC BY-NC-SA 4.0}  # Dutch Lexicon Project (Keuleers et al. 2010), one row per trial, license.txt
     osf_dlp2_0: {kind: url, name: "https://osf.io/download/ste5c/", pin: e738ada92ca290c63b47228624b892355bab5eb315d597d9d14386818b8057dd, file: dlp2_trials0.tsv.zip, license: CC BY-NC-SA 4.0}  # Dutch Lexicon Project 2 (Brysbaert et al. 2016), first half of the trials
     osf_dlp2_1: {kind: url, name: "https://osf.io/download/3c6za/", pin: 6b744fd6bd330bd00cd188a15203d6d97ca1da159b19236c70974ab66b60ee2d, file: dlp2_trials1.tsv.zip, license: CC BY-NC-SA 4.0}  # Dutch Lexicon Project 2 (Brysbaert et al. 2016), second half of the trials
+    # MovieLens 25M (Harper and Konstan 2016), the stable release Embrace Uncertainty analyzes,
+    # from GroupLens's own download (its md5 matches the published one); `path` takes the
+    # ratings, the one table the book fits a model on (#162)
+    grouplens_ml_25m: {kind: url, name: "https://files.grouplens.org/datasets/movielens/ml-25m.zip", pin: 8b21cfb7eb1706b4ec0aac894368d90acf26ebdfb6aced3ebd4ad5bd1eb9c6aa, file: ml-25m.zip, path: ratings.csv, license: "GroupLens usage license: research use, no redistribution or commercial use without permission"}
     # The Confidence Database (Rahnev et al. 2020, OSF s46pr): 30 of its 180 data files, drawn
     # with random.Random(seed) over the sorted names as a cap draws, since each file is its
     # own download; each file's readme is its documentation (#162)
@@ -1026,6 +1028,7 @@ dropped:
   - {tier: O, name: French Lexicon Project (OSF f8kc4), reason: unreadable format, detail: the trial data are one .rar archive}
   - {tier: O, name: "MEGALEX and the Arabic, Hebrew, Malay, Chinese, Vietnamese, Persian, Korean and Portuguese Lexicon Projects", reason: same design, detail: "the subject × item lexical decision design of the English, British and Dutch Lexicon Projects again"}
   - {tier: T, name: Embrace Uncertainty ELP_ldt_subj.arrow (OSF d48ce), reason: unreadable format, detail: "a per-subject summary of ELP_ldt_trial whose dictionary column holds a null category, which pandas refuses"}
+  - {tier: T, name: "Embrace Uncertainty ratings.arrow and movies.arrow (OSF d48ce)", reason: duplicate, detail: "a copy of GroupLens's 2018 ml-latest snapshot, which GroupLens no longer serves; GroupLens's own MovieLens 25M is pinned in Tier O instead"}
 # Tier O keyword net (#24): OpenML, UCI and PMLB searched for tables with a documented clustering
 # column; the cap applies over the three repositories together, drawn with `seed` where exceeded.
 # The Tier O keyword net (#24): `net.py` ran it on 2026-10-07 over every active OpenML dataset
