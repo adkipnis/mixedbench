@@ -168,6 +168,9 @@ REFUSED = {
     'pymc_examples/examples/data/external_pp.csv/1': (
         'censored_response: a censored score filed as continuous (#61)'
     ),
+    'beyondarena_sat11_hand_algo_runtime/sat11_hand_algo_runtime.pq/1': (
+        'censored_response: a log runtime censored at log(5000) filed as continuous (#162)'
+    ),
     # an ordinal text response, which loads in alphabetical order, not the source's (#167)
     'kaggle_corporate_credit_rating/corporate_rating.csv/1': (
         'level_order: Rating loads A < AA < AAA, the scale runs D < ... < AAA (#167)'
