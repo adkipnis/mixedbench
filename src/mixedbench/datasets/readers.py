@@ -133,7 +133,7 @@ def bare(file: Path) -> Path:
 class _RFile:
     """An .rda, .RData or .rds file, through pyreadr, or through rdata where librdata refuses."""
 
-    R_ERRORS = (PyreadrError, LibrdataError, IndexError)
+    R_ERRORS = (PyreadrError, LibrdataError, IndexError, UnicodeDecodeError)
     RDATA_ERRORS = (ValueError, AssertionError)
     FRAME_CLASSES = r'Missing constructor for R class "(data\.table|tbl_df|tbl)"'
 
