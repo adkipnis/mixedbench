@@ -29,6 +29,40 @@ tiers:
     medicaldata: {kind: cran, pin: 0.2.0}
     languageR: {kind: cran, pin: '1.6'}
     datasets: {kind: cran, pin: 4.6.1, checksum: 4da6e61d2c0aac5f14a2e7e432cb5fcc269efe83da4293050ba7f03dff4e2cf4, license: Part of R 4.6.1}
+    # packages outside the frame with grouped tables (#162), at the CRAN versions of 2026-11-01:
+    # econometric panels, meta-analyses, psychology, joint longitudinal-survival models,
+    # textbook companions and smaller packages
+    plm: {kind: cran, pin: 2.6-7}
+    AER: {kind: cran, pin: 1.2-17}
+    Ecdat: {kind: cran, pin: 0.4.7}
+    wooldridge: {kind: cran, pin: 1.4-7}
+    camerondata: {kind: cran, pin: 1.0.0}
+    metadat: {kind: cran, pin: 1.6-0}
+    psymetadata: {kind: cran, pin: 1.0.1}
+    afex: {kind: cran, pin: 1.5-1}
+    lmerTest: {kind: cran, pin: 3.2-1}
+    multilevel: {kind: cran, pin: '2.8'}
+    MPDiR: {kind: cran, pin: '0.3'}
+    mixor: {kind: cran, pin: 1.0.7}
+    BayesFactor: {kind: cran, pin: 0.9.12-4.8}
+    MLMusingR: {kind: cran, pin: 0.4.0}
+    JM: {kind: cran, pin: 1.5-2}
+    JMbayes2: {kind: cran, pin: 0.6-5}
+    joineR: {kind: cran, pin: 1.2.9}
+    joineRML: {kind: cran, pin: 0.4.8}
+    lcmm: {kind: cran, pin: 2.2.2}
+    bayesrules: {kind: cran, pin: 0.0.3}
+    R2MLwiN: {kind: cran, pin: 0.8-10}
+    StroupGLMM: {kind: cran, pin: 0.3.0}
+    labstats: {kind: cran, pin: 1.0.1}
+    DAAG: {kind: cran, pin: 1.25.7}
+    COUNT: {kind: cran, pin: 1.3.5}
+    MCMCglmm: {kind: cran, pin: '2.36'}
+    spaMM: {kind: cran, pin: 4.7.17}
+    hglm.data: {kind: cran, pin: 1.0-2}
+    JoSAE: {kind: cran, pin: 0.3.0}
+    smbdata: {kind: cran, pin: 0.2.0}
+    FAwR: {kind: cran, pin: 1.2.0}
   E:
     # Python and Stan ecosystem examples, git revisions of 2026-10-07 (HEAD of the default
     # branch); the discovery step (#21) added Stata's [ME] manual data as a further ecosystem
@@ -200,6 +234,26 @@ tiers:
     diggle_panss_short: {kind: url, name: https://www.lancaster.ac.uk/staff/diggle/APTS-data-sets/PANSS_short_data.txt, pin: 874512292dbf8c0af69adb8790eaba118f523eb03ae9673453fb4ef5950bc47b}
     diggle_wassle: {kind: url, name: https://www.lancaster.ac.uk/staff/diggle/APTS-data-sets/wassle_data.txt, pin: f4d5617753564c29c8de4912b2d7716ec6aeb0659b600af01218ba860c3b99a1}
     diggle_amacrines: {kind: url, name: https://www.lancaster.ac.uk/staff/diggle/APTS-data-sets/amacrines_data.txt, pin: 26daaf7a241949b860024a6a211373f709b36d04045ddd5e55a520e7f2990060}
+    # textbook companions outside the frame (#162), pinned 2026-11-01: Beyond Multiple Linear
+    # Regression's data folder at a revision, and the Arrow files of Alday, Kliegl and Bates,
+    # Embrace Uncertainty (OSF d48ce) by OSF's sha256, the English Lexicon Project's trial table
+    # among them (its raw per-session files are no table)
+    beyondmlr: {kind: git, name: "https://github.com/proback/BeyondMLR", pin: b04814b528955b8f19ac8752ae74e9f108761062, path: data, license: not stated}  # Roback and Legler, Beyond Multiple Linear Regression (2021): the book is CC BY-NC-SA 4.0, its data repository states no license
+    embrace_elp_ldt_item: {kind: url, name: "https://osf.io/download/c6gxd/", pin: f851910e1435659ca662ad49cfb8deb6b7cf287e4ce4969103dba11b32ab2e6c, file: ELP_ldt_item.arrow, license: not stated}
+    embrace_elp_ldt_subj: {kind: url, name: "https://osf.io/download/rqenu/", pin: d9c88915681b64fc9db975f9bb2d6f402058fee5cb35887f9de7d07776efdd56, file: ELP_ldt_subj.arrow, license: not stated}
+    embrace_elp_ldt_trial: {kind: url, name: "https://osf.io/download/3evhy/", pin: 57a83679f8f458b1d9bb56e05099a556ffdaf15af67464e9ee608c844fc4fa9c, file: ELP_ldt_trial.arrow, license: not stated}
+    embrace_box: {kind: url, name: "https://osf.io/download/tkxnh/", pin: 4ac2038735c5286ca0d6a706b4feef5b34bd93560bc4cabc7223addf2366e4c0, file: box.arrow, license: not stated}
+    embrace_elstongrizzle: {kind: url, name: "https://osf.io/download/5vrbw/", pin: f33e08ad5a91ab5dd9889953dbb97cc52a299fdac9db8b37ec4f87ad2dacadbd, file: elstongrizzle.arrow, license: not stated}
+    embrace_exp_2x2x3: {kind: url, name: "https://osf.io/download/za9gs/", pin: cb09684b7373492e849c83f20a071b97f986123677134ac2ddb9ec0dcb32e503, file: exp_2x2x3.arrow, license: not stated}
+    embrace_fggk21: {kind: url, name: "https://osf.io/download/vwecy/", pin: b02201e251113e53e76b8f2b5491641cfcaca0fc34094df9034e0515133aa3f1, file: fggk21.arrow, license: not stated}
+    embrace_fggk21_child: {kind: url, name: "https://osf.io/download/c2fmn/", pin: 61c91e00336e6f804e9f6b86986ebb4a14561cc4908b3a21cb27c113d2b51a5c, file: fggk21_Child.arrow, license: not stated}
+    embrace_fggk21_score: {kind: url, name: "https://osf.io/download/7fqx3/", pin: 99d73ee705aaf5f4ee696eadbba992d0113ba6f467ce337a62a63853e4617400, file: fggk21_Score.arrow, license: not stated}
+    embrace_kkl15: {kind: url, name: "https://osf.io/download/p8cea/", pin: 90d7bb137c8613d7a15c8597c461aee7c7cb0f0989a07c80fc93e1fbe2e5c156, file: kkl15.arrow, license: not stated}
+    embrace_kwdyz11: {kind: url, name: "https://osf.io/download/4cv52/", pin: 2fa23aa8aa25e1adb10183c8d29646ae0d19d6baef9d711c9906f7fa1b225571, file: kwdyz11.arrow, license: not stated}
+    embrace_movies: {kind: url, name: "https://osf.io/download/kvdch/", pin: c8fa488be74c368530f38de3c1d3511d2182e3fa07f357d2fa09121adc1cc964, file: movies.arrow, license: not stated}
+    embrace_oxboys: {kind: url, name: "https://osf.io/download/cz6g3/", pin: 079f46e404e43c1848a65d3a4e5b6a14b2cb17565c77819d7ee3effe72f5ebd0, file: oxboys.arrow, license: not stated}
+    embrace_ratings: {kind: url, name: "https://osf.io/download/v73ym/", pin: 1d6466b8fd8da2942881c83941077cd2b6c9f7a03fa2d71072a5cd7aaa4ef560, file: ratings.arrow, license: not stated}
+    embrace_sizespeed: {kind: url, name: "https://osf.io/download/kazgm/", pin: d3512795afc101445fdd78e183919378ef7d993d66b4fd55307a0bf57fba1e0b, file: sizespeed.arrow, license: not stated}
   D:  # the deposits of `deposits.csv`, written by resolve.py (#26)
     arriero_2017_dryad: {kind: url, name: "https://datadryad.org/api/v2/files/51526/download", pin: c4c18e276745762af86143ed2f91b1aaebe71ccc1ba431d8b31e6820dddb992b, file: "vole_immunological_profiles_data.xlsx", license: "https://spdx.org/licenses/CC0-1.0.html", mirror: "https://github.com/adkipnis/mixedbench/releases/download/mirror-1/arriero_2017_dryad__vole_immunological_profiles_data.xlsx"}  # doi:10.5061/dryad.110pk: vole_immunological_profiles_data.xlsx
     goodwin_2022_dryad: {kind: url, name: "https://datadryad.org/api/v2/files/1992880/download", pin: f19e67bd3171b1ae3609f72b6cbc8b03511553b2015919eb1c8b05d284848646, file: "Amplification_primers.csv", license: "https://spdx.org/licenses/CC0-1.0.html"}  # doi:10.5061/dryad.nzs7h44tw: Amplification_primers.csv
@@ -890,6 +944,48 @@ tiers:
     kaggle_corporate_credit_rating: {kind: url, name: "https://www.kaggle.com/api/v1/datasets/download/agewerc/corporate-credit-rating", pin: f911301afdbd74eea9cbee5c5bed8ab4cfa4ae3350b2c34d7a36d746c16efb97, file: corporate-credit-rating.zip, license: Attribution 4.0 International (CC BY 4.0)}  # corporate_credit_rating (Data Foundry), company
     kaggle_credit_score_classification: {kind: url, name: "https://www.kaggle.com/api/v1/datasets/download/parisrohan/credit-score-classification", pin: ab5cb9413ad1819700dc006a73b0b03f98b75d9fa0e12b3030b674660497aba6, file: credit-score-classification.zip, license: "CC0: Public Domain"}  # credit_score_classification (Data Foundry), Customer_ID; possibly synthetic
     openml_1044: {kind: url, name: "https://data.openml.org/datasets/0000/1044/dataset_1044.pq", pin: 15608aad7fcbe860e2f690b286103280644c8a7bb73b1871a5a5db789b51274d, license: Public}  # eye_movements (Data Foundry), assgNo
+    # Many Labs 1 and 3, ManyBabies 1 and the British and Dutch Lexicon Projects (#162), pinned
+    # 2026-11-01 by OSF's sha256, `path` picking the analysis table from a zip
+    osf_manylabs1: {kind: url, name: "https://osf.io/download/nqg97/", pin: c0d2ce04e3ea405baf5a2400e3d65bb71805e9d8a123ba7a71685f73bc4f3ff5, file: Datasets.zip, path: CleanedDataset.sav, license: CC0 1.0 Universal}  # Many Labs 1 (Klein et al. 2014), one row per participant, site `referrer`
+    osf_manylabs3: {kind: url, name: "https://osf.io/download/bxw8j/", pin: 51515cff666993a2228be7b11549f4baf46b4e9dd12718515a962015ab8b74c6, file: ML3 Final Data.zip, path: ML3AllSites.csv, license: CC-By Attribution 4.0 International}  # Many Labs 3 (Ebersole et al. 2016), one row per participant, `Site`
+    osf_manybabies1: {kind: url, name: "https://osf.io/download/8jkch/", pin: a4eb8e27ae40833172009e5e681aba3f07eb3cf56d78fddd373d9ee9510110e4, file: 03_data_trial_main.csv, license: not stated}  # ManyBabies 1 (2020), one row per trial, lab and infant
+    osf_blp: {kind: url, name: "https://osf.io/download/84efq/", pin: 60aca4cd6c11d34c7e0623836a04b200286bfaae767a66cac8bd23cab04c5d9a, file: blp-trials.txt.zip, license: CC BY-NC-SA 4.0}  # British Lexicon Project (Keuleers et al. 2012), one row per trial, license.txt
+    osf_dlp1: {kind: url, name: "https://osf.io/download/zjdbn/", pin: 6ef7a4f18a478a1a60b0b6d0d1de8723dbabb83ba282a23caef8af457f7b1b6b, file: dlp-trials.txt.zip, license: CC BY-NC-SA 4.0}  # Dutch Lexicon Project (Keuleers et al. 2010), one row per trial, license.txt
+    osf_dlp2_0: {kind: url, name: "https://osf.io/download/ste5c/", pin: e738ada92ca290c63b47228624b892355bab5eb315d597d9d14386818b8057dd, file: dlp2_trials0.tsv.zip, license: CC BY-NC-SA 4.0}  # Dutch Lexicon Project 2 (Brysbaert et al. 2016), first half of the trials
+    osf_dlp2_1: {kind: url, name: "https://osf.io/download/3c6za/", pin: 6b744fd6bd330bd00cd188a15203d6d97ca1da159b19236c70974ab66b60ee2d, file: dlp2_trials1.tsv.zip, license: CC BY-NC-SA 4.0}  # Dutch Lexicon Project 2 (Brysbaert et al. 2016), second half of the trials
+    # The Confidence Database (Rahnev et al. 2020, OSF s46pr): 30 of its 180 data files, drawn
+    # with random.Random(seed) over the sorted names as a cap draws, since each file is its
+    # own download; each file's readme is its documentation (#162)
+    osf_confidence_arbuzova_2021_expt2: {kind: url, name: "https://osf.io/download/y7mgf/", pin: 420545fa09948e726742c870f32376a66a9a058a2013456a6e787a26c6d0148e, file: data_Arbuzova_2021_expt2.csv, license: CC0 1.0 Universal}
+    osf_confidence_charalampaki_unpub_1: {kind: url, name: "https://osf.io/download/x9c6v/", pin: 5062247d7c7da29dd32cf2c381176bf5007c83bae358fd3e1b3fbb8d901cc1d9, file: data_Charalampaki_unpub_1.csv, license: CC0 1.0 Universal}
+    osf_confidence_denison_2018: {kind: url, name: "https://osf.io/download/xuzaf/", pin: c4dddc619b37067d781616210cd4075699e64517730967f63df680a7861fc8c5, file: data_Denison_2018.csv, license: CC0 1.0 Universal}
+    osf_confidence_desender_2014: {kind: url, name: "https://osf.io/download/s9kz3/", pin: 32c7025f3e2743d202b49162abf241ccdfbeea0fd2f7a61afdeeec81eb03bf8c, file: data_Desender_2014.csv, license: CC0 1.0 Universal}
+    osf_confidence_double_2017: {kind: url, name: "https://osf.io/download/cs2wv/", pin: 0d1aa4dee212e94bdd0819ddbd961554a395195b66139589843c17045a15df56, file: data_Double_2017.csv, license: CC0 1.0 Universal}
+    osf_confidence_duyan_2018_exp2: {kind: url, name: "https://osf.io/download/gm6bp/", pin: a6d36a909896ca21f9f93e06c28d025cdf4a1699d9d715df34d0d86a862a1c04, file: data_Duyan_2018_Exp2.csv, license: CC0 1.0 Universal}
+    osf_confidence_hainguerlot_unpub: {kind: url, name: "https://osf.io/download/64jdt/", pin: bb30ac655747f0d42e990f8edf5106e64503f17c44fbdce2ad27fc2d3e2484a9, file: data_Hainguerlot_unpub.csv, license: CC0 1.0 Universal}
+    osf_confidence_kantner_2010: {kind: url, name: "https://osf.io/download/jw4tu/", pin: 35ac1de57810b83c215b4427f057f361954a01bbceb84e5a06ff6189209e289c, file: data_Kantner_2010.csv, license: CC0 1.0 Universal}
+    osf_confidence_kantner_2012_e2: {kind: url, name: "https://osf.io/download/9acm7/", pin: 0306becf8caea8c2a7fade97c661991b2c8bd5fc4527cc6b3019a5ba9d3419a0, file: data_Kantner_2012_E2.csv, license: CC0 1.0 Universal}
+    osf_confidence_kantner_unpub2: {kind: url, name: "https://osf.io/download/dne7a/", pin: 39a8c65337d1739870ed5acfc42bf681cfe6cf46e65082940c92db6cb0af66fa, file: data_Kantner_unpub2.csv, license: CC0 1.0 Universal}
+    osf_confidence_kvam_2016: {kind: url, name: "https://osf.io/download/pm6yu/", pin: 1707baca10539f142858b5efc136d330b04847bb043c5b2234f33a0aee9e6d53, file: data_Kvam_2016.csv, license: CC0 1.0 Universal}
+    osf_confidence_lebreton_2018: {kind: url, name: "https://osf.io/download/mbqnf/", pin: 4258e3e2a4559a2a85eaadbd071b29cb32cd6a5bb0835e029e60e0376181199d, file: data_Lebreton_2018.csv, license: CC0 1.0 Universal}
+    osf_confidence_maniscalco_2017_expt1: {kind: url, name: "https://osf.io/download/bq2pz/", pin: bea8bb585071dfbf1be2fc47fbda475d07d90dd0f5e55f51131871fb94272082, file: data_Maniscalco_2017_expt1.csv, license: CC0 1.0 Universal}
+    osf_confidence_massoni_unpub: {kind: url, name: "https://osf.io/download/6uf24/", pin: 613e1d9b6657dc58185125ebe4d01da9ad6ce654d33b926a59b5c3cc17896b59, file: data_Massoni_unpub.csv, license: CC0 1.0 Universal}
+    osf_confidence_matthews_2018_exp1: {kind: url, name: "https://osf.io/download/bv9jy/", pin: 851b14fdaf03a3a8e805c3f02de509ce2f4cb376a3f9f58032d131b3d0548516, file: data_Matthews_2018_exp1.csv, license: CC0 1.0 Universal}
+    osf_confidence_mazor_2021_expt2: {kind: url, name: "https://osf.io/download/f4q8g/", pin: 7b6b39ca367725d6072c2e015fa5bf4e0de69a837f35066fe034244ab2327b56, file: data_Mazor_2021_Expt2.csv, license: CC0 1.0 Universal}
+    osf_confidence_mazor_2021_expt7: {kind: url, name: "https://osf.io/download/mpq2d/", pin: 6ed15005c279b692b09e2b0018d4a7bfc3dd12ee21ce845977b5894448e7d827, file: data_Mazor_2021_Expt7.csv, license: CC0 1.0 Universal}
+    osf_confidence_ohora_unpub_1: {kind: url, name: "https://osf.io/download/76jbt/", pin: 33361bb4b0a8b095fd832530b900974e513c6a9a2f5caa340b42847e950b7052, file: data_OHora_unpub_1.csv, license: CC0 1.0 Universal}
+    osf_confidence_rausch_2016: {kind: url, name: "https://osf.io/download/zy43r/", pin: b9fd2ac0175e7c6f57734f9266be941a5c21da64b897580a43b37af77d6e7cef, file: data_Rausch_2016.csv, license: CC0 1.0 Universal}
+    osf_confidence_rausch_2018_expt2: {kind: url, name: "https://osf.io/download/mqyba/", pin: 49ddcc775c61d5f34a44a5aa81867033a33923ea79c47df1e757bdf4128733c2, file: data_Rausch_2018_Expt2.csv, license: CC0 1.0 Universal}
+    osf_confidence_recht_unpub: {kind: url, name: "https://osf.io/download/q5zut/", pin: 9ba50ba726a2fb390159d4b40f8d1585d93456fed0e5a618c2e8536dd6500edd, file: data_Recht_unpub.csv, license: CC0 1.0 Universal}
+    osf_confidence_rouault_2019: {kind: url, name: "https://osf.io/download/kxtc3/", pin: 290bebd3773b6554aed1df53d1853002c8a47eaf7f5ed6e97a442c311bc05c5c, file: data_Rouault_2019.csv, license: CC0 1.0 Universal}
+    osf_confidence_rouault_2020: {kind: url, name: "https://osf.io/download/9bsp3/", pin: ceb1321115e28510ba4039fdf675d5fc820e0a1a89dd3cb410543ddf92676017, file: data_Rouault_2020.csv, license: CC0 1.0 Universal}
+    osf_confidence_samaha_2017_exp3: {kind: url, name: "https://osf.io/download/s9234/", pin: 188fdae71ffebe793cfa4dc270fee0492f40cbf86cea97aff013f7e8d4e498c8, file: data_Samaha_2017_exp3.csv, license: CC0 1.0 Universal}
+    osf_confidence_sherman_2016_jn: {kind: url, name: "https://osf.io/download/tyqkd/", pin: 6269d8be722d856367c07a796c2c6e4121ba52e1b35199036b4ddc5d61bdd615, file: data_Sherman_2016_JN.csv, license: CC0 1.0 Universal}
+    osf_confidence_siedlecka_2019: {kind: url, name: "https://osf.io/download/acy7k/", pin: fa43bdc32fea249f640618748d3213bd441c5d9e357e14b9db4ec97a14688de4, file: data_Siedlecka_2019.csv, license: CC0 1.0 Universal}
+    osf_confidence_sinanaj_2015: {kind: url, name: "https://osf.io/download/bkn4m/", pin: 0a8dd5c62191c2be155b2e10012f484c1f14e76885017595a69ffef76347a51b, file: data_Sinanaj_2015.csv, license: CC0 1.0 Universal}
+    osf_confidence_skora_unpub: {kind: url, name: "https://osf.io/download/v6mxb/", pin: c9eef53b7937560c4bd2ac3f4d60f38a86f4e844eed3c8f4081b3aa98ce4dcfb, file: data_Skora_unpub.csv, license: CC0 1.0 Universal}
+    osf_confidence_teuchies_2019: {kind: url, name: "https://osf.io/download/5xnpm/", pin: f0d6824c803325c2b2e1577ec76d9153c60586e88587958677d08be14cd0862b, file: data_Teuchies_2019.csv, license: CC0 1.0 Universal}
+    osf_confidence_wierzchon_2014: {kind: url, name: "https://osf.io/download/ue3mz/", pin: b9c33b749c526abf9d3dfb187c100f26a7565dcb4c973e67338f7b1202a6b0c1, file: data_Wierzchon_2014.csv, license: CC0 1.0 Universal}
 
 dropped:
   # discovery step (#21), one fetch each with the loader's user agent on 2026-10-07
@@ -923,6 +1019,13 @@ dropped:
   - {tier: O, name: "TableShift College Scorecard and Childhood Lead", reason: not grouped, detail: no grouping column}
   - {tier: O, name: "OpenClustered's simulated tables (hospital, glmmEPsimdata, mbestsimdata, dragons, SBPData)", reason: not grouped, detail: simulated}
   - {tier: O, name: "BeyondArena telemonitoring_parkinsons_biomedical_voice_measurements", reason: duplicate, detail: "a 502-row subset of uci_189"}
+  # outside the frame (#162), looked at on 2026-11-01
+  - {tier: R, name: AMCP, reason: wide, detail: "about 70 small within-subject tables, one row per subject"}
+  - {tier: R, name: frailtypack, reason: hazard data, detail: "clustered survival tables (readmission, colorectal, dataOvarian)"}
+  - {tier: R, name: mitml, reason: not grouped, detail: its three tables are simulated}
+  - {tier: O, name: Many Labs 2 (OSF 8cd4r), reason: wide, detail: "ML2_S1.csv and ML2_S2.csv code a condition by which column holds the answer; the long forms exist only in the analysis scripts"}
+  - {tier: O, name: French Lexicon Project (OSF f8kc4), reason: unreadable format, detail: the trial data are one .rar archive}
+  - {tier: O, name: "MEGALEX and the Arabic, Hebrew, Malay, Chinese, Vietnamese, Persian, Korean and Portuguese Lexicon Projects", reason: same design, detail: "the subject × item lexical decision design of the English, British and Dutch Lexicon Projects again"}
 # Tier O keyword net (#24): OpenML, UCI and PMLB searched for tables with a documented clustering
 # column; the cap applies over the three repositories together, drawn with `seed` where exceeded.
 # The Tier O keyword net (#24): `net.py` ran it on 2026-10-07 over every active OpenML dataset
