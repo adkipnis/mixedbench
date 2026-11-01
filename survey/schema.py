@@ -217,6 +217,7 @@ LICENSES = {
     'Publicly available': 'other',
     'other-open': 'other',
     'Kaggle License': 'other',  # a competition's terms, not an open license
+    'GroupLens usage license: research use, no redistribution or commercial use without permission': 'other',  # MovieLens' README
     'Kaggle Competition License': 'other',
     'Kaggle Competition Rules': 'other',
     'per table (data/README.md)': 'other',  # a repository of tables from several sources
