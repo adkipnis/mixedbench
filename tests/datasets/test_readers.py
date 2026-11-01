@@ -5,6 +5,7 @@ the awkward files met in the pull, plus single R files as deposits serve them.""
 
 from __future__ import annotations
 
+import gzip
 import shutil
 import tarfile
 from collections.abc import Sequence
@@ -153,6 +154,16 @@ def test_a_data_txt_reads_as_r_reads_it_in_the_c_locale():
     tables, reader = readers.read(FIXTURES / 'typed.txt', 'data/typed.txt', cran=True)
     twin, _ = readFixture('typed.rda')
     assert reader == 'pandas'
+    pd.testing.assert_frame_equal(tables['typed'], twin['typed'])
+
+
+def test_a_gzipped_data_file_is_named_and_read_as_data_reads_it(tmp_path):
+    """MCMCglmm ships `data/BTdata.tab.gz`, which utils::data() reads as the `.tab` it wraps
+    and names `BTdata` (#166)."""
+    file = tmp_path / 'typed.txt.gz'
+    file.write_bytes(gzip.compress((FIXTURES / 'typed.txt').read_bytes()))
+    tables, _ = readers.read(file, 'data/typed.txt.gz', cran=True)
+    twin, _ = readFixture('typed.rda')
     pd.testing.assert_frame_equal(tables['typed'], twin['typed'])
 
 
