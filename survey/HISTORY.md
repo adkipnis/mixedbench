@@ -671,7 +671,8 @@ object and the deciding issue.
   factor and a covariate, the grouping stands and the fixed term stays in the formula
   (Cultivation; #12).
 - An area factor with many levels groups; one with a handful is a covariate (LGAclaims,
-  infmort; m3#23). Exhaustive areas group too (ACS's states and PUMAs, BRFSS's states; #162).
+  infmort; m3#23). Exhaustive areas group too (ACS's states and PUMAs, BRFSS's states; #162),
+  and so does any other exhaustive set of many units (the NBA's 30 teams; #162).
 - A Gaussian process over a unit a column holds keeps that column as a grouping factor, the
   process in words in the formula (US income). Over a unit no column holds (coordinates rounded
   by the source), the unit is no grouping factor, and its coordinates are covariates where the
@@ -707,6 +708,8 @@ object and the deciding issue.
   posteriordb's ladders render the richest grouping (radon; m3#24).
 - `published_model` is `no` for all of Tier O (m3#24), unless a paper fits a mixed model on the
   table (LMMNN's Income and Cars; #162).
+- A target encoder's GLMM, one random intercept per feature, is no model of the table: notes
+  name it, and it files no row (eucalyptus and eight more of Pargent's tables; #162).
 - Every feature of a benchmark task is a covariate, however sparse; the contract's drop of
   incomplete rows decides what remains (5g, early learning; #162).
 - Priors in deposit files the page lists are filed (verberk; #10).
@@ -722,7 +725,8 @@ object and the deciding issue.
 
 **Exclusions**
 
-- `simulated data` only where the source says so (Stata's chicken, hox SocsLong; m3#24, #12);
+- `simulated data` only where the source, or a package shipping the same values, says so
+  (Stata's chicken, hox SocsLong, OpenML sensory as dae's Sensory3Phase.dat; m3#24, #12, #162);
   a guessed "constructed" stays (SASmixed Animal; m3#22). A wide twin of a simulated table
   shares its exclusion (socscors; #133).
 - `no grouping structure`: wide repeated-measures tables (nitrofen), replication without a
