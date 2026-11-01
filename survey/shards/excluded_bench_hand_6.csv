@@ -1,0 +1,4 @@
+"source","object","reason","detail"
+"DAAG","progression","no grouping structure","each of the 9 races (100m to Marathon) holds one Distance, so race restates the covariate: the standard events are a design factor, not sampled units, and the page fits lm(log(Time) ~ log(Distance)) without them (hand check #162)"
+"beyondmlr","data/seeds2.csv","no grouping structure","wide: the heights hgt13 to hgt28 are repeated measures stored as columns, which chapter 10 gathers into a long table; the wide rule holds although pot groups the plants of chapter 11's germination exercise (hand check #162)"
+"psymetadata","schroeder2020","no grouping structure","study_id and es_id are both unique over the 75 effects, so no column repeats a unit, and the paper fits an ordinary random-effects meta-analysis (hand check #162)"
