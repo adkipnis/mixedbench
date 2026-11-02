@@ -218,10 +218,9 @@ buildDesign <- function(table, input) {
   glFormula(formula, data = table, family = FAMILY[[input$family]])
 }
 
-# y as glmer reads a binary response: a factor's first level 0, every other level 1
 describeDesign <- function(built) {
   y <- model.response(built$fr)
-  if (is.factor(y)) y <- as.numeric(y != levels(y)[1])
+  if (is.factor(y)) y <- as.numeric(y != levels(y)[1])  # as glmer reads it: first level 0, others 1
   offset <- model.offset(built$fr)
   if (is.null(offset)) offset <- rep(0, nrow(built$fr))
   list(
