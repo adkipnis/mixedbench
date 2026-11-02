@@ -15,18 +15,26 @@ B = ('second', 'table')
 TablePair = tuple[pd.DataFrame, pd.DataFrame]
 
 
+def _labels(rng: np.random.Generator, m: int) -> list[str]:
+    """m school labels of six letters."""
+    return [''.join(rng.choice(list(string.ascii_lowercase), 6)) for _ in range(m)]
+
+
+def _measures(rng: np.random.Generator, n: int) -> dict[str, np.ndarray]:
+    """A score and a covariate of four significant digits for n pupils."""
+    return {
+        'score': rng.integers(1000, 10000, size=n) / 100,
+        'ses': rng.integers(-9999, 10000, size=n) / 1000,
+    }
+
+
 def _groupedTable(rng: np.random.Generator) -> pd.DataFrame:
     """Five to ten schools of four to eight pupils: a score and a covariate of four significant
     digits, a school label of six letters."""
     m = int(rng.integers(5, 11))
     sizes = rng.integers(4, 9, size=m)
-    labels = [''.join(rng.choice(list(string.ascii_lowercase), 6)) for _ in range(m)]
     n = int(sizes.sum())
-    return pd.DataFrame({
-        'school': np.repeat(labels, sizes),
-        'score': rng.integers(1000, 10000, size=n) / 100,
-        'ses': rng.integers(-9999, 10000, size=n) / 1000,
-    })  # fmt: skip
+    return pd.DataFrame({'school': np.repeat(_labels(rng, m), sizes), **_measures(rng, n)})
 
 
 def _disguisedCopy(table: pd.DataFrame, rng: np.random.Generator) -> TablePair:
@@ -52,12 +60,8 @@ def _unrelated(table: pd.DataFrame, rng: np.random.Generator) -> TablePair:
     """Other values in the same rows and columns, one school more."""
     n = len(table)
     schools = table['school'].nunique() + 1
-    labels = [''.join(rng.choice(list(string.ascii_lowercase), 6)) for _ in range(schools)]
-    other = pd.DataFrame({
-        'school': np.array(labels)[np.arange(n) % schools],
-        'score': rng.integers(1000, 10000, size=n) / 100,
-        'ses': rng.integers(-9999, 10000, size=n) / 1000,
-    })  # fmt: skip
+    labels = np.array(_labels(rng, schools))
+    other = pd.DataFrame({'school': labels[np.arange(n) % schools], **_measures(rng, n)})
     return table, other
 
 
