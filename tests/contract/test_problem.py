@@ -47,8 +47,8 @@ def fixtureTable() -> pd.DataFrame:
     """Rows 0-11 are kept; row 12 misses `x`, row 13 misses `block`."""
     return pd.DataFrame(
         {
-            'block': ['A'] * 4 + ['B'] * 4 + ['C'] * 4 + ['A', None],
-            'plot': ['p1', 'p1', 'p2', 'p2'] * 3 + ['p1', 'p1'],
+            'block': ['A'] * 3 + ['B'] * 3 + ['C'] * 2 + ['D'] * 2 + ['E'] * 2 + ['A', None],
+            'plot': ['p1', 'p1', 'p2'] * 2 + ['p1'] * 6 + ['p1', 'p1'],
             'x': X + [NAN, 1.0],
             'sex': ['fm'[s] for s in SEX] + ['f', 'm'],
             'diet': pd.Categorical(['a', 'b', 'c'] * 4 + ['a', 'b'], categories=['a', 'b', 'c']),
@@ -160,16 +160,75 @@ def test_a_grouping_factor_is_integer_coded_with_its_levels_listed() -> None:
     pairs present. `levels` lists every recoded column, so the JSON can say `sex` 1 is `m`."""
     problem = Problem.build(fixtureRow(), fixtureTable())
     assert problem.factors == ('block', 'block:plot')
-    assert problem.table['block'].tolist() == [0] * 4 + [1] * 4 + [2] * 4
-    assert problem.table['block:plot'].tolist() == [0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5]
+    assert problem.table['block'].tolist() == [0, 0, 0, 1, 1, 1, 2, 2, 3, 3, 4, 4]
+    assert problem.table['block:plot'].tolist() == [0, 0, 1, 2, 2, 3, 4, 4, 5, 5, 6, 6]
     assert problem.levels == {
         'sex': ('f', 'm'),
         'diet': ('a', 'b', 'c'),
         'grade': ('lo', 'mid', 'hi'),
-        'block': ('A', 'B', 'C'),
-        'block:plot': ('A:p1', 'A:p2', 'B:p1', 'B:p2', 'C:p1', 'C:p2'),
+        'block': ('A', 'B', 'C', 'D', 'E'),
+        'block:plot': ('A:p1', 'A:p2', 'B:p1', 'B:p2', 'C:p1', 'D:p1', 'E:p1'),
     }
     assert list(problem.table.columns) == [*problem.design, 'y', 'block', 'block:plot', 'rows', 'groups']  # fmt: skip
+
+
+@pytest.mark.parametrize(
+    'herd, design',
+    [
+        pytest.param(['u', 'v'] * 7, ('herd',), id='two levels, one 0/1 column'),
+        pytest.param(
+            ['u', 'v', 'w', 'z'] * 3 + ['u', 'v'], ('herd[v]', 'herd[w]', 'herd[z]'),
+            id='four levels, treatment contrasts',
+        ),
+        pytest.param(
+            [1, 2, 3, 4] * 3 + [1, 2], ('herd[2]', 'herd[3]', 'herd[4]'),
+            id='four integer codes, contrasts and not one slope',
+        ),
+        pytest.param(
+            [1, 2, 3, 4] * 3 + [5, 1], ('herd[2]', 'herd[3]', 'herd[4]'),
+            id='a fifth level only on the row dropped for a missing x',
+        ),
+    ],
+)  # fmt: skip
+def test_a_grouping_factor_of_fewer_than_five_levels_becomes_a_categorical_covariate(
+    herd: list, design: tuple[str, ...]
+) -> None:
+    """Two to four groups barely inform a standard deviation, and the reference sampler diverges
+    in the funnel they leave (#160). So `build` fits such a factor's levels as fixed effects
+    (Harrison et al. 2018), counted over the kept rows. Its columns follow the row's covariates
+    and precede its interactions, as R orders a formula's terms."""
+    row = fixtureRow(
+        grouping_factors=('block', 'herd', 'block:plot'), covariates=('x', 'sex'),
+        types={},
+    )  # fmt: skip
+    problem = Problem.build(row, fixtureTable().assign(herd=herd))
+    assert problem.design == ('Intercept', 'x', 'sex', *design, 'x:sex')
+    assert problem.factors == ('block', 'block:plot')
+    assert 'sd[herd]' not in problem.parameters
+
+
+@pytest.mark.parametrize(
+    'random_slopes, reason',
+    [
+        pytest.param((), 'every grouping factor has fewer than 5 levels', id='no factor left'),
+        pytest.param(
+            (SlopeTerm('x', 'herd', correlated=True),),
+            'random slopes on herd, which has fewer than 5 levels',
+            id='a slope on it, named before the count',
+        ),
+    ],
+)  # fmt: skip
+def test_a_factor_of_fewer_than_five_levels_alone_or_with_slopes_is_refused(
+    random_slopes: tuple[SlopeTerm, ...], reason: str
+) -> None:
+    """Only a random intercept turns into fixed levels. A problem left without a grouping factor
+    is no mixed model (nlme Wheat2), and a slope varying over fixed levels would be an
+    interaction the source did not fit (ARM earnings, weaving df_ALL). So `build` refuses both."""
+    row = fixtureRow(grouping_factors=('herd',), random_slopes=random_slopes)
+    table = fixtureTable().assign(herd=['u', 'v', 'w'] * 4 + ['u', 'v'])
+    with pytest.raises(Refused) as refused:
+        Problem.build(row, table)
+    assert refused.value.reason == reason
 
 
 # the widths whose columns the columns before them span, over the kept rows 0-11
@@ -480,11 +539,11 @@ def test_the_splits_are_a_pure_function_of_the_problem_id() -> None:
     assert not regimes(problem)['groups'].equals(regimes(other)['groups'])
 
 
-SIZES = st.lists(st.integers(1, 8), min_size=3, max_size=40)
+SIZES = st.lists(st.integers(1, 8), min_size=5, max_size=40)
 SOURCES = st.text(alphabet='abcxyz', min_size=1, max_size=8)
 
 
-@given(sizes=SIZES, crossed=st.integers(0, 5), source=SOURCES)
+@given(sizes=SIZES, crossed=st.one_of(st.just(0), st.integers(5, 8)), source=SOURCES)
 def test_regime_rows_deals_every_row_but_a_first_per_group_into_five_even_folds(
     sizes: list[int], crossed: int, source: str
 ) -> None:
@@ -506,27 +565,29 @@ def test_regime_rows_deals_every_row_but_a_first_per_group_into_five_even_folds(
 
 
 @given(sizes=SIZES, source=SOURCES)
-def test_regime_groups_deals_the_first_factors_groups_whole_into_min_5_g_folds(
+def test_regime_groups_deals_the_first_factors_groups_whole_into_five_folds(
     sizes: list[int], source: str
 ) -> None:
     """Regime `groups` predicts new groups: each group of the first factor is held out once,
-    with all its rows, in one of min(5, G) folds that differ by at most one group. So a fold
-    leaves at least two groups seen, and a 3-group factor holds out one group per fold."""
+    with all its rows, in one of five folds that differ by at most one group.
+    A factor has at least five groups, so a fold leaves at least four seen."""
     table = groupedTable(sizes)
     problem = Problem.build(groupedRow(source), table)
     folds_per_group = problem.table.groupby('g')['groups'].nunique()
     assert (folds_per_group == 1).all()
     groups_per_fold = problem.table.groupby('g')['groups'].first().value_counts()
-    assert sorted(groups_per_fold.index) == list(range(min(5, len(sizes))))
+    assert sorted(groups_per_fold.index) == list(range(5))
     assert groups_per_fold.max() - groups_per_fold.min() <= 1
 
 
-def test_a_first_factor_of_two_groups_has_no_groups_regime() -> None:
-    """Holding one of two groups leaves one, so ADR 0001's rule cannot hold: the problem keeps
-    the posterior track and regime `rows`, and has no `groups` column (ten registry rows)."""
-    problem = Problem.build(groupedRow(), groupedTable([6, 6]))
-    assert 'rows' in problem.table.columns
-    assert 'groups' not in problem.table.columns
+def test_regime_groups_deals_the_first_factor_left_after_the_conversion() -> None:
+    """A first factor of fewer than five levels becomes a covariate, as nlme Gun's `Physique`,
+    so regime `groups` holds out the groups of the next factor."""
+    row = fixtureRow(grouping_factors=('herd', 'block', 'block:plot'))
+    problem = Problem.build(row, fixtureTable().assign(herd=['u', 'v', 'w'] * 4 + ['u', 'v']))
+    assert problem.factors == ('block', 'block:plot')
+    assert (problem.table.groupby('block')['groups'].nunique() == 1).all()
+    assert problem.table['groups'].nunique() == 5
 
 
 # ==============================================================================================
@@ -551,14 +612,14 @@ def foldMoments(problem: Problem, regime: str, folds: int) -> tuple[dict[str, Sc
 def test_each_fold_scales_the_continuous_columns_by_the_rows_its_fit_sees() -> None:
     """No held-out row leaks into a scaler (ADR 0001): `full` is one fold with the table's
     moments, and each fold of a split regime holds its seen rows' (sample SD, as R's `scale`),
-    for the continuous covariate `x` and the continuous response `y` only. The fixture's six
-    holdable rows fill five folds, and its three blocks fill three. The table stays in raw units."""
+    for the continuous covariate `x` and the continuous response `y` only. The fixture's five
+    holdable rows fill five folds, and its five blocks fill five. The table stays in raw units."""
     problem = Problem.build(fixtureRow(), fixtureTable())
     every_row = pd.Series([True] * 12)
     assert problem.scales == {
         'full': ({'x': momentsOf(X, every_row), 'y': momentsOf(Y, every_row)},),
         'rows': foldMoments(problem, 'rows', 5),
-        'groups': foldMoments(problem, 'groups', 3),
+        'groups': foldMoments(problem, 'groups', 5),
     }
     assert problem.table['x'].tolist() == X
     assert problem.table['y'].tolist() == Y
@@ -570,16 +631,17 @@ def test_a_level_present_only_in_held_rows_leaves_an_all_zero_column_in_that_fol
     """The coding is the full table's (ADR 0001, amended 2026-10-09): `kind` gives each group
     its own level beside a shared reference, so the group fold 0 holds has a level no seen row
     has, and its contrast column stays in the design, all zero over the seen rows, not dropped."""
-    table = groupedTable([4, 4, 4])
-    table['kind'] = pd.Categorical(
-        ['base', 'k0', 'k0', 'k0', 'base', 'k1', 'k1', 'k1', 'base', 'k2', 'k2', 'k2'],
-        categories=['base', 'k0', 'k1', 'k2'],
-    )
+    table = groupedTable([4] * 5)
+    kinds = []
+    for group in range(5):
+        kinds += ['base', f'k{group}', f'k{group}', f'k{group}']
+    levels = ['base', 'k0', 'k1', 'k2', 'k3', 'k4']
+    table['kind'] = pd.Categorical(kinds, categories=levels)
     row = replace(groupedRow(), covariates=('x', 'kind'), types={'kind': 'categorical'})
     problem = Problem.build(row, table)
     seen = problem.table['groups'] != 0
     [held_level] = set(table.loc[~seen, 'kind']) - {'base'}
-    assert problem.design == ('Intercept', 'x', 'kind[k0]', 'kind[k1]', 'kind[k2]')
+    assert problem.design == ('Intercept', 'x', *[f'kind[{level}]' for level in levels[1:]])
     assert problem.table.loc[seen, f'kind[{held_level}]'].eq(0).all()
     assert problem.table.loc[~seen, f'kind[{held_level}]'].eq(1).any()
 
@@ -664,19 +726,19 @@ def test_the_local_draws_name_each_group_by_its_code_in_the_table() -> None:
     problem = Problem.build(row, fixtureTable())
     local = problem.localDraws()
     assert local['block'] == (
-        'r[block][0]', 'r[block][1]', 'r[block][2]',
-        'r[x|block][0]', 'r[x|block][1]', 'r[x|block][2]',
-        'r[sex|block][0]', 'r[sex|block][1]', 'r[sex|block][2]',
-    )  # fmt: skip
+        *[f'r[block][{j}]' for j in range(5)],
+        *[f'r[x|block][{j}]' for j in range(5)],
+        *[f'r[sex|block][{j}]' for j in range(5)],
+    )
     assert list(local) == ['block', 'block:plot']
-    assert local['block:plot'][5:8] == (
-        'r[block:plot][5]',
+    assert local['block:plot'][6:9] == (
+        'r[block:plot][6]',
         'r[diet[b]|block:plot][0]',
         'r[diet[b]|block:plot][1]',
     )
-    assert len(local['block:plot']) == 3 * 6
+    assert len(local['block:plot']) == 3 * 7
     codes = problem.standardized()['block:plot']
-    assert {f'r[block:plot][{j}]' for j in codes} == set(local['block:plot'][:6])
+    assert {f'r[block:plot][{j}]' for j in codes} == set(local['block:plot'][:7])
 
 
 def test_a_factors_slopes_follow_its_sd_parameters_not_the_design() -> None:
