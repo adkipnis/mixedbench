@@ -29,6 +29,14 @@ def writeCandidates(path: Path, rows: list[dict]) -> None:
             writer.writerow([f'{row["source"]}/{row["object"]}/1', row['verified']])
 
 
+def writeManifest(registry: Path, files: list[tuple[str, str, str]]) -> None:
+    """A manifest.csv naming each object's file; the checksums and sizes the steps never read."""
+    lines = ['source,object,file,sha256,size']
+    for source, object, file in files:
+        lines.append(f'{source},{object},{file},0,1')
+    (registry / 'manifest.csv').write_text('\n'.join(lines) + '\n')
+
+
 def readRows(path: Path) -> list[dict]:
     with open(path, newline='') as f:
         return list(csv.DictReader(f))
@@ -60,10 +68,10 @@ def strataFiles(registry: Path, candidates: Path) -> None:
     refused = cellRows('R', 'high', 40, source='refused')
     writeRegistry(registry, strata + hand + refused)
     writeCandidates(candidates, strata + hand)
-    manifest = ['source,object,file,sha256,size']
+    files = []
     for row in strata + hand + refused:
-        manifest.append(f'{row["source"]},{row["object"]},{row["object"]}.csv,0,1')
-    (registry / 'manifest.csv').write_text('\n'.join(manifest) + '\n')
+        files.append((row['source'], row['object'], f'{row["object"]}.csv'))
+    writeManifest(registry, files)
 
 
 def test_draw_allocates_the_unchecked_candidates_by_tier_and_verification(tmp_path):
@@ -165,11 +173,13 @@ def handoffFiles(registry: Path, candidates: Path) -> None:
         '    ros: {kind: git, name: https://github.com/avehtari/ROS-Examples, pin: abc123}\n'
         f'    rabe_hesketh: {{kind: url, name: https://www.stata-press.com/data/mlmus4/mlmus4.zip, pin: {"0" * 64}}}\n'
     )
-    (registry / 'manifest.csv').write_text(
-        'source,object,file,sha256,size\n'
-        'pens,herds,data/herds.rda,0,1\n'
-        'ros,Beauty/data/beauty.csv,Beauty/data/beauty.csv,0,1\n'
-        'rabe_hesketh,pig.dta,pig.dta,0,1\n'
+    writeManifest(
+        registry,
+        [
+            ('pens', 'herds', 'data/herds.rda'),
+            ('ros', 'Beauty/data/beauty.csv', 'Beauty/data/beauty.csv'),
+            ('rabe_hesketh', 'pig.dta', 'pig.dta'),
+        ],
     )
     writeHelp(registry, 'pens', 'herds', '\\name{herds}\n\\title{Weights of pigs by herd}\n')
     writeHelp(registry, 'ros', 'Beauty/data/beauty.csv', '# first rows (of 463)\neval: float64\n')
