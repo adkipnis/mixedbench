@@ -38,41 +38,26 @@ def nested(**components) -> Fit:
     return Fit(**(fitted | components))
 
 
-@pytest.mark.parametrize(
-    ('response', 'fit', 'shared', 'region', 'herd'),
-    [
-        pytest.param(
-            {'response_type': 'continuous'}, nested(),
-            {'family': 'gaussian', 'family_doc': '', 'sigma2_residual': 1.0, 'sigma2_distribution': 0.0, 'r2_marginal': 0.2857, 'r2_conditional': 0.7143},
-            {'icc': 0.2857, 'icc_adjusted': 0.4}, {'icc': 0.1429, 'icc_adjusted': 0.2},
-            id='gaussian: a residual of 1, a total of 3.5',
-        ),
-        pytest.param(
-            {'response': 'sick', 'response_type': 'binary', 'family': 'bernoulli(probit)'},
-            nested(sigma=None, sigma2_distribution=math.pi**2 / 3),
-            {'family': 'bernoulli', 'family_doc': 'bernoulli(probit)', 'sigma2_residual': None, 'sigma2_distribution': 3.2899, 'r2_marginal': 0.1727, 'r2_conditional': 0.4318},
-            {'icc': 0.1727, 'icc_adjusted': 0.2088}, {'icc': 0.0864, 'icc_adjusted': 0.1044},
-            id='bernoulli: no residual, the logistic pi^2/3, a total of 5.79',
-        ),
-    ],
-)  # fmt: skip
-def test_a_fit_shares_its_variance_between_fixed_part_factors_and_residual(
-    herds, rows, response, fit, shared, region, herd
-):
-    """Nakagawa, Johnson and Schielzeth (2017): R² over σ²_f + Σ σ²_g + σ²_ε + σ²_d, a factor's
-    ICC its σ²_g over the same total, its adjusted ICC over the total without σ²_f.
+def test_a_fit_becomes_a_rounded_row_per_factor_beside_its_family(herds, rows):
+    """measureFit rounds the variance partition test_lme4.py checks into a row per factor.
     The contract's family rule names the family, the registry's departure rides beside it."""
-    row = parsed(rows[0] | response)
+    row = parsed(
+        rows[0] | {'response': 'sick', 'response_type': 'binary', 'family': 'bernoulli(probit)'}
+    )
+    fitted = nested(sigma=None, sigma2_distribution=math.pi**2 / 3)
 
-    first, second = measureFit(row, fit, herds)
+    first, second = measureFit(row, fitted, herds)
 
     every = {
         'source': 'herds', 'object': 'herds.csv', 'model_index': 1, 'tier': 'D', 'status': 'ok',
-        'message': '', 'seconds': 0.5123, 'n_obs': 14, 'sigma2_fixed': 1.0, 'sigma2_random': 1.5,
-        'sd_eta': 1.5, 'max_abs_eta': 3.25,
-    } | shared  # fmt: skip
-    assert first == every | {'factor': 'herd', 'q': 1, 'sigma2': 0.5} | herd
-    assert second == every | {'factor': 'region', 'q': 1, 'sigma2': 1.0} | region
+        'message': '', 'seconds': 0.5123, 'n_obs': 14, 'family': 'bernoulli',
+        'family_doc': 'bernoulli(probit)', 'sigma2_fixed': 1.0, 'sigma2_random': 1.5,
+        'sigma2_residual': None, 'sigma2_distribution': 3.2899, 'sd_eta': 1.5, 'max_abs_eta': 3.25,
+        'r2_marginal': 0.1727, 'r2_conditional': 0.4318,
+    }  # fmt: skip
+    herd = {'factor': 'herd', 'q': 1, 'sigma2': 0.5, 'icc': 0.0864, 'icc_adjusted': 0.1044}
+    region = {'factor': 'region', 'q': 1, 'sigma2': 1.0, 'icc': 0.1727, 'icc_adjusted': 0.2088}
+    assert (first, second) == (every | herd, every | region)
 
 
 @pytest.mark.parametrize(
