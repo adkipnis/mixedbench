@@ -487,7 +487,7 @@ class Merger:
         first = zip(duplicates['source_a'], duplicates['object_a'])
         second = zip(duplicates['source_b'], duplicates['object_b'])
         decided = set(zip(first, second))  # pairs are stored earliest tier first too
-        undecided = [(a, b) for a, b in copies.copyPairs(profiles) if (a, b) not in decided]
+        undecided = [(a, b) for a, b in copies.findPairs(profiles) if (a, b) not in decided]
         return [
             {'source_a': a[0], 'object_a': a[1], 'source_b': b[0], 'object_b': b[1], 'verdict': 'flagged', 'notes': ''}
             for a, b in undecided

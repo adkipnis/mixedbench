@@ -5,19 +5,18 @@ A copy can rename, reorder, recode, add or drop columns and store its numbers at
 precision, so two tables may be copies when most of the smaller one's distinctive values appear
 in the other. A distinctive value survives all of that: a non-integer number to four significant
 digits, a large integer of a sparse column, a text label. A copy of codes and small integers has
-none, so two tables of equal row count and column cardinalities may be copies too. The value
-scan of #168 set the rule.
+none, so two tables of equal row count and column cardinalities may be copies too.
 
 pipeline:
 ---------
 a table
 -> its row count, cardinalities and distinctive values  profileTable
 the profiles of every registry object
--> pairs of equal row count and cardinalities           _matchSignatures
--> pairs that share enough rare values                  _shareRareValues
+-> pairs of equal row count and cardinalities           _pairBySignature
+-> pairs that share enough rare values                  _pairByRareValues
 -> of them, pairs of similar row counts                 _haveSimilarRows
 -> and most distinctive values shared                   _shareMostValues
--> the pairs that may be copies, in the profiles' order copyPairs
+-> the pairs that may be copies, in the profiles' order findPairs
 """
 
 from __future__ import annotations
@@ -42,11 +41,6 @@ COMMON = 50  # a value held by more objects proposes no pair
 CAP = 20_000  # distinctive values a profile keeps, a sample by hash above it
 
 
-def _cut(rate: float) -> np.uint64:
-    """The largest hash a sample at this rate keeps, so two samples compare at the lower rate."""
-    return np.uint64(min(2**64 - 1, int(rate * 2**64)))
-
-
 @dataclass(frozen=True)
 class Profile:
     """What a table offers the comparison:
@@ -65,26 +59,26 @@ class Profile:
 # profileTable: table -> cardinalities and distinctive values -> sample
 # =====================================================================================
 def profileTable(table: pd.DataFrame) -> Profile:
-    values = _hashValues(table)
-    rate = min(1.0, CAP / max(len(values), 1))
-    cardinalities = tuple(sorted(table.nunique()))
-    return Profile(len(table), cardinalities, values[values <= _cut(rate)], rate)
-
-
-def _hashValues(table: pd.DataFrame) -> np.ndarray:
-    """Each kind of value hashes under its own tag, so the label '1001' never meets 1001."""
+    cardinalities = []
     parts = [np.empty(0, np.uint64)]
     for name in table.columns:
-        column = table[name]
-        if pd.api.types.is_bool_dtype(column) or pd.api.types.is_datetime64_any_dtype(column):
-            continue
-        if pd.api.types.is_numeric_dtype(column):
-            values = column.to_numpy(dtype=float, na_value=np.nan)
-            values = values[np.isfinite(values)]
-            parts += [_hashFloats(values), _hashIntegers(values)]
-        else:
-            parts.append(_hashLabels(column))
-    return np.unique(np.concatenate(parts))
+        distinct = pd.Series(table[name].dropna().unique())
+        cardinalities.append(len(distinct))
+        parts.append(_hashValues(distinct))
+    values = np.unique(np.concatenate(parts))
+    rate = min(1.0, CAP / max(len(values), 1))
+    return Profile(len(table), tuple(sorted(cardinalities)), values[values <= _cut(rate)], rate)
+
+
+def _hashValues(distinct: pd.Series) -> np.ndarray:
+    """Each kind of value hashes under its own tag, so the label '1001' never meets 1001."""
+    if pd.api.types.is_bool_dtype(distinct) or pd.api.types.is_datetime64_any_dtype(distinct):
+        return np.empty(0, np.uint64)
+    if pd.api.types.is_numeric_dtype(distinct):
+        values = distinct.to_numpy(dtype=float)
+        values = values[np.isfinite(values)]
+        return np.concatenate([_hashFloats(values), _hashIntegers(values)])
+    return _hashLabels(distinct)
 
 
 def _hashFloats(values: np.ndarray) -> np.ndarray:
@@ -108,43 +102,49 @@ def _hashIntegers(values: np.ndarray) -> np.ndarray:
     if len(integers) < 2:
         return np.empty(0, np.uint64)
     sparse = len(integers) / (integers.max() - integers.min() + 1) < 0.5
-    large = integers[np.abs(integers) >= 1000]
-    if not sparse or len(large) == 0:
+    if not sparse:
         return np.empty(0, np.uint64)
+    large = integers[np.abs(integers) >= 1000]
     return pd.util.hash_array(large.astype(np.int64) * 4 + 2)
 
 
-def _hashLabels(column: pd.Series) -> np.ndarray:
+def _hashLabels(distinct: pd.Series) -> np.ndarray:
     """Labels of four or more characters, case and padding ignored."""
-    labels = column.dropna().astype(str).str.strip().str.lower().unique()
+    labels = distinct.astype(str).str.strip().str.lower().unique()
     labels = np.array([f's:{label}' for label in labels if len(label) >= 4], dtype=object)
-    if len(labels) == 0:
-        return np.empty(0, np.uint64)
     return pd.util.hash_array(labels)
 
 
+def _cut(rate: float) -> np.uint64:
+    """The largest hash a sample at this rate keeps, so two samples compare at the lower rate."""
+    return np.uint64(min(2**64 - 1, int(rate * 2**64)))
+
+
 # =====================================================================================
-# copyPairs: profiles -> signatures or shared values -> pairs
+# findPairs: profiles -> signatures or shared values -> pairs
 # =====================================================================================
-def copyPairs(profiles: dict[Key, Profile]) -> list[tuple[Key, Key]]:
+def findPairs(profiles: dict[Key, Profile]) -> list[tuple[Key, Key]]:
     """The pairs that may be copies, each in the profiles' order and sorted by it."""
     rank = {key: i for i, key in enumerate(profiles)}
-    pairs = set(_matchSignatures(profiles))
-    for a, b in _shareRareValues(profiles):
+    pairs = set(_pairBySignature(profiles))
+    for a, b in _pairByRareValues(profiles):
         first, second = profiles[a], profiles[b]
         if _haveSimilarRows(first, second) and _shareMostValues(first, second):
             pairs.add((a, b))
     return sorted(pairs, key=lambda pair: (rank[pair[0]], rank[pair[1]]))
 
 
-def _matchSignatures(profiles: dict[Key, Profile]) -> list[tuple[Key, Key]]:
+def _pairBySignature(profiles: dict[Key, Profile]) -> list[tuple[Key, Key]]:
     groups = defaultdict(list)  # (rows, cardinalities) -> its objects in the profiles' order
     for key, profile in profiles.items():
         groups[profile.rows, profile.cardinalities].append(key)
-    return [pair for keys in groups.values() for pair in combinations(keys, 2)]
+    pairs = []
+    for keys in groups.values():
+        pairs += combinations(keys, 2)
+    return pairs
 
 
-def _shareRareValues(profiles: dict[Key, Profile]) -> list[tuple[Key, Key]]:
+def _pairByRareValues(profiles: dict[Key, Profile]) -> list[tuple[Key, Key]]:
     """Pairs that share MIN_SHARED values held by at most COMMON objects: comparing every pair
     of a thousand tables in full would take too long."""
     holders = defaultdict(list)

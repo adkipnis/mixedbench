@@ -84,5 +84,5 @@ def _bareCopy(table: pd.DataFrame, rng: np.random.Generator) -> TablePair:
 def test_two_tables_pair_when_one_may_be_a_copy_of_the_other(disguise, paired, seed):
     rng = np.random.default_rng(seed)
     left, right = disguise(_groupedTable(rng), rng)
-    pairs = copies.copyPairs({A: copies.profileTable(left), B: copies.profileTable(right)})
+    pairs = copies.findPairs({A: copies.profileTable(left), B: copies.profileTable(right)})
     assert pairs == ([(A, B)] if paired else [])
