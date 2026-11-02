@@ -183,6 +183,9 @@ REFUSED = {
     'AER/CASchools/1': 'computed_response: the average of math and read (#162)',
     'Ecdat/Star/1': 'computed_response: the sum of tmathssk and treadssk (#162)',
     'Ecdat/PSID/1': 'computed_response: the log hourly wage from earnings and hours (#162)',
+    'AER/Fatalities/1': (
+        'computed_response: the deaths per 10,000 residents from fatal and pop (#162)'
+    ),
     'osf_confidence_kvam_2016/data_Kvam_2016.csv/1': (
         'computed_response: the log odds of Confidence folded by accuracy (#162)'
     ),
