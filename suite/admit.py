@@ -197,6 +197,9 @@ REFUSED = {
     'metadat/dat.bourassa1996/1': 'computed_response: a log odds ratio (#162)',
     'metadat/dat.curtis1998/1': 'computed_response: a log ratio of means (#162)',
     'metadat/dat.dagostino1998/1': 'computed_response: a standardized mean difference (#162)',
+    'DAAG/codling/1': (
+        'computed_response: the complementary log-log of the mortality adjusted for cm (#162)'
+    ),
     # an ordinal text response, which loads in alphabetical order, not the source's (#167)
     'kaggle_corporate_credit_rating/corporate_rating.csv/1': (
         'level_order: Rating loads A < AA < AAA, the scale runs D < ... < AAA (#167)'
