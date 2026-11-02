@@ -10,7 +10,6 @@ import pytest
 from mixedbench.frequentist import Fit, buildDesign, fit, lme4
 
 TIMEOUT = 60  # seconds, far above what these fits take
-NAN = float('nan')
 
 
 def balancedOneWay() -> pd.DataFrame:
@@ -334,10 +333,15 @@ def test_a_fit_shares_its_variance_between_fixed_part_factors_and_residual(
 
 def test_a_fit_without_estimates_has_no_partition() -> None:
     unfitted = Fit('error', 0.2, 'could not find function "s"')
-    partition = (unfitted.sigma2_random, unfitted.sigma2_residual, unfitted.r2_marginal)
-    assert partition == (None, None, None)
-    assert unfitted.r2_conditional is None
-    assert (unfitted.icc, unfitted.icc_adjusted) == ({}, {})
+    partition = (
+        unfitted.sigma2_random,
+        unfitted.sigma2_residual,
+        unfitted.r2_marginal,
+        unfitted.r2_conditional,
+        unfitted.icc,
+        unfitted.icc_adjusted,
+    )
+    assert partition == (None, None, None, None, {}, {})
 
 
 # ==============================================================================================
@@ -352,7 +356,7 @@ def designTable() -> pd.DataFrame:
         {
             'g': ['g1'] * 3 + ['g2'] * 3 + ['g3'] * 4,
             'h': ['h1', 'h2'] * 5,
-            'x': [0.5, 1.0, NAN, 2.0, -1.0, 0.0, 1.5, 3.0, -0.5, 2.5],
+            'x': [0.5, 1.0, np.nan, 2.0, -1.0, 0.0, 1.5, 3.0, -0.5, 2.5],
             'diet': pd.Categorical(list('abcabcabca'), categories=['c', 'a', 'b']),
             'o': [0.1 * i for i in range(10)],
             'y': [1.2, 0.4, 2.2, 3.1, -0.7, 0.9, 2.4, 4.0, 0.3, 3.3],
