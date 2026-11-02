@@ -153,9 +153,10 @@ def test_the_all_column_design_lists_the_documented_covariates_first(herds, rows
 def test_a_design_wider_than_its_rows_keeps_an_infinite_condition_index(herds, rows):
     """As in the flat pass, which cannot afford the drop on its widest tables, a design whose
     coded columns outnumber its rows is singular by count, though the drop would leave a square
-    one. On the first six cows model 2's every measured column codes ten columns with the
-    intercept, its documented design four."""
-    dimension = dimensions.measure(Measurer(herds.head(6), parsed(rows[1])))[0]
+    one. On the first two cows of each of the five herds, model 2's every measured column codes
+    eleven columns with the intercept for nine rows, its documented design four."""
+    firsts = herds.groupby('herd', observed=True).head(2)
+    dimension = dimensions.measure(Measurer(firsts, parsed(rows[1])))[0]
     assert dimension['condition_all'] == np.inf
     assert dimension['condition_doc'] < np.inf
 
