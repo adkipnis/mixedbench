@@ -223,7 +223,7 @@ class _Builder:
         'cor': Prior('lkj', (1,)),
         'sigma': Prior('student_t', (3, 0, 2.5)),
     }
-    FOLDS = 5  # per split regime
+    FOLDS = 5  # per split regime; at most FEWEST_LEVELS, so no `groups` fold is empty
     FEWEST_LEVELS = 5  # of a grouping factor; one with fewer becomes a categorical covariate
 
     def __init__(self, row: Row, table: pd.DataFrame) -> None:
@@ -301,18 +301,20 @@ class _Builder:
         categorical covariate, after the row's own.
         Refuses a row with random slopes on such a factor or with no other factor."""
         few = []
+        kept = []
         for factor in self.row.grouping_factors:
             if self.table[factor].nunique() < self.FEWEST_LEVELS:
                 few.append(factor)
+            else:
+                kept.append(factor)
         levels = f'fewer than {self.FEWEST_LEVELS} levels'
         for term in self.row.random_slopes:
             if term.factor in few:
                 raise Refused(self.id, f'random slopes on {term.factor}, which has {levels}')
-        kept = tuple(factor for factor in self.row.grouping_factors if factor not in few)
         if not kept:
             raise Refused(self.id, f'every grouping factor has {levels}')
         covariates = (*self.row.covariates, *few)
-        self.row = replace(self.row, grouping_factors=kept, covariates=covariates)
+        self.row = replace(self.row, grouping_factors=tuple(kept), covariates=covariates)
         # integer codes would type as continuous
         self.table = self.table.astype({factor: 'category' for factor in few})
 
