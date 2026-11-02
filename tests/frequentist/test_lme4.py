@@ -7,7 +7,7 @@ import subprocess
 import numpy as np
 import pandas as pd
 import pytest
-from mixedbench.frequentist import Fit, design, fit, lme4
+from mixedbench.frequentist import Fit, buildDesign, fit, lme4
 
 TIMEOUT = 60  # seconds, far above what these fits take
 NAN = float('nan')
@@ -372,7 +372,7 @@ def test_the_design_holds_the_kept_rows_x_the_offset_and_each_factors_z_in_lme4s
     a = [1, 0, 1, 0, 0, 1, 0, 0, 1]
     b = [0, 1, 0, 1, 0, 0, 1, 0, 0]
 
-    built = design(designTable(), formula, 'gaussian')
+    built = buildDesign(designTable(), formula, 'gaussian')
 
     assert built.rows.tolist() == kept
     assert built.y.tolist() == [1.2, 0.4, 3.1, -0.7, 0.9, 2.4, 4.0, 0.3, 3.3]
@@ -403,5 +403,5 @@ def test_the_design_reads_a_text_or_categorical_response_as_the_fit_does(
     response: list | pd.Categorical, y: list[int]
 ) -> None:
     """glmer reads a binary response's first level as 0, so tabdgp's mean of y is the fit's."""
-    built = design(designTable().assign(y=response), 'y ~ x + (1 | g)', 'bernoulli')
+    built = buildDesign(designTable().assign(y=response), 'y ~ x + (1 | g)', 'bernoulli')
     assert built.y.tolist() == [y[i] for i in built.rows]

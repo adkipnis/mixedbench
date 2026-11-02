@@ -3,7 +3,7 @@
 Python writes the table and the model for R, and `lme4.R` fits the formula as written.
 R writes back one fixed set: how the fit ended, the fixed effects with their Wald standard errors,
 the random terms, and the variance components of Nakagawa, Johnson and Schielzeth (2017).
-`design` reads the same table and formula into the design lme4 fits, without fitting.
+`buildDesign` reads the same table and formula into the design lme4 fits, without fitting.
 
 pipeline:
 ---------
@@ -13,7 +13,7 @@ a table, a formula and a family
 -> the fit, lme4 checked against its pin           _read
 or
 -> lme4's design, design.json                      lme4.R design
--> the design, lme4 checked against its pin        design
+-> the design, lme4 checked against its pin        _readDesign
 """
 
 from __future__ import annotations
@@ -154,28 +154,14 @@ def fit(table: pd.DataFrame, formula: str, family: Family, dir: Path, timeout: f
     return _read(dir)
 
 
-def design(table: pd.DataFrame, formula: str, family: Family) -> Design:
+def buildDesign(table: pd.DataFrame, formula: str, family: Family) -> Design:
     """Returns the design lme4 builds from `formula` on `table`, both read as `fit` reads them.
     Raises where lme4 refuses the formula or differs from its pin."""
     with tempfile.TemporaryDirectory() as temporary:
         dir = Path(temporary)
         _write(table, {'formula': formula, 'family': family}, dir)
         _runR('design', dir)
-        built = _readOutput(dir / 'design.json')
-    factors = []
-    for factor in built['factors']:
-        terms = tuple(tuple(columns) for columns in factor['terms'])
-        z = np.array(factor['Z'], dtype=float)
-        codes = np.array(factor['codes']) - 1  # R counts levels from 1
-        factors.append(Factor(factor['name'], terms, tuple(factor['levels']), z, codes))
-    return Design(
-        rows=np.array(built['rows']) - 1,  # R counts rows from 1
-        y=np.array(built['y'], dtype=float),
-        columns=tuple(built['columns']),
-        X=np.array(built['X'], dtype=float),
-        offset=np.array(built['offset'], dtype=float),
-        factors=tuple(factors),
-    )
+        return _readDesign(dir)
 
 
 # =====================================================================================
@@ -211,7 +197,7 @@ def _runR(mode: Literal['fit', 'design'], dir: Path) -> None:
 
 
 # =====================================================================================
-# R's output -> the fit
+# R's output -> the fit or the design
 # =====================================================================================
 
 
@@ -234,3 +220,21 @@ def _read(dir: Path) -> Fit:
         )
     fixed = {name: tuple(estimate) for name, estimate in output['fixed'].items()}
     return Fit(**output | {'fixed': fixed, 'terms': tuple(terms)})
+
+
+def _readDesign(dir: Path) -> Design:
+    built = _readOutput(dir / 'design.json')
+    factors = []
+    for factor in built['factors']:
+        terms = tuple(tuple(columns) for columns in factor['terms'])
+        z = np.array(factor['Z'], dtype=float)
+        codes = np.array(factor['codes']) - 1  # R counts levels from 1
+        factors.append(Factor(factor['name'], terms, tuple(factor['levels']), z, codes))
+    return Design(
+        rows=np.array(built['rows']) - 1,  # R counts rows from 1
+        y=np.array(built['y'], dtype=float),
+        columns=tuple(built['columns']),
+        X=np.array(built['X'], dtype=float),
+        offset=np.array(built['offset'], dtype=float),
+        factors=tuple(factors),
+    )
