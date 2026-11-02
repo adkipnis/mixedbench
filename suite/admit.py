@@ -200,6 +200,42 @@ REFUSED = {
     'DAAG/codling/1': (
         'computed_response: the complementary log-log of the mortality adjusted for cm (#162)'
     ),
+    # a person-period table of a discrete-time hazard, which its source fits without a person
+    # intercept, since a person holds at most one event (#161)
+    'alda/aldatxt/teachers_pp.txt/1': (
+        'hazard_model: a discrete-time hazard without a person intercept (#161)'
+    ),
+    'alda/aldatxt/firstsex_pp.txt/1': (
+        'hazard_model: a discrete-time hazard without a person intercept (#161)'
+    ),
+    'alda/aldatxt/tenure_pp.txt/1': (
+        'hazard_model: a discrete-time hazard without a person intercept (#161)'
+    ),
+    'alda/aldatxt/mathdropout_pp.txt/1': (
+        'hazard_model: a discrete-time hazard without a person intercept (#161)'
+    ),
+    'alda/aldatxt/firstarrest_pp.txt/1': (
+        'hazard_model: a discrete-time hazard without a person intercept (#161)'
+    ),
+    'alda/aldatxt/suicide_pp.txt/1': (
+        'hazard_model: a discrete-time hazard without a person intercept (#161)'
+    ),
+    'alda/aldatxt/congress_pp.txt/1': (
+        'hazard_model: a discrete-time hazard without a person intercept (#161)'
+    ),
+    'alda/aldatxt/cocaine_relapse_pp.txt/1': (
+        'hazard_model: a discrete-time hazard without a person intercept (#161)'
+    ),
+    'hox/FirstSexPP.sav/1': (
+        'hazard_model: a discrete-time hazard without a person intercept (#161)'
+    ),
+    'alda/aldatxt/depression_pp.txt/1': (
+        'hazard_model: a discrete-time hazard without a person intercept (#161)'
+    ),
+    # a table whose rows stack posterior draws of the same units (#161)
+    'koczynska_2026_osf_49/merge_iter_20241030/1': (
+        'stacked_draws: 100 posterior draws of the same country-years stacked as rows (#161)'
+    ),
     # an ordinal text response, which loads in alphabetical order, not the source's (#167)
     'kaggle_corporate_credit_rating/corporate_rating.csv/1': (
         'level_order: Rating loads A < AA < AAA, the scale runs D < ... < AAA (#167)'
@@ -239,7 +275,6 @@ FIDELITY: dict[str, Fidelity] = {
     'rabe_hesketh/fat.dta/1': 'approximate',  # the hinge after = pmax(time, 0) dropped (#61)
     'rabe_hesketh/yogurt.dta/1': 'approximate',  # two brand contrasts, no intercept (#61)
     'koczynska_2026_osf_48/data_means_20241030/1': 'approximate',
-    'koczynska_2026_osf_49/merge_iter_20241030/1': 'approximate',
     'naranowicz_2024_osf_2/MO--ST_beh.csv/2': 'approximate',
     'sequestro_2024_osf_2/EXP2_3_pooled.csv/1': 'approximate',
     'sequestro_2024_osf_11/EXP2_elevator_main.csv/1': 'approximate',
