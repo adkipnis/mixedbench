@@ -725,6 +725,9 @@ object and the deciding issue.
 - A robust variance estimation (RVE) meta-regression states its working model, so it files
   `yes`: hierarchical weights as `(1 | study) + (1 | effect)`, correlated weights as
   `(1 | study)` (aksayli2019, sala2019, noble2019, coles2019, maccann2020; #162).
+- A conditional likelihood that removes a trial's intercept by conditioning on its total events
+  (metafor's and meta's `CM.EL` and `CM.AL`) files the model it conditions, with fixed study
+  effects, and `yes` (tian2009; #162).
 - A target encoder's GLMM, one random intercept per feature, is no model of the table: notes
   name it, and it files no row (eucalyptus and eight more of Pargent's tables; #162).
 - Every feature of a benchmark task is a covariate, however sparse; the contract's drop of
