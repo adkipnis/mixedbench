@@ -1,0 +1,3 @@
+"source","object","reason","detail"
+"wooldridge","elem94_95","derived or duplicated table","The same 1848 Michigan schools within districts as benefits, with the same columns (enrol and lenrol named enroll and lenroll there), to which benefits adds the within-district averages bsbar, lunchbar, lenrollbar and lstaffbar; the superset is filed. Every shared value agrees but one school's (distid 82010, schid 701: avgsal 9297 here and 29297 in benefits, bs 1.00 and 0.32). This page's salary-benefits tradeoff (Ch. 4) is cited in benefits' notes (hand check #162)."
+"wooldridge","fair","time series without replication","Presidential elections 1916 to 1996, one row per election (21 rows; the help page says 1992) (hand check #162)."
