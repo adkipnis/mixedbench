@@ -258,13 +258,13 @@ class _DataFolder:
     def _readTable(file: Path) -> dict[str, pd.DataFrame | None]:
         """read.table(header = TRUE, as.is = FALSE), with `sep = ';'` for a `.csv`.
         Levels sort by code point, as R sorts them in the C locale, not by ICU collation."""
-        inner = Path(file.name.removesuffix('.gz'))  # data() reads BTdata.tab.gz as BTdata
         sep = r'\s+'
-        if inner.suffix.lower() == '.csv':
+        if bare(file).suffix == '.csv':
             sep = ';'
         options = {'sep': sep, 'quotechar': '"', 'na_values': ['NA'], 'keep_default_na': False}
         table = _readText(pd.read_csv, file, **options)
-        return {inner.stem: table.assign(**_DataFolder._typeConvert(table))}
+        stem = Path(file.name.removesuffix('.gz')).stem  # data() reads BTdata.tab.gz as BTdata
+        return {stem: table.assign(**_DataFolder._typeConvert(table))}
 
     @staticmethod
     def _typeConvert(table: pd.DataFrame) -> dict[str, pd.Series]:
