@@ -1,24 +1,32 @@
-# lme4.R fits a mixed model's formula as written by lme4 and computes its variance components.
+# lme4.R fits a mixed model's formula as written by lme4 and computes its variance components,
+# or builds the design lme4 fits.
 #
-# Usage: Rscript lme4.R <dir>
+# Usage: Rscript lme4.R fit|design <dir>
 # <dir> holds what Python hands over:
 #   table.csv    the table
-#   input.json   the formula, the family, the seconds after which the fit stops,
+#   input.json   the formula, the family, the seconds after which a fit stops,
 #                each categorical column's levels in order and the ordered ones
-# lme4.R prints sessionInfo() first. Then it writes back into <dir>:
-#   output.json  how the fit ended, its seconds, warnings or error and observations,
+# lme4.R prints sessionInfo() first. Then it writes back into <dir>, with lme4's version:
+#   output.json  (fit) how the fit ended, its seconds, warnings or error and observations,
 #                the fixed effects with their Wald standard errors,
 #                per random term its factor, columns, variances and correlations, sigma,
 #                per factor the random variance, the fixed predictor's variance,
-#                the sd of the linear predictor and the distribution variance
+#                the sd and the largest absolute value of the linear predictor,
+#                and the distribution variance
+#   design.json  (design) the rows lme4 keeps, y as the fit reads it, X and its column names,
+#                the offset, and per factor its name, terms, levels, Z and each row's level
 #
 # pipeline:
 # ---------
 # <dir>
 # -> the table, its categorical columns coded     readTable
+# fit:
 # -> lme4's fit of the formula, within the limit  fitWithin, fitModel
 # -> its estimates and variance components        describeFit
 # -> how it ended, output.json                    fitWithin
+# design:
+# -> lme4's design of the formula                 buildDesign
+# -> its rows, y, X, offset and factors           describeDesign
 
 suppressPackageStartupMessages(library(lme4))
 
@@ -30,7 +38,7 @@ FAMILY <- list(bernoulli = binomial(), poisson = poisson())
 
 UNFITTED <- list(
   n_obs = NA, fixed = setNames(list(), character()), terms = list(), sigma = NA,
-  variances = setNames(list(), character()), sigma2_fixed = NA, sd_eta = NA,
+  variances = setNames(list(), character()), sigma2_fixed = NA, sd_eta = NA, max_abs_eta = NA,
   sigma2_distribution = NA
 )
 
@@ -90,14 +98,19 @@ fitWithin <- function(table, input) {
 
 fitModel <- function(table, input) {
   formula <- as.formula(input$formula)
-  # glmer takes a text response only as a factor; other text stays text, which `==` compares
-  for (column in intersect(all.vars(formula[[2]]), names(table))) {
-    if (is.character(table[[column]])) table[[column]] <- factor(table[[column]])
-  }
+  table <- codeResponse(table, formula)
   if (input$family == "gaussian") {
     return(lmer(formula, data = table))
   }
   glmer(formula, data = table, family = FAMILY[[input$family]])
+}
+
+# glmer takes a text response only as a factor; other text stays text, which `==` compares
+codeResponse <- function(table, formula) {
+  for (column in intersect(all.vars(formula[[2]]), names(table))) {
+    if (is.character(table[[column]])) table[[column]] <- factor(table[[column]])
+  }
+  table
 }
 
 describeFit <- function(model, table, family) {
@@ -107,12 +120,13 @@ describeFit <- function(model, table, family) {
   for (name in names(estimates)) {
     fixed[[name]] <- c(estimates[[name]], errors[[name]])
   }
+  eta <- predict(model, type = "link")  # with the random effects and the offset
   list(
     n_obs = nobs(model), fixed = fixed, terms = describeTerms(model),
     sigma = if (family == "gaussian") sigma(model) else NA,
     variances = randomVariances(model),
     sigma2_fixed = var(as.vector(getME(model, "X") %*% estimates)),
-    sd_eta = sd(predict(model, type = "link")),
+    sd_eta = sd(eta), max_abs_eta = max(abs(eta)),
     sigma2_distribution = distributionVariance(model, table, family)
   )
 }
@@ -143,16 +157,20 @@ randomVariances <- function(model) {
   starts <- getME(model, "Gp")  # where each term's rows start in zt
   variances <- list()
   for (i in seq_along(factors)) {
-    columns <- length(model@cnms[[i]])
     block <- zt[(starts[i] + 1):starts[i + 1], , drop = FALSE]
-    levels <- nrow(block) / columns
-    # a row lies in one level, so the sum over levels leaves the row's own columns
-    z <- as.matrix(t(block) %*% kronecker(matrix(1, levels, 1), diag(columns)))
+    z <- termColumns(block, length(model@cnms[[i]]))
     v <- mean(rowSums((z %*% covariances[[i]]) * z))
     factor <- factors[i]
     variances[[factor]] <- if (is.null(variances[[factor]])) v else variances[[factor]] + v
   }
   variances
+}
+
+# a term's columns per row, read off its block of Z's transpose, which holds per level its columns:
+# a row lies in one level, so the sum over levels leaves the row's own columns
+termColumns <- function(zt, columns) {
+  levels <- nrow(zt) / columns
+  as.matrix(t(zt) %*% kronecker(matrix(1, levels, 1), diag(columns)))
 }
 
 # Nakagawa, Johnson and Schielzeth (2017): the variance the family adds on the link scale.
@@ -190,16 +208,69 @@ nullFormula <- function(model) {
   reformulate(c("1", bars, offsets), response = formula[[2]])
 }
 
+# lmer's and glmer's own parse of the formula, with their checks and the rows they drop
+buildDesign <- function(table, input) {
+  formula <- as.formula(input$formula)
+  table <- codeResponse(table, formula)
+  if (input$family == "gaussian") {
+    return(lFormula(formula, data = table))
+  }
+  glFormula(formula, data = table, family = FAMILY[[input$family]])
+}
+
+# y as glmer reads a binary response: a factor's first level 0, every other level 1
+describeDesign <- function(built) {
+  y <- model.response(built$fr)
+  if (is.factor(y)) y <- as.numeric(y != levels(y)[1])
+  offset <- model.offset(built$fr)
+  if (is.null(offset)) offset <- rep(0, nrow(built$fr))
+  list(
+    rows = as.integer(rownames(built$fr)),
+    y = unname(y),
+    columns = I(colnames(built$X)),  # none for `0 + (1 | g)`
+    X = matrix(built$X, nrow(built$X)),
+    offset = unname(offset),
+    factors = describeFactors(built$reTrms)
+  )
+}
+
+# lme4 splits `(1 + x || g)` into two terms of g, so a factor's Z holds its terms' side by side
+describeFactors <- function(reTrms) {
+  assign <- attr(reTrms$flist, "assign")  # each term's factor
+  factors <- list()
+  for (k in seq_along(reTrms$flist)) {
+    terms <- which(assign == k)
+    z <- NULL
+    for (i in terms) {
+      z <- cbind(z, termColumns(reTrms$Ztlist[[i]], length(reTrms$cnms[[i]])))
+    }
+    factors[[k]] <- list(
+      name = names(reTrms$flist)[k], terms = lapply(unname(reTrms$cnms[terms]), I),
+      levels = I(levels(reTrms$flist[[k]])), Z = unname(z),
+      codes = as.integer(reTrms$flist[[k]])
+    )
+  }
+  factors
+}
+
 # =====================================================================================
 # main
 # =====================================================================================
 
 # first, so that R.log names the R and lme4 versions
 print(sessionInfo())
-dir <- commandArgs(trailingOnly = TRUE)[[1]]
+args <- commandArgs(trailingOnly = TRUE)
+mode <- args[[1]]
+dir <- args[[2]]
 input <- jsonlite::read_json(file.path(dir, "input.json"))
 table <- readTable(dir, input)
-output <- c(fitWithin(table, input), list(lme4 = as.character(packageVersion("lme4"))))
-jsonlite::write_json(
-  output, file.path(dir, "output.json"), auto_unbox = TRUE, digits = NA, na = "null"
-)
+lme4 <- list(lme4 = as.character(packageVersion("lme4")))
+if (mode == "fit") {
+  output <- c(fitWithin(table, input), lme4)
+  jsonlite::write_json(
+    output, file.path(dir, "output.json"), auto_unbox = TRUE, digits = NA, na = "null"
+  )
+} else {
+  design <- c(describeDesign(buildDesign(table, input)), lme4)
+  jsonlite::write_json(design, file.path(dir, "design.json"), auto_unbox = TRUE, digits = NA)
+}
