@@ -728,6 +728,9 @@ object and the deciding issue.
 - A conditional likelihood that removes a trial's intercept by conditioning on its total events
   (metafor's and meta's `CM.EL` and `CM.AL`) files the model it conditions, with fixed study
   effects, and `yes` (tian2009; #162).
+- A finite mixture of mixed models (latent classes, consensus clustering), whose fixed effects
+  differ by cluster, replaces no proposal: notes name it. Its one-class fit replaces one where
+  the source runs it (paquid's `hlme` m1; epileptic.qol; #162).
 - A target encoder's GLMM, one random intercept per feature, is no model of the table: notes
   name it, and it files no row (eucalyptus and eight more of Pargent's tables; #162).
 - Every feature of a benchmark task is a covariate, however sparse; the contract's drop of
