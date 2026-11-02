@@ -8,8 +8,9 @@ from pathlib import Path
 import pandas as pd
 import pytest
 import yaml
-from conftest import FIXTURES, mergeShard, readRows
+from conftest import FIXTURES, mergeShard, readRows, servePlots
 from merge import Merger, ShardRefused
+from mixedbench.datasets import Loader
 from mixedbench.registry.row import readCsv, writeCsv
 from sources import readFrame
 
@@ -248,6 +249,40 @@ def test_equal_row_count_and_column_cardinalities_flag_a_duplicate_candidate(mer
     rows = readRows(merger.survey / 'duplicates.csv')
     assert [(r['source_a'], r['verdict']) for r in rows] == [('cattle', 'different')]
     assert len(readRows(merger.registry / 'registry.csv')) == 3
+
+
+def withPlots(merger: Merger, files: dict[str, str]) -> Merger:
+    """The merger's registry with one more url source, `plots` (Tier O), serving `files`; the
+    scratch sources must be cached already."""
+    entry, fetch = servePlots(files)
+    sources = yaml.safe_load((merger.registry / 'sources.yaml').read_text())
+    sources['tiers']['O'] = {'plots': entry}
+    (merger.registry / 'sources.yaml').write_text(yaml.safe_dump(sources, sort_keys=False))
+    return Merger(
+        merger.registry, merger.survey, loader=Loader(merger.registry / 'cache', fetch=fetch)
+    )
+
+
+def test_a_copy_with_an_extra_and_a_recoded_column_is_flagged_by_its_shared_values(merger):
+    """The barn table is herds with each cow's tag added and parity written as a word, as plm
+    Males recodes wooldridge wagepan: its cardinalities differ, but every weight and label of
+    herds is in it (#168)."""
+    mergeShard(merger, FIXTURES / 'registry_herds.csv')
+    barn = pd.read_csv(FIXTURES / 'herds.csv')
+    barn['tag'] = [f'tag{4000 + i}' for i in range(len(barn))]
+    barn['parity'] = barn['parity'].map({1: 'first', 2: 'second', 3: 'third', 4: 'fourth'})
+    merger = withPlots(merger, {'barn.csv': barn.to_csv(index=False)})
+    types = 'region=categorical;herd=categorical;breed=categorical;feed=categorical'  # parity holds words now
+    row = readRows(FIXTURES / 'registry_herds.csv')[0] | {
+        'source': 'plots',
+        'object': 'barn.csv',
+        'types': types,
+    }
+    mergeShard(merger, writeShard(merger.survey / 'shards' / 'registry_plots.csv', [row]))
+    flagged = readRows(merger.survey / 'duplicates.csv')
+    assert [(r['source_a'], r['object_a'], r['source_b'], r['object_b'], r['verdict']) for r in flagged] == [
+        ('herds', 'herds.csv', 'plots', 'barn.csv', 'flagged')
+    ]  # fmt: skip
 
 
 def test_a_confirmed_duplicate_collapses_into_the_earliest_tier_row_listing_both_sources(merger):
