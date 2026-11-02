@@ -47,6 +47,8 @@ from mixedbench.registry.row import Row, writeCsv
 # =====================================================================================
 # what the family rule cannot see, read off each row's documented model
 
+HAZARD = 'hazard_model: a discrete-time hazard without a person intercept (#161)'
+
 # rows the documented model does not survive into the contract, though the family rule covers them:
 # an empty `random_slopes` there is no approved intercept-only model (#27, #45).
 REFUSED = {
@@ -202,36 +204,16 @@ REFUSED = {
     ),
     # a person-period table of a discrete-time hazard, which its source fits without a person
     # intercept, since a person holds at most one event (#161)
-    'alda/aldatxt/teachers_pp.txt/1': (
-        'hazard_model: a discrete-time hazard without a person intercept (#161)'
-    ),
-    'alda/aldatxt/firstsex_pp.txt/1': (
-        'hazard_model: a discrete-time hazard without a person intercept (#161)'
-    ),
-    'alda/aldatxt/tenure_pp.txt/1': (
-        'hazard_model: a discrete-time hazard without a person intercept (#161)'
-    ),
-    'alda/aldatxt/mathdropout_pp.txt/1': (
-        'hazard_model: a discrete-time hazard without a person intercept (#161)'
-    ),
-    'alda/aldatxt/firstarrest_pp.txt/1': (
-        'hazard_model: a discrete-time hazard without a person intercept (#161)'
-    ),
-    'alda/aldatxt/suicide_pp.txt/1': (
-        'hazard_model: a discrete-time hazard without a person intercept (#161)'
-    ),
-    'alda/aldatxt/congress_pp.txt/1': (
-        'hazard_model: a discrete-time hazard without a person intercept (#161)'
-    ),
-    'alda/aldatxt/cocaine_relapse_pp.txt/1': (
-        'hazard_model: a discrete-time hazard without a person intercept (#161)'
-    ),
-    'hox/FirstSexPP.sav/1': (
-        'hazard_model: a discrete-time hazard without a person intercept (#161)'
-    ),
-    'alda/aldatxt/depression_pp.txt/1': (
-        'hazard_model: a discrete-time hazard without a person intercept (#161)'
-    ),
+    'alda/aldatxt/teachers_pp.txt/1': HAZARD,
+    'alda/aldatxt/firstsex_pp.txt/1': HAZARD,
+    'alda/aldatxt/tenure_pp.txt/1': HAZARD,
+    'alda/aldatxt/mathdropout_pp.txt/1': HAZARD,
+    'alda/aldatxt/firstarrest_pp.txt/1': HAZARD,
+    'alda/aldatxt/suicide_pp.txt/1': HAZARD,
+    'alda/aldatxt/congress_pp.txt/1': HAZARD,
+    'alda/aldatxt/cocaine_relapse_pp.txt/1': HAZARD,
+    'hox/FirstSexPP.sav/1': HAZARD,
+    'alda/aldatxt/depression_pp.txt/1': HAZARD,
     # a table whose rows stack posterior draws of the same units (#161)
     'koczynska_2026_osf_49/merge_iter_20241030/1': (
         'stacked_draws: 100 posterior draws of the same country-years stacked as rows (#161)'
