@@ -53,9 +53,10 @@ ROW_STATISTICS = (
 )  # fmt: skip
 FACTOR_STATISTICS = ('q', 'sigma2', 'icc', 'icc_adjusted')
 FIT_STATISTICS = ROW_STATISTICS + FACTOR_STATISTICS
+# max |η̂| follows the released columns and is no summary axis: it flags a saturated link for tabdgp
 FIT_COLUMNS = (
     *IDENTITY, 'factor', 'status', 'message', 'seconds', 'n_obs', 'family', 'family_doc',
-    *FIT_STATISTICS,
+    *FIT_STATISTICS, 'max_abs_eta',
 )  # fmt: skip
 # fits_preparation.csv: a row whose source fits a subset (a pandas query) or repeats each row by
 # a frequency weight (its column), the factor whose groups a weight counts, and why
@@ -135,8 +136,7 @@ class Fitter:
 # fits.csv: a fit -> its components -> a row per factor
 # =====================================================================================
 def measureFit(row: Row, fitted: Fit, table: pd.DataFrame) -> list[dict]:
-    """A row per factor of the fit (Nakagawa, Johnson and Schielzeth 2017):
-    R² and the ICCs over σ²_f + Σ σ²_g + σ²_ε + σ²_d, the adjusted ICC without σ²_f.
+    """A row per factor of the fit, its variance partition rounded.
     A fit without estimates leaves a row per registry factor, its statistics blank."""
     identity = {k: getattr(row, k) for k in IDENTITY}
     shared = {
@@ -149,17 +149,16 @@ def measureFit(row: Row, fitted: Fit, table: pd.DataFrame) -> list[dict]:
     }
     if fitted.status not in ESTIMATED:
         return [identity | {'factor': factor} | shared for factor in row.grouping_factors]
-    residual = None if fitted.sigma is None else fitted.sigma**2
-    random = sum(fitted.variances.values())
-    total = fitted.sigma2_fixed + random + (residual or 0) + fitted.sigma2_distribution
+    residual = fitted.sigma2_residual
     shared |= {
         'sigma2_fixed': round(fitted.sigma2_fixed, 4),
-        'sigma2_random': round(random, 4),
+        'sigma2_random': round(fitted.sigma2_random, 4),
         'sigma2_residual': None if residual is None else round(residual, 4),
         'sigma2_distribution': round(fitted.sigma2_distribution, 4),
         'sd_eta': round(fitted.sd_eta, 4),
-        'r2_marginal': round(fitted.sigma2_fixed / total, 4),
-        'r2_conditional': round((fitted.sigma2_fixed + random) / total, 4),
+        'max_abs_eta': round(fitted.max_abs_eta, 4),
+        'r2_marginal': round(fitted.r2_marginal, 4),
+        'r2_conditional': round(fitted.r2_conditional, 4),
     }
     widths = {}
     for term in fitted.terms:
@@ -170,8 +169,8 @@ def measureFit(row: Row, fitted: Fit, table: pd.DataFrame) -> list[dict]:
             'factor': nameFactor(factor, row, table),
             'q': widths[factor],
             'sigma2': round(sigma2, 4),
-            'icc': round(sigma2 / total, 4),
-            'icc_adjusted': round(sigma2 / (total - fitted.sigma2_fixed), 4),
+            'icc': round(fitted.icc[factor], 4),
+            'icc_adjusted': round(fitted.icc_adjusted[factor], 4),
         }
         fits.append(identity | shared | per_factor)
     return fits
