@@ -33,7 +33,7 @@ def nested(**components) -> Fit:
     fitted = {
         'status': 'ok', 'seconds': 0.51234, 'n_obs': 14, 'fixed': {'(Intercept)': (500.0, 10.0)},
         'terms': intercepts(variances), 'variances': variances, 'sigma2_fixed': 1.0,
-        'sd_eta': 1.5, 'sigma': 1.0, 'sigma2_distribution': 0.0,
+        'sd_eta': 1.5, 'max_abs_eta': 3.25, 'sigma': 1.0, 'sigma2_distribution': 0.0,
     }  # fmt: skip
     return Fit(**(fitted | components))
 
@@ -69,7 +69,7 @@ def test_a_fit_shares_its_variance_between_fixed_part_factors_and_residual(
     every = {
         'source': 'herds', 'object': 'herds.csv', 'model_index': 1, 'tier': 'D', 'status': 'ok',
         'message': '', 'seconds': 0.5123, 'n_obs': 14, 'sigma2_fixed': 1.0, 'sigma2_random': 1.5,
-        'sd_eta': 1.5,
+        'sd_eta': 1.5, 'max_abs_eta': 3.25,
     } | shared  # fmt: skip
     assert first == every | {'factor': 'herd', 'q': 1, 'sigma2': 0.5} | herd
     assert second == every | {'factor': 'region', 'q': 1, 'sigma2': 1.0} | region
