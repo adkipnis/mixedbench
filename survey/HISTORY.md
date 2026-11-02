@@ -719,6 +719,9 @@ object and the deciding issue.
 - A published model whose predictors the table lacks is no published model of the table, so its
   random part alone files `no` (BLP, DLP1, DLP2; #162). A stand-in for a missing predictor
   files `no` as well (VietNamH; #162).
+- A mixed model that a tutorial or lecture fits on the table replaces the reader's proposal of
+  the same response and grouping, and files `yes` (crime4, lowbrth, prison; #162). A fit posted
+  with a question on a Q&A site is no published model (murder; #162).
 - A robust variance estimation (RVE) meta-regression states its working model, so it files
   `yes`: hierarchical weights as `(1 | study) + (1 | effect)`, correlated weights as
   `(1 | study)` (aksayli2019, sala2019, noble2019, coles2019, maccann2020; #162).
