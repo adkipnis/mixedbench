@@ -64,7 +64,6 @@ EXCLUSION = ('reason', 'detail')
 # what a pass adds per row: the `;`-list of URLs that document its design, and the reader's
 # judgment call as a question to answer first
 GUIDES = ('documentation', 'call')
-# a sample holds what its handoff shows, so a pass's rows are checked before their merge
 SAMPLE_COLUMNS = ('source', 'object', 'model_index', 'stratum', 'batch', 'file', *READING, *EXCLUSION, *GUIDES)  # fmt: skip
 # the strata in the order their ties are allocated, then the agreement table's rows: the
 # strata, each tier pooled, each `verified` pooled, then all
@@ -90,7 +89,10 @@ PAGES = {
     'pmlb_': 'https://epistasislab.github.io/pmlb/',
     'openml_': 'https://www.openml.org/d/{rest}',
     'uci_': 'https://archive.ics.uci.edu/dataset/{rest}',
-    'osf_': 'https://osf.io/{rest}/',
+    'osf_8rjxu': 'https://osf.io/8rjxu/',
+    'osf_dha2j': 'https://osf.io/dha2j/',
+    'osf_r4j2w': 'https://osf.io/r4j2w/',
+    'osf_xrqae': 'https://osf.io/xrqae/',
     'mendeley_oasis_longitudinal': 'https://data.mendeley.com/datasets/tsy6rbc5d4/1',
     'census_acs_pums_2018': 'https://www.census.gov/programs-surveys/acs/microdata/documentation.2018.html',
     'bodowinter_politeness': 'https://bodowinter.com/tutorial/bw_LME_tutorial2.pdf',
@@ -278,7 +280,7 @@ class Links:
         prefixes = [prefix for prefix in PAGES if label.startswith(prefix)]
         if not prefixes:
             raise KeyError(f'url source {label!r} has no page; add its prefix to PAGES')
-        prefix = max(prefixes, key=len)  # `osf_blp`'s page, not `osf_`'s
+        prefix = max(prefixes, key=len)  # the longest, should two prefixes match
         return PAGES[prefix].format(rest=label.removeprefix(prefix))
 
 
@@ -293,6 +295,14 @@ def _foldPage(summary: str, text: str) -> str:
     if len(text) > HELP_CHARACTERS:
         text = f'{text[:HELP_CHARACTERS]}\n[cut at {HELP_CHARACTERS:,} characters]'
     return f'<details><summary>{summary}</summary>\n\n~~~~\n{text}\n~~~~\n\n</details>\n'
+
+
+def renderSourcePage(registry: Path, label: str) -> str:
+    """The host's description of the source, folded, or nothing where no pass fetched one."""
+    path = registry / 'help' / label / SOURCE_PAGE
+    if not path.exists():
+        return ''
+    return _foldPage('source documentation', path.read_text())
 
 
 # =====================================================================================
@@ -361,10 +371,8 @@ class Verifier:
         if row['call']:
             pointers += f'- check first: {row["call"]}\n'
         reading = ''.join(f'- {field}: {row[field] or "-"}\n' for field in fields)
-        details = renderHelpPage(self.registry, row['source'], row['object'])
-        source_page = self.registry / 'help' / row['source'] / SOURCE_PAGE
-        if source_page.exists():
-            details += _foldPage('source documentation', source_page.read_text())
+        help_page = renderHelpPage(self.registry, row['source'], row['object'])
+        details = help_page + renderSourcePage(self.registry, row['source'])
         return f'\n## {number}. {heading}\n\n{pointers}{reading}\n{details}'
 
     # ---------------------------------------------------------------------------------
