@@ -214,6 +214,9 @@ Measured over the rows with a measured response, since dosing rows are no observ
       with λ = exp(β̂₀ + σ²₀ / 2) of the model with an intercept and the same random effects,
       σ²₀ the sum of its random-intercept variances, as performance computes it.
     - `sd_eta`: the sd over rows of the linear predictor, with the random effects and offsets.
+    - `max_abs_eta`: the largest absolute value over rows of the same linear predictor, which
+      flags a fit that saturates the logit or log link. It is the file's last column and no
+      summary axis.
     - `r2_marginal`: `sigma2_fixed` over the total of the four components. `r2_conditional`:
       `sigma2_fixed` and `sigma2_random` over the total.
 - Per factor:
