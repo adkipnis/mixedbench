@@ -39,7 +39,7 @@ def fixtureTable() -> pd.DataFrame:
     return pd.DataFrame(
         {
             'g': [f'g{i % 8}' for i in range(n)],
-            'h': [f'h{i % 3}' for i in range(n)],
+            'h': [f'h{i % 5}' for i in range(n)],
             'x': [0.25 * i - 3 for i in range(n)],
             'diet': pd.Categorical(['a', 'b', 'c', 'b'] * 10, categories=['a', 'b', 'c']),
             'dose': [0.5, 2.0] * 20,  # numeric binary: levels (0.5, 2.0)
