@@ -7,9 +7,10 @@ import subprocess
 import numpy as np
 import pandas as pd
 import pytest
-from mixedbench.frequentist import Fit, fit, lme4
+from mixedbench.frequentist import Fit, design, fit, lme4
 
 TIMEOUT = 60  # seconds, far above what these fits take
+NAN = float('nan')
 
 
 def balancedOneWay() -> pd.DataFrame:
@@ -94,7 +95,23 @@ def test_a_balanced_one_way_design_returns_the_closed_form_reml_estimates(tmp_pa
     assert fitted.sigma == pytest.approx(np.sqrt(msw), rel=1e-4)
     assert fitted.sigma2_fixed == pytest.approx(0, abs=1e-12)
     assert fitted.sd_eta == pytest.approx(eta.std(), rel=1e-4)
+    assert fitted.max_abs_eta == pytest.approx(eta.abs().max(), rel=1e-4)
     assert fitted.sigma2_distribution == 0
+
+
+@pytest.mark.lme4
+def test_the_linear_predictor_adds_the_offset(tmp_path):
+    """sd(η̂) and max |η̂| read η̂ with the offset, as lme4 predicts on the link scale.
+    Flat groups leave no group spread, so η̂ is their mean 10 plus the offset, -15 at its largest."""
+    offset = np.linspace(-25, 0, 30)
+    flat = flatGroups()
+    table = flat.assign(o=offset, y=flat['y'] + offset)
+
+    fitted = fit(table, 'y ~ 1 + offset(o) + (1 | g)', 'gaussian', tmp_path, TIMEOUT)
+
+    assert fitted.status == 'singular'
+    assert fitted.max_abs_eta == pytest.approx(15)
+    assert fitted.sd_eta == pytest.approx(np.std(offset, ddof=1))
 
 
 @pytest.mark.lme4
@@ -136,6 +153,7 @@ def test_a_fit_ends_with_the_worst_status_that_applies_and_its_message(
     assert (fitted.n_obs is not None) == estimated
     assert bool(fitted.fixed) == estimated
     assert (fitted.sd_eta is not None) == estimated
+    assert (fitted.max_abs_eta is not None) == estimated
 
 
 def test_a_formula_without_a_random_term_is_recorded_without_a_fit(tmp_path):
@@ -268,3 +286,122 @@ def test_a_message_is_one_line(tmp_path):
     fitted = fit(balancedOneWay(), formula, 'gaussian', tmp_path, TIMEOUT)
 
     assert fitted.message == "<text>:1:16: unexpected ',' 1: y ~ 1 + (1 | g), ^"
+
+
+# ==============================================================================================
+# the variance partition
+# ==============================================================================================
+
+
+def nested(**fields) -> Fit:
+    """A fit of `(1 | region/herd)` by hand: the fixed part carries a variance of 1, region 1
+    and herd 0.5, the residual 1."""
+    variances = {'herd:region': 0.5, 'region': 1.0}
+    fitted = {
+        'status': 'ok', 'n_obs': 14, 'variances': variances, 'sigma2_fixed': 1.0, 'sigma': 1.0,
+        'sigma2_distribution': 0.0,
+    }  # fmt: skip
+    return Fit(**(fitted | fields))
+
+
+@pytest.mark.parametrize(
+    'fitted, residual, r2, icc, icc_adjusted',
+    [
+        pytest.param(
+            nested(), 1.0, (2 / 7, 5 / 7), (1 / 7, 2 / 7), (0.2, 0.4),
+            id='gaussian: a residual of 1, a total of 3.5',
+        ),
+        pytest.param(
+            nested(sigma=None, sigma2_distribution=3.2898681337),
+            None, (0.1727155, 0.4317888), (0.08635775, 0.1727155), (0.1043870, 0.2087740),
+            id='bernoulli: no residual, the logistic pi^2/3, a total of 5.79',
+        ),
+    ],
+)  # fmt: skip
+def test_a_fit_shares_its_variance_between_fixed_part_factors_and_residual(
+    fitted: Fit, residual: float | None, r2: tuple, icc: tuple, icc_adjusted: tuple
+) -> None:
+    """Nakagawa, Johnson and Schielzeth (2017): R² over σ²_f + Σ σ²_g + σ²_ε + σ²_d, a factor's
+    ICC its σ²_g over the same total, its adjusted ICC over the total without σ²_f.
+    fits.csv and tabdgp's refits read the partition off the fit."""
+    factors = ('herd:region', 'region')
+    assert fitted.sigma2_random == 1.5
+    assert fitted.sigma2_residual == residual
+    assert (fitted.r2_marginal, fitted.r2_conditional) == pytest.approx(r2)
+    assert fitted.icc == pytest.approx(dict(zip(factors, icc)))
+    assert fitted.icc_adjusted == pytest.approx(dict(zip(factors, icc_adjusted)))
+
+
+def test_a_fit_without_estimates_has_no_partition() -> None:
+    unfitted = Fit('error', 0.2, 'could not find function "s"')
+    partition = (unfitted.sigma2_random, unfitted.sigma2_residual, unfitted.r2_marginal)
+    assert partition == (None, None, None)
+    assert unfitted.r2_conditional is None
+    assert (unfitted.icc, unfitted.icc_adjusted) == ({}, {})
+
+
+# ==============================================================================================
+# lme4's design
+# ==============================================================================================
+
+
+def designTable() -> pd.DataFrame:
+    """Ten rows: `x` missing on row 2, `diet` of levels c < a < b, an offset `o`,
+    `g` of three groups and `h` of two."""
+    return pd.DataFrame(
+        {
+            'g': ['g1'] * 3 + ['g2'] * 3 + ['g3'] * 4,
+            'h': ['h1', 'h2'] * 5,
+            'x': [0.5, 1.0, NAN, 2.0, -1.0, 0.0, 1.5, 3.0, -0.5, 2.5],
+            'diet': pd.Categorical(list('abcabcabca'), categories=['c', 'a', 'b']),
+            'o': [0.1 * i for i in range(10)],
+            'y': [1.2, 0.4, 2.2, 3.1, -0.7, 0.9, 2.4, 4.0, 0.3, 3.3],
+        }
+    )
+
+
+@pytest.mark.lme4
+def test_the_design_holds_the_kept_rows_x_the_offset_and_each_factors_z_in_lme4s_order() -> None:
+    """tabdgp draws responses on the registry's designs as lme4 builds them (tabdgp#77).
+    lme4 drops row 2, codes `diet` against its first level c, and orders the factors by their
+    levels, `g` before `h`. `(1 + x || g)` is two terms of `g`, whose columns stand side by side
+    in lme4's order, the slope's first."""
+    formula = 'y ~ x + diet + offset(o) + (1 | h) + (1 + x || g)'
+    kept = [0, 1, 3, 4, 5, 6, 7, 8, 9]
+    x = [0.5, 1.0, 2.0, -1.0, 0.0, 1.5, 3.0, -0.5, 2.5]
+    a = [1, 0, 1, 0, 0, 1, 0, 0, 1]
+    b = [0, 1, 0, 1, 0, 0, 1, 0, 0]
+
+    built = design(designTable(), formula, 'gaussian')
+
+    assert built.rows.tolist() == kept
+    assert built.y.tolist() == [1.2, 0.4, 3.1, -0.7, 0.9, 2.4, 4.0, 0.3, 3.3]
+    assert built.columns == ('(Intercept)', 'x', 'dieta', 'dietb')
+    assert built.X.tolist() == [list(row) for row in zip([1] * 9, x, a, b)]
+    assert built.offset == pytest.approx([0.1 * i for i in kept])
+    g, h = built.factors
+    assert (g.name, g.terms, g.levels) == ('g', (('x',), ('(Intercept)',)), ('g1', 'g2', 'g3'))
+    assert g.Z.tolist() == [[value, 1] for value in x]
+    assert g.codes.tolist() == [0, 0, 1, 1, 1, 2, 2, 2, 2]
+    assert (h.name, h.terms, h.levels) == ('h', (('(Intercept)',),), ('h1', 'h2'))
+    assert h.Z.tolist() == [[1]] * 9
+    assert h.codes.tolist() == [0, 1, 1, 0, 1, 0, 1, 0, 1]
+
+
+@pytest.mark.lme4
+@pytest.mark.parametrize(
+    'response, y',
+    [
+        pytest.param(['yes', 'no'] * 5, [1, 0] * 5, id='text, its first level in sorted order 0'),
+        pytest.param(
+            pd.Categorical(['yes', 'no'] * 5, categories=['yes', 'no']), [0, 1] * 5,
+            id='a categorical, its first level 0',
+        ),
+    ],
+)  # fmt: skip
+def test_the_design_reads_a_text_or_categorical_response_as_the_fit_does(
+    response: list | pd.Categorical, y: list[int]
+) -> None:
+    """glmer reads a binary response's first level as 0, so tabdgp's mean of y is the fit's."""
+    built = design(designTable().assign(y=response), 'y ~ x + (1 | g)', 'bernoulli')
+    assert built.y.tolist() == [y[i] for i in built.rows]
