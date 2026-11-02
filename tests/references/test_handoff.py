@@ -156,7 +156,7 @@ def test_a_slope_on_a_categorical_covariate_takes_all_its_contrast_columns(
 ) -> None:
     """`diet` of three levels is coded `diet[b]` and `diet[c]`, aliased `x1` and `x2`."""
     table = pd.DataFrame(
-        {'block': ['A', 'B'] * 6, 'diet': ['a', 'b', 'c'] * 4, 'y': np.arange(12.0)}
+        {'block': list('ABCDEF') * 2, 'diet': ['a', 'b', 'c'] * 4, 'y': np.arange(12.0)}
     )
     for bars, term in (('|', '(x1 + x2 | g1)'), ('||', '(x1 + x2 || g1)')):
         row = replace(
