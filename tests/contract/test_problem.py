@@ -331,6 +331,43 @@ def _lme4Name(column: str) -> str:
     return ':'.join(names)
 
 
+@pytest.mark.parametrize(
+    'overrides, columns, counts',
+    [
+        pytest.param({}, {}, (8, 12), id='the fixture, its two missing rows left out'),
+        pytest.param(
+            {'interactions': ('diet:grade',)}, {}, (11, 12),
+            id='an interaction of two contrasts, their product',
+        ),
+        pytest.param(
+            {'covariates': (*ROW.covariates, 'width'), 'interactions': ('x:sex', 'sex:diet')},
+            {'width': [4.6] * 14}, (11, 12),
+            id='the columns the drop removes, a constant and an empty cell',
+        ),
+        pytest.param(
+            {'grouping_factors': ('block', 'herd', 'block:plot'), 'covariates': ('x', 'sex')},
+            {'herd': [1, 2, 3, 4] * 3 + [5, 1]}, (7, 12),
+            id='a factor of four levels over the kept rows, its contrasts',
+        ),
+    ],
+)  # fmt: skip
+def test_counting_gives_the_coded_columns_before_the_drop_and_the_complete_rows(
+    overrides: dict, columns: dict, counts: tuple[int, int]
+) -> None:
+    """A design whose coded columns, with `Intercept`, outnumber its complete rows has no
+    condition index, and the drop over so wide a design takes days (openml 41434: 97,619
+    columns over 39,948 rows). So the survey counts both before it builds."""
+    row = fixtureRow(**overrides)
+    assert Problem.countColumns(row, fixtureTable().assign(**columns)) == counts
+
+
+def test_counting_a_row_the_contract_refuses_raises_as_build_does() -> None:
+    row = fixtureRow(grouping_factors=('herd',), random_slopes=())
+    table = fixtureTable().assign(herd=['u', 'v', 'w'] * 4 + ['u', 'v'])
+    with pytest.raises(Refused, match='every grouping factor has fewer than 5 levels'):
+        Problem.countColumns(row, table)
+
+
 # ==============================================================================================
 # rows
 # ==============================================================================================

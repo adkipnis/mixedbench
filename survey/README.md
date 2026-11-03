@@ -18,14 +18,17 @@ deposits of the practice survey's papers, `O` open tabular repositories):
 3. **Reading.** Agents read shards of about 60 help pages by [`prompts/read.md`](prompts/read.md)
    and file each object in a registry or an excluded shard.
 4. **Merge.** `merge.py` validates a shard against the row grammar and the table, upserts it,
-   folds duplicates, measures, and rewrites the manifest and the summary. A failing shard is
-   refused, its rows printed, nothing written.
+   folds duplicates and rewrites the manifest. A failing shard is refused, its rows printed,
+   nothing written.
 5. **Fits.** `fits.py` fits each documented model by lme4, a cluster array task per row, and
    collects `fits.csv`; a merge leaves it as it is.
-6. **Checks.** A blind second reading of the `medium` and `low` rows, a spot check per tier and
+6. **Measurement.** `measure.py` measures every registry row's table into the five measured
+   files and rewrites the summary, as a job of its own before a release; a merge leaves them
+   as they are.
+7. **Checks.** A blind second reading of the `medium` and `low` rows, a spot check per tier and
    two hand samples against [ADR 0002](../docs/adr/0002-registry-suite-versioning-licenses.md)'s
    bar; the outcomes are in [`HISTORY.md`](HISTORY.md).
-7. **Flat pass.** `flat.py screen` derives the frame of flat tables from the exclusions filed
+8. **Flat pass.** `flat.py screen` derives the frame of flat tables from the exclusions filed
    `no grouping structure` and flags read tables for a second reading
    ([`flat_screen.csv`](#bookkeeping)). Agents give each flagged table a verdict by
    [`prompts/flat.md`](prompts/flat.md), and each sample table its response by

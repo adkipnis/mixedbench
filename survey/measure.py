@@ -15,7 +15,8 @@ registry.csv and each row's loaded table
 -> a row per registry row's response                 responses.measure
 -> the five measured files                           measureRegistry
 
-Every merge runs the pass; run it alone, and the summary after it, from the repo root:
+A merge measures nothing, so the pass and the summary after it run as a job of their own
+before a release, from the repo root:
 
     uv run python survey/measure.py
 """

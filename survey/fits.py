@@ -3,7 +3,7 @@ or count response, fitted by lme4, and its variance components, R² and ICC per 
 
 A cluster job fits one row, named by its index among the rows fitted, as a scheduler array task
 knows it, into a directory of its own; the collect writes every row's records into fits.csv.
-The merge leaves fits.csv as it is.
+The merge leaves fits.csv as it is, and `measure.py` renders the summary from it.
 
 pipeline:
 ---------
@@ -15,7 +15,7 @@ a registry row and its loaded table                    Fitter.run
 -> the row's records in its run directory              Fitter.run
 -> fits.csv, in registry order                         Fitter.collect
 
-Run from the repo root, then the summary:
+Run from the repo root:
 
     uv run python survey/fits.py run 17
     uv run python survey/fits.py collect
@@ -201,11 +201,9 @@ def groupsAlike(table: pd.DataFrame, a: str, b: str) -> bool:
 # main
 # =====================================================================================
 if __name__ == '__main__':
-    from summarize import Summarizer  # imported here: summarize imports the measured modules
-
     # fmt: off
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('command', choices=('run', 'collect'), help='fit one row, or collect every row into fits.csv and render the summary')
+    parser.add_argument('command', choices=('run', 'collect'), help='fit one row, or collect every row into fits.csv')
     parser.add_argument('index', type=int, nargs='?', help='the row to fit, by its 0-based index among the rows fitted')
     parser.add_argument('--registry', type=Path, default=HERE.parent / 'registry', help='folder holding sources.yaml and the census tables')
     parser.add_argument('--survey', type=Path, default=HERE, help='folder holding fits_preparation.csv and the duplicates and dropped tables')
@@ -217,4 +215,3 @@ if __name__ == '__main__':
         fitter.run(args.index)
     else:
         fitter.collect()
-        Summarizer(args.registry, args.survey).flush()

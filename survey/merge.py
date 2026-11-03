@@ -5,8 +5,9 @@ A shard is `shards/<table>_<label>.csv` with exactly the agent columns of its ta
 validates the shard against the table it returns, refuses a failing shard printing the
 offending rows, and otherwise upserts on the table's row key, so merging the same shard twice
 changes nothing and a corrected shard replaces its earlier rows. Every merge then folds
-confirmed duplicates, measures the whole registry and rewrites the manifest and the summary;
-a merge about the flat sample measures nothing.
+confirmed duplicates and rewrites the manifest; a merge about the flat sample leaves the
+manifest as it is. A merge measures nothing: `measure.py` writes the measured files and the
+summary as a job of its own.
 The census tables land in `registry/`, the survey's bookkeeping tables (duplicates, dropped,
 flat verdicts and responses) in `survey/`. Run from the repo root:
 
@@ -23,7 +24,6 @@ from pathlib import Path
 
 import copies
 import pandas as pd
-from measure import measureRegistry
 from mixedbench.contract import withComposites
 from mixedbench.datasets import DataObject, Loader
 from mixedbench.registry.row import (
@@ -46,7 +46,6 @@ from schema import (
     Table,
 )
 from sources import Key, readFrame
-from summarize import Summarizer
 
 # =====================================================================================
 # globals
@@ -81,8 +80,8 @@ class ShardRefused(Exception):
 
 
 # =====================================================================================
-# pipeline: shard -> validate -> upsert -> supersede -> reconcile duplicates -> measure
-# -> manifest -> summary -> report
+# pipeline: shard -> validate -> upsert -> supersede -> reconcile duplicates -> manifest
+# -> report
 # =====================================================================================
 class Merger:
     def __init__(self, registry: Path, survey: Path, loader: Loader | None = None) -> None:
@@ -499,17 +498,13 @@ class Merger:
         ]  # fmt: skip
 
     # ---------------------------------------------------------------------------------
-    # measure: registry -> measured files -> manifest.csv
+    # manifest: registry -> manifest.csv
     # ---------------------------------------------------------------------------------
-    def measure(self) -> None:
-        """A flat verdict or response changes no registry row, so its merge measures nothing."""
+    def writeManifest(self) -> None:
+        """The file each registry object loads from, with its digest and size (#4).
+        A flat verdict or response changes no registry row, so its merge leaves the manifest."""
         if self.table.name in FLAT:
             return
-        measureRegistry(self.registry, self.loader)
-        self.writeManifest()
-
-    def writeManifest(self) -> None:
-        """The file each registry object loads from, with its digest and size (#4)."""
         registry = self.canonical(TABLES['registry'])
         rows = []
         for label, name in registry[['source', 'object']].drop_duplicates().itertuples(index=False):  # fmt: skip
@@ -549,6 +544,5 @@ if __name__ == '__main__':
     merger.upsert()
     merger.supersede()
     merger.reconcile()
-    merger.measure()
-    Summarizer(args.registry, args.survey).flush()
+    merger.writeManifest()
     merger.report()

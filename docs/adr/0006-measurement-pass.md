@@ -1,5 +1,5 @@
 ---
-status: accepted, amended 2026-10-29
+status: accepted, amended 2026-11-03
 date: 2026-10-20
 ---
 
@@ -157,3 +157,14 @@ be computed here, from the cached tables, and shipped in a pinned release. Grill
   Gaussian process's basis functions do in a flat table (`mcycle_gp`), and its smallest singular
   value is rounding noise.
 - Decision: both passes are measured again for the next patch, and no contract hash moves.
+
+## Amendment 2026-11-03: the measurement runs apart from the merge
+
+- Decision: a merge writes the tables it merges and `manifest.csv`, and measures nothing.
+  `survey/measure.py` writes the measured files and renders the summary as a job of its own,
+  before a release, and `fits.py collect` renders no summary.
+- Why: admission and a release need the merged registry and its manifest the same day, but on
+  #162's merge the 79 shards took 17 minutes and the measurement more than four hours, before
+  it stalled on a design of 97,619 columns.
+- Decision: neither script takes an option to skip or add the other's job.
+- Why: each script does one job.

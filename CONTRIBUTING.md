@@ -40,7 +40,7 @@ src/mixedbench/
   suite/        a problem by its id, built on first use and checked against its suite
   references/   a problem's reference posterior, fitted by brms in R
   frequentist/  a mixed model's fit by lme4 in R, with its variance components
-registry/       the registry files (docs/registry.md), written by survey/merge.py, summarized in SUMMARY.md
+registry/       the registry files (docs/registry.md), written by survey/merge.py and measure.py, summarized in SUMMARY.md
 suite/          the admission and reference-run scripts; per suite its candidates.csv and refused.csv
 survey/         the pipeline that built the registry
 tests/          mirrors src/

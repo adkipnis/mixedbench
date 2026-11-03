@@ -91,6 +91,12 @@ class Problem:
         """Raises `Refused` if the contract does not cover the row."""
         return _Builder(row, table).build()
 
+    @classmethod
+    def countColumns(cls, row: Row, table: pd.DataFrame) -> tuple[int, int]:
+        """Returns the coded columns `build` would pass to the drop, `Intercept` included, and the
+        complete rows, without coding them. Raises `Refused` as `build` does."""
+        return _Builder(row, table).countColumns()
+
     def standardized(self, regime: Regime = 'full', fold: int = 0) -> pd.DataFrame:
         """Returns the standardized model columns of the rows a fit on the regime's `fold` sees.
         Continuous columns are z-scored with the fold's scales.
@@ -266,6 +272,18 @@ class _Builder:
             correlations=correlations,
             contract=CONTRACT,
         )
+
+    def countColumns(self) -> tuple[int, int]:
+        # each covariate codes into the columns `codeCovariate` gives its kind, an interaction
+        # into the product of its parts'
+        widths = {}
+        for column in self.row.covariates:
+            kind, levels = columnKind(self.table[column])
+            widths[column] = levels - 1 if kind in ('categorical', 'ordered') else 1
+        columns = 1 + sum(widths.values())  # with `Intercept`
+        for term in self.row.interactions:
+            columns += math.prod(widths[part] for part in parts(term))
+        return columns, len(self.table)
 
     # -------------------------------------------------------------------------------------
     # rows -> coding -> splits -> scales -> model

@@ -9,7 +9,7 @@ import copies
 import pandas as pd
 import pytest
 import yaml
-from conftest import FIXTURES, mergeShard, readRows
+from conftest import FIXTURES, mergeShard, readRows, runMeasure
 from merge import Merger, ShardRefused
 from mixedbench.registry.row import readCsv, writeCsv
 from sources import readFrame
@@ -343,7 +343,7 @@ def test_the_census_lands_in_the_registry_and_the_bookkeeping_in_the_survey(spli
     mergeShard(merger, FIXTURES / 'registry_cattle.csv')  # flags the pair with herds
     registryFiles = sorted(p.name for p in merger.registry.iterdir() if p.is_file())
     surveyFiles = sorted(p.name for p in merger.survey.iterdir() if p.is_file())
-    assert registryFiles == ['SUMMARY.md', 'column_factors.csv', 'columns.csv', 'dimensions.csv', 'excluded.csv', 'factor_pairs.csv', 'fits.csv', 'flat.csv', 'flat_columns.csv', 'flat_response_statistics.csv', 'manifest.csv', 'quantiles.yaml', 'registry.csv', 'responses.csv', 'sources.yaml']  # fmt: skip
+    assert registryFiles == ['excluded.csv', 'fits.csv', 'flat.csv', 'flat_columns.csv', 'flat_response_statistics.csv', 'manifest.csv', 'registry.csv', 'sources.yaml']  # fmt: skip
     assert surveyFiles == ['dropped.csv', 'duplicates.csv', 'flat_agreement.csv', 'flat_response_agreement.csv', 'flat_response_recheck_agreement.csv', 'flat_responses.csv', 'flat_screen.csv', 'flat_verdicts.csv']  # fmt: skip
 
 
@@ -353,6 +353,7 @@ def test_a_composite_grouping_factor_merges_and_gets_its_own_dimension_row(merge
     rows = readRows(FIXTURES / 'registry_herds.csv')
     rows[0]['grouping_factors'] = 'region;region:breed'
     mergeShard(merger, writeShard(merger.survey / 'shards' / 'registry_pairs.csv', rows[:1]))
+    runMeasure(merger)
     dimensions = readRows(merger.registry / 'dimensions.csv')
     assert [(r['factor'], r['n_groups'], r['relation']) for r in dimensions] == [
         ('region', '3', 'nested'),
@@ -360,11 +361,12 @@ def test_a_composite_grouping_factor_merges_and_gets_its_own_dimension_row(merge
     ]
 
 
-def test_every_merge_measures_the_registry_into_dimensions_and_columns(merger):
-    """No measured number is typed: the merge loads every registry row's table and writes one
-    dimension row per grouping factor and one column row per covariate column (#18). An
-    excluded shard merged afterwards regenerates both files unchanged."""
+def test_the_measure_pass_writes_a_dimension_row_per_factor_and_a_column_row_per_column(merger):
+    """No measured number is typed: the measure pass loads every registry row's table and
+    writes one dimension row per grouping factor and one column row per covariate column
+    (#18)."""
     mergeShard(merger, FIXTURES / 'registry_herds.csv')
+    runMeasure(merger)
     dimensions = readRows(merger.registry / 'dimensions.csv')
     assert [(r['model_index'], r['factor'], r['n_groups'], r['relation']) for r in dimensions] == [
         ('1', 'region', '3', 'nested'),
@@ -381,17 +383,14 @@ def test_every_merge_measures_the_registry_into_dimensions_and_columns(merger):
         ('2', 'region', 'categorical'),
     ]
     assert len(columns) == 10
-    before = {p.name: p.read_bytes() for p in merger.registry.glob('*.csv')}
-    mergeShard(merger, FIXTURES / 'excluded_cattle.csv')
-    after = {p.name: p.read_bytes() for p in merger.registry.glob('*.csv')}
-    assert after == before | {'excluded.csv': after['excluded.csv']}
 
 
-def test_every_merge_writes_the_measured_headers_and_a_left_out_statistic_as_blank(merger):
+def test_the_measure_pass_writes_the_released_headers_and_a_left_out_statistic_as_blank(merger):
     """column_factors.csv and factor_pairs.csv carry their released headers, and dimensions.csv
     the two condition numbers after d_all. The nested region and herd pair has no empty-cell
     share, written as a blank cell (#99, #100)."""
     mergeShard(merger, FIXTURES / 'registry_herds.csv')
+    runMeasure(merger)
     column_factors = readRows(merger.registry / 'column_factors.csv')
     assert list(column_factors[0]) == [
         'source', 'object', 'model_index', 'tier', 'column', 'factor', 'between_group_share',
@@ -428,9 +427,24 @@ def test_a_merge_leaves_the_flat_files_as_the_last_flat_pass_wrote_them(merger):
         assert (merger.registry / name).read_bytes() == text
 
 
+def test_a_merge_writes_the_manifest_and_leaves_the_measured_files_and_the_summary(merger):
+    """Admission and a release need the merged registry and its manifest the same day, but the
+    measurement took hours on #162's largest tables. So a merge measures nothing, and
+    `measure.py` writes the measured files and the summary as a job of its own (#172)."""
+    mergeShard(merger, FIXTURES / 'registry_herds.csv')
+    runMeasure(merger)
+    names = (*MEASURED, 'SUMMARY.md', 'quantiles.yaml')
+    measured = {name: (merger.registry / name).read_bytes() for name in names}
+    mergeShard(merger, FIXTURES / 'registry_cattle.csv')
+    assert {name: (merger.registry / name).read_bytes() for name in names} == measured
+    objects = [r['object'] for r in readRows(merger.registry / 'manifest.csv')]
+    assert objects == ['herds.csv', 'cattle.csv']
+
+
 def test_every_registry_row_has_one_measured_response(merger):
     """responses.csv is keyed like dimensions.csv, one row per registry row and its response."""
     mergeShard(merger, FIXTURES / 'registry_herds.csv')
+    runMeasure(merger)
     responses = readRows(merger.registry / 'responses.csv')
     keys = [
         (r['source'], r['object'], r['model_index'], r['tier'], r['response']) for r in responses
@@ -441,17 +455,18 @@ def test_every_registry_row_has_one_measured_response(merger):
     ]
 
 
-def test_the_measure_script_writes_what_the_merge_writes(merger):
-    """`measure.py` reruns the merge's measure pass without a shard to merge, so a changed
-    statistic reaches the whole registry in one run (#98). It loads from the cache the merge
-    filled, so the run is offline."""
+def test_the_measure_script_writes_the_measured_files_and_the_summary(merger):
+    """`measure.py` runs the measure pass and the summary over the whole registry in one run
+    (#98, #172). It loads from the cache the merge filled, so the run is offline."""
     mergeShard(merger, FIXTURES / 'registry_herds.csv')
-    merged = {name: (merger.registry / name).read_bytes() for name in MEASURED}
-    for name in MEASURED:
+    runMeasure(merger)
+    names = (*MEASURED, 'SUMMARY.md', 'quantiles.yaml')
+    measured = {name: (merger.registry / name).read_bytes() for name in names}
+    for name in names:
         (merger.registry / name).unlink()
     command = [sys.executable, SURVEY / 'measure.py', '--registry', merger.registry, '--survey', merger.survey]  # fmt: skip
     subprocess.run(command, check=True)
-    assert {name: (merger.registry / name).read_bytes() for name in MEASURED} == merged
+    assert {name: (merger.registry / name).read_bytes() for name in names} == measured
 
 
 def test_every_merge_names_each_registry_objects_file_in_the_manifest(merger):
@@ -565,13 +580,13 @@ def test_a_response_the_table_or_its_type_contradicts_is_refused(merger, edit, c
     assert readRows(merger.survey / 'flat_responses.csv') == []
 
 
-def test_a_flat_merge_leaves_the_measured_files_and_the_manifest_as_they_are(merger):
-    """A verdict or a response changes no registry row, so its merge skips the measure pass,
-    which loads every registry table."""
+def test_a_flat_merge_leaves_the_manifest_as_it_is(merger):
+    """A verdict or a response changes no registry row, so its merge skips the manifest,
+    which reads every registry object's file."""
     mergeShard(merger, FIXTURES / 'registry_herds.csv')
     mergeShard(merger, FIXTURES / 'excluded_cattle.csv')
-    files = [merger.registry / name for name in (*MEASURED, 'manifest.csv')]
-    written = [file.stat().st_mtime_ns for file in files]
+    manifest = merger.registry / 'manifest.csv'
+    written = manifest.stat().st_mtime_ns
     mergeShard(merger, writeShard(merger.survey / 'shards' / 'flat_second.csv', [VERDICT]))
     mergeShard(merger, writeShard(merger.survey / 'shards' / 'response_first.csv', [RESPONSE]))
-    assert [file.stat().st_mtime_ns for file in files] == written
+    assert manifest.stat().st_mtime_ns == written
