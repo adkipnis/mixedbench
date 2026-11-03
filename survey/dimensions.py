@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 import pandas as pd
 from mixedbench.contract import Problem, Refused
-from mixedbench.registry.row import parts
+from mixedbench.registry.row import Row, parts
 from schema import IDENTITY
 
 if TYPE_CHECKING:  # only a type: measure.py imports this module
@@ -102,27 +102,27 @@ def measureConditionIndexes(measurer: Measurer) -> dict:
     """The condition index of the documented design and of the design over every column, both
     built by the contract. Blank where the contract refuses the row."""
     try:
-        documented = Problem.build(measurer.row, measurer.table)
+        conditions = {'condition_doc': _measureCondition(measurer.row, measurer.table)}
     except Refused:
         return {}
-    conditions = {'condition_doc': _measureCondition(documented)}
     # the documented covariates first, so the drop keeps the parts of their interactions
     others = [c for c in measurer.column_names if c not in measurer.row.covariates]
     covariates = (*measurer.row.covariates, *others)
     everything = dataclasses.replace(measurer.row, covariates=covariates)
     try:
-        measured = Problem.build(everything, measurer.table)
+        return conditions | {'condition_all': _measureCondition(everything, measurer.table)}
     except Refused:  # no complete row
         return conditions
-    return conditions | {'condition_all': _measureCondition(measured)}
 
 
-def _measureCondition(problem: Problem) -> float:
-    """The condition index of the problem's design, inf when its coded columns before the
-    contract's drop outnumber its rows, as the flat pass measures a design too wide to drop."""
-    width = len(problem.design) + len(problem.dropped_columns)
-    if width > len(problem.table):
+def _measureCondition(row: Row, table: pd.DataFrame) -> float:
+    """The condition index of the row's design, inf without building it when its coded columns
+    before the contract's drop outnumber its rows, as the flat pass measures a design too wide
+    to drop."""
+    columns, rows = Problem.countColumns(row, table)
+    if columns > rows:
         return float('inf')
+    problem = Problem.build(row, table)
     return computeConditionIndex(problem.standardized()[list(problem.design)])
 
 
