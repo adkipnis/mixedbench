@@ -6,8 +6,8 @@ design docs, not the envelope itself.
 
 How to read the tables:
 
-- Every number is filled from the measured files by `merge.py` on each merge, or by
-  `measure.py`; edit `SUMMARY.template.md`, never this file.
+- Every number is filled from the measured files by `measure.py` or `flat.py measure`; edit
+  `SUMMARY.template.md`, never this file.
 - Quantiles are observed values, never interpolated: below the median the nearest value at
   or below the level, from the median on the nearest value at or above it.
 - Per-factor axes (groups, group sizes, imbalance) count a dataset once per grouping factor;
@@ -19,7 +19,7 @@ How to read the tables:
   [`docs/registry.md`](../docs/registry.md).
 - The last column of an axis table, `practice`, is the practice survey's upper decile, the
   maximum over the v1 families in [`practice_quantiles.yaml`](../survey/practice_quantiles.yaml)
-  (the minimum for the smallest group size), read at merge time; `-` where the practice survey
+  (the minimum for the smallest group size), read at measurement time; `-` where the practice survey
   has no such axis.
 
 **Corpus.** ${n_rows} registry rows over ${n_objects} datasets and ${n_factor_rows} grouping

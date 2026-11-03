@@ -291,8 +291,8 @@ Neither `flat.csv` nor `flat_columns.csv` measures a table's response, as `colum
   registry rows of `fits.csv`, and `flat_column_type` over the rows of `flat_columns.csv`.
 - `implied_columns`: the expected design columns of a 9- and a 14-term model (the practice
   survey's p90 and p95 of terms) under the observed categorical share and mean K − 1.
-- `SUMMARY.md` is rendered from the digit-free `survey/SUMMARY.template.md` at every merge and
-  measurement, its flat section from the survey's flat files as they stand.
+- `SUMMARY.md` is rendered from the digit-free `survey/SUMMARY.template.md` by `measure.py` and
+  `flat.py measure`, its flat section from the survey's flat files as they stand.
 - MetaBeta's `packages/glmm/tests/surveys/test_dimension_quantiles.py` asserts the shape of
   `quantiles.yaml`, so an axis or tier name changes only with it.
 
