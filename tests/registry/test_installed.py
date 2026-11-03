@@ -8,9 +8,11 @@ import typing
 from pathlib import Path
 
 import pandas as pd
+import pytest
 import yaml
 from mixedbench import registry
-from mixedbench.registry.row import COLUMNS, readCsv
+from mixedbench.registry.installed import Preparations
+from mixedbench.registry.row import COLUMNS, Row, readCsv
 
 FILES = typing.get_args(registry.RegistryFile)
 # the top-level keys metabeta's contract test asserts (packages/glmm/tests/surveys/)
@@ -91,3 +93,62 @@ def test_a_url_sources_pin_is_its_checksum() -> None:
     entry = {'kind': 'url', 'name': 'https://example.org/deposit.zip', 'pin': 'ab' * 32}
     deposit = registry.source('deposit', entry)
     assert deposit.checksum == deposit.pin == 'ab' * 32
+
+
+# =====================================================================================
+# the rows a registry fit read
+# =====================================================================================
+def installedRow(id: str) -> Row:
+    [row] = [row for row in registry.rows() if row.id == id]
+    return row
+
+
+def test_a_preparation_keeps_the_subset_its_source_fits() -> None:
+    """The documented glmer fits subset(police, crime == 1), so the other crimes' rows go."""
+    police = installedRow('rabe_hesketh/police.dta/1')
+    table = pd.DataFrame({'precinct': [1, 1, 2, 2], 'crime': [1, 2, 1, 4], 'stops': [10, 3, 7, 1]})
+
+    prepared = Preparations().prepare(police, table)
+
+    expected = pd.DataFrame({'precinct': [1, 2], 'crime': [1, 1], 'stops': [10, 7]})
+    pd.testing.assert_frame_equal(prepared, expected)
+
+
+def test_a_weight_of_a_group_repeats_the_group_each_copy_a_group_of_its_own() -> None:
+    """twin_hay weights each twin pair's response pattern, its weight on both members:
+    repeated alone, the rows of a pattern's pairs would fall into one group of 2 × weight twins."""
+    twins = installedRow('rabe_hesketh/twin_hay.dta/1')
+    patterns = pd.DataFrame({'pair': [1, 1, 2, 2], 'h': [0, 1, 1, 1], 'freq': [3, 3, 2, 2]})
+
+    prepared = Preparations().prepare(twins, patterns)
+
+    members = prepared.groupby('pair')['h'].apply(list).to_dict()
+    assert members == {'1:0': [0, 1], '1:1': [0, 1], '1:2': [0, 1], '2:0': [1, 1], '2:1': [1, 1]}
+
+
+def test_a_row_no_preparation_lists_keeps_its_whole_table() -> None:
+    sleepstudy = installedRow('lme4/sleepstudy/1')
+    table = pd.DataFrame({'Subject': [308, 308], 'Days': [0, 1], 'Reaction': [249.6, 258.7]})
+
+    prepared = Preparations().prepare(sleepstudy, table)
+
+    pd.testing.assert_frame_equal(prepared, table)
+
+
+@pytest.mark.network
+def test_tables_load_the_rows_each_fit_read(tmp_path: Path) -> None:
+    """A user reproduces a row of fits.csv from the rows its fit read: police.dta's fit takes the
+    225 rows of one crime (its `n_obs`), and sleepstudy's fit its whole table."""
+    tables = registry.Tables(tmp_path)
+    police = installedRow('rabe_hesketh/police.dta/1')
+    sleepstudy = installedRow('lme4/sleepstudy/1')
+
+    assert len(tables.loadFitted(police)) == 225
+    pd.testing.assert_frame_equal(tables.loadFitted(sleepstudy), tables.load(sleepstudy))
+
+
+def test_every_preparation_names_a_registry_row() -> None:
+    """A preparation of a row the registry lacks, mistyped or of a row since removed, would go
+    unused by `loadFitted`; the fits pass refuses it only when it runs."""
+    ids = {row.id for row in registry.rows()}
+    assert set(Preparations().listed) <= ids
