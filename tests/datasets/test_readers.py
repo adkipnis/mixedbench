@@ -291,6 +291,19 @@ def test_a_column_of_logicals_with_missing_values_keeps_them(tmp_path):
     assert sessions.isna().tolist() == [False, False, True]
 
 
+def test_a_column_of_numbers_that_turns_to_words_keeps_every_value(tmp_path):
+    """ManyLabs 3's ML3AllSites.csv and a trade table's commodity codes read as numbers for many
+    rows before one reads as a word. pandas' C reader types a wide file chunk by chunk, about
+    2**20 cells each, unless told to type each column whole; the mixed column then lost its
+    numbers to the field stripping (#171)."""
+    file = tmp_path / 'trade.csv'
+    filler = ',0' * 511
+    rows = ['010119' + filler] * 2100 + ['TOTAL' + filler]
+    file.write_text('code' + ''.join(f',x{k}' for k in range(511)) + '\n' + '\n'.join(rows) + '\n')
+    codes = readers.read(file, 'trade.csv')[0]['trade.csv']['code']
+    assert codes.tolist() == ['010119'] * 2100 + ['TOTAL']
+
+
 def test_a_banner_of_hash_lines_above_the_table_is_skipped(example):
     """Diggle's course files open with `#` comment lines above a whitespace-aligned table."""
     cd4 = readExample(example, 'formats/cd4.txt')
@@ -427,6 +440,7 @@ TEXT_ROUTES = {  # route: file name, the text it holds, read's options
     'sniffed separator': ('scores.csv', partial(lines, separator=','), {}),
     'decimal commas': ('scores.csv', commaLines, {}),  # pymc-examples' marketing.csv
     'semicolons, decimal points': ('scores.csv', partial(lines, separator=';'), {}),  # rethinking
+    'tabs': ('scores.tsv', partial(lines, separator='\t'), {}),  # OSF's dlp-trials.txt
     'whitespace': ('scores.txt', partial(lines, separator='  '), {}),
     'cran data folder': ('scores.txt', lines, {'cran': True}),
     'layout of spans': (  # 24 characters hold the longest repr of a double
