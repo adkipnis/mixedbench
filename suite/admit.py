@@ -56,11 +56,9 @@ REFUSED = {
     'nlme/IGF/1': 'nonlinear_parameter_model: random effects on nonlinear parameters (#27)',
     'nlme/Muscle/1': 'nonlinear_parameter_model: random effects on nonlinear parameters (#27)',
     'nlme/Soybean/1': 'nonlinear_parameter_model: random effects on nonlinear parameters (#27)',
-    # one-compartment pharmacokinetic models, the nlme tables and Stata's fuller copies (notes)
+    # one-compartment pharmacokinetic models (notes)
     'nlme/Phenobarb/1': 'nonlinear_parameter_model: a pharmacokinetic model (#32)',
     'nlme/Quinidine/1': 'nonlinear_parameter_model: a pharmacokinetic model (#32)',
-    'stata_phenobarb/phenobarb.dta/1': 'nonlinear_parameter_model: a pharmacokinetic model (#32)',
-    'stata_quinidine/quinidine.dta/1': 'nonlinear_parameter_model: a pharmacokinetic model (#32)',
     'nlme/Ovary/1': 'non_affine_feature: the slope is on sin(2*pi*Time) (#27)',
     'gumundsdottir_2026_osf_6/Questionnaire_data_long/1': (
         'non_affine_feature: time is a non-linear recode of wave (#27)'
@@ -107,12 +105,12 @@ REFUSED = {
     ),
     # a row that stands for several observations, which the documented fit weights by count (#61)
     'agridat/keen.potatodamage/1': 'frequency_weighted: each cell weighted by count (#61)',
-    'rabe_hesketh/thailand.dta/1': (
-        'frequency_weighted: each covariate pattern weighted by wt1 (#61)'
-    ),
     'rabe_hesketh/twin_hay.dta/1': (
         'frequency_weighted: each response pattern weighted by freq (#61)'
     ),
+    'mixor/concen/1': 'frequency_weighted: each response pattern weighted by freq (#162)',
+    'mixor/norcag/1': 'frequency_weighted: each response pattern weighted by freq (#162)',
+    'mixor/irt.data/1': 'frequency_weighted: each response pattern weighted by freq (#162)',
     # a documented model whose likelihood the filed rows do not hold (#61)
     'rabe_hesketh/elections.dta/1': (
         'choice_model: rank == 1 in conditional and mixed logits over choice sets (#61)'
@@ -137,9 +135,6 @@ REFUSED = {
     ),
     'hox/AstLrd.sav/1': (
         'known_sampling_variance: meta-analysis log odds ratios with variances VarLor (#82)'
-    ),
-    'rabe_hesketh/contraceptive.dta/1': (
-        'categorical_response: method, multinomial with correlated district intercepts (#82)'
     ),
     'rabe_hesketh/ecls_child.dta/1': (
         'joined_covariate: nbhoodcl comes from ecls_school.dta, merged by s4_id (#82)'
@@ -166,7 +161,6 @@ REFUSED = {
     'rabe_hesketh/mortality.dta/1': 'censored_response: a censored time filed as continuous (#61)',
     'rabe_hesketh/recurrent.dta/1': 'censored_response: a censored time filed as continuous (#61)',
     'hox/SibDiv.sav/1': 'censored_response: a censored time filed as continuous (#61)',
-    'stata_nlswork3/nlswork3.dta/1': 'censored_response: a censored wage filed as continuous (#61)',
     'pymc_examples/examples/data/external_pp.csv/1': (
         'censored_response: a censored score filed as continuous (#61)'
     ),
@@ -185,9 +179,6 @@ REFUSED = {
     'AER/CASchools/1': 'computed_response: the average of math and read (#162)',
     'Ecdat/Star/1': 'computed_response: the sum of tmathssk and treadssk (#162)',
     'Ecdat/PSID/1': 'computed_response: the log hourly wage from earnings and hours (#162)',
-    'camerondata/incpanel/1': (
-        'computed_response: the log hourly wage from earnings and hours (#162)'
-    ),
     'AER/Fatalities/1': (
         'computed_response: the deaths per 10,000 residents from fatal and pop (#162)'
     ),
@@ -202,10 +193,18 @@ REFUSED = {
     'DAAG/codling/1': (
         'computed_response: the complementary log-log of the mortality adjusted for cm (#162)'
     ),
+    'osf_confidence_siedlecka_2019/data_Siedlecka_2019.csv/1': (
+        'computed_response: the accuracy, Response equal to Stimulus (#162)'
+    ),
+    'osf_confidence_wierzchon_2014/data_Wierzchon_2014.csv/1': (
+        'computed_response: the accuracy, Response equal to Stimulus (#162)'
+    ),
+    'osf_manylabs3/ML3AllSites.csv/1': (
+        'computed_response: the prime-consistent answer, SRMeetingResponse by SRCondition (#162)'
+    ),
     # a person-period table of a discrete-time hazard, which its source fits without a person
     # intercept, since a person holds at most one event (#161)
     'alda/aldatxt/teachers_pp.txt/1': HAZARD,
-    'alda/aldatxt/firstsex_pp.txt/1': HAZARD,
     'alda/aldatxt/tenure_pp.txt/1': HAZARD,
     'alda/aldatxt/mathdropout_pp.txt/1': HAZARD,
     'alda/aldatxt/firstarrest_pp.txt/1': HAZARD,
