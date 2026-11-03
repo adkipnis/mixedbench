@@ -73,7 +73,7 @@ def isData(file: Path, *, cran: bool = False) -> bool:
     readable = R_FILES | TABLE_FILES
     if cran:
         readable = R_FILES | DATA_FILES
-    if bare(file).suffix not in readable:
+    if bare(file, cran=cran).suffix not in readable:
         return False
     if file.name.endswith('.init.json') or '__MACOSX' in file.parts:
         return False
@@ -129,10 +129,14 @@ def _describesSibling(file: Path) -> bool:
     return any(bare(f).stem == file.stem.lower() for f in siblings)
 
 
-def bare(file: Path) -> Path:
-    """The file's name without its `.zip` or `.gz` wrapper (`radon.json.zip`, `apnea.tsv.gz`):
+def bare(file: Path, *, cran: bool = False) -> Path:
+    """The file's name without its `.zip` or `.gz` wrapper (`radon.json.zip`, `apnea.tsv.gz`),
+    in a CRAN package's data/ folder also without the `.bz2` or `.xz` utils::data() reads:
     the suffix says how to read it, the stem what documents it."""
-    return Path(file.name.lower().removesuffix('.zip').removesuffix('.gz'))
+    name = file.name.lower().removesuffix('.zip').removesuffix('.gz')
+    if cran:
+        name = name.removesuffix('.bz2').removesuffix('.xz')
+    return Path(name)
 
 
 # =====================================================================================
@@ -266,12 +270,14 @@ class _DataFolder:
     def _readTable(file: Path) -> dict[str, pd.DataFrame | None]:
         """read.table(header = TRUE, as.is = FALSE), with `sep = ';'` for a `.csv`.
         Levels sort by code point, as R sorts them in the C locale, not by ICU collation."""
+        unwrapped = bare(file, cran=True)
         sep = r'\s+'
-        if bare(file).suffix == '.csv':
+        if unwrapped.suffix == '.csv':
             sep = ';'
         options = {'sep': sep, 'quotechar': '"', 'na_values': ['NA'], 'keep_default_na': False}
         table = _readCsv(file, **options)
-        stem = Path(file.name.removesuffix('.gz')).stem  # data() reads BTdata.tab.gz as BTdata
+        # data() reads BTdata.tab.gz as BTdata: the bare stem's length, in the file name's case
+        stem = file.name[: len(unwrapped.stem)]
         return {stem: table.assign(**_DataFolder._typeConvert(table))}
 
     @staticmethod
