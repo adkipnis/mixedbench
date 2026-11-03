@@ -1,5 +1,5 @@
 ---
-status: accepted, amended 2026-10-09, 2026-10-10, 2026-10-20 and 2026-10-21
+status: accepted, amended 2026-10-09, 2026-10-10, 2026-10-20, 2026-10-21, 2026-10-25, 2026-10-28 and 2026-11-02
 date: 2026-10-08
 ---
 
@@ -163,6 +163,9 @@ any rule is a new suite version, never a recomputation.
   The held-out-rows regime deals into 5 folds the rows it may hold, which are all but the
   first row of each group of every grouping factor in a seeded order. The seed stays the
   hash of the problem id, and the row order is drawn before the group order.
+
+> Amended 2026-11-02 below: every grouping factor has at least five groups, so the
+> held-out-groups regime always deals five folds.
 - Decision: a method's score in a regime is the mean over its held-out rows, each held out
   once.
 - Why: in the experiment of #47 (`experiments/kfold`), a single 10% split was too noisy for
@@ -265,3 +268,35 @@ any rule is a new suite version, never a recomputation.
 
 - Decision: the seven contract hashes move, as a patch, since no suite is frozen before
   release 1.1.
+
+## Amendment 2026-11-02: grouping factors of fewer than five levels (#161)
+
+**Grouping factors.**
+
+- Decision: a grouping factor of fewer than five levels over the kept rows becomes a categorical
+  covariate. Its treatment contrasts, or one 0/1 column for two levels, follow the row's
+  covariates and precede its interactions, as R orders a formula's terms. Integer codes become
+  contrasts, not a slope.
+- Why: two to four groups barely inform a standard deviation (Harrison et al. 2018; Bolker et
+  al. 2009), and the reference sampler diverges in the funnel they leave with the group effects.
+  In the second reference run (#160), 35 of the 48 candidates with a factor of two to four
+  levels ended `bar` or `cap`. The registry stays as filed, since it documents the sources'
+  models.
+
+**Refusals.**
+
+- Decision: a problem left without a grouping factor, or with random slopes on such a factor,
+  is refused.
+- Why: a problem without a grouping factor is no mixed model, and a slope that varies over fixed
+  levels would be an interaction the source did not fit.
+
+**Splits.**
+
+- Decision: the held-out-groups regime deals the first factor that stays a grouping factor. It
+  has at least five groups, so the regime always deals five folds, and the exception for a first
+  factor of two groups is gone.
+
+**Hashes.**
+
+- Decision: the rule refuses 17 candidates and moves the hashes of the 31 it converts, as a
+  patch, since no suite is frozen before release 1.1.

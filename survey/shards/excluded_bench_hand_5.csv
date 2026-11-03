@@ -1,0 +1,2 @@
+"source","object","reason","detail"
+"Ecdat","BudgetItaly","no grouping structure","each row is a cell of income class (19) and household size (7) in one year of 1973-1992, 115 cells recurring over 20 annual cross sections: the cells classify households rather than sample units, and Bollino, Perali and Rossi (2000) fit a demand system with no random cell effect (hand check #162)"

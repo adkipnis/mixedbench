@@ -1,0 +1,2 @@
+"source","object","reason","detail"
+"wooldridge","discrim","no grouping structure","wide: each restaurant's second-wave prices, wage, staff and hours are the columns psoda2 to emp2 beside the first wave's, so its repeated measures are stored as columns; the wide rule holds although the 410 restaurants repeat within 29 counties (hand check #162)"

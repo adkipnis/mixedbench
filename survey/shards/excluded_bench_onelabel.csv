@@ -1,0 +1,8 @@
+"source","object","reason","detail"
+"beyondarena_pancreatic_cancer_mouse_detection","pancreatic_cancer_mouse_detection.pq","no grouping structure","label constant within group: BeyondArena groups on mouse_id (73 mice) with group_labels per_group, and no group of the table has two values of the label"
+"beyondarena_parkinsons_biomedical_voice_measurements","parkinsons_biomedical_voice_measurements.pq","no grouping structure","label constant within group: BeyondArena groups on patient_id (32 patients) with group_labels per_group, and no group of the table has two values of the label"
+"beyondarena_micro_mass","micro_mass.pq","no grouping structure","label constant within group: BeyondArena groups on Strain (213 strains) with group_labels per_group, and no group of the table has two values of the label"
+"beyondarena_mice_protein_trisomy_discriminant","mice_protein_trisomy_discriminant.pq","no grouping structure","label constant within group: BeyondArena groups on MouseID (72 mice) with group_labels per_group, and no group of the table has two values of the label"
+"beyondarena_musk","musk.pq","no grouping structure","label constant within group: BeyondArena groups on molecule_name (102 molecules) with group_labels per_group, and no group of the table has two values of the label"
+"beyondarena_amex_non_iid","amex_non_iid.pq","no grouping structure","label constant within group: BeyondArena groups on customer_ID (103,693 customers) with group_labels per_group, and no group of the table has two values of the label"
+"beyondarena_covertype","covertype.pq","no grouping structure","BeyondArena groups on Wilderness_Area, three exhaustive areas of Roosevelt National Forest: a design factor, no grouping factor"

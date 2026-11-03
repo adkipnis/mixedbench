@@ -650,6 +650,50 @@ reading's open disagreements, four to eight per tier.
 - The merge's measurement stopped on six designs over every column, where the contract drops a
   part of a documented interaction, so the measured files follow at #152's rerun.
 
+## Few-level factors (#161, 2026-11-02)
+
+- `Problem.build` turns a grouping factor of fewer than five levels over the kept rows into a
+  categorical covariate after the row's covariates, and refuses a row with slopes on one or
+  with no factor left (ADR 0001, amended 2026-11-02).
+- A fingerprint of every candidate before and after: 28 refused (15 without a factor, 2 with
+  slopes, 11 by hand: the ten hazard rows and koczynska's stacked draws), 31 hashes moved, and
+  the other 536 problems and their files byte for byte.
+- Two converted problems drop a column as aliased, as lme4 would: geepack spruce's `chamber[4]`
+  and voorspoels's `premset:list`.
+- `fits.csv` gained `max_abs_eta`, the largest absolute linear predictor of a fit, as its last
+  column and no axis of `quantiles.yaml`.
+
+## Grouped benchmarks (#162, 2026-10-31 to 2026-11-03)
+
+- Two passes read new tables under the survey's rules, each fetched from its original source:
+  the grouped tables of benchmark collections, BeyondArena's and OpenClustered's among them (72
+  sources, 80 rows, 38 exclusions), then 31 whole CRAN packages, two books' data and large
+  replication studies (419 rows, 503 exclusions).
+- An outside reader checked every exclusion and every row below `high`
+  (`benchmarks/sample.csv`). Alex settled each disagreement: 316 rows were rewritten by hand
+  and 15 filed out as exclusions. Its rulings joined the reading rulings below.
+- Four reader fixes came with them: `.parquet` loads as `.pq` (#163), an undecodable R file
+  as an object without a table (#164), a logical column with missing values from delimited
+  text (#165), and a gzipped CRAN data file under its `data()` name (#166).
+- Delimited text reads once with pandas' C engine, and `max_abs_rho` ranks the columns that
+  share a pattern of gaps together (#171). No measured value moved.
+- `copies.py` flags two registry tables that may be copies, by their shape and cardinalities
+  or by shared distinctive values, and the merge folds the confirmed ones (#168). 14 copies
+  were excluded as `derived or duplicated table`: an earlier copy that is wrong or lossy, or a
+  later one that is a subset.
+- kaggle_safecast and the ACS PUMS tables are excluded as `too large`.
+- The merge took `registry.csv` from 692 to 1,076 rows (623 to 942 objects, 368 in and 49
+  out), `excluded.csv` from 2,136 to 2,865 rows and `duplicates.csv` from 474 to 618 pairs.
+- `fits.py` refitted every row, since earlier runs lacked `max_abs_eta`. No other value of the
+  563 rows fitted before moved. `fits_preparation.csv` weights mixor concen and irt.data by
+  `freq`.
+- `suite/admit.py` lists 908 candidates: 386 came in, and the 45 whose rows left as copies or
+  exclusions went out. No kept candidate's hash moved. Of the 50 new refusals, 26 come from a
+  hand decision or the notes' marker: computed responses, censored runtimes, the three text
+  ordinals of #167 and mixor's three frequency-weighted rows.
+- A level of dates, by which bayesrules bike_users groups, enters the problem's record as its
+  ISO date. No earlier hash could move, since no problem had one.
+
 ## Reading rulings (m3#22 to #15)
 
 The rulings [`prompts/read.md`](prompts/read.md) does not carry, from the agents' `RULE GAP` notes and Alex's checks, each with an example
@@ -665,13 +709,19 @@ object and the deciding issue.
 - Not counted: strata and waves a documented model fits as fixed or per wave (CES11,
   GSSvocab, NES; m3#23, #118); field coordinates
   (connolly.potato; m3#22), though a Latin square's rows and columns are blocks (OrchardSprays;
-  m3#23); a factor that classifies rather than clusters (singer; m3#23); a dyad with one row
-  per pair (Monks; m3#25).
+  m3#23); a factor that classifies rather than clusters (singer; m3#23), as a pseudo-panel's
+  cells of income class and household size do (BudgetItaly; #162); a dyad with one row per pair
+  (Monks; m3#25).
 - A term `a:b` has no level where a part is missing (m3#24). Where a column is both a grouping
   factor and a covariate, the grouping stands and the fixed term stays in the formula
   (Cultivation; #12).
 - An area factor with many levels groups; one with a handful is a covariate (LGAclaims,
-  infmort; m3#23).
+  infmort; m3#23). Exhaustive areas group too (ACS's states and PUMAs, BRFSS's states; #162),
+  and so does any other exhaustive set of many units (the NBA's 30 teams; #162).
+- A Gaussian process over a unit a column holds keeps that column as a grouping factor, the
+  process in words in the formula (US income). Over a unit no column holds (coordinates rounded
+  by the source), the unit is no grouping factor, and its coordinates are covariates where the
+  model takes them (Cars; #162).
 - A random intercept on the matched pair (amlxray; m3#23), the GEE cluster (geepack; m3#22), a
   frontier inefficiency term (xtfrontier1; m3#24); a single-level conditional logit is excluded
   (travel2; m3#25).
@@ -684,7 +734,20 @@ object and the deciding issue.
 - A documented normalized score is its own column (jsp_728; m3#25).
 - Survival: `continuous`, the event indicator in `ignore` and `Surv(time, event)` in the
   formula (catheter; m3#24). Discrete-time hazard: the indicator is the response, `PERIOD` a
-  categorical covariate (cigarette; m3#25).
+  categorical covariate (cigarette; m3#25). One record per subject, its interval and event, is
+  survival, not a hazard (SmokeOnset; #162).
+- A benchmark runtime censored at its cutoff, or scored with a timeout penalty (PAR10), keeps
+  its row, and `suite/admit.py` refuses it as `censored_response` (sat11, CPMP, MIP; #162).
+- A benchmark task's recode of a column stays in the formula only; `response` and
+  `response_type` describe the column as stored, so the contract refuses a categorical one
+  (ACS, BRFSS, Cars model 2; #162).
+- A documented response computed from several columns (a score's sum or average, a
+  meta-analysis's effect size) is a response of the table: the formula's left side holds its
+  expression, `response` names its first column, and `suite/admit.py` refuses the row as
+  `computed_response` (CASchools, Star, five metadat tables; #162).
+- A text-coded ordinal response stays `ordinal`, the source's order in notes. While no registry
+  field holds a level order, `suite/admit.py` refuses a row whose loaded order differs
+  (corporate_rating; #167).
 
 **Covariates and model rows**
 
@@ -695,7 +758,27 @@ object and the deciding issue.
   contrasts are named in the formula (m3#26).
 - A variant with one row per extra level is the same model (SASmixed, melanoma; m3#22, m3#24).
   posteriordb's ladders render the richest grouping (radon; m3#24).
-- `published_model` is `no` for all of Tier O (m3#24).
+- `published_model` is `no` for all of Tier O (m3#24), unless a paper fits a mixed model on the
+  table (LMMNN's Income and Cars; #162).
+- A published model whose predictors the table lacks is no published model of the table, so its
+  random part alone files `no` (BLP, DLP1, DLP2; #162). A stand-in for a missing predictor
+  files `no` as well (VietNamH; #162).
+- A mixed model that a paper, tutorial or lecture fits on the table replaces the reader's proposal
+  of the same response and grouping, and files `yes` (crime4, lowbrth, prison, TeachingRatings;
+  #162). A fit posted with a question on a Q&A site is no published model (murder; #162).
+- A robust variance estimation (RVE) meta-regression states its working model, so it files
+  `yes`: hierarchical weights as `(1 | study) + (1 | effect)`, correlated weights as
+  `(1 | study)` (aksayli2019, sala2019, noble2019, coles2019, maccann2020; #162).
+- A conditional likelihood that removes a trial's intercept by conditioning on its total events
+  (metafor's and meta's `CM.EL` and `CM.AL`) files the model it conditions, with fixed study
+  effects, and `yes` (tian2009; #162).
+- A finite mixture of mixed models (latent classes, consensus clustering), whose fixed effects
+  differ by cluster, replaces no proposal: notes name it. Its one-class fit replaces one where
+  the source runs it (paquid's `hlme` m1; epileptic.qol; #162).
+- A target encoder's GLMM, one random intercept per feature, is no model of the table: notes
+  name it, and it files no row (eucalyptus and eight more of Pargent's tables; #162).
+- Every feature of a benchmark task is a covariate, however sparse; the contract's drop of
+  incomplete rows decides what remains (5g, early learning; #162).
 - Priors in deposit files the page lists are filed (verberk; #10).
 
 **Code against prose** (#15)
@@ -709,9 +792,11 @@ object and the deciding issue.
 
 **Exclusions**
 
-- `simulated data` only where the source says so (Stata's chicken, hox SocsLong; m3#24, #12);
-  a guessed "constructed" stays (SASmixed Animal; m3#22). A wide twin of a simulated table
-  shares its exclusion (socscors; #133).
+- `simulated data` only where the source, or a package shipping the same values, says so
+  (Stata's chicken, hox SocsLong, OpenML sensory as dae's Sensory3Phase.dat; m3#24, #12, #162);
+  a guessed "constructed" stays (SASmixed Animal; m3#22). A source that calls the data
+  hypothetical, contrived or imaginary says so (Maxwell and Delaney's tables in afex, carData's
+  OBrienKaiserLong; #162). A wide twin of a simulated table shares its exclusion (socscors; #133).
 - `no grouping structure`: wide repeated-measures tables (nitrofen), replication without a
   replicate column (faraway rats), a uniformity trial without a random term, coordinates as the
   only grouping (besag.checks); m3#22, m3#23. A fixed-effects fit over blocks is rendered with

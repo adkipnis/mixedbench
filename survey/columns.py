@@ -10,6 +10,7 @@ a measurer
 
 from __future__ import annotations
 
+import itertools
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -52,11 +53,45 @@ def measureMaxAbsRho(table: pd.DataFrame, column_types: dict[str, tuple]) -> pd.
     for column, (kind, _) in column_types.items():
         if kind != 'categorical':
             ranked[column] = codeColumn(table[column], kind)
-    # one d × d copy beside pandas' own, since a flat table's d reaches the tens of thousands
-    rho = np.abs(pd.DataFrame(ranked, index=table.index).corr(method='spearman').to_numpy())
-    np.fill_diagonal(rho, np.nan)  # a column is no partner of itself
-    largest = np.fmax.reduce(rho, axis=0, initial=np.nan)  # (d,), nan only without a partner
+    codes = pd.DataFrame(ranked, index=table.index).to_numpy(dtype=float)  # (n, d)
+    observed = np.isfinite(codes)  # (n, d); pandas leaves an infinity out too
+    largest = np.full(codes.shape[1], np.nan)  # (d,), nan only without a partner
+    # a pair ranks over the rows both columns observe, so columns observing the same rows rank
+    # together, and each pair of their patterns takes one matrix product, not one per pair;
+    # positions, not labels, since a table may hold hundreds of patterns
+    for a, b in itertools.combinations_with_replacement(_groupByPattern(observed), 2):
+        rows = observed[:, a[0]] & observed[:, b[0]]  # (n,)
+        rho = _rankCorrelations(codes[np.ix_(rows, a)], codes[np.ix_(rows, b)])  # (|a|, |b|)
+        if a is b:
+            np.fill_diagonal(rho, np.nan)  # a column is no partner of itself
+        largest[a] = np.fmax(largest[a], np.fmax.reduce(rho, axis=1, initial=np.nan))
+        largest[b] = np.fmax(largest[b], np.fmax.reduce(rho, axis=0, initial=np.nan))
     return pd.Series(largest, index=list(ranked)).round(4).reindex(list(column_types))
+
+
+def _groupByPattern(observed: np.ndarray) -> list[list[int]]:
+    """The column positions by the rows they observe, one list per pattern of gaps."""
+    patterns = {}
+    for position in range(observed.shape[1]):
+        pattern = np.packbits(observed[:, position]).tobytes()  # eight rows a byte
+        patterns.setdefault(pattern, []).append(position)
+    return list(patterns.values())
+
+
+def _rankCorrelations(x: np.ndarray, y: np.ndarray) -> np.ndarray:
+    """|Spearman| of each column of x with each of y over their rows, as pandas computes it:
+    Pearson's r of average ranks, centered on their mean, (n + 1) / 2. Blank where constant."""
+    middle = (len(x) + 1) / 2
+    ranks_x = pd.DataFrame(x).rank().to_numpy() - middle  # (n, |x|)
+    ranks_y = pd.DataFrame(y).rank().to_numpy() - middle  # (n, |y|)
+    rho = ranks_x.T @ ranks_y  # (|x|, |y|)
+    # pandas' divisor, sqrt(sxx * syy), applied in place: a flat table's |x| reaches the tens of
+    # thousands
+    divisor = np.outer((ranks_x**2).sum(axis=0), (ranks_y**2).sum(axis=0))  # (|x|, |y|)
+    np.sqrt(divisor, out=divisor)
+    with np.errstate(divide='ignore', invalid='ignore'):  # 0 / 0 for a constant column
+        rho /= divisor
+    return np.abs(rho, out=rho)
 
 
 def codeColumn(values: pd.Series, kind: str) -> pd.Series:

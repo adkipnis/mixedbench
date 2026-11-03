@@ -24,6 +24,7 @@ from __future__ import annotations
 import hashlib
 import json
 from dataclasses import asdict, fields
+from datetime import date
 from pathlib import Path
 
 import numpy as np
@@ -123,9 +124,11 @@ def _serializeRecord(problem: Problem) -> dict:
     return json.loads(json.dumps(values, default=_serializeValue))
 
 
-def _serializeValue(value: Scale | Prior | np.generic) -> dict | int | float:
+def _serializeValue(value: Scale | Prior | np.generic | date) -> dict | int | float | str:
     if isinstance(value, np.generic):
         return value.item()
+    if isinstance(value, date):  # a level of R `Date`s, as pyreadr loads them
+        return value.isoformat()
     return asdict(value)
 
 

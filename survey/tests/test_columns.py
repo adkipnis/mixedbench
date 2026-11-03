@@ -3,11 +3,13 @@ correlations, each expected value worked by hand or by scipy, and the shares' ra
 generated tables."""
 
 import columns
+import numpy as np
 import pandas as pd
 import pytest
 from columns import COLUMN_STATISTICS
-from conftest import GENERATED, asOrdered, measuredColumns, parsed, tables
+from conftest import GENERATED, asOrdered, measuredColumns, parsed, roundedFloats, tables
 from hypothesis import given, settings
+from hypothesis import strategies as st
 from measure import Measurer
 
 
@@ -169,6 +171,39 @@ def test_max_abs_rho_pairs_over_the_rows_both_columns_observe(herds, rows):
     assert pd.isna(rho['dose'])
     alone = rows[0] | {'ignore': 'id;cases;trials;parity'}
     assert pd.isna(measuredColumns(herds, alone).loc['sick', 'max_abs_rho'])
+
+
+@st.composite
+def gappyColumns(draw: st.DrawFn) -> pd.DataFrame:
+    """One to six columns over one to forty rows, each complete, with one of two shared patterns
+    of gaps or with its own. Values tie often, so a column may be constant where it pairs."""
+    n = draw(st.integers(1, 40))
+    pattern = st.lists(st.booleans(), min_size=n, max_size=n)
+    shared = [[True] * n, draw(pattern), draw(pattern)]
+    value = st.one_of(st.integers(0, 3).map(float), roundedFloats())
+    columns = {}
+    for k in range(draw(st.integers(1, 6))):
+        observed = draw(st.one_of(st.sampled_from(shared), pattern))
+        values = draw(st.lists(value, min_size=n, max_size=n))
+        columns[f'c{k}'] = pd.Series(values).where(pd.Series(observed))
+    return pd.DataFrame(columns)
+
+
+def _pandasMaxAbsRho(table: pd.DataFrame) -> pd.Series:
+    """pandas' loop over pairs, each ranked over the rows both columns observe."""
+    rho = table.corr(method='spearman').abs()
+    partners = rho.mask(np.eye(len(rho), dtype=bool))  # a column is no partner of itself
+    return partners.max().round(4)
+
+
+@settings(max_examples=300, deadline=None)
+@given(table=gappyColumns())
+def test_max_abs_rho_is_pandas_pairwise_spearman_whatever_the_gaps(table):
+    """measureMaxAbsRho ranks columns that share a pattern of gaps together (#171); it must reach
+    pandas' values, which rank each pair anew over the rows both observe."""
+    continuous = {column: ('continuous', '') for column in table}
+    rho = columns.measureMaxAbsRho(table, continuous)
+    pd.testing.assert_series_equal(rho, _pandasMaxAbsRho(table))
 
 
 @settings(max_examples=100, deadline=None)

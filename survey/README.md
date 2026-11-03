@@ -64,6 +64,7 @@ uv run python survey/mirror.py --tag mirror-<n>
 | `flat.py`, `prompts/flat.md`, `prompts/response.md` | the flat pass, the second reading's brief and the response reading's brief |
 | `fits_preparation.csv` | the rows a source fitted where they are not the whole table: a subset or a frequency weight, read by `fits.py` |
 | `schema.py`, `sources.py`, `help.py`, `summarize.py` | the survey's file contract, the frame, the help pages, the summary |
+| `copies.py` | the pairs of registry tables that may be copies, which the merge flags |
 | `dimensions.py`, `columns.py`, `groups.py`, `pairs.py`, `responses.py` | one module per measured file |
 | `SUMMARY.template.md` | the digit-free template of `registry/SUMMARY.md` |
 | `prompts/read.md` | the reading agent's brief |
@@ -95,8 +96,8 @@ The merge's files:
 
 - An object is in the registry or the exclusions, never both; to re-file one, drop it first.
 - `duplicates.csv`: key `source_a`, `object_a`, `source_b`, `object_b` in frame order, with
-  `verdict` and `notes`. The merge flags (`flagged`) two registry objects with equal row counts
-  and sorted column cardinalities; a shard answers `same` or `different`. Confirmed groups fold
+  `verdict` and `notes`. The merge flags (`flagged`) two registry objects that may be copies,
+  by `copies.py`; a shard answers `same` or `different`. Confirmed groups fold
   into their first object in frame order (nlme before MEMSS), the others leave the registry.
 - `dropped.csv`: key `source`, `object`; agent columns `source`, `object`, `reason`, plus
   `tier`. A dropped object leaves `registry.csv` and `excluded.csv` until a later shard re-files

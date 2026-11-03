@@ -2,7 +2,7 @@
 
 A problem holds the table a model is fitted to and metadata:
 the model formula, model family, prior, train/test splits, scales, and parameter names.
-`Problem.build` follows five decisions.
+`Problem.build` follows six decisions.
 1. Reproducible: a problem depends only on the pins, the row and the contract version.
    The splits are seeded by the problem id.
 2. Uniform: the response type fixes the family.
@@ -12,15 +12,19 @@ the model formula, model family, prior, train/test splits, scales, and parameter
    A design column the columns before it span over the kept rows is dropped and recorded.
    A row outside the contract (a categorical response, a censored model,
    doses on rows without a response) raises `Refused`.
-4. Scaled per fold: the table stays in raw units.
+4. Five levels per grouping factor: a factor with fewer over the kept rows
+   becomes a categorical covariate, since so few groups barely inform a standard deviation.
+   A row left without a factor, or with random slopes on such a factor, raises `Refused`.
+5. Scaled per fold: the table stays in raw units.
    Each fold records the scales of the rows its fit sees.
-5. Parameter names are based on brms and are in brms's block order.
+6. Parameter names are based on brms and are in brms's block order.
 
 pipeline:
 ---------
 a typed registry row and its loaded table
 -> refused if outside the contract             _refuseUncovered, _refuseSeparated
 -> composites added, incomplete rows dropped   withComposites, _dropIncomplete
+-> few-level factors made covariates           _convertFewLevelFactors
 -> each covariate's kind and coded columns     _typeCovariates, _codeTerms
 -> the columns the earlier ones span dropped   dropAliased
 -> the design, factors and response            _assembleDesign, _codeFactor, _codeResponse
@@ -34,7 +38,7 @@ from __future__ import annotations
 
 import hashlib
 import math
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from importlib.metadata import version
 from itertools import combinations
 from typing import Literal
@@ -219,7 +223,8 @@ class _Builder:
         'cor': Prior('lkj', (1,)),
         'sigma': Prior('student_t', (3, 0, 2.5)),
     }
-    FOLDS = 5  # per split regime, or G in `groups` if fewer
+    FOLDS = 5  # per split regime; at most FEWEST_LEVELS, so no `groups` fold is empty
+    FEWEST_LEVELS = 5  # of a grouping factor; one with fewer becomes a categorical covariate
 
     def __init__(self, row: Row, table: pd.DataFrame) -> None:
         self.row = row
@@ -231,6 +236,7 @@ class _Builder:
         if self.table.empty:  # nlme Phenobarb: doses and responses on different rows
             raise Refused(self.id, 'no row has every model value')
         self.dropped_share = (len(table) - len(self.table)) / len(table)
+        self._convertFewLevelFactors()
 
     def build(self) -> Problem:
         kinds = self._typeCovariates()
@@ -289,6 +295,28 @@ class _Builder:
         if self.row.trials:
             model.append(self.row.trials)
         return table.dropna(subset=model)
+
+    def _convertFewLevelFactors(self) -> None:
+        """Turns each grouping factor of fewer than FEWEST_LEVELS levels over the kept rows into a
+        categorical covariate, after the row's own.
+        Refuses a row with random slopes on such a factor or with no other factor."""
+        few = []
+        kept = []
+        for factor in self.row.grouping_factors:
+            if self.table[factor].nunique() < self.FEWEST_LEVELS:
+                few.append(factor)
+            else:
+                kept.append(factor)
+        levels = f'fewer than {self.FEWEST_LEVELS} levels'
+        for term in self.row.random_slopes:
+            if term.factor in few:
+                raise Refused(self.id, f'random slopes on {term.factor}, which has {levels}')
+        if not kept:
+            raise Refused(self.id, f'every grouping factor has {levels}')
+        covariates = (*self.row.covariates, *few)
+        self.row = replace(self.row, grouping_factors=tuple(kept), covariates=covariates)
+        # integer codes would type as continuous
+        self.table = self.table.astype({factor: 'category' for factor in few})
 
     def _typeCovariates(self) -> dict[str, str]:
         """Returns each covariate's kind, by the typing rule."""
@@ -359,12 +387,9 @@ class _Builder:
         digest = hashlib.sha256(self.id.encode()).digest()
         seed = int.from_bytes(digest[:8], 'big')
         rng = np.random.default_rng(seed)
-        regimes = {'rows': self._dealRows(rng, factors)}
-        first = factors[self.row.grouping_factors[0]]
-        groups = first.max() + 1
-        if groups > 2:  # holding out one of two groups would leave just one
-            regimes['groups'] = self._dealGroups(rng, first)
-        return regimes
+        rows = self._dealRows(rng, factors)  # drawn before the groups
+        groups = self._dealGroups(rng, factors[self.row.grouping_factors[0]])
+        return {'rows': rows, 'groups': groups}
 
     def _dealRows(self, rng: np.random.Generator, factors: dict[str, pd.Series]) -> pd.Series:
         """Returns each row's fold, the rows dealt into FOLDS folds in seeded order.
@@ -382,12 +407,11 @@ class _Builder:
 
     def _dealGroups(self, rng: np.random.Generator, codes: pd.Series) -> pd.Series:
         """Returns each row's fold.
-        Its group is dealt whole into min(FOLDS, G) folds in seeded order."""
+        Its group is dealt whole into FOLDS folds in seeded order."""
         groups = codes.max() + 1
-        folds = min(self.FOLDS, groups)
         order = self._drawOrder(rng, groups)  # (m,) group codes
         group_folds = np.empty(groups, dtype=np.int8)  # (m,)
-        group_folds[order] = np.arange(groups) % folds
+        group_folds[order] = np.arange(groups) % self.FOLDS
         return pd.Series(group_folds[codes.to_numpy()], index=self.table.index)  # (n,)
 
     @staticmethod
@@ -406,9 +430,8 @@ class _Builder:
         columns = [column for column in continuous if column in table]  # not a dropped one
         if self.row.response_type == 'continuous':
             columns.append(self.row.response)
-        splits = [regime for regime in ('rows', 'groups') if regime in table]
         scales = {'full': (self._measureFold(table[columns]),)}
-        for regime in splits:
+        for regime in ('rows', 'groups'):
             folds = table[regime].max() + 1  # dealt from fold 0
             fold_scales = []
             for fold in range(folds):

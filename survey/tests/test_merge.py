@@ -5,6 +5,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+import copies
 import pandas as pd
 import pytest
 import yaml
@@ -248,6 +249,23 @@ def test_equal_row_count_and_column_cardinalities_flag_a_duplicate_candidate(mer
     rows = readRows(merger.survey / 'duplicates.csv')
     assert [(r['source_a'], r['verdict']) for r in rows] == [('cattle', 'different')]
     assert len(readRows(merger.registry / 'registry.csv')) == 3
+
+
+def test_a_merger_profiles_each_registry_object_once_across_its_merges(merger, monkeypatch):
+    """A run of several merges profiles each table once, since a large table's profile takes
+    minutes (kaggle_safecast's half an hour), and a pinned table never changes."""
+    profiled = []
+
+    def countingProfile(table):
+        profiled.append(table.shape)
+        return profileTable(table)
+
+    profileTable = copies.profileTable
+    monkeypatch.setattr(copies, 'profileTable', countingProfile)
+    mergeShard(merger, FIXTURES / 'registry_herds.csv')
+    mergeShard(merger, FIXTURES / 'registry_cattle.csv')
+    mergeShard(merger, FIXTURES / 'registry_herds.csv')
+    assert len(profiled) == 2
 
 
 def test_a_confirmed_duplicate_collapses_into_the_earliest_tier_row_listing_both_sources(merger):

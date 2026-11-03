@@ -215,8 +215,8 @@ def test_summary_shows_one_pooled_table_per_measured_file(merger):
     for heading, axes in statistics.items():
         assert [row[0] for row in tableRows(summary, heading)] == list(axes)
     assert tableRows(summary, '## Design columns\n', '| statistic |') == [
-        ['condition_doc', '2', '3.452', '3.452', '3.452', '6.5784', '6.5784', '6.5784', '6.5784'],
-        ['condition_all', '2', '10.2274', '10.2274', '10.2274', '34.2099', '34.2099', '34.2099', '34.2099'],
+        ['condition_doc', '2', '3.452', '3.452', '3.452', '10.745', '10.745', '10.745', '10.745'],
+        ['condition_all', '2', '19.0451', '19.0451', '19.0451', '34.2099', '34.2099', '34.2099', '34.2099'],
     ]  # fmt: skip
     pairs = summary.split('## Quirk statistics per factor pair\n', 1)[1]
     assert '| pair relation | n | share |' in pairs and '| superior | n | share |' in pairs

@@ -47,6 +47,8 @@ from mixedbench.registry.row import Row, writeCsv
 # =====================================================================================
 # what the family rule cannot see, read off each row's documented model
 
+HAZARD = 'hazard_model: a discrete-time hazard without a person intercept (#161)'
+
 # rows the documented model does not survive into the contract, though the family rule covers them:
 # an empty `random_slopes` there is no approved intercept-only model (#27, #45).
 REFUSED = {
@@ -54,11 +56,9 @@ REFUSED = {
     'nlme/IGF/1': 'nonlinear_parameter_model: random effects on nonlinear parameters (#27)',
     'nlme/Muscle/1': 'nonlinear_parameter_model: random effects on nonlinear parameters (#27)',
     'nlme/Soybean/1': 'nonlinear_parameter_model: random effects on nonlinear parameters (#27)',
-    # one-compartment pharmacokinetic models, the nlme tables and Stata's fuller copies (notes)
+    # one-compartment pharmacokinetic models (notes)
     'nlme/Phenobarb/1': 'nonlinear_parameter_model: a pharmacokinetic model (#32)',
     'nlme/Quinidine/1': 'nonlinear_parameter_model: a pharmacokinetic model (#32)',
-    'stata_phenobarb/phenobarb.dta/1': 'nonlinear_parameter_model: a pharmacokinetic model (#32)',
-    'stata_quinidine/quinidine.dta/1': 'nonlinear_parameter_model: a pharmacokinetic model (#32)',
     'nlme/Ovary/1': 'non_affine_feature: the slope is on sin(2*pi*Time) (#27)',
     'gumundsdottir_2026_osf_6/Questionnaire_data_long/1': (
         'non_affine_feature: time is a non-linear recode of wave (#27)'
@@ -105,12 +105,12 @@ REFUSED = {
     ),
     # a row that stands for several observations, which the documented fit weights by count (#61)
     'agridat/keen.potatodamage/1': 'frequency_weighted: each cell weighted by count (#61)',
-    'rabe_hesketh/thailand.dta/1': (
-        'frequency_weighted: each covariate pattern weighted by wt1 (#61)'
-    ),
     'rabe_hesketh/twin_hay.dta/1': (
         'frequency_weighted: each response pattern weighted by freq (#61)'
     ),
+    'mixor/concen/1': 'frequency_weighted: each response pattern weighted by freq (#162)',
+    'mixor/norcag/1': 'frequency_weighted: each response pattern weighted by freq (#162)',
+    'mixor/irt.data/1': 'frequency_weighted: each response pattern weighted by freq (#162)',
     # a documented model whose likelihood the filed rows do not hold (#61)
     'rabe_hesketh/elections.dta/1': (
         'choice_model: rank == 1 in conditional and mixed logits over choice sets (#61)'
@@ -135,9 +135,6 @@ REFUSED = {
     ),
     'hox/AstLrd.sav/1': (
         'known_sampling_variance: meta-analysis log odds ratios with variances VarLor (#82)'
-    ),
-    'rabe_hesketh/contraceptive.dta/1': (
-        'categorical_response: method, multinomial with correlated district intercepts (#82)'
     ),
     'rabe_hesketh/ecls_child.dta/1': (
         'joined_covariate: nbhoodcl comes from ecls_school.dta, merged by s4_id (#82)'
@@ -164,9 +161,71 @@ REFUSED = {
     'rabe_hesketh/mortality.dta/1': 'censored_response: a censored time filed as continuous (#61)',
     'rabe_hesketh/recurrent.dta/1': 'censored_response: a censored time filed as continuous (#61)',
     'hox/SibDiv.sav/1': 'censored_response: a censored time filed as continuous (#61)',
-    'stata_nlswork3/nlswork3.dta/1': 'censored_response: a censored wage filed as continuous (#61)',
     'pymc_examples/examples/data/external_pp.csv/1': (
         'censored_response: a censored score filed as continuous (#61)'
+    ),
+    'beyondarena_sat11_hand_algo_runtime/sat11_hand_algo_runtime.pq/1': (
+        'censored_response: a log runtime censored at log(5000) filed as continuous (#162)'
+    ),
+    'openml_41700/dataset_41700.pq/1': (
+        'censored_response: a runtime censored at the 3600 s cutoff filed as continuous (#162)'
+    ),
+    'openml_43071/dataset_43071.pq/1': (
+        'censored_response: a PAR10 runtime with a timeout penalty filed as continuous (#162)'
+    ),
+    'mixor/SmokeOnset/1': 'censored_response: a censored onset interval filed as continuous (#162)',
+    'mixor/SmokeOnset/2': 'censored_response: a censored onset interval filed as continuous (#162)',
+    # a response computed from several columns, which the contract would model as its first (#162)
+    'AER/CASchools/1': 'computed_response: the average of math and read (#162)',
+    'Ecdat/Star/1': 'computed_response: the sum of tmathssk and treadssk (#162)',
+    'Ecdat/PSID/1': 'computed_response: the log hourly wage from earnings and hours (#162)',
+    'AER/Fatalities/1': (
+        'computed_response: the deaths per 10,000 residents from fatal and pop (#162)'
+    ),
+    'osf_confidence_kvam_2016/data_Kvam_2016.csv/1': (
+        'computed_response: the log odds of Confidence folded by accuracy (#162)'
+    ),
+    'metadat/dat.besson2016/1': 'computed_response: a standardized mean difference (#162)',
+    'metadat/dat.bornmann2007/1': 'computed_response: a log odds ratio (#162)',
+    'metadat/dat.bourassa1996/1': 'computed_response: a log odds ratio (#162)',
+    'metadat/dat.curtis1998/1': 'computed_response: a log ratio of means (#162)',
+    'metadat/dat.dagostino1998/1': 'computed_response: a standardized mean difference (#162)',
+    'DAAG/codling/1': (
+        'computed_response: the complementary log-log of the mortality adjusted for cm (#162)'
+    ),
+    'osf_confidence_siedlecka_2019/data_Siedlecka_2019.csv/1': (
+        'computed_response: the accuracy, Response equal to Stimulus (#162)'
+    ),
+    'osf_confidence_wierzchon_2014/data_Wierzchon_2014.csv/1': (
+        'computed_response: the accuracy, Response equal to Stimulus (#162)'
+    ),
+    'osf_manylabs3/ML3AllSites.csv/1': (
+        'computed_response: the prime-consistent answer, SRMeetingResponse by SRCondition (#162)'
+    ),
+    # a person-period table of a discrete-time hazard, which its source fits without a person
+    # intercept, since a person holds at most one event (#161)
+    'alda/aldatxt/teachers_pp.txt/1': HAZARD,
+    'alda/aldatxt/tenure_pp.txt/1': HAZARD,
+    'alda/aldatxt/mathdropout_pp.txt/1': HAZARD,
+    'alda/aldatxt/firstarrest_pp.txt/1': HAZARD,
+    'alda/aldatxt/suicide_pp.txt/1': HAZARD,
+    'alda/aldatxt/congress_pp.txt/1': HAZARD,
+    'alda/aldatxt/cocaine_relapse_pp.txt/1': HAZARD,
+    'hox/FirstSexPP.sav/1': HAZARD,
+    'alda/aldatxt/depression_pp.txt/1': HAZARD,
+    # a table whose rows stack posterior draws of the same units (#161)
+    'koczynska_2026_osf_49/merge_iter_20241030/1': (
+        'stacked_draws: 100 posterior draws of the same country-years stacked as rows (#161)'
+    ),
+    # an ordinal text response, which loads in alphabetical order, not the source's (#167)
+    'kaggle_corporate_credit_rating/corporate_rating.csv/1': (
+        'level_order: Rating loads A < AA < AAA, the scale runs D < ... < AAA (#167)'
+    ),
+    'kaggle_credit_score_classification/train.csv/1': (
+        'level_order: Credit_Score loads Good < Poor < Standard (#167)'
+    ),
+    'beyondarena_ghanas_indigenous_intel/ghanas_indigenous_intel.pq/1': (
+        'level_order: rainfall loads HEAVYRAIN < MEDIUMRAIN < NORAIN < SMALLRAIN (#167)'
     ),
 }
 
@@ -197,7 +256,6 @@ FIDELITY: dict[str, Fidelity] = {
     'rabe_hesketh/fat.dta/1': 'approximate',  # the hinge after = pmax(time, 0) dropped (#61)
     'rabe_hesketh/yogurt.dta/1': 'approximate',  # two brand contrasts, no intercept (#61)
     'koczynska_2026_osf_48/data_means_20241030/1': 'approximate',
-    'koczynska_2026_osf_49/merge_iter_20241030/1': 'approximate',
     'naranowicz_2024_osf_2/MO--ST_beh.csv/2': 'approximate',
     'sequestro_2024_osf_2/EXP2_3_pooled.csv/1': 'approximate',
     'sequestro_2024_osf_11/EXP2_elevator_main.csv/1': 'approximate',

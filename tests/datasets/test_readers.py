@@ -5,6 +5,8 @@ the awkward files met in the pull, plus single R files as deposits serve them.""
 
 from __future__ import annotations
 
+import gzip
+import shutil
 import tarfile
 from collections.abc import Sequence
 from functools import partial
@@ -132,6 +134,13 @@ def test_a_rejected_rds_is_named_by_its_file_and_one_rdata_cannot_parse_has_no_t
     assert readFixture('fit.rds') == ({'fit': None}, 'rdata')
 
 
+def test_an_r_file_whose_strings_neither_reader_decodes_has_no_table():
+    """bayesrules' book_banning holds a Windows-1252 apostrophe without an encoding mark:
+    pyreadr refuses it and rdata cannot decode it either, so the object stays without a table
+    rather than failing the source (#164)."""
+    assert readFixture('banned.rda') == ({'banned': None}, 'rdata')
+
+
 # ==============================================================================================
 # utils::data() files read without R (#8)
 # ==============================================================================================
@@ -145,6 +154,16 @@ def test_a_data_txt_reads_as_r_reads_it_in_the_c_locale():
     tables, reader = readers.read(FIXTURES / 'typed.txt', 'data/typed.txt', cran=True)
     twin, _ = readFixture('typed.rda')
     assert reader == 'pandas'
+    pd.testing.assert_frame_equal(tables['typed'], twin['typed'])
+
+
+def test_a_gzipped_data_file_is_named_and_read_as_data_reads_it(tmp_path):
+    """MCMCglmm ships `data/BTdata.tab.gz`, which utils::data() reads as the `.tab` it wraps
+    and names `BTdata` (#166)."""
+    file = tmp_path / 'typed.txt.gz'
+    file.write_bytes(gzip.compress((FIXTURES / 'typed.txt').read_bytes()))
+    tables, _ = readers.read(file, 'data/typed.txt.gz', cran=True)
+    twin, _ = readFixture('typed.rda')
     pd.testing.assert_frame_equal(tables['typed'], twin['typed'])
 
 
@@ -226,10 +245,15 @@ def test_a_gzipped_tsv_is_read_as_the_tsv_it_wraps():
     assert list(apnea['Subject']) == [1, 1, 2, 2]
 
 
-def test_a_parquet_file_reads():
-    """OpenML serves every dataset as `dataset_<id>.pq`; the Tier O hits come that way."""
-    tables, _ = readFixture('dataset_42.pq')
-    assert list(tables['dataset_42.pq']['school']) == ['GP', 'GP', 'MS']
+@pytest.mark.parametrize('suffix', ['.pq', '.parquet'], ids=['openml', 'zip member'])
+def test_a_parquet_file_is_data_and_reads(tmp_path, suffix):
+    """OpenML serves every dataset as `dataset_<id>.pq`. Kaggle's CTU-13 copy ships
+    `.parquet` files inside a zip, where `file` cannot rename them (#163)."""
+    file = tmp_path / f'dataset_42{suffix}'
+    shutil.copy(FIXTURES / 'dataset_42.pq', file)
+    tables, _ = readers.read(file, file.name)
+    assert readers.isData(file)
+    assert list(tables[file.name]['school']) == ['GP', 'GP', 'MS']
 
 
 def test_whitespace_aligned_text_and_latin1_text_read(example):
@@ -254,6 +278,30 @@ def test_padded_delimited_text_reads_with_clean_names_and_missing_values(example
     assert list(padded['group']) == ['NN', 'NN', 'PP']
     assert padded['recovered'].dtype.kind == 'f'
     assert padded['recovered'].isna().tolist() == [False, True, False]
+
+
+def test_a_column_of_logicals_with_missing_values_keeps_them(tmp_path):
+    """ManyBabies 1's trial table marks a second session TRUE, FALSE or NA; pandas reads the
+    column as Python booleans beside NaN, which the field stripping leaves alone (#165)."""
+    file = tmp_path / 'trials.csv'
+    file.write_text('lab,second_session\na,TRUE\nb,FALSE\nc,NA\n')
+    tables, _ = readers.read(file, 'trials.csv')
+    sessions = tables['trials.csv']['second_session']
+    assert sessions[:2].tolist() == [True, False]
+    assert sessions.isna().tolist() == [False, False, True]
+
+
+def test_a_column_of_numbers_that_turns_to_words_keeps_every_value(tmp_path):
+    """ManyLabs 3's ML3AllSites.csv and a trade table's commodity codes read as numbers for many
+    rows before one reads as a word. pandas' C reader types a wide file chunk by chunk, about
+    2**20 cells each, unless told to type each column whole; the mixed column then lost its
+    numbers to the field stripping (#171)."""
+    file = tmp_path / 'trade.csv'
+    filler = ',0' * 511
+    rows = ['010119' + filler] * 2100 + ['TOTAL' + filler]
+    file.write_text('code' + ''.join(f',x{k}' for k in range(511)) + '\n' + '\n'.join(rows) + '\n')
+    codes = readers.read(file, 'trade.csv')[0]['trade.csv']['code']
+    assert codes.tolist() == ['010119'] * 2100 + ['TOTAL']
 
 
 def test_a_banner_of_hash_lines_above_the_table_is_skipped(example):
@@ -392,6 +440,7 @@ TEXT_ROUTES = {  # route: file name, the text it holds, read's options
     'sniffed separator': ('scores.csv', partial(lines, separator=','), {}),
     'decimal commas': ('scores.csv', commaLines, {}),  # pymc-examples' marketing.csv
     'semicolons, decimal points': ('scores.csv', partial(lines, separator=';'), {}),  # rethinking
+    'tabs': ('scores.tsv', partial(lines, separator='\t'), {}),  # OSF's dlp-trials.txt
     'whitespace': ('scores.txt', partial(lines, separator='  '), {}),
     'cran data folder': ('scores.txt', lines, {'cran': True}),
     'layout of spans': (  # 24 characters hold the longest repr of a double

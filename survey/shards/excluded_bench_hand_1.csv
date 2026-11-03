@@ -1,0 +1,4 @@
+"source","object","reason","detail"
+"kaggle_safecast","measurements.csv","too large","82.6 million readings in a 10.3 GB CSV: the loader parses it in 39 minutes at a 112 GB peak, and every merge and admission loads it. The hand check of #162 found it grouped by Loader ID, the upload log a reading came in."
+"census_acs_pums_2018","psam_pusa.csv","too large","1,648,512 persons in 286 columns, the first half of the ACS 2018 national person file: each of its three models takes the registry's measurement about half an hour, on every merge. The hand check of #162 found it grouped by state, PUMA and household (SERIALNO)."
+"census_acs_pums_2018","psam_pusb.csv","too large","1,566,027 persons in 286 columns, the second half of the ACS 2018 national person file: each of its three models takes the registry's measurement about half an hour, on every merge. The hand check of #162 found it grouped by state, PUMA and household (SERIALNO)."

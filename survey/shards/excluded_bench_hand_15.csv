@@ -1,0 +1,2 @@
+"source","object","reason","detail"
+"MPDiR","HSP","no grouping structure","Three observers (SH and SS with two runs, MHP with one; Hecht, Shlaer and Pirenne 1942), six light intensities per run. MPDiR's Ch1.R fits one probit psychometric function per observer and run, glm(cbind(NumYes, NumNo) ~ id/log(Quanta) - 1, binomial(probit)) with id = interaction(Obs, Run): five fixed functions. Three observers are fewer than five sampled units, and the runs of one observer sample none, so nothing groups (hand check #162)."

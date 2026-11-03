@@ -19,9 +19,9 @@ import argparse
 import hashlib
 import re
 import sys
-from itertools import combinations
 from pathlib import Path
 
+import copies
 import pandas as pd
 from measure import measureRegistry
 from mixedbench.contract import withComposites
@@ -89,6 +89,9 @@ class Merger:
         self.registry, self.survey = Path(registry), Path(survey)
         self.loader = loader or Loader(self.registry / 'cache')
         self.frame = readFrame(self.registry)
+        # each registry object's profile for the flag, computed once over the merges this
+        # merger runs: a pinned table never changes, and a large one takes minutes
+        self.profiles: dict[Key, copies.Profile] = {}
 
     # ---------------------------------------------------------------------------------
     # load
@@ -478,25 +481,22 @@ class Merger:
         return registry.assign(sources=sources)[keep].reset_index(drop=True)
 
     def flagCandidates(self, registry: pd.DataFrame, duplicates: pd.DataFrame) -> list[dict]:
-        """Pairs of registry objects with equal row count and sorted column cardinalities that
-        no verdict row covers yet, earliest tier first."""
-        objects = sorted(set(self.keysOf(registry)), key=self.frame.rank)
-        groups: dict[tuple, list[Key]] = {}  # signature -> its objects in frame order
-        for key in objects:
-            groups.setdefault(self.signature(key), []).append(key)
+        """Pairs of registry objects that may be copies and no verdict row covers yet, earliest
+        tier first."""
+        profiles = {}
+        for label, name in sorted(set(self.keysOf(registry)), key=self.frame.rank):
+            if (label, name) not in self.profiles:
+                table = self.loader.load(self.frame.sources[label], name)
+                self.profiles[label, name] = copies.profileTable(table)
+            profiles[label, name] = self.profiles[label, name]
         first = zip(duplicates['source_a'], duplicates['object_a'])
         second = zip(duplicates['source_b'], duplicates['object_b'])
         decided = set(zip(first, second))  # pairs are stored earliest tier first too
-        pairs = [pair for group in groups.values() for pair in combinations(group, 2)]
-        undecided = [(a, b) for a, b in pairs if (a, b) not in decided]
+        undecided = [(a, b) for a, b in copies.findPairs(profiles) if (a, b) not in decided]
         return [
             {'source_a': a[0], 'object_a': a[1], 'source_b': b[0], 'object_b': b[1], 'verdict': 'flagged', 'notes': ''}
             for a, b in undecided
         ]  # fmt: skip
-
-    def signature(self, key: Key) -> tuple[int, tuple[int, ...]]:
-        table = self.loader.load(self.frame.sources[key[0]], key[1])
-        return (len(table), tuple(sorted(table.nunique())))
 
     # ---------------------------------------------------------------------------------
     # measure: registry -> measured files -> manifest.csv

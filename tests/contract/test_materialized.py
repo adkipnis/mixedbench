@@ -14,6 +14,7 @@ import random
 import socket
 import tempfile
 from dataclasses import fields, replace
+from datetime import date
 from pathlib import Path
 
 import pandas as pd
@@ -39,7 +40,7 @@ def fixtureTable() -> pd.DataFrame:
     return pd.DataFrame(
         {
             'g': [f'g{i % 8}' for i in range(n)],
-            'h': [f'h{i % 3}' for i in range(n)],
+            'h': [f'h{i % 5}' for i in range(n)],
             'x': [0.25 * i - 3 for i in range(n)],
             'diet': pd.Categorical(['a', 'b', 'c', 'b'] * 10, categories=['a', 'b', 'c']),
             'dose': [0.5, 2.0] * 20,  # numeric binary: levels (0.5, 2.0)
@@ -93,6 +94,24 @@ def test_a_loaded_problem_equals_the_built_one_and_carries_the_written_hash(
     loaded = load(built.id, tmp_path)
     assertSameProblem(loaded, built)
     assert written == storedHash(tmp_path) == contractHash(loaded)
+
+
+def test_a_factor_of_dates_is_written_with_iso_levels_and_loads_back(tmp_path: Path) -> None:
+    """pyreadr loads an R `Date` column as `datetime.date` objects (bayesrules bike_users,
+    #162), which JSON cannot hold: the record writes each level as its ISO date,
+    and the loaded problem hashes those strings alike."""
+    table = fixtureTable().assign(h=[date(2011, 1, 1 + i % 5) for i in range(40)])
+    built = Problem.build(ROW, table)
+    written = materialize(built, tmp_path)
+    loaded = load(built.id, tmp_path)
+    assert loaded.levels['h'] == (
+        '2011-01-01',
+        '2011-01-02',
+        '2011-01-03',
+        '2011-01-04',
+        '2011-01-05',
+    )
+    assert written == contractHash(loaded)
 
 
 def refuseNetwork(*args, **kwargs) -> None:
