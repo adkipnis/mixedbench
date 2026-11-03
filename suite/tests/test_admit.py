@@ -29,10 +29,11 @@ CELLS = {column: '' for column in COLUMNS} | {
 
 
 def groupedTable(missing: int = 0) -> pd.DataFrame:
-    """Twelve rows over four groups; the first `missing` rows lack their response."""
+    """Twelve rows over six groups, enough levels to stay a grouping factor;
+    the first `missing` rows lack their response."""
     y = [float(i % 5) for i in range(12)]
     y[:missing] = [float('nan')] * missing
-    return pd.DataFrame({'g': [f'g{i % 4}' for i in range(12)], 'x': range(12), 'y': y})
+    return pd.DataFrame({'g': [f'g{i % 6}' for i in range(12)], 'x': range(12), 'y': y})
 
 
 def scratchRegistry(dir: Path, objects: list[str], **overrides: str) -> list[Row]:
