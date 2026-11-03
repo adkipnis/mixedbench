@@ -89,6 +89,9 @@ class Merger:
         self.registry, self.survey = Path(registry), Path(survey)
         self.loader = loader or Loader(self.registry / 'cache')
         self.frame = readFrame(self.registry)
+        # each registry object's profile for the flag, computed once over the merges this
+        # merger runs: a pinned table never changes, and a large one takes minutes
+        self.profiles: dict[Key, copies.Profile] = {}
 
     # ---------------------------------------------------------------------------------
     # load
@@ -482,8 +485,10 @@ class Merger:
         tier first."""
         profiles = {}
         for label, name in sorted(set(self.keysOf(registry)), key=self.frame.rank):
-            table = self.loader.load(self.frame.sources[label], name)
-            profiles[label, name] = copies.profileTable(table)
+            if (label, name) not in self.profiles:
+                table = self.loader.load(self.frame.sources[label], name)
+                self.profiles[label, name] = copies.profileTable(table)
+            profiles[label, name] = self.profiles[label, name]
         first = zip(duplicates['source_a'], duplicates['object_a'])
         second = zip(duplicates['source_b'], duplicates['object_b'])
         decided = set(zip(first, second))  # pairs are stored earliest tier first too
