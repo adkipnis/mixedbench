@@ -650,6 +650,50 @@ reading's open disagreements, four to eight per tier.
 - The merge's measurement stopped on six designs over every column, where the contract drops a
   part of a documented interaction, so the measured files follow at #152's rerun.
 
+## Few-level factors (#161, 2026-11-02)
+
+- `Problem.build` turns a grouping factor of fewer than five levels over the kept rows into a
+  categorical covariate after the row's covariates, and refuses a row with slopes on one or
+  with no factor left (ADR 0001, amended 2026-11-02).
+- A fingerprint of every candidate before and after: 28 refused (15 without a factor, 2 with
+  slopes, 11 by hand: the ten hazard rows and koczynska's stacked draws), 31 hashes moved, and
+  the other 536 problems and their files byte for byte.
+- Two converted problems drop a column as aliased, as lme4 would: geepack spruce's `chamber[4]`
+  and voorspoels's `premset:list`.
+- `fits.csv` gained `max_abs_eta`, the largest absolute linear predictor of a fit, as its last
+  column and no axis of `quantiles.yaml`.
+
+## Grouped benchmarks (#162, 2026-10-31 to 2026-11-03)
+
+- Two passes read new tables under the survey's rules, each fetched from its original source:
+  the grouped tables of benchmark collections, BeyondArena's and OpenClustered's among them (72
+  sources, 80 rows, 38 exclusions), then 31 whole CRAN packages, two books' data and large
+  replication studies (419 rows, 503 exclusions).
+- An outside reader checked every exclusion and every row below `high`
+  (`benchmarks/sample.csv`). Alex settled each disagreement: 316 rows were rewritten by hand
+  and 15 filed out as exclusions. Its rulings joined the reading rulings below.
+- Four reader fixes came with them: `.parquet` loads as `.pq` (#163), an undecodable R file
+  as an object without a table (#164), a logical column with missing values from delimited
+  text (#165), and a gzipped CRAN data file under its `data()` name (#166).
+- Delimited text reads once with pandas' C engine, and `max_abs_rho` ranks the columns that
+  share a pattern of gaps together (#171). No measured value moved.
+- `copies.py` flags two registry tables that may be copies, by their shape and cardinalities
+  or by shared distinctive values, and the merge folds the confirmed ones (#168). 14 copies
+  were excluded as `derived or duplicated table`: an earlier copy that is wrong or lossy, or a
+  later one that is a subset.
+- kaggle_safecast and the ACS PUMS tables are excluded as `too large`.
+- The merge took `registry.csv` from 692 to 1,076 rows (623 to 942 objects, 368 in and 49
+  out), `excluded.csv` from 2,136 to 2,865 rows and `duplicates.csv` from 474 to 618 pairs.
+- `fits.py` refitted every row, since earlier runs lacked `max_abs_eta`. No other value of the
+  563 rows fitted before moved. `fits_preparation.csv` weights mixor concen and irt.data by
+  `freq`.
+- `suite/admit.py` lists 908 candidates: 386 came in, and the 45 whose rows left as copies or
+  exclusions went out. No kept candidate's hash moved. Of the 50 new refusals, 26 come from a
+  hand decision or the notes' marker: computed responses, censored runtimes, the three text
+  ordinals of #167 and mixor's three frequency-weighted rows.
+- A level of dates, by which bayesrules bike_users groups, enters the problem's record as its
+  ISO date. No earlier hash could move, since no problem had one.
+
 ## Reading rulings (m3#22 to #15)
 
 The rulings [`prompts/read.md`](prompts/read.md) does not carry, from the agents' `RULE GAP` notes and Alex's checks, each with an example
