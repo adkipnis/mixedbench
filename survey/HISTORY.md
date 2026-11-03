@@ -694,6 +694,27 @@ reading's open disagreements, four to eight per tier.
 - A level of dates, by which bayesrules bike_users groups, enters the problem's record as its
   ISO date. No earlier hash could move, since no problem had one.
 
+## Fit errors (#175, 2026-11-03 to 2026-11-04)
+
+- 62 of #162's 368 new rows ended `error` and 4 `timeout`, and their messages were read for
+  patches a user would apply, as in #111.
+- `shards/registry_fits_3.csv` rewrote five cells in `formula` and `notes` alone. Four remarks
+  moved to `notes`: PlodiaRB's residual variance fixed at 1, KH2004's compound-symmetric
+  residual, which its `rat:cond` intercept gives, and the gamma-distributed intercept of Stata's
+  xtpoisson in airfare model 2 and ships. R2MLwiN cvd's fractional polynomial takes age divided
+  by 100, the same model, which the logit fit needs to converge.
+- `fits_preparation.csv` lists the subset Cameron and Trivedi's program fits for Ecdat PSID:
+  women aged 36 with positive earnings and a known education.
+- Ecdat breaches and sigrist2023 news hold counts, so their response type stands. Their Poisson
+  fits of a log time out on R's warning per non-integer value, but breaches' rounded values fit
+  in 19 seconds.
+- Left as they fail: 33 metadat and psymetadata rows with an effect per observation or a known
+  sampling variance, 14 models lme4 cannot state (dispersion models, a CAR effect,
+  autocorrelated residuals, nonlinear means, a Gaussian process, a pedigree, `normMMSE`,
+  `Surv`, a cumulative probit) and 11 fits lme4 refuses on the data or ends at the hour.
+- The six rows refitted: five `ok`, and airfare model 2 a `warning` on convergence. No other row
+  of `fits.csv` moved, and `suite/admit.py` left `suite/` as it was.
+
 ## Reading rulings (m3#22 to #15)
 
 The rulings [`prompts/read.md`](prompts/read.md) does not carry, from the agents' `RULE GAP` notes and Alex's checks, each with an example
