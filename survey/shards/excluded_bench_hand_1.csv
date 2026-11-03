@@ -1,0 +1,2 @@
+"source","object","reason","detail"
+"kaggle_safecast","measurements.csv","too large","82.6 million readings in a 10.3 GB CSV: the loader parses it in 39 minutes at a 112 GB peak, and every merge and admission loads it. The hand check of #162 found it grouped by Loader ID, the upload log a reading came in."
