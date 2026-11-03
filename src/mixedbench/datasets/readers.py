@@ -20,6 +20,7 @@ a file in a source's tree
 
 from __future__ import annotations
 
+import csv
 import gzip
 import io
 import json
@@ -27,7 +28,6 @@ import struct
 import warnings
 import zipfile
 from collections import Counter
-from collections.abc import Callable
 from pathlib import Path
 from typing import Literal
 
@@ -93,11 +93,19 @@ def numbers(values: pd.Series) -> pd.Series:
     return values.astype('float64')
 
 
-def _readText(read: Callable[..., pd.DataFrame], file: Path, **options) -> pd.DataFrame:
-    """A pandas text reader's table, its float columns read again as text and made numbers."""
-    table = read(file, **options)
+def _readCsv(file: Path, **options) -> pd.DataFrame:
+    """pandas' C reader, its floats parsed by Python's float() (`round_trip`), not by pandas'
+    own conversion, which numbers() avoids. A column is typed whole, not chunk by chunk,
+    where a column of numbers that turns to words would mix types."""
+    return pd.read_csv(file, engine='c', float_precision='round_trip', low_memory=False, **options)
+
+
+def _readFixedWidth(file: Path, **options) -> pd.DataFrame:
+    """read_fwf's table, its float columns read again as text and made numbers,
+    since read_fwf has no C engine to parse them by float()."""
+    table = pd.read_fwf(file, **options)
     floats = table.columns[table.dtypes == 'float64']
-    text = read(file, **options, dtype={column: str for column in floats})
+    text = pd.read_fwf(file, **options, dtype={column: str for column in floats})
     return table.assign(**{column: numbers(text[column]) for column in floats})
 
 
@@ -262,7 +270,7 @@ class _DataFolder:
         if bare(file).suffix == '.csv':
             sep = ';'
         options = {'sep': sep, 'quotechar': '"', 'na_values': ['NA'], 'keep_default_na': False}
-        table = _readText(pd.read_csv, file, **options)
+        table = _readCsv(file, **options)
         stem = Path(file.name.removesuffix('.gz')).stem  # data() reads BTdata.tab.gz as BTdata
         return {stem: table.assign(**_DataFolder._typeConvert(table))}
 
@@ -348,8 +356,8 @@ class PandasFile:
                 start, _, end = span.partition('-')
                 spans.append((int(start) - 1, int(end or start)))
         if spans:
-            return _readText(pd.read_fwf, file, colspecs=spans, names=names, header=None)
-        return _readText(pd.read_csv, file, sep=r'\s+', names=names, header=None)
+            return _readFixedWidth(file, colspecs=spans, names=names, header=None)
+        return _readCsv(file, sep=r'\s+', names=names, header=None)
 
     @staticmethod
     def _readByExtension(file: Path) -> pd.DataFrame | None:
@@ -392,23 +400,21 @@ class PandasFile:
 
     @staticmethod
     def _readDelimited(file: Path) -> pd.DataFrame | None:
-        """The separator sniffed, or whitespace where the header holds none of the usual ones.
-        A `#` banner above the table is skipped, and what does not parse is no table."""
+        """The separator sniffed from the header, or whitespace where it holds none of the usual
+        ones. A `#` banner above the table is skipped, and what does not parse is no table."""
         # undecodable bytes (a latin-1 degree sign) replaced, a byte-order mark dropped
         options = {'encoding': 'utf-8-sig', 'encoding_errors': 'replace'}
         lines, header = PandasFile.banner(file)
-        # the sniffer needs the python engine, which ignores quotes under a regex separator; the C
-        # engine honors them, as read.table does (R's write.table output)
-        sep, engine = None, 'python'
-        if not any(mark in header for mark in ',;\t|'):  # columns aligned with runs of spaces
-            sep, engine = r'\s+', 'c'
+        sep = r'\s+'  # columns aligned with runs of spaces
+        if any(mark in header for mark in ',;\t|'):
+            # what pandas' python engine sniffs (sep=None), read by the C engine in one pass;
+            # pandas decodes utf-8-sig, so its sniffer never sees a byte-order mark
+            sep = csv.Sniffer().sniff(header.removeprefix('\ufeff')).delimiter
         decimal = '.'
         if ';' in header:  # R's write.csv2 writes decimal commas
             decimal = ','
         try:  # pandas opens a `.gz` itself
-            table = _readText(
-                pd.read_csv, file, sep=sep, skiprows=len(lines), engine=engine, **options
-            )
+            table = _readCsv(file, sep=sep, skiprows=len(lines), **options)
         except pd.errors.ParserError:
             return None
         return PandasFile._tidyText(table, decimal)
@@ -420,8 +426,9 @@ class PandasFile:
         if file.suffix.lower() == '.gz':
             opener = gzip.open
         lines = []
-        # text mode ends a line at `\r` too, as classic Mac OS wrote them
-        with opener(file, 'rt', encoding='utf-8', errors='replace') as f:
+        # text mode ends a line at `\r` too, as classic Mac OS wrote them; the header keeps its
+        # line ending, as the line pandas' sniffer reads does
+        with opener(file, 'rt', encoding='utf-8', errors='replace', newline='') as f:
             for line in f:
                 if not line.startswith('#'):
                     return lines, line
