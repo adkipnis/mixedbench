@@ -109,7 +109,7 @@ line-length = 100
 quote-style = "single"
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["tests", "suite/tests"]
 # pytest's defaults kept; survey tests run by hand (`uv run pytest survey/tests`);
 # registry/cache holds fetched repositories with tests of their own
 norecursedirs = [".*", "build", "dist", "venv", "*.egg", "survey", "cache"]

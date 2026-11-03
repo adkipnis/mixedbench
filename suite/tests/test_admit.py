@@ -1,6 +1,6 @@
 """The admission script (#32): over a scratch registry it writes the suite's candidate list,
 one row per admissible registry row in registry order, and reports what it refused and the top
-of the dropped-share distribution (ADR 0002). Run by hand: `uv run pytest suite/tests`.
+of the dropped-share distribution (ADR 0002).
 
 The scratch registry is a `registry.csv` written in the package's dialect and read back through
 `registry.rows`; every row loads one small grouped table, held in memory by object name.

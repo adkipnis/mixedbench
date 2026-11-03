@@ -1,5 +1,5 @@
 """The driver (#68): one candidate's reference run by id or index, and the per-problem records
-collected into `references.csv`. Run by hand: `uv run pytest suite/tests`.
+collected into `references.csv`.
 
 The records are written as `references.run` writes `run.json`, under directories named apart
 from the ids, since collect finds a record by the id inside it.
