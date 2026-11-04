@@ -1,5 +1,5 @@
 ---
-status: accepted, amended 2026-10-09, 2026-10-10, 2026-10-20, 2026-10-21, 2026-10-25, 2026-10-28 and 2026-11-02
+status: accepted, amended 2026-10-09, 2026-10-10, 2026-10-20, 2026-10-21, 2026-10-25, 2026-10-28, 2026-11-02 and 2026-11-03
 date: 2026-10-08
 ---
 
@@ -31,6 +31,9 @@ any rule is a new suite version, never a recomputation.
 
 > Amended 2026-10-21 below: an integer covariate is continuous unless the source stores it as
 > a factor or `types` declares it categorical.
+
+> Amended 2026-11-03 below: the table holds the covariates' coded columns, and a fitter builds
+> each interaction from its parts.
 
 **Family rule.**
 
@@ -300,3 +303,21 @@ any rule is a new suite version, never a recomputation.
 
 - Decision: the rule refuses 17 candidates and moves the hashes of the 31 it converts, as a
   patch, since no suite is frozen before release 1.1.
+
+## Amendment 2026-11-03: interactions built by the fitter (#155)
+
+**Coding.**
+
+- Decision: the materialized table holds the covariates' coded columns, and a fitter builds
+  each interaction column as the product of its parts' standardized columns. The drop of aliased
+  columns runs over the covariates' coded columns, then the products, in R's term order. A
+  dropped product leaves the design. A dropped part leaves the design but stays in the table
+  while a kept product needs it, as lme4 drops `a` and keeps `a:b`.
+- Why: a product stored in the table outlived a dropped part, which left nothing to standardize
+  it from. lme4 drops an aliased column but brms keeps it, so the contract decides every drop
+  and the reference formula names only the kept columns.
+
+**Hashes.**
+
+- Decision: the 220 hashes of the candidates with a kept interaction move, as a patch, since no
+  suite is frozen before release 1.1. Every other hash stands.
