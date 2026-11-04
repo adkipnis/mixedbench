@@ -61,7 +61,7 @@ class Handoff:
         aliases = {'y': self.problem.response}
         if self.problem.trials:
             aliases['n'] = self.problem.trials
-        for i, column in enumerate(self.problem.design[1:], start=1):
+        for i, column in enumerate(self.problem.listCoded()[1:], start=1):
             aliases[f'x{i}'] = column
         for i, factor in enumerate(self.problem.factors, start=1):
             aliases[f'g{i}'] = factor
@@ -69,10 +69,12 @@ class Handoff:
 
     @cached_property
     def _aliasOf(self) -> dict[str, str]:
-        """Returns each column's alias."""
+        """Returns each column's alias, an interaction's being its term in the formula."""
         alias_of = {'Intercept': 'Intercept'}
         for alias, column in self.aliases.items():
             alias_of[column] = alias
+        for column, parts in self.problem.findInteractions().items():
+            alias_of[column] = ':'.join(alias_of[part] for part in parts)
         return alias_of
 
     # ---------------------------------------------------------------------------------

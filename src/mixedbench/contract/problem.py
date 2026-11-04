@@ -102,7 +102,7 @@ class Problem:
         Continuous columns are z-scored with the fold's scales.
         An interaction is the product of its standardized parts,
         see Aiken & West (1991) and Gelman (2008)."""
-        coded = self._listCoded()
+        coded = self.listCoded()
         others = [self.response]
         if self.trials:
             others.append(self.trials)
@@ -112,18 +112,19 @@ class Problem:
         for column, scale in self.scales[regime][fold].items():
             table[column] = (table[column] - scale.mean) / scale.sd
         products = {}
-        for column, operands in self._findInteractions().items():
+        for column, operands in self.findInteractions().items():
             products[column] = table[list(operands)].prod(axis=1)
         return table.assign(**products)[[*coded, *products, *others]]
 
-    def _listCoded(self) -> list[str]:
-        """Returns the table's coded columns, `Intercept` first."""
+    def listCoded(self) -> list[str]:
+        """Returns the table's coded columns, `Intercept` first: the design's but its interactions,
+        and a dropped part a kept interaction needs."""
         others = {self.response, self.trials, *self.factors, 'rows', 'groups'}
         return [column for column in self.table.columns if column not in others]
 
-    def _findInteractions(self) -> dict[str, tuple[str, ...]]:
+    def findInteractions(self) -> dict[str, tuple[str, ...]]:
         """Returns each interaction of the design with its parts, in order."""
-        coded = self._listCoded()
+        coded = self.listCoded()
         # every design column the table lacks is an interaction
         interactions = {}
         for column in self.design:
