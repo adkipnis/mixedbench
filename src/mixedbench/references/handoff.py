@@ -9,7 +9,7 @@ Python reads back the draws by the aliases in brms's labels and the diagnostics 
 pipeline:
 ---------
 a Problem
--> the aliases of its response, design columns and factors     aliases
+-> the aliases of its response, coded columns and factors      aliases
 -> the aliased table as CSV, the model as JSON                 write
 -> brms's draws and summaries under the contract's names       read, _contractNames
 -> the diagnostics R reported                                  diagnostics
@@ -37,8 +37,9 @@ class Handoff:
 
     brms rewrites column names such as `x[level]` or `a:b`, so R sees aliases instead:
     `y` for the response, `n` for a binomial model's trials,
-    `x1`, `x2`, ... for the design columns after `Intercept`,
+    `x1`, `x2`, ... for the table's coded columns after `Intercept`,
     `g1`, `g2`, ... for the grouping factors.
+    An interaction is a term of its parts' aliases, such as `x4:x3`, whose column brms builds.
     Each grouping factor is one term: `(x1 | g1)` for slopes correlated with its intercept,
     `(x1 || g1)` for uncorrelated ones and `(1 | g1)` without slopes.
     brms labels a variable by its class and aliases, such as `sd_g1__x1` or `r_g1[j,x1]`,
