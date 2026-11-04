@@ -128,21 +128,8 @@ class Problem:
         interactions = {}
         for column in self.design:
             if column not in coded:
-                interactions[column] = self._splitInteraction(column, coded)
+                interactions[column] = _splitInteraction(column, coded)
         return interactions
-
-    @staticmethod
-    def _splitInteraction(column: str, coded: list[str]) -> tuple[str, ...]:
-        """Returns the coded parts of an interaction column, read left to right."""
-        # a level may contain `:`, so each part is the longest coded column that matches
-        parts = []
-        rest = column
-        while rest:
-            matches = [c for c in coded if rest == c or rest.startswith(f'{c}:')]
-            part = max(matches, key=len)
-            parts.append(part)
-            rest = rest[len(part) + 1 :]  # past the part and its `:`
-        return tuple(parts)
 
     def globalDraws(self) -> tuple[str, ...]:
         """Returns `parameters` with each `cor[<factor>]` split into its pairs.
@@ -212,6 +199,19 @@ def _selectSeenRows(table: pd.DataFrame, regime: Regime, fold: int) -> pd.DataFr
     return table[table[regime] != fold]
 
 
+def _splitInteraction(column: str, coded: list[str]) -> tuple[str, ...]:
+    """Returns the coded parts of an interaction column, read left to right."""
+    # a level may contain `:`, so each part is the longest coded column that matches
+    parts = []
+    rest = column
+    while rest:
+        matches = [c for c in coded if rest == c or rest.startswith(f'{c}:')]
+        part = max(matches, key=len)
+        parts.append(part)
+        rest = rest[len(part) + 1 :]  # past the part and its `:`
+    return tuple(parts)
+
+
 # =====================================================================================
 # the builder
 # =====================================================================================
@@ -246,11 +246,13 @@ class _Builder:
 
     def build(self) -> Problem:
         kinds = self._typeCovariates()
-        coded, dropped_columns = dropAliased(self._codeTerms(), len(self.table))
+        terms = self._codeTerms()
+        coded, dropped_columns = dropAliased(terms, len(self.table))
         design = self._assembleDesign(coded)
         factors = {factor: self._codeFactor(factor) for factor in self.row.grouping_factors}
         regimes = self._dealRegimes(factors)
-        columns = self._leaveInteractions(design, coded) | self._codeResponse() | factors | regimes
+        covariates = self._selectParts(terms, design)
+        columns = covariates | self._codeResponse() | factors | regimes
         table = pd.DataFrame(columns).reset_index(drop=True)
         correlations = self._listCorrelations(coded)
         family, link = FAMILY[self.row.response_type]
@@ -372,14 +374,18 @@ class _Builder:
             design.update(columns)
         return design
 
-    def _leaveInteractions(
-        self, design: dict[str, pd.Series], coded: Coded
-    ) -> dict[str, pd.Series]:
-        """Returns the design's columns but its interactions, which a fitter builds."""
-        interactions = []
-        for term in self.row.interactions:
-            interactions += coded[term]
-        return {name: column for name, column in design.items() if name not in interactions}
+    def _selectParts(self, terms: Coded, design: dict[str, pd.Series]) -> dict[str, pd.Series]:
+        """Returns `Intercept` and the covariates' coded columns that the design keeps or a kept
+        interaction needs, which a fitter builds from them."""
+        covariates = {'Intercept': design['Intercept']}
+        for covariate in self.row.covariates:
+            covariates.update(terms[covariate])
+        # a dropped part stays while a kept interaction needs it, as lme4 drops `a` and keeps `a:b`
+        needed = set(design)
+        for column in design:
+            if column not in covariates:  # an interaction
+                needed.update(_splitInteraction(column, list(covariates)))
+        return {name: column for name, column in covariates.items() if name in needed}
 
     def _codeFactor(self, column: str) -> pd.Series:
         """Returns the column's 0-based codes, in the loaded level order."""
