@@ -721,6 +721,18 @@ reading's open disagreements, four to eight per tier.
   potatodamage, since its notes weight each cell of a contingency table by the plants in
   `count`. No other candidate moved.
 
+## Interactions built by the fitter (#155, 2026-11-04)
+
+- `Problem.build`'s table holds the covariates' coded columns, and a fitter builds each
+  interaction from its parts' standardized columns. A dropped part stays in the table while a
+  kept interaction needs it, as lme4 drops `a` and keeps `a:b` (ADR 0001, amended 2026-11-03).
+- The handoff writes an interaction as R labels its term: its parts' aliases in the order they
+  first appear in the formula (`x4:x3`), since brms names the coefficient by that label.
+- A fingerprint of every candidate before and after: 220 hashes moved, those of the candidates
+  with a kept interaction. Every record, design and standardized frame stayed byte for byte, and
+  each table lost only its interaction columns, so no candidate drops a part of a kept
+  interaction.
+
 ## Reading rulings (m3#22 to #15)
 
 The rulings [`prompts/read.md`](prompts/read.md) does not carry, from the agents' `RULE GAP` notes and Alex's checks, each with an example
