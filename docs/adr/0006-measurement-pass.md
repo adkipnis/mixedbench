@@ -168,3 +168,14 @@ be computed here, from the cached tables, and shipped in a pinned release. Grill
   it stalled on a design of 97,619 columns.
 - Decision: neither script takes an option to skip or add the other's job.
 - Why: each script does one job.
+
+## Amendment 2026-11-04: a task per registry row
+
+- Decision: `survey/measure.py run` measures one registry row into a records file of its own,
+  as a cluster array task, and `collect` writes the five measured files in registry order and
+  renders the summary, as `fits.py` does. A collect refuses a row never run.
+- Why: the single job crashed after 5 hours on row 1,048 of 1,076, on a date column no row
+  ignored, and wrote nothing. A crash now costs one row, and the pass takes as long as its
+  slowest table, about 2 hours.
+- Decision: no serial mode stays beside the array; a laptop runs the rows one after another.
+- Why: one path, which the tests run.

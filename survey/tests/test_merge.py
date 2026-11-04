@@ -456,16 +456,18 @@ def test_every_registry_row_has_one_measured_response(merger):
 
 
 def test_the_measure_script_writes_the_measured_files_and_the_summary(merger):
-    """`measure.py` runs the measure pass and the summary over the whole registry in one run
-    (#98, #172). It loads from the cache the merge filled, so the run is offline."""
+    """`measure.py run` measures one registry row, as a cluster array task, and `collect` writes
+    the measured files and the summary (#98, #172, #182). It loads from the cache the merge
+    filled, so the run is offline."""
     mergeShard(merger, FIXTURES / 'registry_herds.csv')
     runMeasure(merger)
     names = (*MEASURED, 'SUMMARY.md', 'quantiles.yaml')
     measured = {name: (merger.registry / name).read_bytes() for name in names}
     for name in names:
         (merger.registry / name).unlink()
-    command = [sys.executable, SURVEY / 'measure.py', '--registry', merger.registry, '--survey', merger.survey]  # fmt: skip
-    subprocess.run(command, check=True)
+    folders = ['--registry', merger.registry, '--survey', merger.survey, '--dir', merger.survey / 'measure']  # fmt: skip
+    for command in (['run', '0'], ['run', '1'], ['collect']):
+        subprocess.run([sys.executable, SURVEY / 'measure.py', *command, *folders], check=True)
     assert {name: (merger.registry / name).read_bytes() for name in names} == measured
 
 

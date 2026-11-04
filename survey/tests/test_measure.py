@@ -1,12 +1,13 @@
 """The Measurer: the rows a registry row measures, its composite grouping factors and the codes
-of a column's present levels, each through the measured file that shows it."""
+of a column's present levels, each through the measured file that shows it. The pass: a run per
+registry row, collected into the measured files."""
 
 import columns
 import dimensions
 import pandas as pd
 import pytest
-from conftest import asOrdered, measuredColumnFactors, parsed
-from measure import Measurer
+from conftest import FIXTURES, asOrdered, measuredColumnFactors, mergeShard, parsed, readRows
+from measure import Measurement, Measurer
 
 
 def test_rows_without_a_measured_response_are_not_observations(herds, rows):
@@ -46,3 +47,31 @@ def test_a_level_no_measured_row_holds_leaves_no_gap_in_the_codes(herds, rows):
     compact = measured.assign(parity=measured['parity'].cat.remove_unused_categories())
     gapped = measuredColumnFactors(unmeasured, rows[0]).loc['parity']
     pd.testing.assert_frame_equal(gapped, measuredColumnFactors(compact, rows[0]).loc['parity'])
+
+
+def mergedHerds(merger) -> Measurement:
+    """The pass over the scratch registry of the two herds rows."""
+    mergeShard(merger, FIXTURES / 'registry_herds.csv')
+    return Measurement(merger.registry, merger.loader, merger.survey / 'measure')
+
+
+def test_the_collect_writes_every_rows_measurements_in_registry_order(merger):
+    """Array tasks end in any order: the collect follows the registry, a response per row."""
+    measurement = mergedHerds(merger)
+
+    measurement.run(1)
+    measurement.run(0)
+    measurement.collect()
+
+    responses = readRows(merger.registry / 'responses.csv')
+    assert [r['response'] for r in responses] == ['weight', 'cases']
+
+
+def test_the_collect_refuses_a_row_never_run(merger):
+    """A task that crashed or was preempted is no row to leave out of the measured files."""
+    measurement = mergedHerds(merger)
+
+    measurement.run(0)
+
+    with pytest.raises(FileNotFoundError):
+        measurement.collect()

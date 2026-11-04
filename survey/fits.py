@@ -24,13 +24,12 @@ Run from the repo root:
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import shutil
 from pathlib import Path
 
 import pandas as pd
-from measure import Measurer
+from measure import Measurer, digestId
 from mixedbench import registry
 from mixedbench.contract import FAMILY, withComposites
 from mixedbench.datasets import Loader
@@ -103,9 +102,7 @@ class Fitter:
         writeCsv(table, self.root / 'fits.csv')
 
     def findDir(self, row: Row) -> Path:
-        """An id may hold `/`, `!` and spaces, so the directory is named by its hash."""
-        digest = hashlib.sha256(row.id.encode()).hexdigest()
-        return self.dir / digest[:16]
+        return self.dir / digestId(row.id)
 
 
 # =====================================================================================
