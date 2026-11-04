@@ -135,9 +135,11 @@ def computeConditionIndex(design: pd.DataFrame) -> float:
     if d > n:
         return float('inf')
     scaled = (design / np.sqrt((design**2).sum())).to_numpy()
-    if np.linalg.matrix_rank(scaled) < d:
+    singular = np.linalg.svd(scaled, compute_uv=False)  # (d,), descending
+    # numpy's matrix_rank rule on the same singular values, so a wide design is decomposed once
+    tolerance = singular[0] * (max(n, d) * np.finfo(singular.dtype).eps)
+    if singular[-1] <= tolerance:
         return float('inf')
-    singular = np.linalg.svd(scaled, compute_uv=False)
     return round(float(singular[0] / singular[-1]), 4)
 
 
