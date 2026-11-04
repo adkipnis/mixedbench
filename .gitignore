@@ -19,6 +19,8 @@ examples/cache/
 /references
 # the fits pass's run directories and logs (survey/fits.py)
 /fits
+# the measurement's records and logs (survey/measure.py)
+/measure
 # the lab notes, private
 /lab/
 # an experiment's per-problem runs
