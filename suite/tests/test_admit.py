@@ -75,10 +75,33 @@ def test_the_list_has_one_row_per_admissible_row_in_registry_order_with_its_hash
         'verified',
         'dropped_share',
         'fidelity',
+        'n',
+        'd',
+        'factors',
+        'grouping',
+        'm',
+        'q',
+        'n_i_min',
+        'n_i_max',
     ]
     assert list(candidates['dropped_share']) == [0, 0.25, 0]
     for id, hash in zip(candidates['id'], candidates['contract_hash']):
         assert hash == contractHash(load(id, tmp_path / 'cache'))
+
+
+def test_the_list_records_each_problems_dimensions_per_factor_in_its_order(tmp_path):
+    """The axes `select` filters on (#193), measured on the problem the row builds.
+    A per-factor cell is a `;`-list in the order `factors` gives."""
+    rows = scratchRegistry(tmp_path, ['crossed'], grouping_factors='g;h')
+    table = groupedTable().assign(h=[f'h{i % 5}' for i in range(12)])  # g0 holds h0 and h1
+    admission = Admission(rows, Tables({'crossed': table}), tmp_path / 'cache')
+    admission.admit().write(tmp_path / 'suite')
+    [listed] = readCsv(tmp_path / 'suite' / 'candidates.csv').to_dict('records')
+    dimensions = {
+        'n': '12', 'd': '2', 'factors': 'g;h', 'grouping': 'crossed', 'm': '6;5', 'q': '1;1',
+        'n_i_min': '2;2', 'n_i_max': '2;3',
+    }  # fmt: skip
+    assert {column: listed[column] for column in dimensions} == dimensions
 
 
 def test_a_refused_row_leaves_the_list_and_keeps_its_reason(tmp_path):
