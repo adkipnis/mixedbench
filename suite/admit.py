@@ -40,7 +40,7 @@ from typing import Literal
 import pandas as pd
 from mixedbench import registry
 from mixedbench.contract import Problem, Refused, materialize
-from mixedbench.registry.row import Row, writeCsv
+from mixedbench.registry.row import Row, joinList, writeCsv
 
 # =====================================================================================
 # the hand decisions
@@ -350,18 +350,13 @@ class Admission:
             'fidelity': self.fidelity.get(problem.id, ''),
             'n': dimensions.n,
             'd': dimensions.d,
-            'factors': self._joinList(problem.factors),
+            'factors': joinList(problem.factors),
             'grouping': dimensions.grouping,
-            'm': self._joinList(dimensions.m),
-            'q': self._joinList(dimensions.q),
-            'n_i_min': self._joinList(dimensions.n_i_min),
-            'n_i_max': self._joinList(dimensions.n_i_max),
+            'm': joinList(dimensions.m),
+            'q': joinList(dimensions.q),
+            'n_i_min': joinList(dimensions.n_i_min),
+            'n_i_max': joinList(dimensions.n_i_max),
         }
-
-    @staticmethod
-    def _joinList(values: tuple) -> str:
-        """A per-factor cell as a `;`-list, in the problem's factor order."""
-        return ';'.join(str(value) for value in values)
 
 
 # =====================================================================================
