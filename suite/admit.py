@@ -1,7 +1,7 @@
 """admit.py defines the admission of suite 1.1: registry rows in, candidates and refusals out.
 
 Every row the family rule covers is built into its problem and materialized under the cache.
-Its contract hash goes into the candidate list. Five decisions guide admission:
+Its contract hash and its dimensions go into the candidate list. Five decisions guide admission:
 - hand decisions first: a row whose documented model does not survive into the contract
   is refused by id, or by its notes' marker when the model is nonlinear;
   a row whose random effects were changed carries its fidelity:
@@ -341,13 +341,27 @@ class Admission:
     # ---------------------------------------------------------------------------------
     # the step that turns a built problem into its row of the list
     def _candidate(self, row: Row, problem: Problem) -> dict:
+        dimensions = problem.measureDimensions()
         return {
             'id': problem.id,
             'contract_hash': materialize(problem, self.cache),
             'verified': row.verified,
             'dropped_share': problem.dropped_share,
             'fidelity': self.fidelity.get(problem.id, ''),
+            'n': dimensions.n,
+            'd': dimensions.d,
+            'factors': self._joinList(problem.factors),
+            'grouping': dimensions.grouping,
+            'm': self._joinList(dimensions.m),
+            'q': self._joinList(dimensions.q),
+            'n_i_min': self._joinList(dimensions.n_i_min),
+            'n_i_max': self._joinList(dimensions.n_i_max),
         }
+
+    @staticmethod
+    def _joinList(values: tuple) -> str:
+        """A per-factor cell as a `;`-list, in the problem's factor order."""
+        return ';'.join(str(value) for value in values)
 
 
 # =====================================================================================
