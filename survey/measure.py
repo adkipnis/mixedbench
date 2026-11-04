@@ -13,17 +13,23 @@ registry.csv and each row's loaded table
 -> a row per covariate column and grouping factor    groups.measure
 -> a row per pair of grouping factors                pairs.measure
 -> a row per registry row's response                 responses.measure
--> the five measured files                           measureRegistry
+-> the row's records in a file of its own            Measurement.run
+-> the five measured files, in registry order        Measurement.collect
 
 A merge measures nothing, so the pass and the summary after it run as a job of their own
-before a release, from the repo root:
+before a release. A cluster array task measures one row, named by its index in registry.csv, so
+that a crash costs one row; the collect writes the measured files and the summary. Run from the
+repo root:
 
-    uv run python survey/measure.py
+    uv run python survey/measure.py run 17
+    uv run python survey/measure.py collect
 """
 
 from __future__ import annotations
 
 import argparse
+import hashlib
+import json
 from pathlib import Path
 
 import columns
@@ -94,34 +100,59 @@ class Measurer:
 
 
 # =====================================================================================
-# pass: registry.csv -> each row's loaded table -> the five measured files
+# pass: a registry row -> its measurements -> the five measured files
 # =====================================================================================
-def measureRegistry(root: Path, loader: Loader) -> None:
-    frame = readFrame(root)
-    measured = {
-        'dimensions': [],
-        'columns': [],
-        'column_factors': [],
-        'factor_pairs': [],
-        'responses': [],
-    }
-    for row in registry.rows(root / 'registry.csv'):
-        table = loader.load(frame.sources[row.source], row.object, row.types)
+MEASURED_COLUMNS = {
+    'dimensions': dimensions.DIMENSION_COLUMNS,
+    'columns': columns.COLUMN_COLUMNS,
+    'column_factors': groups.COLUMN_FACTOR_COLUMNS,
+    'factor_pairs': pairs.FACTOR_PAIR_COLUMNS,
+    'responses': responses.RESPONSE_COLUMNS,
+}
+
+
+class Measurement:
+    """The measurement of a registry's rows, a records file each under `dir`."""
+
+    def __init__(self, root: Path, loader: Loader, dir: Path) -> None:
+        self.root = root
+        self.loader = loader
+        self.dir = dir
+        self.sources = readFrame(root).sources
+        self.rows = registry.rows(root / 'registry.csv')
+
+    def run(self, index: int) -> None:
+        """Measures the row at `index` in registry order, replacing an earlier run of it."""
+        row = self.rows[index]
+        table = self.loader.load(self.sources[row.source], row.object, row.types)
         measurer = Measurer(table, row)
-        measured['dimensions'] += dimensions.measure(measurer)
-        measured['columns'] += columns.measure(measurer)
-        measured['column_factors'] += groups.measure(measurer)
-        measured['factor_pairs'] += pairs.measure(measurer)
-        measured['responses'].append(responses.measure(measurer))
-    headers = {
-        'dimensions': dimensions.DIMENSION_COLUMNS,
-        'columns': columns.COLUMN_COLUMNS,
-        'column_factors': groups.COLUMN_FACTOR_COLUMNS,
-        'factor_pairs': pairs.FACTOR_PAIR_COLUMNS,
-        'responses': responses.RESPONSE_COLUMNS,
-    }
-    for name, rows in measured.items():
-        writeCsv(pd.DataFrame(rows, columns=headers[name]), root / f'{name}.csv')
+        measured = {
+            'dimensions': dimensions.measure(measurer),
+            'columns': columns.measure(measurer),
+            'column_factors': groups.measure(measurer),
+            'factor_pairs': pairs.measure(measurer),
+            'responses': [responses.measure(measurer)],
+        }
+        self.dir.mkdir(parents=True, exist_ok=True)
+        self.findRecords(row).write_text(json.dumps(measured, indent=2))
+
+    def collect(self) -> None:
+        """Writes every row's records into the five measured files in registry order."""
+        measured = {name: [] for name in MEASURED_COLUMNS}
+        for row in self.rows:
+            records = json.loads(self.findRecords(row).read_text())
+            for name in MEASURED_COLUMNS:
+                measured[name] += records[name]
+        for name, header in MEASURED_COLUMNS.items():
+            writeCsv(pd.DataFrame(measured[name], columns=header), self.root / f'{name}.csv')
+
+    def findRecords(self, row: Row) -> Path:
+        return self.dir / f'{digestId(row.id)}.json'
+
+
+def digestId(id: str) -> str:
+    """A run is named by its row's hash, since an id may hold `/`, `!` and spaces."""
+    return hashlib.sha256(id.encode()).hexdigest()[:16]
 
 
 # =====================================================================================
@@ -132,9 +163,16 @@ if __name__ == '__main__':
 
     # fmt: off
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument('command', choices=('run', 'collect'), help='measure one row, or collect every row into the measured files and the summary')
+    parser.add_argument('index', type=int, nargs='?', help='the row to measure, by its 0-based index in registry.csv')
     parser.add_argument('--registry', type=Path, default=HERE.parent / 'registry', help='folder holding sources.yaml and the census tables')
     parser.add_argument('--survey', type=Path, default=HERE, help='folder holding the duplicates and dropped tables')
+    parser.add_argument('--dir', type=Path, default=HERE.parent / 'measure', help='folder of the rows\' records')
     args = parser.parse_args()
     # fmt: on
-    measureRegistry(args.registry, Loader(args.registry / 'cache'))
-    Summarizer(args.registry, args.survey).flush()
+    measurement = Measurement(args.registry, Loader(args.registry / 'cache'), args.dir)
+    if args.command == 'run':
+        measurement.run(args.index)
+    else:
+        measurement.collect()
+        Summarizer(args.registry, args.survey).flush()
