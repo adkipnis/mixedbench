@@ -1,4 +1,5 @@
-"""members.py defines a suite's members: a problem by its id, from one call.
+"""members.py defines a suite's members: a problem by its id, from one call, and the candidates
+whose axes match.
 
 A suite's list holds the contract hash of each of its problems.
 On first use a problem is built from its pinned source and materialized into the cache,
@@ -12,7 +13,6 @@ a problem id
 -> its files in the cache, built where stale or missing   _Suite._build
 -> the problem read from them                             load
 -> every problem of a suite, one at a time in list order  problems
--> the candidates whose axes match                        select
 """
 
 from __future__ import annotations
@@ -32,6 +32,17 @@ Version = Literal['1.1']
 Tier = Literal['R', 'E', 'T', 'D', 'O']
 Fitter = Literal['lme4']  # brms joins once suite 1.1's references freeze
 Range = int | tuple[int | None, int | None]
+# select's columns, which an empty selection keeps too
+AXES = (
+    'id', 'tier', 'family', 'grouping', 'n', 'd', 'factors', 'm', 'q', 'n_i_min', 'n_i_max', 'fit',
+)  # fmt: skip
+VALUES = {
+    'tier': get_args(Tier),
+    'family': tuple(family for family, _ in FAMILY.values()),
+    'grouping': get_args(Grouping),
+    'fit': get_args(Fitter),
+}
+PASSED = ('ok', 'singular')  # lme4's statuses of a converged fit, a singular one at the boundary
 
 
 def path(version: Version) -> Path:
@@ -51,13 +62,14 @@ def problems(version: Version, cache: Path) -> Iterator[tuple[str, Problem]]:
 
 
 def select(
+    *,
     tier: Tier | list[Tier] | None = None,
     family: str | list[str] | None = None,
     grouping: Grouping | list[Grouping] | None = None,
-    q: Range | None = None,
     n: Range | None = None,
-    m: Range | None = None,
     d: Range | None = None,
+    m: Range | None = None,
+    q: Range | None = None,
     n_i: Range | None = None,
     fit: Fitter | list[Fitter] | None = None,
 ) -> pd.DataFrame:
@@ -71,63 +83,50 @@ def select(
     - m, q: the groups and the random effects per group, of every factor.
     - n_i: the rows of every group of every factor.
     - fit: `lme4`, whose fit of the documented model ended `ok` or `singular`.
+      It fits the registry row, which may keep a factor the problem made a covariate
+      or read a subset of the rows. lme4 fits only `gaussian`, `bernoulli` and `poisson` rows.
     A count takes an int, matched exactly, or an inclusive `(low, high)` with `None` for an
     open end. A categorical axis takes one value or a list."""
+    candidates = _listCandidates()
     categories = {'tier': tier, 'family': family, 'grouping': grouping, 'fit': fit}
-    listed = {}
     for axis, wanted in categories.items():
         if wanted is not None:
-            listed[axis] = _checkValues(axis, wanted)
-    candidates = _listCandidates()
-    for axis, values in listed.items():
-        candidates = [c for c in candidates if _holdsValue(c, axis, values)]
+            values = _checkValues(axis, wanted)
+            candidates = [c for c in candidates if _holdsValue(c, axis, values)]
     counts = {'n': n, 'd': d, 'm': m, 'q': q, 'n_i': n_i}
     for axis, wanted in counts.items():
         if wanted is not None:
-            candidates = [c for c in candidates if _holdsRange(_listCounts(c, axis), wanted)]
+            low, high = _checkRange(axis, wanted)
+            candidates = [c for c in candidates if _holdsRange(_spanCounts(c, axis), low, high)]
     return pd.DataFrame(candidates, columns=list(AXES))
 
 
 # ----------------------------------------------------------------------------------------------
 # list -> axes -> matches
 # ----------------------------------------------------------------------------------------------
-AXES = (
-    'id', 'tier', 'family', 'grouping', 'n', 'd', 'factors', 'm', 'q', 'n_i_min', 'n_i_max', 'fit',
-)  # fmt: skip
-VALUES = {
-    'tier': get_args(Tier),
-    'family': tuple(family for family, _ in FAMILY.values()),
-    'grouping': get_args(Grouping),
-    'fit': get_args(Fitter),
-}
-PASSED = ('ok', 'singular')  # lme4's statuses of a converged fit, a singular one at the boundary
-
-
 def _listCandidates() -> list[dict]:
     """Returns each candidate's axes: its dimensions from the list, its tier and family from its
     registry row, and the fitters that passed."""
     rows = {row.id: row for row in registry.rows()}
-    fits = readCsv(registry.path('fits.csv'))
-    passed = fits[fits['status'].isin(PASSED)]
-    lme4 = set(passed['source'] + '/' + passed['object'] + '/' + passed['model_index'])
+    statuses = registry.fits()
     candidates = []
-    for listed in readCsv(path('1.1') / 'candidates.csv').to_dict('records'):
-        id = listed['id']
+    for cells in readCsv(path('1.1') / 'candidates.csv').to_dict('records'):
+        id = cells['id']
         row = rows[id]
         family, _ = FAMILY[row.response_type]
         candidates.append({
             'id': id,
             'tier': row.tier,
             'family': family,
-            'grouping': listed['grouping'],
-            'n': int(listed['n']),
-            'd': int(listed['d']),
-            'factors': splitList(listed['factors']),
-            'm': _splitCounts(listed['m']),
-            'q': _splitCounts(listed['q']),
-            'n_i_min': _splitCounts(listed['n_i_min']),
-            'n_i_max': _splitCounts(listed['n_i_max']),
-            'fit': ('lme4',) if id in lme4 else (),
+            'grouping': cells['grouping'],
+            'n': int(cells['n']),
+            'd': int(cells['d']),
+            'factors': splitList(cells['factors']),
+            'm': _splitCounts(cells['m']),
+            'q': _splitCounts(cells['q']),
+            'n_i_min': _splitCounts(cells['n_i_min']),
+            'n_i_max': _splitCounts(cells['n_i_max']),
+            'fit': ('lme4',) if statuses.get(id) in PASSED else (),
         })  # fmt: skip
     return candidates
 
@@ -138,11 +137,11 @@ def _splitCounts(cell: str) -> tuple[int, ...]:
 
 def _checkValues(axis: str, wanted: str | list[str]) -> list[str]:
     """Returns the wanted values as a list. Raises on a value the axis does not take."""
-    listed = [wanted] if isinstance(wanted, str) else list(wanted)
-    for value in listed:
+    values = [wanted] if isinstance(wanted, str) else list(wanted)
+    for value in values:
         if value not in VALUES[axis]:
             raise ValueError(f'{axis} {value!r} is none of {", ".join(VALUES[axis])}')
-    return listed
+    return values
 
 
 def _holdsValue(candidate: dict, axis: str, values: list[str]) -> bool:
@@ -150,22 +149,30 @@ def _holdsValue(candidate: dict, axis: str, values: list[str]) -> bool:
     return any(value in values for value in held)
 
 
-def _listCounts(candidate: dict, axis: str) -> tuple[int, ...]:
-    """Returns the values a range must hold: the problem's, each factor's, or the smallest and
-    largest group of each factor, between which every group lies."""
+def _checkRange(axis: str, wanted: Range) -> tuple[int | None, int | None]:
+    """Returns the wanted range's ends, an int as both. Raises on a reversed range."""
+    low, high = wanted if isinstance(wanted, tuple) else (wanted, wanted)
+    if low is not None and high is not None and low > high:
+        raise ValueError(f'{axis} ({low}, {high}) is a reversed range, low above high')
+    return low, high
+
+
+def _spanCounts(candidate: dict, axis: str) -> tuple[int, int]:
+    """Returns the smallest and the largest value a range must hold: the problem's, each
+    factor's, or each group's of each factor."""
     match axis:
         case 'n' | 'd':
-            return (candidate[axis],)
+            return candidate[axis], candidate[axis]
         case 'm' | 'q':
-            return candidate[axis]
+            return min(candidate[axis]), max(candidate[axis])
         case 'n_i':
-            return candidate['n_i_min'] + candidate['n_i_max']
+            return min(candidate['n_i_min']), max(candidate['n_i_max'])
 
 
-def _holdsRange(values: tuple[int, ...], wanted: Range) -> bool:
-    low, high = (wanted, wanted) if isinstance(wanted, int) else wanted
-    above = low is None or min(values) >= low
-    below = high is None or max(values) <= high
+def _holdsRange(span: tuple[int, int], low: int | None, high: int | None) -> bool:
+    smallest, largest = span
+    above = low is None or smallest >= low
+    below = high is None or largest <= high
     return above and below
 
 
