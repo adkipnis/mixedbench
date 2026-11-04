@@ -43,7 +43,8 @@ from pyreadr._pyreadr_parser import PyreadrParser
 # =====================================================================================
 # the suffixes each reader takes, and the names that point to documentation.
 R_FILES = {'.rda', '.rdata', '.rds'}  # meant for pyreadr, or rdata
-DATA_FILES = {'.r', '.tab', '.txt', '.csv'}  # meant for utils::data()
+TEXT_DATA_FILES = {'.tab', '.txt', '.csv'}  # those utils::data() also reads compressed
+DATA_FILES = {'.r', *TEXT_DATA_FILES}  # meant for utils::data()
 TABLE_FILES = {  # meant for pandas
     '.csv', '.tsv', '.tab', '.txt', '.dat', '.xlsx', '.xls', '.json', '.dta', '.sav',
     '.arrow', '.pq', '.parquet',
@@ -131,11 +132,12 @@ def _describesSibling(file: Path) -> bool:
 
 def bare(file: Path, *, cran: bool = False) -> Path:
     """The file's name without its `.zip` or `.gz` wrapper (`radon.json.zip`, `apnea.tsv.gz`),
-    in a CRAN package's data/ folder also without the `.bz2` or `.xz` utils::data() reads:
-    the suffix says how to read it, the stem what documents it."""
+    in a CRAN package's data/ folder also without the `.bz2` or `.xz` utils::data() reads
+    around a text table: the suffix says how to read it, the stem what documents it."""
     name = file.name.lower().removesuffix('.zip').removesuffix('.gz')
-    if cran:
-        name = name.removesuffix('.bz2').removesuffix('.xz')
+    unwrapped = name.removesuffix('.bz2').removesuffix('.xz')
+    if cran and Path(unwrapped).suffix in TEXT_DATA_FILES:
+        name = unwrapped
     return Path(name)
 
 
