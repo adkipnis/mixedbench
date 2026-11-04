@@ -79,19 +79,21 @@ def fixtureRow(**overrides) -> Row:
 def test_the_design_has_the_coded_columns_in_order_with_the_intercept_first() -> None:
     """ADR 0001's coding, one column per parameter in the row's order: a continuous covariate
     raw, a binary 0/1 with the first loaded level 0, a categorical and an ordered factor as
-    k − 1 treatment contrasts against the first level, an interaction the product."""
+    k − 1 treatment contrasts against the first level, an interaction the product.
+    The table holds no interaction column, since a fitter builds it from its parts, as lme4 and
+    brms do (#155)."""
     problem = Problem.build(fixtureRow(), fixtureTable())
     assert problem.design == ('Intercept', 'x', 'sex', 'diet[b]', 'diet[c]', 'grade[mid]', 'grade[hi]', 'x:sex')  # fmt: skip
-    design = problem.table[list(problem.design)]
-    assert design['Intercept'].tolist() == [1.0] * 12
-    assert design['x'].tolist() == X
-    assert design['sex'].tolist() == SEX
-    assert design['diet[b]'].tolist() == [0, 1, 0] * 4
-    assert design['diet[c]'].tolist() == [0, 0, 1] * 4
-    assert design['grade[mid]'].tolist() == [0, 1, 0, 1, 0, 0, 0, 0, 1, 0, 1, 0]
-    assert design['grade[hi]'].tolist() == [0, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 1]
-    assert design['x:sex'].tolist() == [x * s for x, s in zip(X, SEX)]
-    assert all(design[c].dtype == np.float64 for c in problem.design)
+    coded = problem.table[list(problem.design[:-1])]
+    assert coded['Intercept'].tolist() == [1.0] * 12
+    assert coded['x'].tolist() == X
+    assert coded['sex'].tolist() == SEX
+    assert coded['diet[b]'].tolist() == [0, 1, 0] * 4
+    assert coded['diet[c]'].tolist() == [0, 0, 1] * 4
+    assert coded['grade[mid]'].tolist() == [0, 1, 0, 1, 0, 0, 0, 0, 1, 0, 1, 0]
+    assert coded['grade[hi]'].tolist() == [0, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 1]
+    assert all(coded[c].dtype == np.float64 for c in coded)
+    assert 'x:sex' not in problem.table
 
 
 @pytest.mark.parametrize(
@@ -169,7 +171,7 @@ def test_a_grouping_factor_is_integer_coded_with_its_levels_listed() -> None:
         'block': ('A', 'B', 'C', 'D', 'E'),
         'block:plot': ('A:p1', 'A:p2', 'B:p1', 'B:p2', 'C:p1', 'D:p1', 'E:p1'),
     }
-    assert list(problem.table.columns) == [*problem.design, 'y', 'block', 'block:plot', 'rows', 'groups']  # fmt: skip
+    assert list(problem.table.columns) == [*problem.design[:-1], 'y', 'block', 'block:plot', 'rows', 'groups']  # fmt: skip
 
 
 @pytest.mark.parametrize(
@@ -280,11 +282,13 @@ def test_a_design_column_aliased_by_the_columns_before_it_is_dropped_and_recorde
     expected = ('Intercept', 'x', 'sex', 'diet[b]', 'diet[c]', 'grade[mid]', 'grade[hi]', *design)  # fmt: skip
     assert problem.design == expected
     assert problem.dropped_columns == dropped
-    assert list(problem.table.columns) == [*expected, 'y', 'block', 'block:plot', 'rows', 'groups']  # fmt: skip
-    assert np.linalg.matrix_rank(problem.table[list(expected)].to_numpy()) == len(expected)
+    standardized = problem.standardized()
+    assert list(standardized.columns) == [*expected, 'y', 'block', 'block:plot']
+    assert np.linalg.matrix_rank(standardized[list(expected)].to_numpy()) == len(expected)
+    assert not set(dropped) & set(problem.table.columns)
     assert not set(dropped) & set(problem.scales['full'][0])
     assert not set(dropped) & set(problem.parameters)
-    assert not problem.standardized().isna().any().any()
+    assert not standardized.isna().any().any()
 
 
 @pytest.mark.lme4
