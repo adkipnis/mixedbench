@@ -115,7 +115,9 @@ Measured over the rows with a measured response, since dosing rows are no observ
     it, less the columns it drops, each column scaled to unit length (Belsley, Kuh and Welsch
     1980), on the rows complete in all its columns. Unlike their index, it leaves out the
     continuous columns' collinearity with the intercept. The design of `d_all` lists the
-    documented covariates first. `inf` when the coded columns outnumber the rows or the kept
+    documented covariates first. Both designs also hold the contrasts of a grouping factor of
+    fewer than five levels, which the contract makes a covariate and `d_doc` and `d_all` do not
+    count. `inf` when the coded columns outnumber the rows or the kept
     ones are singular in floating point, blank for a row the contract refuses, and
     `condition_all` alone blank when no row is complete.
 - `columns.csv`: key `source`, `object`, `model_index`, `column`, with `tier`. Every column but
