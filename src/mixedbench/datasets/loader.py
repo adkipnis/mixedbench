@@ -69,6 +69,7 @@ def fetch(url: str) -> bytes | None:
 # =====================================================================================
 # what the registry pins, what the loader finds in it, and the column types a row declares.
 ColumnType = Literal['categorical', 'ordered', 'continuous']
+Levels = tuple[str, ...]  # an ordered column's declared levels, lowest first
 
 
 @dataclass(frozen=True)
@@ -273,7 +274,7 @@ class Loader:
     # ------------------------------------------------------------------------------------------
 
     def load(
-        self, source: Source, name: str, types: Mapping[str, ColumnType] | None = None
+        self, source: Source, name: str, types: Mapping[str, ColumnType | Levels] | None = None
     ) -> pd.DataFrame:
         file, table = self._object(source, name)
         if table is None:
@@ -302,13 +303,22 @@ class Loader:
         return file
 
     @staticmethod
-    def _declared(table: pd.DataFrame, types: Mapping[str, ColumnType]) -> dict[str, pd.Series]:
+    def _declared(
+        table: pd.DataFrame, types: Mapping[str, ColumnType | Levels]
+    ) -> dict[str, pd.Series]:
         """What a format cannot carry: column types for text and Excel,
-        the order pyreadr drops from an R factor."""
+        the order pyreadr drops from an R factor, the level order of a text column."""
         declared = {}
         for column, kind in types.items():
             if kind == 'continuous':
                 declared[column] = readers.numbers(table[column])
+            elif isinstance(kind, tuple):  # a declared order
+                # the cast would turn a value outside the declared levels missing
+                undeclared = sorted(set(table[column].dropna()) - set(kind))
+                if undeclared:
+                    raise ValueError(f'{column} holds {undeclared} outside its declared levels')
+                dtype = pd.CategoricalDtype(kind, ordered=True)
+                declared[column] = table[column].astype(dtype)
             else:  # a categorical keeps its levels under a CategoricalDtype without categories
                 dtype = pd.CategoricalDtype(ordered=kind == 'ordered')
                 declared[column] = table[column].astype(dtype)
