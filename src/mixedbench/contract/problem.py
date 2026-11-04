@@ -57,6 +57,7 @@ from mixedbench.registry.row import Row, parts
 # what `build` returns or raises, and the records a problem holds
 CONTRACT = int(version('mixedbench').partition('.')[0])  # the package's major version
 Regime = Literal['full', 'rows', 'groups']
+Grouping = Literal['single', 'nested', 'crossed', 'mixed']  # how a problem's factors relate
 # the family rule: the response type sets brms's family and link
 FAMILY = {
     'continuous': ('gaussian', 'identity'),
@@ -172,6 +173,18 @@ class Problem:
                 slopes.append(slope)
         return tuple(slopes)
 
+    def measureDimensions(self) -> Dimensions:
+        sizes = [self.table[factor].value_counts() for factor in self.factors]
+        return Dimensions(
+            n=len(self.table),
+            d=len(self.design),
+            grouping=classifyRelation(self.table, self.factors),
+            m=tuple(len(groups) for groups in sizes),
+            q=tuple(1 + len(self.slopes(factor)) for factor in self.factors),
+            n_i_min=tuple(int(groups.min()) for groups in sizes),
+            n_i_max=tuple(int(groups.max()) for groups in sizes),
+        )
+
 
 @dataclass(frozen=True)
 class Prior:
@@ -183,6 +196,20 @@ class Prior:
 class Scale:
     mean: float
     sd: float  # the sample standard deviation, as R's `scale` computes it
+
+
+@dataclass(frozen=True)
+class Dimensions:
+    """A problem's sizes over its kept rows and the factors the five-level rule leaves.
+    A per-factor size is a tuple in `factors` order."""
+
+    n: int  # rows
+    d: int  # design columns, `Intercept` included
+    grouping: Grouping
+    m: tuple[int, ...]  # groups
+    q: tuple[int, ...]  # random effects per group: the intercept and the slopes' coded columns
+    n_i_min: tuple[int, ...]  # rows of the smallest group
+    n_i_max: tuple[int, ...]  # rows of the largest group
 
 
 class Refused(Exception):
@@ -549,7 +576,8 @@ class _Builder:
 # =====================================================================================
 # the rules shared with the survey
 # =====================================================================================
-# the survey uses these rules too, so its design widths and coded columns match the builds
+# the survey uses these rules too, so its design widths, coded columns and factor relations
+# match the builds
 
 
 def columnKind(values: pd.Series) -> tuple[str, int | str]:
@@ -633,6 +661,35 @@ def dropAliased(coded: Coded, rows: int) -> tuple[Coded, tuple[str, ...]]:
                 basis[:, k] = residual / norm
                 k += 1
     return kept, tuple(dropped)
+
+
+def classifyRelation(table: pd.DataFrame, factors: tuple[str, ...]) -> Grouping:
+    """A pair is nested when every group of one factor lies in one group of the other."""
+    if len(factors) == 1:
+        return 'single'
+    nested = {bool(findHolders(table, a, b)) for a, b in combinations(factors, 2)}
+    if nested == {True}:
+        return 'nested'
+    if nested == {False}:
+        return 'crossed'
+    return 'mixed'
+
+
+def findHolders(table: pd.DataFrame, a: str, b: str) -> list[str]:
+    """The factors whose groups hold whole groups of the other: none when the two cross,
+    both when they partition the rows alike."""
+    levels = table[[a, b]].drop_duplicates()
+    holders = []
+    if _hasOneParent(levels, b, a):
+        holders.append(a)
+    if _hasOneParent(levels, a, b):
+        holders.append(b)
+    return holders
+
+
+def _hasOneParent(levels: pd.DataFrame, child: str, parent: str) -> bool:
+    parents = levels.groupby(child, observed=True)[parent].nunique()
+    return bool(parents.max() == 1)
 
 
 def withComposites(table: pd.DataFrame, factors: tuple[str, ...]) -> pd.DataFrame:

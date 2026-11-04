@@ -1,8 +1,8 @@
 """measure.py runs the measurement pass: the dimension survey's numbers that no agent types,
 measured on each registry row's loaded table and written to the five measured files.
 The Measurer holds what the five share: the loaded rows, those with a response,
-the covariate columns with their types, each grouping factor's group-level columns,
-two factors' holders and the empty cells of two columns' levels.
+the covariate columns with their types, each grouping factor's group-level columns
+and the empty cells of two columns' levels.
 
 pipeline:
 ---------
@@ -71,22 +71,6 @@ class Measurer:
                 c for c in self.column_names if grouped[c].nunique().max() <= 1
             ]
         return group_level
-
-    def findHolders(self, a: str, b: str) -> list[str]:
-        """The factors whose groups hold whole groups of the other: none when the two cross,
-        both when they partition the rows alike."""
-        levels = self.table[[a, b]].drop_duplicates()
-        holders = []
-        if self.hasOneParent(levels, b, a):
-            holders.append(a)
-        if self.hasOneParent(levels, a, b):
-            holders.append(b)
-        return holders
-
-    @staticmethod
-    def hasOneParent(levels: pd.DataFrame, child: str, parent: str) -> bool:
-        parents = levels.groupby(child, observed=True)[parent].nunique()
-        return bool(parents.max() == 1)
 
     @staticmethod
     def measureEmptyCells(pairs: pd.DataFrame) -> float:

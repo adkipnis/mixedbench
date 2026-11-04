@@ -12,12 +12,11 @@ a measurer
 from __future__ import annotations
 
 import dataclasses
-from itertools import combinations
 from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
-from mixedbench.contract import Problem, Refused, countWidth
+from mixedbench.contract import Problem, Refused, classifyRelation, countWidth
 from mixedbench.registry.row import Row, parts
 from schema import IDENTITY
 
@@ -56,28 +55,14 @@ def pickObserved(values: pd.Series, q: float) -> int | float:
 # dimensions.csv: relation -> design columns -> condition indexes -> group sizes
 # =====================================================================================
 def measure(measurer: Measurer) -> list[dict]:
-    shared = {'n_factors': len(measurer.grouping_factors), 'relation': classifyRelation(measurer)}
+    relation = classifyRelation(measurer.table, measurer.grouping_factors)
+    shared = {'n_factors': len(measurer.grouping_factors), 'relation': relation}
     shared |= countDesignColumns(measurer) | measureConditionIndexes(measurer)
     dimensions = []
     for grouping_factor in measurer.grouping_factors:
         sizes = measureGroupSizes(measurer, grouping_factor)
         dimensions.append(measurer.identity | {'factor': grouping_factor} | shared | sizes)
     return dimensions
-
-
-def classifyRelation(measurer: Measurer) -> str:
-    """single, nested, crossed or mixed.
-    A pair is nested when every group of one factor lies in one group of the other."""
-    if len(measurer.grouping_factors) == 1:
-        return 'single'
-    nested = {
-        bool(measurer.findHolders(a, b)) for a, b in combinations(measurer.grouping_factors, 2)
-    }
-    if nested == {True}:
-        return 'nested'
-    if nested == {False}:
-        return 'crossed'
-    return 'mixed'
 
 
 def countDesignColumns(measurer: Measurer) -> dict:

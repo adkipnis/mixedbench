@@ -116,7 +116,8 @@ _Avoid_: spot check (the 20 rows per tier read before it), audit
 **Dimension**:
 A size of a table or of a grouping factor, measured by script per registry row or per grouping
 factor (observations, grouping factors, groups, group sizes and their imbalance, design
-columns).
+columns). The candidate list records a problem's own, over the rows and factors the contract
+keeps.
 _Avoid_: shape, size axis (MetaBeta's word for the envelope's side), statistic
 
 **Quirk statistic**:

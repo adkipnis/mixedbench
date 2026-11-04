@@ -1,7 +1,7 @@
 """admit.py defines the admission of suite 1.1: registry rows in, candidates and refusals out.
 
 Every row the family rule covers is built into its problem and materialized under the cache.
-Its contract hash goes into the candidate list. Five decisions guide admission:
+Its contract hash and its dimensions go into the candidate list. Five decisions guide admission:
 - hand decisions first: a row whose documented model does not survive into the contract
   is refused by id, or by its notes' marker when the model is nonlinear;
   a row whose random effects were changed carries its fidelity:
@@ -40,7 +40,7 @@ from typing import Literal
 import pandas as pd
 from mixedbench import registry
 from mixedbench.contract import Problem, Refused, materialize
-from mixedbench.registry.row import Row, writeCsv
+from mixedbench.registry.row import Row, joinList, writeCsv
 
 # =====================================================================================
 # the hand decisions
@@ -341,12 +341,21 @@ class Admission:
     # ---------------------------------------------------------------------------------
     # the step that turns a built problem into its row of the list
     def _candidate(self, row: Row, problem: Problem) -> dict:
+        dimensions = problem.measureDimensions()
         return {
             'id': problem.id,
             'contract_hash': materialize(problem, self.cache),
             'verified': row.verified,
             'dropped_share': problem.dropped_share,
             'fidelity': self.fidelity.get(problem.id, ''),
+            'n': dimensions.n,
+            'd': dimensions.d,
+            'factors': joinList(problem.factors),
+            'grouping': dimensions.grouping,
+            'm': joinList(dimensions.m),
+            'q': joinList(dimensions.q),
+            'n_i_min': joinList(dimensions.n_i_min),
+            'n_i_max': joinList(dimensions.n_i_max),
         }
 
 
