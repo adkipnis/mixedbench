@@ -102,31 +102,31 @@ class Problem:
         Continuous columns are z-scored with the fold's scales.
         An interaction is the product of its standardized parts,
         see Aiken & West (1991) and Gelman (2008)."""
-        columns = [*self.design, self.response]
+        coded = self._listCoded()
+        others = [self.response]
         if self.trials:
-            columns.append(self.trials)
-        columns += self.factors
+            others.append(self.trials)
+        others += self.factors
         rows = _selectSeenRows(self.table, regime, fold)
-        table = rows[columns].copy()
+        table = rows[[*coded, *others]].copy()
         for column, scale in self.scales[regime][fold].items():
             table[column] = (table[column] - scale.mean) / scale.sd
+        products = {}
         for column, operands in self._findInteractions().items():
-            table[column] = table[list(operands)].prod(axis=1)
-        return table
+            products[column] = table[list(operands)].prod(axis=1)
+        return table.assign(**products)[[*coded, *products, *others]]
+
+    def _listCoded(self) -> list[str]:
+        """Returns the table's coded columns, `Intercept` first."""
+        others = {self.response, self.trials, *self.factors, 'rows', 'groups'}
+        return [column for column in self.table.columns if column not in others]
 
     def _findInteractions(self) -> dict[str, tuple[str, ...]]:
-        """Returns each interaction column with its parts, in order."""
-        # a covariate's coded columns: a continuous one has a scale, a binary one has levels,
-        # any other is a contrast
-        contrasts = []
-        for column, levels in self.levels.items():
-            contrasts += [f'{column}[{level}]' for level in levels[1:]]
-        covariate_columns = [*self.scales['full'][0], *self.levels, *contrasts]
-        design = self.design[1:]  # without `Intercept`
-        coded = [column for column in design if column in covariate_columns]
-        # every other design column is an interaction
+        """Returns each interaction of the design with its parts, in order."""
+        coded = self._listCoded()
+        # every design column the table lacks is an interaction
         interactions = {}
-        for column in design:
+        for column in self.design:
             if column not in coded:
                 interactions[column] = self._splitInteraction(column, coded)
         return interactions
@@ -250,7 +250,7 @@ class _Builder:
         design = self._assembleDesign(coded)
         factors = {factor: self._codeFactor(factor) for factor in self.row.grouping_factors}
         regimes = self._dealRegimes(factors)
-        columns = design | self._codeResponse() | factors | regimes
+        columns = self._leaveInteractions(design, coded) | self._codeResponse() | factors | regimes
         table = pd.DataFrame(columns).reset_index(drop=True)
         correlations = self._listCorrelations(coded)
         family, link = FAMILY[self.row.response_type]
@@ -371,6 +371,15 @@ class _Builder:
         for columns in coded.values():
             design.update(columns)
         return design
+
+    def _leaveInteractions(
+        self, design: dict[str, pd.Series], coded: Coded
+    ) -> dict[str, pd.Series]:
+        """Returns the design's columns but its interactions, which a fitter builds."""
+        interactions = []
+        for term in self.row.interactions:
+            interactions += coded[term]
+        return {name: column for name, column in design.items() if name not in interactions}
 
     def _codeFactor(self, column: str) -> pd.Series:
         """Returns the column's 0-based codes, in the loaded level order."""
