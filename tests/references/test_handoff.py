@@ -79,9 +79,11 @@ def test_an_interaction_reaches_r_as_its_parts_aliases_a_dropped_part_only_insid
     tmp_path: Path,
 ) -> None:
     """brms builds `w:c` from the standardized `w` and `c`, as the contract does (#155).
-    The contract dropped `w`, so `w` stands only inside the product, as lme4 keeps it."""
+    The contract dropped `w`, so `w` stands only inside the product, as lme4 keeps it.
+    R lists a term's variables in the order they first appear in the formula, so the term is
+    written as R labels it: `c` (`x4`) stands alone before `w` (`x3`)."""
     model = writtenModel(droppedPart(), tmp_path)
-    assert model['formula'] == 'y ~ x1 + x2 + x4 + x3:x4 + (1 | g1)'
+    assert model['formula'] == 'y ~ x1 + x2 + x4 + x4:x3 + (1 | g1)'
     assert list(pd.read_csv(tmp_path / 'table.csv').columns) == ['y', 'x1', 'x2', 'x3', 'x4', 'g1']
 
 
@@ -259,6 +261,15 @@ def test_slopes_and_correlation_pairs_read_back_by_brms_label() -> None:
     assert draws['sd[age|school]'].tolist() == raw['sd_g1__x3'].tolist()
     assert draws['cor[school][Intercept,age]'].tolist() == raw['cor_g1__Intercept__x3'].tolist()
     assert draws['cor[school][dose,sex]'].tolist() == raw['cor_g1__x1__x2'].tolist()
+
+
+def test_an_interaction_reads_back_by_the_label_r_gives_its_term() -> None:
+    """`c` (`x4`) stands alone in the formula before `w` (`x3`) appears, so R labels `w:c`'s term
+    `x4:x3` and brms's draw is `b_x4:x3` (#155). Recorded by `run.R` from `Handoff.write` of
+    `droppedPart()`, at 100 warmup and 10 draws per chain."""
+    draws = Handoff(droppedPart()).read(FIXTURES / 'dropped_part')['globals']
+    assert list(draws.columns) == ['chain', 'draw', 'Intercept', 'x', 'sex', 'c', 'w:c', 'sd[block]', 'sigma']  # fmt: skip
+    assert draws['w:c'].tolist() == rawDraws('dropped_part')['b_x4:x3'].tolist()
 
 
 def test_ordinal_thresholds_read_back_as_intercept_k() -> None:
