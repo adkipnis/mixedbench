@@ -291,6 +291,23 @@ def test_a_design_column_aliased_by_the_columns_before_it_is_dropped_and_recorde
     assert not standardized.isna().any().any()
 
 
+def test_a_dropped_part_stays_in_the_table_while_a_kept_interaction_needs_it() -> None:
+    """`width` sums `x` and `sex`, as Hoogland's AllKin, so the drop removes it, but no earlier
+    column spans `diet:width`. lme4 drops `width` and keeps `diet:width` too.
+    The table keeps `width`, scaled per fold, so a fitter can build the product (#155)."""
+    row = fixtureRow(covariates=(*ROW.covariates, 'width'), interactions=('diet:width',))
+    problem = Problem.build(row, fixtureTable().assign(width=SUMMED))
+    assert problem.design[-2:] == ('diet[b]:width', 'diet[c]:width')
+    assert problem.dropped_columns == ('width',)
+    assert 'width' not in problem.parameters
+    assert 'width' in problem.scales['full'][0]
+    standardized = problem.standardized()
+    width = np.array(X) + np.array(SEX)  # (12,) over the kept rows
+    z = (width - width.mean()) / width.std(ddof=1)  # (12,)
+    assert standardized['diet[b]:width'].to_numpy() == pytest.approx(z * np.array([0, 1, 0] * 4))
+    assert not standardized.isna().any().any()
+
+
 @pytest.mark.lme4
 @pytest.mark.parametrize(
     'width, interactions',
@@ -304,6 +321,7 @@ def test_a_design_column_aliased_by_the_columns_before_it_is_dropped_and_recorde
             CELLED, ('x:sex', 'sex:width'),
             id='an empty cell at a first level, its contrasts not constant',
         ),
+        pytest.param(SUMMED, ('diet:width',), id='a dropped part of a kept interaction'),
     ],
 )  # fmt: skip
 def test_lme4_estimates_the_design_columns_the_contract_keeps(
