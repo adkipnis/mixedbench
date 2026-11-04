@@ -44,7 +44,7 @@ from flat import (
     SCREEN_COLUMNS,
 )
 from groups import COLUMN_FACTOR_COLUMNS
-from measure import Measurer, measureRegistry
+from measure import Measurement, Measurer
 from merge import Merger
 from mixedbench.datasets import Loader
 from mixedbench.registry.row import Row, readCsv, writeCsv
@@ -137,8 +137,12 @@ def mergeShard(merger: Merger, shard: Path) -> Merger:
 
 
 def runMeasure(merger: Merger) -> None:
-    """The steps of `measure.py`'s `__main__`, over the merger's registry."""
-    measureRegistry(merger.registry, merger.loader)
+    """The steps of `measure.py`'s `__main__`, a run per row and the collect, over the merger's
+    registry."""
+    measurement = Measurement(merger.registry, merger.loader, merger.survey / 'measure')
+    for index in range(len(measurement.rows)):
+        measurement.run(index)
+    measurement.collect()
     Summarizer(merger.registry, merger.survey).flush()
 
 
