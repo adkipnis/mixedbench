@@ -22,9 +22,9 @@ deposits of the practice survey's papers, `O` open tabular repositories):
    nothing written.
 5. **Fits.** `fits.py` fits each documented model by lme4, a cluster array task per row, and
    collects `fits.csv`; a merge leaves it as it is.
-6. **Measurement.** `measure.py` measures every registry row's table into the five measured
-   files and rewrites the summary, as a job of its own before a release; a merge leaves them
-   as they are.
+6. **Measurement.** `measure.py` measures each registry row's table, a cluster array task per
+   row, and collects the five measured files and the summary, as a job of its own before a
+   release; a merge leaves them as they are.
 7. **Checks.** A blind second reading of the `medium` and `low` rows, a spot check per tier and
    two hand samples against [ADR 0002](../docs/adr/0002-registry-suite-versioning-licenses.md)'s
    bar; the outcomes are in [`HISTORY.md`](HISTORY.md).
@@ -42,7 +42,8 @@ deposits of the practice survey's papers, `O` open tabular repositories):
 ```
 uv run python survey/pull.py [--tiers E O]
 uv run python survey/merge.py survey/shards/<shard>.csv
-uv run python survey/measure.py
+uv run python survey/measure.py run <index>
+uv run python survey/measure.py collect
 uv run python survey/fits.py run <index>
 uv run python survey/fits.py collect
 uv run python survey/flat.py screen
@@ -55,8 +56,8 @@ uv run python survey/mirror.py --tag mirror-<n>
 ```
 
 `pull.py`, `merge.py`, `measure.py`, `fits.py` and `flat.py` take `--registry DIR` and `--survey DIR`
-(default `registry/`, `survey/`), `fits.py` also `--dir DIR` for its run directories (default
-`fits/`). `pull.py --tiers` pulls only those tiers; the others keep their rows.
+(default `registry/`, `survey/`), `fits.py` and `measure.py` also `--dir DIR` for their runs
+(default `fits/` and `measure/`). `pull.py --tiers` pulls only those tiers; the others keep their rows.
 
 ## Files
 
