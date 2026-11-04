@@ -750,6 +750,20 @@ reading's open disagreements, four to eight per tier.
 - The widest tables set the run's length: openml_41444 and DAAG nassCDS took 19 and 41 minutes
   on 48 CPUs, against more than 90 on one, and skillbuilder needed 28 GB.
 
+## Compressed CRAN data files (#180, 2026-11-04)
+
+- The loader reads CRAN data files in bzip2 or xz since #180, which enumerates two more objects:
+  FAwR herbdata and gamlss.data abdom. A Tier R pull into a scratch copy added only these two to
+  `candidates.csv`.
+- `shards/registry_bzip2_xz.csv` files herbdata at `low`, with height by treatment over the
+  eight visits and an intercept per seedling, since no source fits a model. A blind second
+  reading added an intercept per plot, which Alex left out as a weak component of six levels.
+- `shards/excluded_bzip2_xz.csv` excludes abdom as `no grouping structure`, since its
+  reference-centile data hold no fetus identifier.
+- `measure.py` measured every row again, as records carry their row's cells from #187 on. Every
+  earlier row of the five measured files stayed byte for byte.
+- `suite/admit.py` admits herbdata, and no other candidate or refusal moved.
+
 ## Reading rulings (m3#22 to #15)
 
 The rulings [`prompts/read.md`](prompts/read.md) does not carry, from the agents' `RULE GAP` notes and Alex's checks, each with an example
@@ -767,7 +781,7 @@ object and the deciding issue.
   (connolly.potato; m3#22), though a Latin square's rows and columns are blocks (OrchardSprays;
   m3#23); a factor that classifies rather than clusters (singer; m3#23), as a pseudo-panel's
   cells of income class and household size do (BudgetItaly; #162); a dyad with one row per pair
-  (Monks; m3#25).
+  (Monks; m3#25); a trial's six plots beside its seedlings, a weak component (herbdata; #180).
 - A term `a:b` has no level where a part is missing (m3#24). Where a column is both a grouping
   factor and a covariate, the grouping stands and the fixed term stays in the formula
   (Cultivation; #12).
@@ -809,9 +823,10 @@ object and the deciding issue.
 
 - A baseline is a covariate, not a response (dietox; m3#22). Polynomial and derived terms name
   their column once (muscatine; m3#22).
-- An interaction is carried only when fitted (prt; m3#22). The source document beats recall
-  (Stata manuals; m3#24). The final model's terms count, not the candidates; subset fits and
-  contrasts are named in the formula (m3#26).
+- An interaction is carried only when fitted (prt; m3#22), but an inferred model of a trial
+  carries its treatment by occasion interaction (locomotor, herbdata; #180). The source
+  document beats recall (Stata manuals; m3#24). The final model's terms count, not the
+  candidates; subset fits and contrasts are named in the formula (m3#26).
 - A variant with one row per extra level is the same model (SASmixed, melanoma; m3#22, m3#24).
   posteriordb's ladders render the richest grouping (radon; m3#24).
 - `published_model` is `no` for all of Tier O (m3#24), unless a paper fits a mixed model on the
