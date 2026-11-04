@@ -10,6 +10,7 @@ import socket
 from itertools import islice
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 import pytest
 from mixedbench import registry, suite
@@ -131,6 +132,7 @@ def test_select_without_axes_lists_each_candidate_with_its_axes(id: str, axes: d
     'axes, kept',
     [
         pytest.param({'q': 1}, {DYESTUFF, ARABIDOPSIS, WINE}, id='an int matches exactly'),
+        pytest.param({'n': np.int64(30)}, {DYESTUFF}, id='a numpy int matches as an int'),
         pytest.param({'n': (100, None)}, {SLEEPSTUDY_ID, ARABIDOPSIS}, id='a range with an open end'),
         pytest.param({'d': (2, 4)}, {SLEEPSTUDY_ID, WINE}, id='a range includes both ends'),
         pytest.param({'family': ['gaussian', 'cumulative']}, {DYESTUFF, SLEEPSTUDY_ID, WINE}, id='a list of values'),
@@ -145,7 +147,21 @@ def test_select_keeps_the_known_rows_whose_axes_match(axes: dict, kept: set[str]
     assert set(selected['id']) & set(KNOWN) == kept
 
 
-def test_select_names_the_values_of_an_axis_given_another() -> None:
-    """A misspelled value would otherwise select nothing without a word."""
-    with pytest.raises(ValueError, match="grouping 'simple' is none of single, nested, crossed, mixed"):  # fmt: skip
-        suite.select(grouping='simple')
+@pytest.mark.parametrize(
+    'axes, message',
+    [
+        pytest.param({'grouping': 'simple'}, "grouping 'simple' is none of single, nested, crossed, mixed", id='a misspelled value, named with the values'),
+        pytest.param({'n': (100, 10)}, r'n \(100, 10\) is a reversed range', id='a reversed range'),
+    ],
+)  # fmt: skip
+def test_select_raises_where_it_would_select_nothing_without_a_word(
+    axes: dict, message: str
+) -> None:
+    with pytest.raises(ValueError, match=message):
+        suite.select(**axes)
+
+
+def test_select_takes_its_axes_by_name_only() -> None:
+    """By position, `select('R', 'gaussian', 'single', 1)` would set `n` to 1, not `q`."""
+    with pytest.raises(TypeError):
+        suite.select('R')
