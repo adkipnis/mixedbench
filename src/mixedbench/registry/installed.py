@@ -8,6 +8,7 @@ the installed files                                   path
 -> sources.yaml as a pinned Source per label          sources
 -> manifest.csv as the file each object loads from    manifest
 -> registry.csv as typed Rows                         rows
+-> fits.csv as lme4's status per fitted row           fits
 -> fits_preparation.csv as the rows each fit read     Preparations
 -> a row's typed table                                Tables.load
 -> the rows its fit read                              Tables.loadFitted
@@ -93,6 +94,19 @@ def rows(file: Path | None = None) -> list[Row]:
     return [Row.parse(record) for record in cells.to_dict('records')]
 
 
+def fits() -> dict[str, str]:
+    """lme4's status per fitted row id. fits.csv repeats a row's status on each of its factors."""
+    statuses = {}
+    for fit in readCsv(path('fits.csv')).to_dict('records'):
+        statuses[_joinId(fit)] = fit['status']
+    return statuses
+
+
+def _joinId(cells: dict[str, str]) -> str:
+    """A row's id from its key cells, as `Row.id` writes it."""
+    return f'{cells["source"]}/{cells["object"]}/{cells["model_index"]}'
+
+
 class Preparations:
     """fits_preparation.csv: the registry fits that read other rows than the whole table."""
 
@@ -105,8 +119,7 @@ class Preparations:
     def __init__(self, file: Path | None = None) -> None:
         self.listed = {}
         for preparation in readCsv(file or path('fits_preparation.csv')).to_dict('records'):
-            id = f'{preparation["source"]}/{preparation["object"]}/{preparation["model_index"]}'
-            self.listed[id] = preparation
+            self.listed[_joinId(preparation)] = preparation
 
     def prepare(self, row: Row, table: pd.DataFrame) -> pd.DataFrame:
         """The rows the source fitted: its subset, each row repeated by its frequency weight.
