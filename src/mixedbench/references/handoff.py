@@ -40,6 +40,7 @@ class Handoff:
     `x1`, `x2`, ... for the table's coded columns after `Intercept`,
     `g1`, `g2`, ... for the grouping factors.
     An interaction is a term of its parts' aliases, such as `x4:x3`, whose column brms builds.
+    One with a repeated part is their product, `I(x1*x1)`, since R collapses `x1:x1` to `x1`.
     Each grouping factor is one term: `(x1 | g1)` for slopes correlated with its intercept,
     `(x1 || g1)` for uncorrelated ones and `(1 | g1)` without slopes.
     brms labels a variable by its class and aliases, such as `sd_g1__x1` or `r_g1[j,x1]`,
@@ -82,7 +83,11 @@ class Handoff:
             parts = [alias_of[part] for part in interactions.get(column, (column,))]
             appearances += [alias for alias in parts if alias not in appearances]
             if column in interactions:
-                alias_of[column] = ':'.join(sorted(parts, key=appearances.index))
+                ordered = sorted(parts, key=appearances.index)
+                if len(set(parts)) < len(parts):  # R collapses `x1:x1` to `x1`
+                    alias_of[column] = f'I({"*".join(ordered)})'
+                else:
+                    alias_of[column] = ':'.join(ordered)
         return alias_of
 
     # ---------------------------------------------------------------------------------
@@ -176,7 +181,9 @@ class Handoff:
             if name.startswith('Intercept['):  # an ordinal model's thresholds
                 names[f'b_{name}'] = name
         for column in self.problem.design[1:]:
-            names[f'b_{self._aliasOf[column]}'] = column
+            # brms's `rename()` drops brackets and writes `*` as `MU`: `I(x1*x1)` is `Ix1MUx1`
+            label = self._aliasOf[column].replace('(', '').replace(')', '').replace('*', 'MU')
+            names[f'b_{label}'] = column
         for factor in self.problem.factors:
             names.update(self._factorNames(factor))
         return names
