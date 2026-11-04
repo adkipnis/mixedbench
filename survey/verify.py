@@ -147,6 +147,10 @@ These rules settle what groups:
 - **Levels:** a grouping factor no documented model fits needs at least five levels sampled
   from a larger population (Harrison et al. 2018; Bolker et al. 2009). Fewer levels, or a few
   exhaustive ones (a city's boroughs, a country's regions), make a design factor.
+- **Many exhaustive units:** an exhaustive set of many units (50 states, a league's 30 teams)
+  groups, as sampled units do.
+- **Fixed blocks:** a source that fits blocks as fixed effects is filed with random blocks, at
+  `low`.
 - **Plots:** coordinates that identify one plot observed on several occasions on the same land
   group as `row:col`, even where some plots are observed once.
 - **Waves:** a wave that a documented model fits as fixed, or separately per wave, groups
@@ -164,6 +168,15 @@ These rules settle what groups:
   per unit, has no grouping structure; a summary of another file is a derived or duplicated
   table.
 - **Size:** a large table is read like any other and never filed `too large`.
+
+These rules settle how a row is written:
+
+- **Nonlinear models:** a documented model nonlinear in its parameters (a growth curve, a
+  pharmacokinetic model) keeps its row for its grouping: the formula names the model class and
+  its inputs in words, and the notes open `NONLINEAR:`.
+- **Survival:** the time is a `continuous` response, the event indicator in the formula's
+  `Surv(time, event)`.
+- **No model:** a `no` row keeps a formula, the model a reader would fit to the design.
 
 ## Per row
 
