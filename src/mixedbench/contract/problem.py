@@ -10,6 +10,7 @@ the model formula, model family, prior, train/test splits, scales, and parameter
    One typing rule decides each column's kind.
 3. Complete cases only: a row that misses a model value is dropped.
    A design column the columns before it span over the kept rows is dropped and recorded.
+   A dropped part stays in the table while a kept interaction needs it, as lme4 keeps `a:b`.
    A row outside the contract (a categorical response, a censored model,
    doses on rows without a response) raises `Refused`.
 4. Five levels per grouping factor: a factor with fewer over the kept rows
@@ -17,6 +18,7 @@ the model formula, model family, prior, train/test splits, scales, and parameter
    A row left without a factor, or with random slopes on such a factor, raises `Refused`.
 5. Scaled per fold: the table stays in raw units.
    Each fold records the scales of the rows its fit sees.
+   The table holds no interaction, since a fitter builds it from its standardized parts.
 6. Parameter names are based on brms and are in brms's block order.
 
 pipeline:
@@ -27,7 +29,8 @@ a typed registry row and its loaded table
 -> few-level factors made covariates           _convertFewLevelFactors
 -> each covariate's kind and coded columns     _typeCovariates, _codeTerms
 -> the columns the earlier ones span dropped   dropAliased
--> the design, factors and response            _assembleDesign, _codeFactor, _codeResponse
+-> the design and the parts the table holds    _assembleDesign, _selectParts
+-> the factors and response                    _codeFactor, _codeResponse
 -> the regimes `rows` and `groups`, in folds   _dealRegimes
 -> each fold's scales                          _measureFolds
 -> the family, prior and parameter names       _assignPrior, _nameParameters
@@ -66,10 +69,10 @@ FAMILY = {
 @dataclass(frozen=True)
 class Problem:
     id: str  # <source>/<object>/<model_index>
-    table: pd.DataFrame  # the coded columns in raw units, one row per kept row
+    table: pd.DataFrame  # the covariates' coded columns in raw units, one row per kept row
     # the column roles in `table`; the factors hold 0-based codes, and the columns `rows` and
     # `groups` hold the fold each row is held out in, -1 for none
-    design: tuple[str, ...]  # `Intercept` first
+    design: tuple[str, ...]  # `Intercept` first, the interactions last
     response: str
     factors: tuple[str, ...]
     levels: dict[str, tuple]  # each recoded column's levels, in code order
@@ -77,7 +80,8 @@ class Problem:
     # sees, with `full` as one fold that holds nothing out
     scales: dict[Regime, tuple[dict[str, Scale], ...]]
     dropped_share: float  # the share of loaded rows dropped for a missing model value
-    dropped_columns: tuple[str, ...]  # the coded columns the columns before them span
+    # the coded columns the columns before them span; `table` keeps those a kept interaction needs
+    dropped_columns: tuple[str, ...]
     trials: str | None  # the trials column of a binomial response
     family: str  # brms's name, set by the family rule
     link: str
@@ -250,9 +254,9 @@ class _Builder:
         terms = self._codeTerms()
         coded, dropped_columns = dropAliased(terms, len(self.table))
         design = self._assembleDesign(coded)
+        covariates = self._selectParts(terms, design)
         factors = {factor: self._codeFactor(factor) for factor in self.row.grouping_factors}
         regimes = self._dealRegimes(factors)
-        covariates = self._selectParts(terms, design)
         columns = covariates | self._codeResponse() | factors | regimes
         table = pd.DataFrame(columns).reset_index(drop=True)
         correlations = self._listCorrelations(coded)
