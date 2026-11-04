@@ -69,12 +69,19 @@ class Handoff:
 
     @cached_property
     def _aliasOf(self) -> dict[str, str]:
-        """Returns each column's alias, an interaction's being its term in the formula."""
+        """Returns each column's alias, an interaction's being its term as R labels it."""
         alias_of = {'Intercept': 'Intercept'}
         for alias, column in self.aliases.items():
             alias_of[column] = alias
-        for column, parts in self.problem.findInteractions().items():
-            alias_of[column] = ':'.join(alias_of[part] for part in parts)
+        # R lists a term's variables in the order they first appear in the formula,
+        # which writes the design in order
+        interactions = self.problem.findInteractions()
+        appearances = []
+        for column in self.problem.design[1:]:
+            parts = [alias_of[part] for part in interactions.get(column, (column,))]
+            appearances += [alias for alias in parts if alias not in appearances]
+            if column in interactions:
+                alias_of[column] = ':'.join(sorted(parts, key=appearances.index))
         return alias_of
 
     # ---------------------------------------------------------------------------------
