@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Literal, get_args
 
 import pandas as pd
-from mixedbench.datasets import ColumnType
+from mixedbench.datasets import ColumnType, Levels
 
 # =====================================================================================
 # vocabularies
@@ -85,10 +85,23 @@ class SlopeTerm:
         return cls(match['covariate'], match['factor'], correlated=match['bars'] == '|')
 
 
-def parseTypes(text: str) -> dict[str, str]:
-    """`col=categorical;col2=continuous` -> {col: kind}."""
-    pairs = [entry.partition('=') for entry in splitList(text)]
-    return {col.strip(): kind.strip() for col, _, kind in pairs}
+def parseTypes(text: str) -> dict[str, ColumnType | Levels]:
+    """`col=categorical;col2=ordered:a<b` -> {col: 'categorical', col2: (a, b)}:
+    a declared order stands for its column's kind."""
+    types = {}
+    for column, kind, order in splitTypes(text):
+        types[column] = tuple(order.split('<')) if order else kind
+    return types
+
+
+def splitTypes(text: str) -> list[tuple[str, str, str]]:
+    """`col=kind` or `col=kind:a<b` per entry -> (col, kind, 'a<b' or '')."""
+    entries = []
+    for entry in splitList(text):
+        column, _, declared = entry.partition('=')
+        kind, _, order = declared.partition(':')
+        entries.append((column.strip(), kind.strip(), order.strip()))
+    return entries
 
 
 # =====================================================================================
@@ -117,7 +130,7 @@ class Row:
     interactions: tuple[str, ...]
     random_slopes: tuple[SlopeTerm, ...]
     ignore: tuple[str, ...]
-    types: dict[str, ColumnType]
+    types: dict[str, ColumnType | Levels]
     formula: str
     documented_prior: str
     published_model: str
@@ -157,9 +170,11 @@ class Row:
             refusals.append(('response_type', f'not a response type: {cells["response_type"]}'))
         if cells['family'] not in ('', *get_args(Family)):
             refusals.append(('family', f'not a family: {cells["family"]}'))
-        for kind in parseTypes(cells['types']).values():
+        for _, kind, order in splitTypes(cells['types']):
             if kind not in get_args(ColumnType):
                 refusals.append(('types', f'not a column type: {kind}'))
+            elif order and kind != 'ordered':
+                refusals.append(('types', f'an order on a {kind} column'))
         for column in TERM_COLUMNS:
             for term in splitList(cells[column]):
                 if '' in parts(term):
