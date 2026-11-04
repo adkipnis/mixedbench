@@ -10,6 +10,8 @@ import pytest
 from mixedbench import registry
 from mixedbench.registry.row import Row, SlopeTerm, parts, readCsv, writeCsv
 
+from .conftest import installedRow
+
 
 def test_the_dialect_round_trips_an_empty_cell_and_a_cell_with_a_comma(tmp_path: Path) -> None:
     """Every cell is a quoted string and the empty cell stays `''`, never NaN: a `notes` cell
@@ -19,17 +21,10 @@ def test_the_dialect_round_trips_an_empty_cell_and_a_cell_with_a_comma(tmp_path:
     assert readCsv(tmp_path / 'rows.csv').equals(table)
 
 
-def installedRow(source: str, object: str, model_index: int) -> Row:
-    rows = registry.rows()
-    matches = [r for r in rows if (r.source, r.object, r.model_index) == (source, object, model_index)]  # fmt: skip
-    assert len(matches) == 1
-    return matches[0]
-
-
 def test_an_installed_row_has_its_lists_split_and_its_types_as_a_mapping() -> None:
     """lme4 VerbAgg #1 fills every list column: two folded sources, two grouping factors, six
     interactions, an ignored column declared ordered."""
-    row = installedRow('lme4', 'VerbAgg', 1)
+    row = installedRow('lme4/VerbAgg/1')
     assert row.sources == ('lme4:VerbAgg', 'mixedmodels_jl:verbagg.arrow')
     assert row.response_type == 'binary'
     assert row.grouping_factors == ('id', 'item')
@@ -44,7 +39,7 @@ def test_an_installed_row_has_its_lists_split_and_its_types_as_a_mapping() -> No
 def test_a_composite_term_splits_into_its_parts() -> None:
     """nlme Alfalfa's whole plots are `Block:Variety`, no column of the table: the term keeps
     its name and `parts` gives the columns it combines."""
-    row = installedRow('nlme', 'Alfalfa', 1)
+    row = installedRow('nlme/Alfalfa/1')
     assert row.grouping_factors == ('Block', 'Block:Variety')
     assert parts(row.grouping_factors[1]) == ('Block', 'Variety')
 
@@ -126,5 +121,5 @@ def test_a_slope_on_a_column_whose_name_has_spaces_is_one_covariate() -> None:
 def test_a_row_names_its_problem() -> None:
     """The problem id is the row's: the contract, the admission and the candidate test key on
     it, so it is written once."""
-    row = installedRow('lme4', 'VerbAgg', 1)
+    row = installedRow('lme4/VerbAgg/1')
     assert row.id == 'lme4/VerbAgg/1'
