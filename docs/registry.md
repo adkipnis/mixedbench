@@ -190,10 +190,10 @@ Measured over the rows with a measured response, since dosing rows are no observ
   (log) by `glmer`. `survey/fits.py` runs the pass on a cluster, and a merge leaves the file as
   it is.
 - A row whose source fits a subset of the table, or repeats each row by a frequency weight, is
-  listed in `survey/fits_preparation.csv` with the subset as a pandas query or the weight's
-  column, and the fit and `n_obs` take those rows. A weight that
-  counts the groups of a factor (`frequency_factor`, twin_hay's `pair`) makes each copy of a
-  group a group of its own.
+  listed in `fits_preparation.csv` with the subset as a pandas query or the weight's column,
+  and the fit and `n_obs` take those rows, which `Tables.loadFitted` returns.
+  A weight that counts the groups of a factor (`frequency_factor`, twin_hay's `pair`) makes each
+  copy of a group a group of its own.
 - Key `source`, `object`, `model_index`, `factor`, with `tier`, a row per grouping factor of the
   fit with the per-row fields repeated. `factor` is the registry's grouping factor that groups
   the rows alike, else lme4's name (`factor(year)`, an observation-level `INDEX`). A fit without

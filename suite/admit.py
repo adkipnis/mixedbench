@@ -105,6 +105,7 @@ REFUSED = {
     ),
     # a row that stands for several observations, which the documented fit weights by count (#61)
     'agridat/keen.potatodamage/1': 'frequency_weighted: each cell weighted by count (#61)',
+    'agridat/jansen.strawberry/1': 'frequency_weighted: each cell weighted by count (#179)',
     'rabe_hesketh/twin_hay.dta/1': (
         'frequency_weighted: each response pattern weighted by freq (#61)'
     ),

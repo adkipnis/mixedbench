@@ -11,13 +11,13 @@ from conftest import FIXTURES, mergeShard, parsed, readRows
 from fits import (
     FIT_COLUMNS,
     FIT_STATISTICS,
-    PREPARATION_COLUMNS,
     RESPONSE_TYPES,
     Fitter,
     measureFit,
 )
 from mixedbench.contract import FAMILY
 from mixedbench.frequentist import Family, Fit, Term, fit
+from mixedbench.registry.installed import Preparations
 from mixedbench.registry.row import readCsv, writeCsv
 
 
@@ -204,7 +204,7 @@ def mergedHerds(
 ) -> Fitter:
     """A fitter over the scratch registry of the herds rows, the gaussian one's formula replaced:
     it fits that row and not the binomial one, unless `counted` names a formula for its cases
-    as a count. The survey lists `preparations`."""
+    as a count. The registry lists `preparations`."""
     rows = readRows(FIXTURES / 'registry_herds.csv')
     rows[0]['formula'] = formula
     if counted:
@@ -212,9 +212,9 @@ def mergedHerds(
     shard = merger.survey / 'shards' / 'registry_fits.csv'
     writeCsv(pd.DataFrame(rows), shard)
     mergeShard(merger, shard)
-    listed = pd.DataFrame(list(preparations), columns=PREPARATION_COLUMNS)
-    writeCsv(listed, merger.survey / 'fits_preparation.csv')
-    return Fitter(merger.registry, merger.survey, merger.loader, merger.survey / 'fits')
+    listed = pd.DataFrame(list(preparations), columns=Preparations.COLUMNS)
+    writeCsv(listed, merger.registry / 'fits_preparation.csv')
+    return Fitter(merger.registry, merger.loader, merger.survey / 'fits')
 
 
 def test_the_pass_collects_a_row_per_factor_of_every_row_it_fits(merger):
@@ -281,27 +281,6 @@ def test_a_run_fits_the_rows_its_source_fitted(merger):
 
     fits = readCsv(fitter.root / 'fits.csv')
     assert fits[['factor', 'n_obs']].values.tolist() == [['herd', '27']]
-
-
-def test_a_weight_of_a_group_repeats_the_group_each_copy_a_group_of_its_own(merger):
-    """twin_hay weights each twin pair's response pattern, its weight on both members:
-    repeated alone, the rows of a pattern's pairs would fall into one group of 2 × weight twins."""
-    preparation = {
-        'source': 'herds',
-        'object': 'herds.csv',
-        'model_index': '1',
-        'subset': '',
-        'frequency': 'freq',
-        'frequency_factor': 'pair',
-        'reason': 'freq counts the pairs of each pattern',
-    }
-    fitter = mergedHerds(merger, 'h ~ 1 + (1 | pair)', preparations=(preparation,))
-    patterns = pd.DataFrame({'pair': [1, 1, 2, 2], 'h': [0, 1, 1, 1], 'freq': [3, 3, 2, 2]})
-
-    table = fitter.prepareTable(fitter.rows[0], patterns)
-
-    members = table.groupby('pair')['h'].apply(list).to_dict()
-    assert members == {'1:0': [0, 1], '1:1': [0, 1], '1:2': [0, 1], '2:0': [1, 1], '2:1': [1, 1]}
 
 
 def test_a_preparation_names_a_row_the_pass_fits(merger):

@@ -8,7 +8,7 @@ The merge leaves fits.csv as it is, and `measure.py` renders the summary from it
 pipeline:
 ---------
 a registry row and its loaded table                    Fitter.run
--> the rows its source fitted                          Fitter.prepareTable
+-> the rows its source fitted                          Preparations.prepare
 -> its formula fitted as written                       frequentist.fit
 -> the variance components, R² and ICC per factor      measureFit
 -> each factor named as the registry names it          nameFactor
@@ -35,7 +35,8 @@ from mixedbench import registry
 from mixedbench.contract import FAMILY, withComposites
 from mixedbench.datasets import Loader
 from mixedbench.frequentist import Fit, fit
-from mixedbench.registry.row import Row, parts, readCsv, writeCsv
+from mixedbench.registry.installed import Preparations
+from mixedbench.registry.row import Row, parts, writeCsv
 from schema import IDENTITY
 from sources import readFrame
 
@@ -58,11 +59,6 @@ FIT_COLUMNS = (
     *IDENTITY, 'factor', 'status', 'message', 'seconds', 'n_obs', 'family', 'family_doc',
     *FIT_STATISTICS, 'max_abs_eta',
 )  # fmt: skip
-# fits_preparation.csv: a row whose source fits a subset (a pandas query) or repeats each row by
-# a frequency weight (its column), the factor whose groups a weight counts, and why
-PREPARATION_COLUMNS = (
-    'source', 'object', 'model_index', 'subset', 'frequency', 'frequency_factor', 'reason',
-)  # fmt: skip
 
 
 # =====================================================================================
@@ -71,7 +67,7 @@ PREPARATION_COLUMNS = (
 class Fitter:
     """The fits of a registry's rows with a fitted response type, a directory each under `dir`."""
 
-    def __init__(self, root: Path, survey: Path, loader: Loader, dir: Path) -> None:
+    def __init__(self, root: Path, loader: Loader, dir: Path) -> None:
         self.root = root
         self.loader = loader
         self.dir = dir
@@ -79,12 +75,10 @@ class Fitter:
         rows = registry.rows(root / 'registry.csv')
         self.rows = [row for row in rows if row.response_type in RESPONSE_TYPES]
         fitted = {row.id for row in self.rows}
-        self.preparations = {}
-        for preparation in readCsv(survey / 'fits_preparation.csv').to_dict('records'):
-            id = f'{preparation["source"]}/{preparation["object"]}/{preparation["model_index"]}'
+        self.preparations = Preparations(root / 'fits_preparation.csv')
+        for id in self.preparations.listed:
             if id not in fitted:
                 raise ValueError(f'fits_preparation.csv prepares {id}, which no fit takes')
-            self.preparations[id] = preparation
 
     def run(self, index: int) -> None:
         """Fits the row at `index` among the rows fitted, replacing an earlier run of it."""
@@ -94,28 +88,10 @@ class Fitter:
             shutil.rmtree(dir)
         dir.mkdir(parents=True)
         loaded = self.loader.load(self.sources[row.source], row.object, row.types)
-        table = self.prepareTable(row, loaded)
+        table = self.preparations.prepare(row, loaded)
         fitted = fit(table, row.formula, FAMILY[row.response_type][0], dir, TIMEOUT)
         records = measureFit(row, fitted, table)
         (dir / 'records.json').write_text(json.dumps(records, indent=2))
-
-    def prepareTable(self, row: Row, table: pd.DataFrame) -> pd.DataFrame:
-        """The rows the source fitted: its subset, each row repeated by its frequency weight.
-        A weight that counts a factor's groups makes each copy of a group a group of its own."""
-        preparation = self.preparations.get(row.id)
-        if preparation is None:
-            return table
-        if preparation['subset']:
-            table = table.query(preparation['subset'])
-        if preparation['frequency']:
-            repeats = table[preparation['frequency']].astype(int)
-            table = table.loc[table.index.repeat(repeats)]
-        if preparation['frequency_factor']:
-            factor = preparation['frequency_factor']
-            copies = table.groupby(level=0).cumcount()  # per row of the table, 0 to its weight - 1
-            labels = table[factor].astype(str) + ':' + copies.astype(str)
-            table = table.assign(**{factor: labels})
-        return table.reset_index(drop=True)
 
     def collect(self) -> None:
         """Writes every row's records into fits.csv; raises where a row was never run."""
@@ -206,11 +182,10 @@ if __name__ == '__main__':
     parser.add_argument('command', choices=('run', 'collect'), help='fit one row, or collect every row into fits.csv')
     parser.add_argument('index', type=int, nargs='?', help='the row to fit, by its 0-based index among the rows fitted')
     parser.add_argument('--registry', type=Path, default=HERE.parent / 'registry', help='folder holding sources.yaml and the census tables')
-    parser.add_argument('--survey', type=Path, default=HERE, help='folder holding fits_preparation.csv and the duplicates and dropped tables')
     parser.add_argument('--dir', type=Path, default=HERE.parent / 'fits', help='folder of the run directories')
     args = parser.parse_args()
     # fmt: on
-    fitter = Fitter(args.registry, args.survey, Loader(args.registry / 'cache'), args.dir)
+    fitter = Fitter(args.registry, Loader(args.registry / 'cache'), args.dir)
     if args.command == 'run':
         fitter.run(args.index)
     else:

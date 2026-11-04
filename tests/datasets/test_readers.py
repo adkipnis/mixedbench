@@ -5,7 +5,9 @@ the awkward files met in the pull, plus single R files as deposits serve them.""
 
 from __future__ import annotations
 
+import bz2
 import gzip
+import lzma
 import shutil
 import tarfile
 from collections.abc import Sequence
@@ -157,13 +159,24 @@ def test_a_data_txt_reads_as_r_reads_it_in_the_c_locale():
     pd.testing.assert_frame_equal(tables['typed'], twin['typed'])
 
 
-def test_a_gzipped_data_file_is_named_and_read_as_data_reads_it(tmp_path):
-    """MCMCglmm ships `data/BTdata.tab.gz`, which utils::data() reads as the `.tab` it wraps
-    and names `BTdata` (#166)."""
-    file = tmp_path / 'typed.txt.gz'
-    file.write_bytes(gzip.compress((FIXTURES / 'typed.txt').read_bytes()))
-    tables, _ = readers.read(file, 'data/typed.txt.gz', cran=True)
+@pytest.mark.parametrize(
+    'compress, wrapper',
+    [
+        pytest.param(gzip.compress, '.gz', id='MCMCglmm BTdata.tab.gz (#166)'),
+        pytest.param(bz2.compress, '.bz2', id='FAwR herbdata.txt.bz2 (#180)'),
+        pytest.param(lzma.compress, '.xz', id='gamlss.data abdom.tab.xz (#180)'),
+    ],
+)
+def test_a_compressed_data_file_is_found_named_and_read_as_data_reads_it(
+    tmp_path, compress, wrapper
+):
+    """utils::data() reads a text file in `data/` compressed by gzip, bzip2 or xz as the file it
+    wraps, and names it by the name before both suffixes: `BTdata.tab.gz` as `BTdata`."""
+    file = tmp_path / f'typed.txt{wrapper}'
+    file.write_bytes(compress((FIXTURES / 'typed.txt').read_bytes()))
+    tables, _ = readers.read(file, f'data/typed.txt{wrapper}', cran=True)
     twin, _ = readFixture('typed.rda')
+    assert readers.isData(file, cran=True)
     pd.testing.assert_frame_equal(tables['typed'], twin['typed'])
 
 

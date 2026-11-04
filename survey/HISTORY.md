@@ -715,6 +715,12 @@ reading's open disagreements, four to eight per tier.
 - The six rows refitted: five `ok`, and airfare model 2 a `warning` on convergence. No other row
   of `fits.csv` moved, and `suite/admit.py` left `suite/` as it was.
 
+## Frequency weights (#179, 2026-11-04)
+
+- `suite/admit.py` refuses agridat jansen.strawberry as `frequency_weighted`, as it refuses keen
+  potatodamage, since its notes weight each cell of a contingency table by the plants in
+  `count`. No other candidate moved.
+
 ## Reading rulings (m3#22 to #15)
 
 The rulings [`prompts/read.md`](prompts/read.md) does not carry, from the agents' `RULE GAP` notes and Alex's checks, each with an example

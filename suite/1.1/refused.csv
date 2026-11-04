@@ -16,6 +16,7 @@
 "MEMSS/Theoph/1","nonlinear_model: the documented model is nonlinear in its parameters"
 "brms/kidney/1","family weibull is a censored model, outside suite 1.1 (ADR 0001)"
 "brms/loss/1","nonlinear_model: the documented model is nonlinear in its parameters"
+"agridat/jansen.strawberry/1","frequency_weighted: each cell weighted by count (#179)"
 "agridat/keen.potatodamage/1","frequency_weighted: each cell weighted by count (#61)"
 "MASS/gehan/1","censored_response: a censored time filed as continuous (#61)"
 "HSAUR3/Lanza/1","every grouping factor has fewer than 5 levels"

@@ -8,7 +8,9 @@ the installed files                                   path
 -> sources.yaml as a pinned Source per label          sources
 -> manifest.csv as the file each object loads from    manifest
 -> registry.csv as typed Rows                         rows
+-> fits_preparation.csv as the rows each fit read     Preparations
 -> a row's typed table                                Tables.load
+-> the rows its fit read                              Tables.loadFitted
 """
 
 from __future__ import annotations
@@ -31,6 +33,7 @@ RegistryFile = Literal[
     'column_factors.csv',
     'factor_pairs.csv',
     'fits.csv',
+    'fits_preparation.csv',
     'responses.csv',
     'flat.csv',
     'flat_columns.csv',
@@ -90,10 +93,49 @@ def rows(file: Path | None = None) -> list[Row]:
     return [Row.parse(record) for record in cells.to_dict('records')]
 
 
+class Preparations:
+    """fits_preparation.csv: the registry fits that read other rows than the whole table."""
+
+    # a row whose source fits a subset (a pandas query) or repeats each row by a frequency
+    # weight (its column), the factor whose groups a weight counts, and why
+    COLUMNS = (
+        'source', 'object', 'model_index', 'subset', 'frequency', 'frequency_factor', 'reason',
+    )  # fmt: skip
+
+    def __init__(self, file: Path | None = None) -> None:
+        self.listed = {}
+        for preparation in readCsv(file or path('fits_preparation.csv')).to_dict('records'):
+            id = f'{preparation["source"]}/{preparation["object"]}/{preparation["model_index"]}'
+            self.listed[id] = preparation
+
+    def prepare(self, row: Row, table: pd.DataFrame) -> pd.DataFrame:
+        """The rows the source fitted: its subset, each row repeated by its frequency weight.
+        A weight that counts a factor's groups makes each copy of a group a group of its own."""
+        preparation = self.listed.get(row.id)
+        if preparation is None:
+            return table
+        if preparation['subset']:
+            table = table.query(preparation['subset'])
+        if preparation['frequency']:
+            repeats = table[preparation['frequency']].astype(int)
+            table = table.loc[table.index.repeat(repeats)]
+        if preparation['frequency_factor']:
+            factor = preparation['frequency_factor']
+            copies = table.groupby(level=0).cumcount()  # per row of the table, 0 to its weight - 1
+            labels = table[factor].astype(str) + ':' + copies.astype(str)
+            table = table.assign(**{factor: labels})
+        return table.reset_index(drop=True)
+
+
 class Tables:
     def __init__(self, cache: Path) -> None:
         self.sources = sources()
         self.loader = Loader(cache, manifest=manifest())
+        self.preparations = Preparations()
 
     def load(self, row: Row) -> pd.DataFrame:
         return self.loader.load(self.sources[row.source], row.object, row.types)
+
+    def loadFitted(self, row: Row) -> pd.DataFrame:
+        """The rows the row's fit in fits.csv read. A problem builds from `load`'s whole table."""
+        return self.preparations.prepare(row, self.load(row))
