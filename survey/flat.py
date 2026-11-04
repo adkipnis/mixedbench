@@ -37,8 +37,8 @@ from pathlib import Path
 
 import pandas as pd
 from columns import COLUMN_STATISTICS, measureMaxAbsRho, measureShape
-from dimensions import computeConditionIndex, countWidth
-from mixedbench.contract import codeCovariate, columnKind, dropAliased
+from dimensions import computeConditionIndex
+from mixedbench.contract import codeCovariate, columnKind, countWidth, dropAliased
 from mixedbench.datasets import Loader
 from mixedbench.registry.row import readCsv, splitList, writeCsv
 from pull import Puller
