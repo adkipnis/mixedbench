@@ -48,8 +48,8 @@ One registry row under the contract, with its design, family, prior and splits, 
 _Avoid_: dataset, task, posterior (posteriordb's word for the same thing)
 
 **Materialized problem**:
-A problem written to files, a table of its coded columns in raw units with the response,
-trials, grouping factors and each row's folds, and a record of what the table cannot hold
+A problem written to files, a table of its covariates' coded columns in raw units with the
+response, trials, grouping factors and each row's folds, and a record of what the table cannot hold
 (family, prior, column roles, per-fold scales, contract hash). It is the package's interface to
 a problem, a cache rebuilt from the pins and never redistributed.
 _Avoid_: dataset, export, the parquet
