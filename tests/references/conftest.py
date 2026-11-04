@@ -34,6 +34,14 @@ def fixtureProblem(row: Row = ROW) -> Problem:
     return Problem.build(row, table)
 
 
+def squaredCovariate() -> Problem:
+    """The fixture problem with the square of `x`, the interaction `x:x` (#190)."""
+    row = replace(
+        ROW, object='squared', interactions=('x:x',), formula='y ~ x + I(x^2) + sex + (1 | block)'
+    )
+    return fixtureProblem(row)
+
+
 C = [1, 0, 0, 1, 1, 0, 1, 0, 1, 0]  # u = 0, v = 1
 
 

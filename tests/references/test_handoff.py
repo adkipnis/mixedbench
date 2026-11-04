@@ -25,6 +25,7 @@ from .conftest import (
     manyGroups,
     nestedProblem,
     ordinalProblem,
+    squaredCovariate,
 )
 
 
@@ -85,6 +86,12 @@ def test_an_interaction_reaches_r_as_its_parts_aliases_a_dropped_part_only_insid
     model = writtenModel(droppedPart(), tmp_path)
     assert model['formula'] == 'y ~ x1 + x2 + x4 + x4:x3 + (1 | g1)'
     assert list(pd.read_csv(tmp_path / 'table.csv').columns) == ['y', 'x1', 'x2', 'x3', 'x4', 'g1']
+
+
+def test_an_interaction_with_a_repeated_part_reaches_r_as_its_product(tmp_path: Path) -> None:
+    """R collapses the term `x1:x1` to `x1`, so brms would fit no square (#190)."""
+    model = writtenModel(squaredCovariate(), tmp_path)
+    assert model['formula'] == 'y ~ x1 + x2 + I(x1*x1) + (1 | g1)'
 
 
 def test_each_level_of_the_ladder_reaches_r_with_its_settings_and_the_same_seed(
@@ -264,6 +271,13 @@ def test_an_interaction_reads_back_by_the_label_r_gives_its_term() -> None:
     assert draws['w:c'].tolist() == rawDraws('dropped_part')['b_x4:x3'].tolist()
 
 
+def test_an_interaction_with_a_repeated_part_reads_back_by_its_brms_label() -> None:
+    """brms labels the term `I(x1*x1)` as `b_Ix1MUx1` (#190). Recorded by `run.R` from
+    `Handoff.write` of `squaredCovariate()`, at 100 warmup and 10 draws per chain."""
+    draws = Handoff(squaredCovariate()).read(FIXTURES / 'squared')['globals']
+    assert draws['x:x'].tolist() == rawDraws('squared')['b_Ix1MUx1'].tolist()
+
+
 def test_ordinal_thresholds_read_back_as_intercept_k() -> None:
     """brms names a threshold `b_Intercept[k]`.
     The contract drops the `b_`, as for every fixed effect.
@@ -336,15 +350,16 @@ SUMMARY = pd.DataFrame({
 })  # fmt: skip
 
 
-def recordedDiagnostics(dir: Path, summary: pd.DataFrame) -> dict:
-    """`Handoff.diagnostics` of the fixture problem, from files written as run.R writes them."""
+def recordedDiagnostics(dir: Path, summary: pd.DataFrame, problem: Problem | None = None) -> dict:
+    """`Handoff.diagnostics` of the fixture problem, or of `problem`, from files written as
+    run.R writes them."""
     pyreadr.write_rds(dir / 'summary.rds', summary)
     pyreadr.write_rds(dir / 'chains.rds', CHAINS)
     meta = pd.DataFrame(
         {'rhat_locals': [1.003], 'ess_bulk_locals': [450.0], 'ess_tail_locals': [520.0]}
     )
     pyreadr.write_rds(dir / 'meta.rds', meta)
-    return Handoff(fixtureProblem()).diagnostics(dir)
+    return Handoff(problem or fixtureProblem()).diagnostics(dir)
 
 
 def picked(diagnostics: dict, keys: tuple[str, ...]) -> dict:
@@ -395,6 +410,16 @@ def test_diagnostics_name_each_global_parameters_rhat_and_ess_by_the_contract(
         'sd[block]': {'rhat': 1.02, 'ess_bulk': 320.0, 'ess_tail': 410.0},
         'sigma': {'rhat': 1.0, 'ess_bulk': 1200.0, 'ess_tail': 1100.0},
     }
+
+
+def test_diagnostics_name_an_interaction_with_a_repeated_part_by_the_contract(
+    tmp_path: Path,
+) -> None:
+    """A reference run of `age:age` raised here before writing its record (#190).
+    `summary.rds` is recorded with `squared/draws.rds`."""
+    summary = pyreadr.read_r(FIXTURES / 'squared' / 'summary.rds')[None]
+    parameters = recordedDiagnostics(tmp_path, summary, squaredCovariate())['by_parameter']
+    assert list(parameters) == ['Intercept', 'x', 'sex', 'x:x', 'sd[block]', 'sigma']
 
 
 def test_a_brms_global_the_contract_does_not_name_still_counts_toward_the_bar(
