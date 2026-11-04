@@ -10992,3 +10992,7 @@
 "osf_confidence_sinanaj_2015","data_Sinanaj_2015.csv","1","O","Angle perturbation","continuous","","within","","0.0","yes","-0.0035","-0.2016","0.0","0.1971","0.0001","0.0001","0.6539","","0.0053"
 "osf_confidence_teuchies_2019","data_Teuchies_2019.csv","1","O","Stimulus","binary","2","within","","0.0","no","","","","","","","0.0003","0.5",""
 "osf_confidence_teuchies_2019","data_Teuchies_2019.csv","1","O","Congruency","categorical","3","within","","0.0","yes","","","","","","","0.0005","0.3333",""
+"FAwR","herbdata","1","R","treat","binary","2","group","treat:tree","0.0","yes","","","","","","","0.0022","0.48","0.0456"
+"FAwR","herbdata","1","R","rep","categorical","3","group","treat:tree","0.0","no","","","","","","","0.0033","0.3142",""
+"FAwR","herbdata","1","R","tree","continuous","","group","treat:tree","0.0","no","0.0573","-1.1687","0.0","0.0","0.0173","0.0173","0.065","","0.0456"
+"FAwR","herbdata","1","R","date","categorical","8","within","","0.0","yes","","","","","","","0.0087","0.1246",""
