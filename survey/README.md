@@ -18,8 +18,8 @@ deposits of the practice survey's papers, `O` open tabular repositories):
 3. **Reading.** Agents read shards of about 60 help pages by [`prompts/read.md`](prompts/read.md)
    and file each object in a registry or an excluded shard.
 4. **Merge.** `merge.py` validates a shard against the row grammar and the table, upserts it,
-   folds duplicates and rewrites the manifest. A failing shard is refused, its rows printed,
-   nothing written.
+   folds duplicates and rewrites the manifest, several shards in turn in one run. A failing
+   shard is refused, its rows printed, nothing of it written, and the run stops.
 5. **Fits.** `fits.py` fits each documented model by lme4, a cluster array task per row, and
    collects `fits.csv`; a merge leaves it as it is.
 6. **Measurement.** `measure.py` measures each registry row's table, a cluster array task per
@@ -41,7 +41,7 @@ deposits of the practice survey's papers, `O` open tabular repositories):
 
 ```
 uv run python survey/pull.py [--tiers E O]
-uv run python survey/merge.py survey/shards/<shard>.csv
+uv run python survey/merge.py survey/shards/<shard>.csv [<shard>.csv ...]
 uv run python survey/measure.py run <index>
 uv run python survey/measure.py collect
 uv run python survey/fits.py run <index>

@@ -180,6 +180,15 @@ def test_a_compressed_data_file_is_found_named_and_read_as_data_reads_it(
     pd.testing.assert_frame_equal(tables['typed'], twin['typed'])
 
 
+@pytest.mark.parametrize('wrapper', ['.bz2', '.xz'])
+def test_a_cran_r_file_compressed_by_bzip2_or_xz_is_no_data(tmp_path, wrapper):
+    """utils::data() reads a `.bz2` or `.xz` file only around a `.tab`, `.txt` or `.csv`,
+    so `growth.R.xz` would otherwise be read as a text table."""
+    file = tmp_path / f'growth.R{wrapper}'
+    file.write_bytes(b'')
+    assert not readers.isData(file, cran=True)
+
+
 def test_a_data_csv_is_read_with_semicolons(package):
     """utils::data() reads a `.csv` in `data/` with `sep = ';'`, strings as factors."""
     trials = readCran(package, 'data/trials.csv')[0]['trials']

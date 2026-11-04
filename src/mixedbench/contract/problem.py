@@ -41,6 +41,7 @@ from __future__ import annotations
 
 import hashlib
 import math
+from collections.abc import Iterable
 from dataclasses import dataclass, replace
 from importlib.metadata import version
 from itertools import combinations
@@ -102,7 +103,8 @@ class Problem:
         return _Builder(row, table).countColumns()
 
     def standardized(self, regime: Regime = 'full', fold: int = 0) -> pd.DataFrame:
-        """Returns the standardized model columns of the rows a fit on the regime's `fold` sees.
+        """Returns the standardized model columns of the rows a fit on the regime's `fold` sees,
+        with a dropped part a kept interaction needs.
         Continuous columns are z-scored with the fold's scales.
         An interaction is the product of its standardized parts,
         see Aiken & West (1991) and Gelman (2008)."""
@@ -128,13 +130,7 @@ class Problem:
 
     def findInteractions(self) -> dict[str, tuple[str, ...]]:
         """Returns each interaction of the design with its parts, in order."""
-        coded = self.listCoded()
-        # every design column the table lacks is an interaction
-        interactions = {}
-        for column in self.design:
-            if column not in coded:
-                interactions[column] = _splitInteraction(column, coded)
-        return interactions
+        return _findInteractions(self.design, self.listCoded())
 
     def globalDraws(self) -> tuple[str, ...]:
         """Returns `parameters` with each `cor[<factor>]` split into its pairs.
@@ -202,6 +198,16 @@ def _selectSeenRows(table: pd.DataFrame, regime: Regime, fold: int) -> pd.DataFr
     if regime == 'full':
         return table
     return table[table[regime] != fold]
+
+
+def _findInteractions(design: Iterable[str], coded: list[str]) -> dict[str, tuple[str, ...]]:
+    """Returns each design column that is not a coded one, an interaction, with its parts."""
+    covariates = set(coded)
+    interactions = {}
+    for column in design:
+        if column not in covariates:
+            interactions[column] = _splitInteraction(column, coded)
+    return interactions
 
 
 def _splitInteraction(column: str, coded: list[str]) -> tuple[str, ...]:
@@ -285,8 +291,7 @@ class _Builder:
         # into the product of its parts'
         widths = {}
         for column in self.row.covariates:
-            kind, levels = columnKind(self.table[column])
-            widths[column] = levels - 1 if kind in ('categorical', 'ordered') else 1
+            widths[column] = countWidth(*columnKind(self.table[column]))
         columns = 1 + sum(widths.values())  # with `Intercept`
         for term in self.row.interactions:
             columns += math.prod(widths[part] for part in parts(term))
@@ -387,9 +392,8 @@ class _Builder:
             covariates.update(terms[covariate])
         # a dropped part stays while a kept interaction needs it, as lme4 drops `a` and keeps `a:b`
         needed = set(design)
-        for column in design:
-            if column not in covariates:  # an interaction
-                needed.update(_splitInteraction(column, list(covariates)))
+        for operands in _findInteractions(design, list(covariates)).values():
+            needed.update(operands)
         return {name: column for name, column in covariates.items() if name in needed}
 
     def _codeFactor(self, column: str) -> pd.Series:
@@ -560,6 +564,13 @@ def columnKind(values: pd.Series) -> tuple[str, int | str]:
     if categorical or pd.api.types.is_string_dtype(dtype):
         return 'categorical', distinct
     return 'continuous', ''
+
+
+def countWidth(kind: str, levels: int | str) -> int:
+    """Returns the design columns `codeCovariate` codes a covariate of the kind into."""
+    if kind in ('categorical', 'ordered'):
+        return levels - 1
+    return 1
 
 
 def codeCovariate(values: pd.Series) -> dict[str, pd.Series]:

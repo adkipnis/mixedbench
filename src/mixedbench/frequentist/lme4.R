@@ -6,27 +6,30 @@
 #   table.csv    the table
 #   input.json   the formula, the family, the seconds after which a fit stops,
 #                each categorical column's levels in order and the ordered ones
-# lme4.R prints sessionInfo() first. Then it writes back into <dir>, with lme4's version:
-#   output.json  (fit) how the fit ended, its seconds, warnings or error and observations,
-#                the fixed effects with their Wald standard errors,
-#                per random term its factor, columns, variances and correlations, sigma,
-#                per factor the random variance, the fixed predictor's variance,
-#                the sd and the largest absolute value of the linear predictor,
-#                and the distribution variance
-#   design.json  (design) the rows lme4 keeps, y as the fit reads it, X and its column names,
-#                the offset, and per factor its name, terms, levels, Z and each row's level
+# lme4.R prints sessionInfo() first. Then it writes output.json back into <dir>, with lme4's
+# version and per mode:
+#   fit     how the fit ended, its seconds, warnings or error and observations,
+#           the fixed effects with their Wald standard errors,
+#           per random term its factor, columns, variances and correlations, sigma,
+#           per factor the random variance, the fixed predictor's variance,
+#           the sd and the largest absolute value of the linear predictor,
+#           and the distribution variance
+#   design  the rows lme4 keeps, y as the fit reads it, X and its column names,
+#           the offset, and per factor its name, terms, levels, Z and each row's level
 #
 # pipeline:
 # ---------
 # <dir>
 # -> the table, its categorical columns coded     readTable
 # fit:
-# -> lme4's fit of the formula, within the limit  fitWithin, fitModel
+# -> lme4's fit of the formula, within the limit  fitWithin, callLme4
 # -> its estimates and variance components        describeFit
-# -> how it ended, output.json                    fitWithin
+# -> how it ended                                 fitWithin
 # design:
-# -> lme4's design of the formula                 buildDesign
+# -> lme4's design of the formula                 callLme4
 # -> its rows, y, X, offset and factors           describeDesign
+# both modes:
+# -> output.json, with lme4's version             main
 
 suppressPackageStartupMessages(library(lme4))
 
@@ -74,7 +77,7 @@ fitWithin <- function(table, input) {
   result <- withCallingHandlers(
     tryCatch(
       {
-        model <- suppressMessages(fitModel(table, input))
+        model <- suppressMessages(callLme4(table, input, lmer, glmer))
         described <- describeFit(model, table, input$family)
         list(described = described, singular = isSingular(model), error = character())
       },
@@ -96,13 +99,15 @@ fitWithin <- function(table, input) {
   c(list(status = status, seconds = seconds, message = message), result$described)
 }
 
-fitModel <- function(table, input) {
+# the formula through a pair of lme4's functions, the linear one for the gaussian family:
+# lmer and glmer fit it, lFormula and glFormula parse it with their checks and the rows they drop
+callLme4 <- function(table, input, linear, generalized) {
   formula <- as.formula(input$formula)
   table <- codeResponse(table, formula)
   if (input$family == "gaussian") {
-    return(lmer(formula, data = table))
+    return(linear(formula, data = table))
   }
-  glmer(formula, data = table, family = FAMILY[[input$family]])
+  generalized(formula, data = table, family = FAMILY[[input$family]])
 }
 
 # glmer takes a text response only as a factor; other text stays text, which `==` compares
@@ -208,16 +213,6 @@ nullFormula <- function(model) {
   reformulate(c("1", bars, offsets), response = formula[[2]])
 }
 
-# lmer's and glmer's own parse of the formula, with their checks and the rows they drop
-buildDesign <- function(table, input) {
-  formula <- as.formula(input$formula)
-  table <- codeResponse(table, formula)
-  if (input$family == "gaussian") {
-    return(lFormula(formula, data = table))
-  }
-  glFormula(formula, data = table, family = FAMILY[[input$family]])
-}
-
 describeDesign <- function(built) {
   y <- model.response(built$fr)
   if (is.factor(y)) y <- as.numeric(y != levels(y)[1])  # as glmer reads it: first level 0, others 1
@@ -263,13 +258,12 @@ mode <- args[[1]]
 dir <- args[[2]]
 input <- jsonlite::read_json(file.path(dir, "input.json"))
 table <- readTable(dir, input)
-lme4 <- list(lme4 = as.character(packageVersion("lme4")))
 if (mode == "fit") {
-  output <- c(fitWithin(table, input), lme4)
-  jsonlite::write_json(
-    output, file.path(dir, "output.json"), auto_unbox = TRUE, digits = NA, na = "null"
-  )
+  output <- fitWithin(table, input)
 } else {
-  design <- c(describeDesign(buildDesign(table, input)), lme4)
-  jsonlite::write_json(design, file.path(dir, "design.json"), auto_unbox = TRUE, digits = NA)
+  output <- describeDesign(callLme4(table, input, lFormula, glFormula))
 }
+output$lme4 <- as.character(packageVersion("lme4"))
+jsonlite::write_json(
+  output, file.path(dir, "output.json"), auto_unbox = TRUE, digits = NA, na = "null"
+)

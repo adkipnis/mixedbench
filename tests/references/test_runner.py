@@ -3,7 +3,6 @@ out, its global draws under the contract's names. Most tests fit a model, about 
 
 from __future__ import annotations
 
-import hashlib
 import json
 import math
 import subprocess
@@ -15,7 +14,7 @@ import numpy as np
 import pandas as pd
 import pyreadr
 import pytest
-from mixedbench.contract import Problem, contractHash
+from mixedbench.contract import Problem, contractHash, digestId
 from mixedbench.references import runner
 from mixedbench.references.handoff import Handoff
 
@@ -32,7 +31,7 @@ FOUR_CHAINS = {chain: list(range(1000)) for chain in range(4)}  # 1,000 draws ea
 
 
 def problemDir(dir: Path, problem: Problem) -> Path:
-    return dir / hashlib.sha256(problem.id.encode()).hexdigest()[:16]
+    return dir / digestId(problem.id)
 
 
 def record(dir: Path) -> dict:
@@ -153,7 +152,7 @@ def test_the_intercept_is_the_uncentered_one(ran) -> None:
 
 @pytest.mark.brms
 def test_brms_builds_an_interaction_whose_part_the_contract_dropped(tmp_path: Path) -> None:
-    """brms builds `w:c` from `w` and `c`, which the contract dropped, and labels it `b_x3:x4`
+    """brms builds `w:c` from `w` and `c`, which the contract dropped, and labels it `b_x4:x3`
     (#155). Every group holds the same design rows, so the posterior mean of `w:c` sits on least
     squares over the contract's design within Monte Carlo error, as the intercept's does."""
     problem = droppedPart()

@@ -52,6 +52,7 @@ from schema import EXCLUDED, FLAT_RESPONSES, FLAT_VERDICTS, REGISTRY
 from summarize import Summarizer
 
 FIXTURES = HERE / 'fixtures'
+SURVEY = HERE.parent  # the scripts
 HERDS_URL = 'https://example.org/herds.zip'
 CATTLE_URL = 'https://example.org/cattle.zip'
 PENS_URL = 'https://cloud.r-project.org/src/contrib/pens_1.0.tar.gz'
@@ -134,6 +135,13 @@ def mergeShard(merger: Merger, shard: Path) -> Merger:
     merger.writeManifest()
     merger.report()
     return merger
+
+
+# the files `measure.py` writes: the five measured files and the summary
+MEASURED = (
+    'dimensions.csv', 'columns.csv', 'column_factors.csv', 'factor_pairs.csv', 'responses.csv',
+    'SUMMARY.md', 'quantiles.yaml',
+)  # fmt: skip
 
 
 def runMeasure(merger: Merger) -> None:

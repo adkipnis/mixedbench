@@ -12,7 +12,9 @@ import pytest
 import yaml
 from mixedbench import registry
 from mixedbench.registry.installed import Preparations
-from mixedbench.registry.row import COLUMNS, Row, readCsv
+from mixedbench.registry.row import COLUMNS, readCsv
+
+from .conftest import installedRow
 
 FILES = typing.get_args(registry.RegistryFile)
 # the top-level keys metabeta's contract test asserts (packages/glmm/tests/surveys/)
@@ -98,41 +100,44 @@ def test_a_url_sources_pin_is_its_checksum() -> None:
 # =====================================================================================
 # the rows a registry fit read
 # =====================================================================================
-def installedRow(id: str) -> Row:
-    [row] = [row for row in registry.rows() if row.id == id]
-    return row
+SLEEPSTUDY = {'Subject': [308, 308], 'Days': [0, 1], 'Reaction': [249.6, 258.7]}
 
 
-def test_a_preparation_keeps_the_subset_its_source_fits() -> None:
-    """The documented glmer fits subset(police, crime == 1), so the other crimes' rows go."""
-    police = installedRow('rabe_hesketh/police.dta/1')
-    table = pd.DataFrame({'precinct': [1, 1, 2, 2], 'crime': [1, 2, 1, 4], 'stops': [10, 3, 7, 1]})
+@pytest.mark.parametrize(
+    'id, table, expected',
+    [
+        pytest.param(
+            'rabe_hesketh/police.dta/1',
+            {'precinct': [1, 1, 2, 2], 'crime': [1, 2, 1, 4], 'stops': [10, 3, 7, 1]},
+            {'precinct': [1, 2], 'crime': [1, 1], 'stops': [10, 7]},
+            id='the subset its source fits, the other crimes left out',
+        ),
+        pytest.param(
+            'rabe_hesketh/twin_hay.dta/1',
+            {'pair': [1, 1, 2, 2], 'h': [0, 1, 1, 1], 'freq': [3, 3, 2, 2]},
+            {
+                'pair': ['1:0', '1:1', '1:2', '1:0', '1:1', '1:2', '2:0', '2:1', '2:0', '2:1'],
+                'h': [0, 0, 0, 1, 1, 1, 1, 1, 1, 1],
+                'freq': [3, 3, 3, 3, 3, 3, 2, 2, 2, 2],
+            },
+            id='a weight of a group repeating it, each copy a group of its own',
+        ),
+        pytest.param(
+            'lme4/sleepstudy/1', SLEEPSTUDY, SLEEPSTUDY, id='no preparation, the whole table',
+        ),
+    ],
+)  # fmt: skip
+def test_a_preparation_gives_the_rows_the_source_fitted(
+    id: str, table: dict, expected: dict
+) -> None:
+    """police.dta's documented glmer fits subset(police, crime == 1). twin_hay weights each twin
+    pair's response pattern, its weight on both members: repeated alone, the rows of a pattern's
+    pairs would fall into one group of 2 × weight twins."""
+    row = installedRow(id)
 
-    prepared = Preparations().prepare(police, table)
+    prepared = Preparations().prepare(row, pd.DataFrame(table))
 
-    expected = pd.DataFrame({'precinct': [1, 2], 'crime': [1, 1], 'stops': [10, 7]})
-    pd.testing.assert_frame_equal(prepared, expected)
-
-
-def test_a_weight_of_a_group_repeats_the_group_each_copy_a_group_of_its_own() -> None:
-    """twin_hay weights each twin pair's response pattern, its weight on both members:
-    repeated alone, the rows of a pattern's pairs would fall into one group of 2 × weight twins."""
-    twins = installedRow('rabe_hesketh/twin_hay.dta/1')
-    patterns = pd.DataFrame({'pair': [1, 1, 2, 2], 'h': [0, 1, 1, 1], 'freq': [3, 3, 2, 2]})
-
-    prepared = Preparations().prepare(twins, patterns)
-
-    members = prepared.groupby('pair')['h'].apply(list).to_dict()
-    assert members == {'1:0': [0, 1], '1:1': [0, 1], '1:2': [0, 1], '2:0': [1, 1], '2:1': [1, 1]}
-
-
-def test_a_row_no_preparation_lists_keeps_its_whole_table() -> None:
-    sleepstudy = installedRow('lme4/sleepstudy/1')
-    table = pd.DataFrame({'Subject': [308, 308], 'Days': [0, 1], 'Reaction': [249.6, 258.7]})
-
-    prepared = Preparations().prepare(sleepstudy, table)
-
-    pd.testing.assert_frame_equal(prepared, table)
+    pd.testing.assert_frame_equal(prepared, pd.DataFrame(expected))
 
 
 @pytest.mark.network

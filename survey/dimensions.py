@@ -17,7 +17,7 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
-from mixedbench.contract import Problem, Refused
+from mixedbench.contract import Problem, Refused, countWidth
 from mixedbench.registry.row import Row, parts
 from schema import IDENTITY
 
@@ -90,12 +90,6 @@ def countDesignColumns(measurer: Measurer) -> dict:
     d_doc = sum(width[c] for c in measurer.row.covariates) + d_interactions
     d_all = sum(width.values()) + d_interactions
     return {'d_doc': int(d_doc), 'd_all': int(d_all)}
-
-
-def countWidth(kind: str, levels: int | str) -> int:
-    if kind in ('categorical', 'ordered'):
-        return levels - 1
-    return 1
 
 
 def measureConditionIndexes(measurer: Measurer) -> dict:

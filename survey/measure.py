@@ -28,7 +28,6 @@ repo root:
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 from pathlib import Path
 
@@ -38,10 +37,9 @@ import groups
 import pairs
 import pandas as pd
 import responses
-from mixedbench import registry
-from mixedbench.contract import columnKind, withComposites
+from mixedbench.contract import columnKind, digestId, withComposites
 from mixedbench.datasets import Loader
-from mixedbench.registry.row import Row, writeCsv
+from mixedbench.registry.row import Row, readCsv, writeCsv
 from schema import IDENTITY
 from sources import readFrame
 
@@ -102,31 +100,35 @@ class Measurer:
 # =====================================================================================
 # pass: a registry row -> its measurements -> the five measured files
 # =====================================================================================
-MEASURED_COLUMNS = {
-    'dimensions': dimensions.DIMENSION_COLUMNS,
-    'columns': columns.COLUMN_COLUMNS,
-    'column_factors': groups.COLUMN_FACTOR_COLUMNS,
-    'factor_pairs': pairs.FACTOR_PAIR_COLUMNS,
-    'responses': responses.RESPONSE_COLUMNS,
-}
-
-
 class Measurement:
     """The measurement of a registry's rows, a records file each under `dir`."""
+
+    MEASURED_COLUMNS = {
+        'dimensions': dimensions.DIMENSION_COLUMNS,
+        'columns': columns.COLUMN_COLUMNS,
+        'column_factors': groups.COLUMN_FACTOR_COLUMNS,
+        'factor_pairs': pairs.FACTOR_PAIR_COLUMNS,
+        'responses': responses.RESPONSE_COLUMNS,
+    }
 
     def __init__(self, root: Path, loader: Loader, dir: Path) -> None:
         self.root = root
         self.loader = loader
         self.dir = dir
         self.sources = readFrame(root).sources
-        self.rows = registry.rows(root / 'registry.csv')
+        # a record keeps its row's cells, so the collect sees a row that changed since its run
+        self.cells = readCsv(root / 'registry.csv').to_dict('records')
+        self.rows = [Row.parse(cells) for cells in self.cells]
 
     def run(self, index: int) -> None:
         """Measures the row at `index` in registry order, replacing an earlier run of it."""
         row = self.rows[index]
+        records = self.findRecords(row)
+        records.unlink(missing_ok=True)  # a run killed for memory leaves no earlier record behind
         table = self.loader.load(self.sources[row.source], row.object, row.types)
         measurer = Measurer(table, row)
         measured = {
+            'cells': self.cells[index],
             'dimensions': dimensions.measure(measurer),
             'columns': columns.measure(measurer),
             'column_factors': groups.measure(measurer),
@@ -134,25 +136,24 @@ class Measurement:
             'responses': [responses.measure(measurer)],
         }
         self.dir.mkdir(parents=True, exist_ok=True)
-        self.findRecords(row).write_text(json.dumps(measured, indent=2))
+        records.write_text(json.dumps(measured, indent=2))
 
     def collect(self) -> None:
-        """Writes every row's records into the five measured files in registry order."""
-        measured = {name: [] for name in MEASURED_COLUMNS}
-        for row in self.rows:
+        """Writes every row's records into the five measured files in registry order.
+        Raises where a row was never run or changed since its run."""
+        measured = {name: [] for name in self.MEASURED_COLUMNS}
+        for row, cells in zip(self.rows, self.cells):
             records = json.loads(self.findRecords(row).read_text())
-            for name in MEASURED_COLUMNS:
+            changed = [column for column in cells if records['cells'].get(column) != cells[column]]
+            if changed:
+                raise ValueError(f'{row.id}: {", ".join(changed)} changed since its run; rerun it')
+            for name in self.MEASURED_COLUMNS:
                 measured[name] += records[name]
-        for name, header in MEASURED_COLUMNS.items():
+        for name, header in self.MEASURED_COLUMNS.items():
             writeCsv(pd.DataFrame(measured[name], columns=header), self.root / f'{name}.csv')
 
     def findRecords(self, row: Row) -> Path:
         return self.dir / f'{digestId(row.id)}.json'
-
-
-def digestId(id: str) -> str:
-    """A run is named by its row's hash, since an id may hold `/`, `!` and spaces."""
-    return hashlib.sha256(id.encode()).hexdigest()[:16]
 
 
 # =====================================================================================
