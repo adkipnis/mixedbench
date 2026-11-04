@@ -272,6 +272,26 @@ def test_declared_column_types_are_applied(tmp_path):
     assert table['size'].dtype.kind == 'i'
 
 
+def test_a_declared_order_becomes_the_columns_level_order(tmp_path):
+    """A text column's levels sort alphabetically unless its row declares their order (#167),
+    and the contract codes an ordinal response in the loaded order."""
+    deposit = urlSource(DEPOSIT_URL, DEPOSIT)
+    loader = Loader(tmp_path, fetch=Server({DEPOSIT_URL: DEPOSIT}))
+    table = loader.load(deposit, 'data/schools.csv', types={'school': ('C', 'A', 'B')})
+    assert table['school'].dtype.ordered
+    assert list(table['school'].cat.categories) == ['C', 'A', 'B']
+    assert list(table['school']) == ['A', 'B', 'A', 'C', 'B']
+
+
+def test_a_value_outside_the_declared_order_raises(tmp_path):
+    """The cast to the declared levels would turn an undeclared value missing, and the problem
+    drop its rows unseen; a typo in the order or a level the source adds stops the load."""
+    deposit = urlSource(DEPOSIT_URL, DEPOSIT)
+    loader = Loader(tmp_path, fetch=Server({DEPOSIT_URL: DEPOSIT}))
+    with pytest.raises(ValueError, match=r"school holds \['C'\] outside its declared levels"):
+        loader.load(deposit, 'data/schools.csv', types={'school': ('A', 'B')})
+
+
 def test_git_source_is_fetched_as_an_archive_at_its_revision(tmp_path):
     """A repository pinned to a revision comes as GitHub's archive tarball of that revision, so
     one fetch serves every file and README; the pinned path narrows the objects to its folder."""

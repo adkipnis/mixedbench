@@ -1,6 +1,7 @@
 from mixedbench.datasets.loader import (
     ColumnType,
     DataObject,
+    Levels,
     Loader,
     Manifest,
     ManifestRow,
@@ -8,4 +9,13 @@ from mixedbench.datasets.loader import (
     fetch,
 )
 
-__all__ = ['ColumnType', 'DataObject', 'Loader', 'Manifest', 'ManifestRow', 'Source', 'fetch']
+__all__ = [
+    'ColumnType',
+    'DataObject',
+    'Levels',
+    'Loader',
+    'Manifest',
+    'ManifestRow',
+    'Source',
+    'fetch',
+]

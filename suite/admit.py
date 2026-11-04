@@ -218,16 +218,6 @@ REFUSED = {
     'koczynska_2026_osf_49/merge_iter_20241030/1': (
         'stacked_draws: 100 posterior draws of the same country-years stacked as rows (#161)'
     ),
-    # an ordinal text response, which loads in alphabetical order, not the source's (#167)
-    'kaggle_corporate_credit_rating/corporate_rating.csv/1': (
-        'level_order: Rating loads A < AA < AAA, the scale runs D < ... < AAA (#167)'
-    ),
-    'kaggle_credit_score_classification/train.csv/1': (
-        'level_order: Credit_Score loads Good < Poor < Standard (#167)'
-    ),
-    'beyondarena_ghanas_indigenous_intel/ghanas_indigenous_intel.pq/1': (
-        'level_order: rainfall loads HEAVYRAIN < MEDIUMRAIN < NORAIN < SMALLRAIN (#167)'
-    ),
 }
 
 # The marker that opens the notes of a row whose documented model is nonlinear in its parameters

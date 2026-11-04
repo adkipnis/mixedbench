@@ -57,6 +57,7 @@ def verbAggCells() -> dict[str, str]:
         ('family', 'poisson', 'not a family: poisson'),  # the rule is the empty cell
         ('types', 'resp=factor', 'not a column type: factor'),
         ('types', 'resp', 'not a column type: '),
+        ('types', 'resp=categorical:no<yes', 'an order on a categorical column'),
         ('interactions', 'Anger:', 'a term with an empty part: Anger:'),
         ('grouping_factors', 'id;:item', 'a term with an empty part: :item'),
         ('random_slopes', 'Anger', 'not a slope term: Anger'),
@@ -103,6 +104,14 @@ def test_a_row_carries_its_slope_terms_structured_and_its_verification() -> None
         SlopeTerm(covariate='situ', factor='id:item', correlated=True),
     )
     assert row.verified == 'hand'
+
+
+def test_a_declared_order_parses_into_the_columns_levels_lowest_first() -> None:
+    """A text column loads its levels in alphabetical order, so `types` declares the order of
+    an ordinal one (#167); the loader builds it into the column's dtype."""
+    cells = verbAggCells() | {'types': 'resp=ordered:no<perhaps<yes'}
+    row = Row.parse(cells)
+    assert row.types == {'resp': ('no', 'perhaps', 'yes')}
 
 
 def test_a_slope_on_a_column_whose_name_has_spaces_is_one_covariate() -> None:

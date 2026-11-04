@@ -297,11 +297,11 @@ successes' share of the trials, an ordinal one by its levels.
 | response_excess_kurtosis | 809 | -1.9502 | -1.2475 | -0.9652 | 0.3544 | 15.6477 | 37.6216 | 69205.0886 |
 | response_outlier_share | 809 | 0 | 0 | 0 | 0 | 0.0102 | 0.0131 | 0.0312 |
 | response_zero_share | 874 | 0 | 0 | 0 | 0 | 0.1189 | 0.3758 | 0.8942 |
-| response_min_share | 890 | 0 | 0.0001 | 0.0003 | 0.0111 | 0.2419 | 0.3963 | 0.8942 |
-| response_max_share | 890 | 0 | 0.0001 | 0.0002 | 0.0067 | 0.1445 | 0.2624 | 0.7713 |
+| response_min_share | 890 | 0 | 0.0001 | 0.0003 | 0.0111 | 0.2479 | 0.4028 | 0.8942 |
+| response_max_share | 890 | 0 | 0.0001 | 0.0002 | 0.0067 | 0.1445 | 0.2543 | 0.7713 |
 | response_unique_share | 1076 | 0 | 0.0002 | 0.0006 | 0.1838 | 0.98 | 1 | 1 |
 | response_rare_level_share | 267 | 0.0001 | 0.0024 | 0.0157 | 0.2037 | 0.4465 | 0.4761 | 0.5 |
-| response_max_abs_rho | 924 | 0 | 0.0363 | 0.0743 | 0.3301 | 0.8131 | 0.9013 | 1 |
+| response_max_abs_rho | 924 | 0 | 0.0363 | 0.0743 | 0.333 | 0.8131 | 0.9013 | 1 |
 
 ## Fits of the documented models
 
