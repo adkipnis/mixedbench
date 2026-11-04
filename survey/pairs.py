@@ -3,7 +3,7 @@
 pipeline:
 ---------
 a measurer
--> each pair's holders                              Measurer.findHolders
+-> each pair's holders                              findHolders
 -> a nested pair's superior, a crossed pair's empty cells  measurePair
 """
 
@@ -12,6 +12,7 @@ from __future__ import annotations
 from itertools import combinations
 from typing import TYPE_CHECKING
 
+from mixedbench.contract import findHolders
 from schema import IDENTITY
 
 if TYPE_CHECKING:  # only a type: measure.py imports this module
@@ -39,7 +40,7 @@ def measure(measurer: Measurer) -> list[dict]:
 
 def measurePair(measurer: Measurer, a: str, b: str) -> dict:
     """A nested pair's superior, blank when each holds the other; a crossed pair's empty cells."""
-    holders = measurer.findHolders(a, b)
+    holders = findHolders(measurer.table, a, b)
     if not holders:
         empty = measurer.measureEmptyCells(measurer.table[[a, b]])
         return {'relation': 'crossed', 'empty_cell_share': empty}
