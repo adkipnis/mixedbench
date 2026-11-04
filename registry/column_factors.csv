@@ -13937,3 +13937,7 @@
 "osf_confidence_sinanaj_2015","data_Sinanaj_2015.csv","1","O","Angle perturbation","Subj_idx","-0.0032","","","0.1508","0.5324"
 "osf_confidence_teuchies_2019","data_Teuchies_2019.csv","1","O","Stimulus","Subj_idx","-0.0047","","0.0","","0.0"
 "osf_confidence_teuchies_2019","data_Teuchies_2019.csv","1","O","Congruency","Subj_idx","","","0.0","",""
+"FAwR","herbdata","1","R","treat","treat:tree","1.0","-0.0239","0.5","0.1643",""
+"FAwR","herbdata","1","R","rep","treat:tree","","","0.6667","",""
+"FAwR","herbdata","1","R","tree","treat:tree","1.0","0.8827","","-0.1518",""
+"FAwR","herbdata","1","R","date","treat:tree","","","0.0222","",""
