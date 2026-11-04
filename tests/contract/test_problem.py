@@ -9,6 +9,7 @@ in `x`, one in `block`); every expected value below is computed by hand from it.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import replace
 from pathlib import Path
 
@@ -210,6 +211,9 @@ def test_a_grouping_factor_of_fewer_than_five_levels_becomes_a_categorical_covar
 
 
 @pytest.mark.parametrize(
+    'call', [Problem.build, Problem.countColumns], ids=['build', 'countColumns']
+)
+@pytest.mark.parametrize(
     'random_slopes, reason',
     [
         pytest.param((), 'every grouping factor has fewer than 5 levels', id='no factor left'),
@@ -221,15 +225,16 @@ def test_a_grouping_factor_of_fewer_than_five_levels_becomes_a_categorical_covar
     ],
 )  # fmt: skip
 def test_a_factor_of_fewer_than_five_levels_alone_or_with_slopes_is_refused(
-    random_slopes: tuple[SlopeTerm, ...], reason: str
+    call: Callable[[Row, pd.DataFrame], object], random_slopes: tuple[SlopeTerm, ...], reason: str
 ) -> None:
     """Only a random intercept turns into fixed levels. A problem left without a grouping factor
     is no mixed model (nlme Wheat2), and a slope varying over fixed levels would be an
-    interaction the source did not fit (ARM earnings, weaving df_ALL). So `build` refuses both."""
+    interaction the source did not fit (ARM earnings, weaving df_ALL). So `build` refuses both,
+    and counting the columns raises as `build` does."""
     row = fixtureRow(grouping_factors=('herd',), random_slopes=random_slopes)
     table = fixtureTable().assign(herd=['u', 'v', 'w'] * 4 + ['u', 'v'])
     with pytest.raises(Refused) as refused:
-        Problem.build(row, table)
+        call(row, table)
     assert refused.value.reason == reason
 
 
@@ -381,13 +386,6 @@ def test_counting_gives_the_coded_columns_before_the_drop_and_the_complete_rows(
     columns over 39,948 rows). So the survey counts both before it builds."""
     row = fixtureRow(**overrides)
     assert Problem.countColumns(row, fixtureTable().assign(**columns)) == counts
-
-
-def test_counting_a_row_the_contract_refuses_raises_as_build_does() -> None:
-    row = fixtureRow(grouping_factors=('herd',), random_slopes=())
-    table = fixtureTable().assign(herd=['u', 'v', 'w'] * 4 + ['u', 'v'])
-    with pytest.raises(Refused, match='every grouping factor has fewer than 5 levels'):
-        Problem.countColumns(row, table)
 
 
 # ==============================================================================================
