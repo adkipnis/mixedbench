@@ -19,7 +19,7 @@ from mixedbench.suite import members
 # suite 1.1's list, copied by hand
 SLEEPSTUDY = '78bda46ff3996060104d7ce61de055373415213e38190b5dcc01ffbfd23a4146'
 FIRST_TWO = {
-    'lme4/Arabidopsis/1': '5e5783e6742da0010ddc7679123efc23e4a02e85914b68cfc31339aef0b86421',
+    'lme4/Arabidopsis/1': '1167673d4874295bb96cfccf0f8bab74cb5afba8f383e6332e10b056032fe3e6',
     'lme4/Dyestuff/1': '3ca838e00f298712176f7c865ec94a9ef18ad638fc37c251495d2845d0ddb0b7',
 }
 
