@@ -721,6 +721,23 @@ reading's open disagreements, four to eight per tier.
   potatodamage, since its notes weight each cell of a contingency table by the plants in
   `count`. No other candidate moved.
 
+## Date columns and the measurement by row (#182, 2026-11-04)
+
+- The measurement crashed after 5 hours on row 1,048 of 1,076 and wrote nothing:
+  osf_manylabs1 CleanedDataset.sav loads 49 SPSS date columns that cannot be coded as floats.
+  `shards/registry_manylabs1_dates.csv` adds them to the `ignore` of the object's three rows, as
+  the seven other rows with date columns already list theirs. No contract hash moved.
+- `measure.py` now measures each row in a cluster array task of its own and collects the five
+  measured files after them.
+- The measured files of #162's registry: against those before its merge, earlier rows move only
+  in `condition_doc` and `condition_all`, all by #161's five-level rule. 47 rows are among the
+  candidates #161 changed. The rule also refuses rabe_hesketh recurrent.dta, whose seven rows
+  hold one factor of fewer than five levels, and the designs over every column of
+  lagisz_2020_osf_3 MA_dataset_with_ES.csv's two rows, whose complete rows leave each factor
+  under five levels.
+- The widest tables set the run's length: openml_41444 and DAAG nassCDS took 19 and 41 minutes
+  on 48 CPUs, against more than 90 on one, and skillbuilder needed 28 GB.
+
 ## Reading rulings (m3#22 to #15)
 
 The rulings [`prompts/read.md`](prompts/read.md) does not carry, from the agents' `RULE GAP` notes and Alex's checks, each with an example
