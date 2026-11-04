@@ -284,7 +284,7 @@ The words are [`CONTEXT.md`](../CONTEXT.md)'s.
 | `datasets/deparse.py` | base R's `data/*.R` files, read without R | `readers.py` |
 | `contract/problem.py` | the contract's rules: typing, coding, family, prior, splits, scales, parameter names | `contract`, through it `suite/members.py`, `references`, `suite/admit.py`, `survey/flat.py` and the rest of the survey |
 | `contract/materialized.py` | a problem's files on disk and the contract hash over them | `contract`, through it `suite/members.py`, `references/runner.py` and `suite/admit.py` |
-| `suite/members.py` | a suite's problems by id: built and materialized on first use, checked against the suite's list in the wheel | `suite`, through it the user and `suite/drive.py` |
+| `suite/members.py` | a suite's problems by id: built and materialized on first use, checked against the suite's list in the wheel; its candidates picked by their axes | `suite`, through it the user and `suite/drive.py` |
 | `suite/admit.py` | the admission of suite 1.1 and its hand decisions; writes `suite/1.1/` | run as a script |
 | `references/handoff.py` | what passes between a problem and `run.R`: the aliased table, the model and a level's settings out; the draws under the contract's names and the diagnostics back | `runner.py` |
 | `references/run.R` | one level's fit by brms through cmdstanr: the variables kept or summarized, the files written back | `runner.py`, as a subprocess |
