@@ -1,4 +1,4 @@
-"""Merge one agent-written shard into the dimension survey's canonical CSVs.
+"""Merge agent-written shards, one after another, into the dimension survey's canonical CSVs.
 
 A shard is `shards/<table>_<label>.csv` with exactly the agent columns of its table
 (schema.py). The script loads every named object through the package's dataset loader,
@@ -9,9 +9,10 @@ confirmed duplicates and rewrites the manifest; a merge about the flat sample le
 manifest as it is. A merge measures nothing: `measure.py` writes the measured files and the
 summary as a job of its own.
 The census tables land in `registry/`, the survey's bookkeeping tables (duplicates, dropped,
-flat verdicts and responses) in `survey/`. Run from the repo root:
+flat verdicts and responses) in `survey/`. Several shards merge in one run, which profiles each
+registry object for the duplicate flag once. Run from the repo root:
 
-    uv run python survey/merge.py survey/shards/registry_lme4.csv
+    uv run python survey/merge.py survey/shards/registry_lme4.csv [survey/shards/<shard>.csv ...]
 """
 
 from __future__ import annotations
@@ -530,19 +531,20 @@ class Merger:
 if __name__ == '__main__':
     # fmt: off
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('shard', type=Path, help='survey/shards/<table>_<label>.csv')
+    parser.add_argument('shards', type=Path, nargs='+', help='survey/shards/<table>_<label>.csv, merged in turn; a refused one stops the run')
     parser.add_argument('--registry', type=Path, default=HERE.parent / 'registry', help='folder holding sources.yaml and the census tables')
     parser.add_argument('--survey', type=Path, default=HERE, help='folder holding the duplicates and dropped tables')
     args = parser.parse_args()
     # fmt: on
     merger = Merger(args.registry, args.survey)
-    merger.load(args.shard)
-    try:
-        merger.validate()
-    except ShardRefused as e:
-        sys.exit(str(e))
-    merger.upsert()
-    merger.supersede()
-    merger.reconcile()
-    merger.writeManifest()
-    merger.report()
+    for shard in args.shards:
+        merger.load(shard)
+        try:
+            merger.validate()
+        except ShardRefused as e:
+            sys.exit(str(e))
+        merger.upsert()
+        merger.supersede()
+        merger.reconcile()
+        merger.writeManifest()
+        merger.report()
