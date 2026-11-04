@@ -9,14 +9,12 @@ import copies
 import pandas as pd
 import pytest
 import yaml
-from conftest import FIXTURES, mergeShard, readRows, runMeasure
+from conftest import FIXTURES, MEASURED, SURVEY, emptyCensus, mergeShard, readRows, runMeasure
 from merge import Merger, ShardRefused
 from mixedbench.registry.row import readCsv, writeCsv
 from sources import readFrame
 
 RENAMED_TYPES = 'area=categorical;farm=categorical;type=categorical;diet=categorical'
-SURVEY = Path(__file__).resolve().parents[1]
-MEASURED = ('dimensions.csv', 'columns.csv', 'column_factors.csv', 'factor_pairs.csv', 'responses.csv')  # fmt: skip
 
 
 def test_passing_registry_shard_merges_with_tier_and_reader_filled_in(merger):
@@ -347,6 +345,23 @@ def test_the_census_lands_in_the_registry_and_the_bookkeeping_in_the_survey(spli
     assert surveyFiles == ['dropped.csv', 'duplicates.csv', 'flat_agreement.csv', 'flat_response_agreement.csv', 'flat_response_recheck_agreement.csv', 'flat_responses.csv', 'flat_screen.csv', 'flat_verdicts.csv']  # fmt: skip
 
 
+def test_the_merge_script_merges_several_shards_in_turn(merger):
+    """One run merges several shards, so the duplicate flag profiles each registry object once
+    per run, not once per shard (safecast alone takes 30 minutes). It loads from the cache the
+    merges before it filled, so the run is offline."""
+    shards = [FIXTURES / 'registry_herds.csv', FIXTURES / 'registry_cattle.csv']
+    for shard in shards:
+        mergeShard(merger, shard)
+    names = ('registry.csv', 'manifest.csv')
+    merged = {name: (merger.registry / name).read_bytes() for name in names}
+    emptyCensus(merger.registry)
+
+    folders = ['--registry', merger.registry, '--survey', merger.survey]
+    subprocess.run([sys.executable, SURVEY / 'merge.py', *shards, *folders], check=True)
+
+    assert {name: (merger.registry / name).read_bytes() for name in names} == merged
+
+
 def test_a_composite_grouping_factor_merges_and_gets_its_own_dimension_row(merger):
     """`region:breed` is no column of the table; the merge checks its parts, builds the
     combination and measures it like any factor (the pilot's split-plot whole plots, #20)."""
@@ -359,52 +374,6 @@ def test_a_composite_grouping_factor_merges_and_gets_its_own_dimension_row(merge
         ('region', '3', 'nested'),
         ('region:breed', '12', 'nested'),
     ]
-
-
-def test_the_measure_pass_writes_a_dimension_row_per_factor_and_a_column_row_per_column(merger):
-    """No measured number is typed: the measure pass loads every registry row's table and
-    writes one dimension row per grouping factor and one column row per covariate column
-    (#18)."""
-    mergeShard(merger, FIXTURES / 'registry_herds.csv')
-    runMeasure(merger)
-    dimensions = readRows(merger.registry / 'dimensions.csv')
-    assert [(r['model_index'], r['factor'], r['n_groups'], r['relation']) for r in dimensions] == [
-        ('1', 'region', '3', 'nested'),
-        ('1', 'herd', '5', 'nested'),
-        ('2', 'herd', '5', 'single'),
-    ]
-    assert dimensions[0]['tier'] == 'D' and dimensions[0]['alpha'] == '65.0'
-    columns = readRows(merger.registry / 'columns.csv')
-    assert [(r['model_index'], r['column'], r['type']) for r in columns][:5] == [
-        ('1', 'breed', 'categorical'),
-        ('1', 'feed', 'categorical'),
-        ('1', 'parity', 'ordered'),  # declared in the shard: pyreadr drops R's ordering
-        ('1', 'sick', 'binary'),
-        ('2', 'region', 'categorical'),
-    ]
-    assert len(columns) == 10
-
-
-def test_the_measure_pass_writes_the_released_headers_and_a_left_out_statistic_as_blank(merger):
-    """column_factors.csv and factor_pairs.csv carry their released headers, and dimensions.csv
-    the two condition numbers after d_all. The nested region and herd pair has no empty-cell
-    share, written as a blank cell (#99, #100)."""
-    mergeShard(merger, FIXTURES / 'registry_herds.csv')
-    runMeasure(merger)
-    column_factors = readRows(merger.registry / 'column_factors.csv')
-    assert list(column_factors[0]) == [
-        'source', 'object', 'model_index', 'tier', 'column', 'factor', 'between_group_share',
-        'group_level_r2', 'absent_level_share', 'size_rho', 'within_sd_cv',
-    ]  # fmt: skip
-    pairs = readRows(merger.registry / 'factor_pairs.csv')
-    assert list(pairs[0]) == [
-        'source', 'object', 'model_index', 'tier', 'factor_a', 'factor_b', 'relation', 'superior',
-        'empty_cell_share',
-    ]  # fmt: skip
-    assert pairs[0]['empty_cell_share'] == ''
-    columns = list(readRows(merger.registry / 'dimensions.csv')[0])
-    after = columns.index('d_all') + 1
-    assert columns[after : after + 2] == ['condition_doc', 'condition_all']
 
 
 def test_a_merge_leaves_fits_csv_as_the_last_fits_pass_wrote_it(merger):
@@ -433,42 +402,11 @@ def test_a_merge_writes_the_manifest_and_leaves_the_measured_files_and_the_summa
     `measure.py` writes the measured files and the summary as a job of its own (#172)."""
     mergeShard(merger, FIXTURES / 'registry_herds.csv')
     runMeasure(merger)
-    names = (*MEASURED, 'SUMMARY.md', 'quantiles.yaml')
-    measured = {name: (merger.registry / name).read_bytes() for name in names}
+    measured = {name: (merger.registry / name).read_bytes() for name in MEASURED}
     mergeShard(merger, FIXTURES / 'registry_cattle.csv')
-    assert {name: (merger.registry / name).read_bytes() for name in names} == measured
+    assert {name: (merger.registry / name).read_bytes() for name in MEASURED} == measured
     objects = [r['object'] for r in readRows(merger.registry / 'manifest.csv')]
     assert objects == ['herds.csv', 'cattle.csv']
-
-
-def test_every_registry_row_has_one_measured_response(merger):
-    """responses.csv is keyed like dimensions.csv, one row per registry row and its response."""
-    mergeShard(merger, FIXTURES / 'registry_herds.csv')
-    runMeasure(merger)
-    responses = readRows(merger.registry / 'responses.csv')
-    keys = [
-        (r['source'], r['object'], r['model_index'], r['tier'], r['response']) for r in responses
-    ]
-    assert keys == [
-        ('herds', 'herds.csv', '1', 'D', 'weight'),
-        ('herds', 'herds.csv', '2', 'D', 'cases'),
-    ]
-
-
-def test_the_measure_script_writes_the_measured_files_and_the_summary(merger):
-    """`measure.py run` measures one registry row, as a cluster array task, and `collect` writes
-    the measured files and the summary (#98, #172, #182). It loads from the cache the merge
-    filled, so the run is offline."""
-    mergeShard(merger, FIXTURES / 'registry_herds.csv')
-    runMeasure(merger)
-    names = (*MEASURED, 'SUMMARY.md', 'quantiles.yaml')
-    measured = {name: (merger.registry / name).read_bytes() for name in names}
-    for name in names:
-        (merger.registry / name).unlink()
-    folders = ['--registry', merger.registry, '--survey', merger.survey, '--dir', merger.survey / 'measure']  # fmt: skip
-    for command in (['run', '0'], ['run', '1'], ['collect']):
-        subprocess.run([sys.executable, SURVEY / 'measure.py', *command, *folders], check=True)
-    assert {name: (merger.registry / name).read_bytes() for name in names} == measured
 
 
 def test_every_merge_names_each_registry_objects_file_in_the_manifest(merger):

@@ -101,6 +101,16 @@ def test_each_level_of_the_ladder_reaches_r_with_its_settings_and_the_same_seed(
         model = writtenModel(fixtureProblem(), tmp_path, ladder)
         settings[level] = model['settings']
         seeds.add(model['seed'])
+    level_2 = {
+        'chains': 4,
+        'cores': 4,
+        'warmup': 4000,
+        'draws': 2000,
+        'thin': 2,
+        'adapt_delta': 0.99,
+        'max_treedepth': 12,
+        'metric': 'diag_e',
+    }
     assert settings == {
         0: {
             'chains': 4,
@@ -122,26 +132,8 @@ def test_each_level_of_the_ladder_reaches_r_with_its_settings_and_the_same_seed(
             'max_treedepth': 10,
             'metric': 'diag_e',
         },
-        2: {
-            'chains': 4,
-            'cores': 4,
-            'warmup': 4000,
-            'draws': 2000,
-            'thin': 2,
-            'adapt_delta': 0.99,
-            'max_treedepth': 12,
-            'metric': 'diag_e',
-        },
-        3: {
-            'chains': 4,
-            'cores': 4,
-            'warmup': 4000,
-            'draws': 2000,
-            'thin': 2,
-            'adapt_delta': 0.99,
-            'max_treedepth': 12,
-            'metric': 'dense_e',
-        },
+        2: level_2,
+        3: level_2 | {'metric': 'dense_e'},
     }
     assert seeds == {75704431}
 

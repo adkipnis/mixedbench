@@ -97,9 +97,13 @@ def storedHash(id: str, cache: Path) -> str | None:
 
 
 def _locateProblem(id: str, cache: Path) -> Path:
-    """Named by the id's sha256: an object name may hold `/`, `!`, commas and spaces,
-    and the JSON carries the id itself."""
-    return Path(cache) / 'problems' / hashlib.sha256(id.encode()).hexdigest()[:16]
+    return Path(cache) / 'problems' / digestId(id)
+
+
+def digestId(id: str) -> str:
+    """Returns the name of an id's directory or file, from the id's sha256:
+    an object name may hold `/`, `!`, commas and spaces, and the files carry the id itself."""
+    return hashlib.sha256(id.encode()).hexdigest()[:16]
 
 
 # =====================================================================================

@@ -105,12 +105,6 @@ PAGES = {
     'osf_manylabs1': 'https://osf.io/pqf9r/',
     'osf_manylabs3': 'https://osf.io/ct89g/',
 }  # fmt: skip
-# the hosts whose download names its page: a Kaggle dataset's page, a Hugging Face or raw
-# GitHub file's folder at its commit
-KAGGLE_DOWNLOAD = 'https://www.kaggle.com/api/v1/datasets/download/'
-KAGGLE_PAGE = 'https://www.kaggle.com/datasets/'
-HUGGING_FACE = 'https://huggingface.co/datasets/'
-RAW_GITHUB = 'https://raw.githubusercontent.com/'
 DOI = re.compile(r'10\.\d{4,}/\S+')  # a DOI anywhere in a deposit's link
 HELP_CHARACTERS = 20_000  # a help page can hold a whole table, which would drown a handoff
 # the host's description of a source (an OpenML, UCI or Kaggle page), fetched by a survey pass
@@ -237,6 +231,13 @@ def _allocate(sizes: dict[str, int], strata: tuple[str, ...], size: int) -> dict
 class Links:
     """The page and the download of an object at its source's pin, to open in the browser."""
 
+    # the hosts whose download names its page: a Kaggle dataset's page, a Hugging Face or raw
+    # GitHub file's folder at its commit
+    KAGGLE_DOWNLOAD = 'https://www.kaggle.com/api/v1/datasets/download/'
+    KAGGLE_PAGE = 'https://www.kaggle.com/datasets/'
+    HUGGING_FACE = 'https://huggingface.co/datasets/'
+    RAW_GITHUB = 'https://raw.githubusercontent.com/'
+
     def __init__(self, registry: Path, survey: Path) -> None:
         self.sources = readFrame(registry).sources
         deposits = readCsv(survey / 'deposit_files.csv')
@@ -268,12 +269,12 @@ class Links:
             if doi is not None:
                 return f'https://doi.org/{doi.group()}'
             return f'https://{link}'
-        if download.startswith(KAGGLE_DOWNLOAD):
-            return KAGGLE_PAGE + download.removeprefix(KAGGLE_DOWNLOAD)
-        if download.startswith(HUGGING_FACE):
+        if download.startswith(self.KAGGLE_DOWNLOAD):
+            return self.KAGGLE_PAGE + download.removeprefix(self.KAGGLE_DOWNLOAD)
+        if download.startswith(self.HUGGING_FACE):
             return posixpath.dirname(download.replace('/resolve/', '/tree/', 1))
-        if download.startswith(RAW_GITHUB):
-            owner, repository, commit, path = download.removeprefix(RAW_GITHUB).split('/', 3)
+        if download.startswith(self.RAW_GITHUB):
+            owner, repository, commit, path = download.removeprefix(self.RAW_GITHUB).split('/', 3)
             return (
                 f'https://github.com/{owner}/{repository}/tree/{commit}/{posixpath.dirname(path)}'
             )

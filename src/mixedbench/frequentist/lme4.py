@@ -12,7 +12,7 @@ a table, a formula and a family
 -> lme4's fit and its components, output.json      lme4.R fit
 -> the fit, lme4 checked against its pin           _read
 or
--> lme4's design, design.json                      lme4.R design
+-> lme4's design, output.json                      lme4.R design
 -> the design, lme4 checked against its pin        _readDesign
 """
 
@@ -102,17 +102,19 @@ class Fit:
 
     @property
     def icc(self) -> dict[str, float]:
-        icc = {}
-        for factor, variance in self.variances.items():
-            icc[factor] = variance / self._sumVariances()
-        return icc
+        return self._computeIcc(adjusted=False)
 
     @property
     def icc_adjusted(self) -> dict[str, float]:
-        icc = {}
-        for factor, variance in self.variances.items():
-            icc[factor] = variance / (self._sumVariances() - self.sigma2_fixed)
-        return icc
+        return self._computeIcc(adjusted=True)
+
+    def _computeIcc(self, adjusted: bool) -> dict[str, float]:
+        if self.sigma2_fixed is None:
+            return {}
+        total = self._sumVariances()
+        if adjusted:
+            total -= self.sigma2_fixed
+        return {factor: variance / total for factor, variance in self.variances.items()}
 
     def _sumVariances(self) -> float:
         residual = self.sigma2_residual or 0
@@ -201,9 +203,9 @@ def _runR(mode: Literal['fit', 'design'], dir: Path) -> None:
 # =====================================================================================
 
 
-def _readOutput(path: Path) -> dict:
+def _readOutput(dir: Path) -> dict:
     """Returns R's output without lme4's version, which it checks against the pin."""
-    output = json.loads(path.read_text())
+    output = json.loads((dir / 'output.json').read_text())
     lme4 = output.pop('lme4')
     if lme4 != LME4:
         raise RuntimeError(f'lme4 {lme4} differs from the pin {LME4}')
@@ -211,7 +213,7 @@ def _readOutput(path: Path) -> dict:
 
 
 def _read(dir: Path) -> Fit:
-    output = _readOutput(dir / 'output.json')
+    output = _readOutput(dir)
     terms = []
     for term in output['terms']:
         correlations = tuple(tuple(row) for row in term['correlations'])
@@ -223,7 +225,7 @@ def _read(dir: Path) -> Fit:
 
 
 def _readDesign(dir: Path) -> Design:
-    built = _readOutput(dir / 'design.json')
+    built = _readOutput(dir)
     factors = []
     for factor in built['factors']:
         terms = tuple(tuple(columns) for columns in factor['terms'])

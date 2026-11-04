@@ -29,9 +29,9 @@ import shutil
 from pathlib import Path
 
 import pandas as pd
-from measure import Measurer, digestId
+from measure import Measurer
 from mixedbench import registry
-from mixedbench.contract import FAMILY, withComposites
+from mixedbench.contract import FAMILY, digestId, withComposites
 from mixedbench.datasets import Loader
 from mixedbench.frequentist import Fit, fit
 from mixedbench.registry.installed import Preparations

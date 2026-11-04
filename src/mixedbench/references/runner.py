@@ -19,7 +19,6 @@ a Problem and a directory
 
 from __future__ import annotations
 
-import hashlib
 import json
 import math
 import shutil
@@ -31,7 +30,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Literal, TextIO
 
-from mixedbench.contract import Problem, contractHash
+from mixedbench.contract import Problem, contractHash, digestId
 from mixedbench.references.handoff import Handoff
 
 CMDSTAN = '2.40.0'
@@ -133,9 +132,7 @@ class _Runner:
     def __init__(self, problem: Problem, dir: Path) -> None:
         self.problem = problem
         self.handoff = Handoff(problem)
-        # an id may hold `/`, `!` and spaces, and the record carries the id itself
-        digest = hashlib.sha256(problem.id.encode()).hexdigest()
-        self.dir = dir / digest[:16]
+        self.dir = dir / digestId(problem.id)
 
     def run(self) -> Outcome:
         versions = self._checkStack()
