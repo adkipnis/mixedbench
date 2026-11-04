@@ -319,5 +319,5 @@ any rule is a new suite version, never a recomputation.
 
 **Hashes.**
 
-- Decision: the hash of every candidate with an interaction moves, as a patch, since no suite is
-  frozen before release 1.1. Every other hash stands.
+- Decision: the 220 hashes of the candidates with a kept interaction move, as a patch, since no
+  suite is frozen before release 1.1. Every other hash stands.
