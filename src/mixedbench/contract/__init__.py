@@ -1,4 +1,10 @@
-from mixedbench.contract.materialized import contractHash, load, materialize, storedHash
+from mixedbench.contract.materialized import (
+    contractHash,
+    digestId,
+    load,
+    materialize,
+    storedHash,
+)
 from mixedbench.contract.problem import (
     FAMILY,
     Prior,
@@ -7,6 +13,7 @@ from mixedbench.contract.problem import (
     Scale,
     codeCovariate,
     columnKind,
+    countWidth,
     dropAliased,
     withComposites,
 )
@@ -20,6 +27,8 @@ __all__ = [
     'codeCovariate',
     'columnKind',
     'contractHash',
+    'countWidth',
+    'digestId',
     'dropAliased',
     'load',
     'materialize',
