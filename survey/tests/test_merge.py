@@ -4,6 +4,7 @@ import hashlib
 import subprocess
 import sys
 from pathlib import Path
+from typing import get_args
 
 import copies
 import pandas as pd
@@ -12,6 +13,8 @@ import yaml
 from conftest import FIXTURES, MEASURED, SURVEY, emptyCensus, mergeShard, readRows, runMeasure
 from merge import Merger, ShardRefused
 from mixedbench.registry.row import readCsv, writeCsv
+from mixedbench.suite.members import Tier
+from schema import TIERS
 from sources import readFrame
 
 RENAMED_TYPES = 'area=categorical;farm=categorical;type=categorical;diet=categorical'
@@ -35,6 +38,12 @@ def test_passing_registry_shard_merges_with_tier_and_reader_filled_in(merger):
     assert columns[columns.index('trials') + 1] == 'family'
     assert columns[columns.index('formula') + 1] == 'documented_prior'
     assert columns[columns.index('reader') + 1] == 'license'
+
+
+def test_select_takes_the_tiers_the_merge_fills_in():
+    """The merge parses a shard's rows before it fills their tier, so `Row` refuses no tier
+    and `suite.select` names the tiers apart from the frame."""
+    assert get_args(Tier) == TIERS
 
 
 def writeShard(path: Path, rows: list[dict]) -> Path:
