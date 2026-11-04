@@ -36,7 +36,7 @@ from mixedbench import suite
 # fetched from CRAN at its pin and checked against suite 1.1's list; later calls are offline
 problem = suite.load('lme4/sleepstudy/1', Path('cache'))
 
-# the candidates with one grouping factor, random intercepts only and a passing lme4 fit
+# the candidates with one grouping factor, random intercepts only and a passing lme4 fit of the documented model
 candidates = suite.select(grouping='single', q=1, fit='lme4')
 ```
 
