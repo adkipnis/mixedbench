@@ -34,6 +34,32 @@ def fixtureProblem(row: Row = ROW) -> Problem:
     return Problem.build(row, table)
 
 
+C = [1, 0, 0, 1, 1, 0, 1, 0, 1, 0]  # u = 0, v = 1
+
+
+def droppedPart() -> Problem:
+    """The fixture problem with `w = x + sex` and a binary `c`, interacted as `w:c`.
+    The contract drops `w` but keeps `w:c`, whose product needs it (#155):
+    `x`, `sex`, `w` and `c` are aliased `x1` to `x4`."""
+    rng = np.random.default_rng(7)
+    block = np.repeat([f'b{j:02d}' for j in range(GROUPS)], len(X))
+    x = np.tile(X, GROUPS)
+    sex = np.tile(SEX, GROUPS)
+    c = np.tile(C, GROUPS)
+    w = x + sex
+    intercepts = rng.normal(0, 0.5, GROUPS).repeat(len(X))
+    y = 1 + 0.5 * x + 2 * sex + 0.8 * w * c + intercepts + rng.normal(0, 1, len(x))
+    table = pd.DataFrame({
+        'block': block, 'x': x, 'sex': np.array(['f', 'm'])[sex], 'w': w,
+        'c': np.array(['u', 'v'])[c], 'y': y,
+    })  # fmt: skip
+    row = replace(
+        ROW, object='dropped_part', covariates=('x', 'sex', 'w', 'c'), interactions=('w:c',),
+        formula='y ~ x + sex + w * c + (1 | block)',
+    )  # fmt: skip
+    return Problem.build(row, table)
+
+
 # ==============================================================================================
 # the shapes of #63's fixtures
 # ==============================================================================================

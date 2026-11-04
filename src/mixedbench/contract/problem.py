@@ -10,6 +10,7 @@ the model formula, model family, prior, train/test splits, scales, and parameter
    One typing rule decides each column's kind.
 3. Complete cases only: a row that misses a model value is dropped.
    A design column the columns before it span over the kept rows is dropped and recorded.
+   A dropped part stays in the table while a kept interaction needs it, as lme4 keeps `a:b`.
    A row outside the contract (a categorical response, a censored model,
    doses on rows without a response) raises `Refused`.
 4. Five levels per grouping factor: a factor with fewer over the kept rows
@@ -17,6 +18,7 @@ the model formula, model family, prior, train/test splits, scales, and parameter
    A row left without a factor, or with random slopes on such a factor, raises `Refused`.
 5. Scaled per fold: the table stays in raw units.
    Each fold records the scales of the rows its fit sees.
+   The table holds no interaction, since a fitter builds it from its standardized parts.
 6. Parameter names are based on brms and are in brms's block order.
 
 pipeline:
@@ -27,7 +29,8 @@ a typed registry row and its loaded table
 -> few-level factors made covariates           _convertFewLevelFactors
 -> each covariate's kind and coded columns     _typeCovariates, _codeTerms
 -> the columns the earlier ones span dropped   dropAliased
--> the design, factors and response            _assembleDesign, _codeFactor, _codeResponse
+-> the design and the parts the table holds    _assembleDesign, _selectParts
+-> the factors and response                    _codeFactor, _codeResponse
 -> the regimes `rows` and `groups`, in folds   _dealRegimes
 -> each fold's scales                          _measureFolds
 -> the family, prior and parameter names       _assignPrior, _nameParameters
@@ -66,10 +69,10 @@ FAMILY = {
 @dataclass(frozen=True)
 class Problem:
     id: str  # <source>/<object>/<model_index>
-    table: pd.DataFrame  # the coded columns in raw units, one row per kept row
+    table: pd.DataFrame  # the covariates' coded columns in raw units, one row per kept row
     # the column roles in `table`; the factors hold 0-based codes, and the columns `rows` and
     # `groups` hold the fold each row is held out in, -1 for none
-    design: tuple[str, ...]  # `Intercept` first
+    design: tuple[str, ...]  # `Intercept` first, the interactions last
     response: str
     factors: tuple[str, ...]
     levels: dict[str, tuple]  # each recoded column's levels, in code order
@@ -77,7 +80,8 @@ class Problem:
     # sees, with `full` as one fold that holds nothing out
     scales: dict[Regime, tuple[dict[str, Scale], ...]]
     dropped_share: float  # the share of loaded rows dropped for a missing model value
-    dropped_columns: tuple[str, ...]  # the coded columns the columns before them span
+    # the coded columns the columns before them span; `table` keeps those a kept interaction needs
+    dropped_columns: tuple[str, ...]
     trials: str | None  # the trials column of a binomial response
     family: str  # brms's name, set by the family rule
     link: str
@@ -102,47 +106,35 @@ class Problem:
         Continuous columns are z-scored with the fold's scales.
         An interaction is the product of its standardized parts,
         see Aiken & West (1991) and Gelman (2008)."""
-        columns = [*self.design, self.response]
+        coded = self.listCoded()
+        others = [self.response]
         if self.trials:
-            columns.append(self.trials)
-        columns += self.factors
+            others.append(self.trials)
+        others += self.factors
         rows = _selectSeenRows(self.table, regime, fold)
-        table = rows[columns].copy()
+        table = rows[[*coded, *others]].copy()
         for column, scale in self.scales[regime][fold].items():
             table[column] = (table[column] - scale.mean) / scale.sd
-        for column, operands in self._findInteractions().items():
-            table[column] = table[list(operands)].prod(axis=1)
-        return table
+        products = {}
+        for column, operands in self.findInteractions().items():
+            products[column] = table[list(operands)].prod(axis=1)
+        return table.assign(**products)[[*coded, *products, *others]]
 
-    def _findInteractions(self) -> dict[str, tuple[str, ...]]:
-        """Returns each interaction column with its parts, in order."""
-        # a covariate's coded columns: a continuous one has a scale, a binary one has levels,
-        # any other is a contrast
-        contrasts = []
-        for column, levels in self.levels.items():
-            contrasts += [f'{column}[{level}]' for level in levels[1:]]
-        covariate_columns = [*self.scales['full'][0], *self.levels, *contrasts]
-        design = self.design[1:]  # without `Intercept`
-        coded = [column for column in design if column in covariate_columns]
-        # every other design column is an interaction
+    def listCoded(self) -> list[str]:
+        """Returns the table's coded columns, `Intercept` first: the design's but its interactions,
+        and a dropped part a kept interaction needs."""
+        others = {self.response, self.trials, *self.factors, 'rows', 'groups'}
+        return [column for column in self.table.columns if column not in others]
+
+    def findInteractions(self) -> dict[str, tuple[str, ...]]:
+        """Returns each interaction of the design with its parts, in order."""
+        coded = self.listCoded()
+        # every design column the table lacks is an interaction
         interactions = {}
-        for column in design:
+        for column in self.design:
             if column not in coded:
-                interactions[column] = self._splitInteraction(column, coded)
+                interactions[column] = _splitInteraction(column, coded)
         return interactions
-
-    @staticmethod
-    def _splitInteraction(column: str, coded: list[str]) -> tuple[str, ...]:
-        """Returns the coded parts of an interaction column, read left to right."""
-        # a level may contain `:`, so each part is the longest coded column that matches
-        parts = []
-        rest = column
-        while rest:
-            matches = [c for c in coded if rest == c or rest.startswith(f'{c}:')]
-            part = max(matches, key=len)
-            parts.append(part)
-            rest = rest[len(part) + 1 :]  # past the part and its `:`
-        return tuple(parts)
 
     def globalDraws(self) -> tuple[str, ...]:
         """Returns `parameters` with each `cor[<factor>]` split into its pairs.
@@ -212,6 +204,19 @@ def _selectSeenRows(table: pd.DataFrame, regime: Regime, fold: int) -> pd.DataFr
     return table[table[regime] != fold]
 
 
+def _splitInteraction(column: str, coded: list[str]) -> tuple[str, ...]:
+    """Returns the coded parts of an interaction column, read left to right."""
+    # a level may contain `:`, so each part is the longest coded column that matches
+    parts = []
+    rest = column
+    while rest:
+        matches = [c for c in coded if rest == c or rest.startswith(f'{c}:')]
+        part = max(matches, key=len)
+        parts.append(part)
+        rest = rest[len(part) + 1 :]  # past the part and its `:`
+    return tuple(parts)
+
+
 # =====================================================================================
 # the builder
 # =====================================================================================
@@ -246,11 +251,13 @@ class _Builder:
 
     def build(self) -> Problem:
         kinds = self._typeCovariates()
-        coded, dropped_columns = dropAliased(self._codeTerms(), len(self.table))
+        terms = self._codeTerms()
+        coded, dropped_columns = dropAliased(terms, len(self.table))
         design = self._assembleDesign(coded)
+        covariates = self._selectParts(terms, design)
         factors = {factor: self._codeFactor(factor) for factor in self.row.grouping_factors}
         regimes = self._dealRegimes(factors)
-        columns = design | self._codeResponse() | factors | regimes
+        columns = covariates | self._codeResponse() | factors | regimes
         table = pd.DataFrame(columns).reset_index(drop=True)
         correlations = self._listCorrelations(coded)
         family, link = FAMILY[self.row.response_type]
@@ -371,6 +378,19 @@ class _Builder:
         for columns in coded.values():
             design.update(columns)
         return design
+
+    def _selectParts(self, terms: Coded, design: dict[str, pd.Series]) -> dict[str, pd.Series]:
+        """Returns `Intercept` and the covariates' coded columns that the design keeps or a kept
+        interaction needs, which a fitter builds from them."""
+        covariates = {'Intercept': design['Intercept']}
+        for covariate in self.row.covariates:
+            covariates.update(terms[covariate])
+        # a dropped part stays while a kept interaction needs it, as lme4 drops `a` and keeps `a:b`
+        needed = set(design)
+        for column in design:
+            if column not in covariates:  # an interaction
+                needed.update(_splitInteraction(column, list(covariates)))
+        return {name: column for name, column in covariates.items() if name in needed}
 
     def _codeFactor(self, column: str) -> pd.Series:
         """Returns the column's 0-based codes, in the loaded level order."""

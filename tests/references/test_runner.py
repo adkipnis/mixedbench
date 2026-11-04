@@ -19,7 +19,14 @@ from mixedbench.contract import Problem, contractHash
 from mixedbench.references import runner
 from mixedbench.references.handoff import Handoff
 
-from .conftest import binomialTrials, fixtureProblem, gaussianSlopes, nestedProblem, ordinalProblem
+from .conftest import (
+    binomialTrials,
+    droppedPart,
+    fixtureProblem,
+    gaussianSlopes,
+    nestedProblem,
+    ordinalProblem,
+)
 
 FOUR_CHAINS = {chain: list(range(1000)) for chain in range(4)}  # 1,000 draws each, from 0
 
@@ -142,6 +149,23 @@ def test_the_intercept_is_the_uncentered_one(ran) -> None:
     tolerance = 4 * draws['Intercept'].std() / np.sqrt(400)
     assert abs(draws['Intercept'].mean() - leastSquares) < tolerance
     assert abs(leastSquares) > 10 * tolerance
+
+
+@pytest.mark.brms
+def test_brms_builds_an_interaction_whose_part_the_contract_dropped(tmp_path: Path) -> None:
+    """brms builds `w:c` from `w` and `c`, which the contract dropped, and labels it `b_x3:x4`
+    (#155). Every group holds the same design rows, so the posterior mean of `w:c` sits on least
+    squares over the contract's design within Monte Carlo error, as the intercept's does."""
+    problem = droppedPart()
+    outcome = runner.run(problem, tmp_path)
+    draws = pd.read_parquet(problemDir(tmp_path, problem) / 'globals.parquet')
+    assert outcome.outcome == 'passed'
+    assert list(draws.columns) == ['chain', 'draw', *problem.globalDraws()]
+    table = problem.standardized('full')
+    design = table[list(problem.design)].to_numpy()  # (n, d)
+    leastSquares = np.linalg.lstsq(design, table['y'].to_numpy(), rcond=None)[0][-1]
+    tolerance = 4 * draws['w:c'].std() / np.sqrt(400)
+    assert abs(draws['w:c'].mean() - leastSquares) < tolerance
 
 
 @pytest.mark.brms

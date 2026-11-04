@@ -9,7 +9,7 @@ Python reads back the draws by the aliases in brms's labels and the diagnostics 
 pipeline:
 ---------
 a Problem
--> the aliases of its response, design columns and factors     aliases
+-> the aliases of its response, coded columns and factors      aliases
 -> the aliased table as CSV, the model as JSON                 write
 -> brms's draws and summaries under the contract's names       read, _contractNames
 -> the diagnostics R reported                                  diagnostics
@@ -37,8 +37,9 @@ class Handoff:
 
     brms rewrites column names such as `x[level]` or `a:b`, so R sees aliases instead:
     `y` for the response, `n` for a binomial model's trials,
-    `x1`, `x2`, ... for the design columns after `Intercept`,
+    `x1`, `x2`, ... for the table's coded columns after `Intercept`,
     `g1`, `g2`, ... for the grouping factors.
+    An interaction is a term of its parts' aliases, such as `x4:x3`, whose column brms builds.
     Each grouping factor is one term: `(x1 | g1)` for slopes correlated with its intercept,
     `(x1 || g1)` for uncorrelated ones and `(1 | g1)` without slopes.
     brms labels a variable by its class and aliases, such as `sd_g1__x1` or `r_g1[j,x1]`,
@@ -61,7 +62,7 @@ class Handoff:
         aliases = {'y': self.problem.response}
         if self.problem.trials:
             aliases['n'] = self.problem.trials
-        for i, column in enumerate(self.problem.design[1:], start=1):
+        for i, column in enumerate(self.problem.listCoded()[1:], start=1):
             aliases[f'x{i}'] = column
         for i, factor in enumerate(self.problem.factors, start=1):
             aliases[f'g{i}'] = factor
@@ -69,10 +70,19 @@ class Handoff:
 
     @cached_property
     def _aliasOf(self) -> dict[str, str]:
-        """Returns each column's alias."""
+        """Returns each column's alias, an interaction's being its term as R labels it."""
         alias_of = {'Intercept': 'Intercept'}
         for alias, column in self.aliases.items():
             alias_of[column] = alias
+        # R lists a term's variables in the order they first appear in the formula,
+        # which writes the design in order
+        interactions = self.problem.findInteractions()
+        appearances = []
+        for column in self.problem.design[1:]:
+            parts = [alias_of[part] for part in interactions.get(column, (column,))]
+            appearances += [alias for alias in parts if alias not in appearances]
+            if column in interactions:
+                alias_of[column] = ':'.join(sorted(parts, key=appearances.index))
         return alias_of
 
     # ---------------------------------------------------------------------------------
