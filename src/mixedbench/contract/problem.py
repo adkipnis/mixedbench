@@ -664,8 +664,7 @@ def dropAliased(coded: Coded, rows: int) -> tuple[Coded, tuple[str, ...]]:
 
 
 def classifyRelation(table: pd.DataFrame, factors: tuple[str, ...]) -> Grouping:
-    """single, nested, crossed or mixed.
-    A pair is nested when every group of one factor lies in one group of the other."""
+    """A pair is nested when every group of one factor lies in one group of the other."""
     if len(factors) == 1:
         return 'single'
     nested = {bool(findHolders(table, a, b)) for a, b in combinations(factors, 2)}
@@ -681,14 +680,14 @@ def findHolders(table: pd.DataFrame, a: str, b: str) -> list[str]:
     both when they partition the rows alike."""
     levels = table[[a, b]].drop_duplicates()
     holders = []
-    if hasOneParent(levels, b, a):
+    if _hasOneParent(levels, b, a):
         holders.append(a)
-    if hasOneParent(levels, a, b):
+    if _hasOneParent(levels, a, b):
         holders.append(b)
     return holders
 
 
-def hasOneParent(levels: pd.DataFrame, child: str, parent: str) -> bool:
+def _hasOneParent(levels: pd.DataFrame, child: str, parent: str) -> bool:
     parents = levels.groupby(child, observed=True)[parent].nunique()
     return bool(parents.max() == 1)
 

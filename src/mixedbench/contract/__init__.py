@@ -19,7 +19,6 @@ from mixedbench.contract.problem import (
     countWidth,
     dropAliased,
     findHolders,
-    hasOneParent,
     withComposites,
 )
 
@@ -39,7 +38,6 @@ __all__ = [
     'digestId',
     'dropAliased',
     'findHolders',
-    'hasOneParent',
     'load',
     'materialize',
     'storedHash',
