@@ -19,6 +19,7 @@ from mixedbench.registry.row import SlopeTerm
 from .conftest import (
     ROW,
     binomialTrials,
+    droppedPart,
     fixtureProblem,
     gaussianSlopes,
     manyGroups,
@@ -41,14 +42,15 @@ def writtenModel(problem: Problem, dir: Path, settings: dict = LEVELS[0]) -> dic
 def test_the_table_reaches_r_standardized_under_aliases_without_the_intercept(
     tmp_path: Path,
 ) -> None:
-    """brms would read the interaction `x:sex` as its own term, so R sees aliases.
+    """brms rewrites names such as `diet[b]` and `x:sex`, so R sees aliases.
+    The interaction `x:sex` reaches R only through its parts, from which brms builds it (#155).
     A group's value is its code, so brms's label names the code.
     The CSV round-trips every float."""
     row = replace(ROW, interactions=('x:sex',), formula='y ~ x * sex + (1 | block)')
     problem = fixtureProblem(row)
     Handoff(problem).write(tmp_path, LEVELS[0])
     table = pd.read_csv(tmp_path / 'table.csv')
-    aliases = {'y': 'y', 'x1': 'x', 'x2': 'sex', 'x3': 'x:sex', 'g1': 'block'}
+    aliases = {'y': 'y', 'x1': 'x', 'x2': 'sex', 'g1': 'block'}
     expected = problem.standardized('full')[list(aliases.values())]
     expected.columns = list(aliases)
     pd.testing.assert_frame_equal(table, expected.reset_index(drop=True), check_dtype=False)
@@ -71,6 +73,16 @@ def test_the_model_reaches_r_as_formula_family_prior_settings_and_seed(tmp_path:
         'seed': 75704431,
         'summarized': [],
     }
+
+
+def test_an_interaction_reaches_r_as_its_parts_aliases_a_dropped_part_only_inside_it(
+    tmp_path: Path,
+) -> None:
+    """brms builds `w:c` from the standardized `w` and `c`, as the contract does (#155).
+    The contract dropped `w`, so `w` stands only inside the product, as lme4 keeps it."""
+    model = writtenModel(droppedPart(), tmp_path)
+    assert model['formula'] == 'y ~ x1 + x2 + x4 + x3:x4 + (1 | g1)'
+    assert list(pd.read_csv(tmp_path / 'table.csv').columns) == ['y', 'x1', 'x2', 'x3', 'x4', 'g1']
 
 
 def test_each_level_of_the_ladder_reaches_r_with_its_settings_and_the_same_seed(
