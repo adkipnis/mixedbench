@@ -35,6 +35,9 @@ from mixedbench import suite
 
 # fetched from CRAN at its pin and checked against suite 1.1's list; later calls are offline
 problem = suite.load('lme4/sleepstudy/1', Path('cache'))
+
+# the candidates with one grouping factor, random intercepts only and a passing lme4 fit
+candidates = suite.select(grouping='single', q=1, fit='lme4')
 ```
 
 Check out the [demo](https://colab.research.google.com/github/adkipnis/mixedbench/blob/main/examples/demo.ipynb) for a friendly introduction.
