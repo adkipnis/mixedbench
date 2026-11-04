@@ -2864,3 +2864,4 @@
 "Ecdat","R","Males","derived or duplicated table","plm Males with married spelled maried: wooldridge wagepan recoded, residence garbled (copy scan #168)"
 "plm","R","LaborSupply","derived or duplicated table","laborpanelprec rounded to two decimals, without agesq (copy scan #168)"
 "Ecdat","R","LaborSupply","derived or duplicated table","plm LaborSupply: laborpanelprec rounded to two decimals, without agesq (copy scan #168)"
+"gamlss.data","R","abdom","no grouping structure","fetal abdominal circumference y by gestational age x (610 rows, 2 cols) from ultrasound scans at Kings College Hospital; cross-sectional reference-centile data (Chitty et al. 1994; Wright and Royston 1997), no fetus or scan identifier, no grouping factor."
