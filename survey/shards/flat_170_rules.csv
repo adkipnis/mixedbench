@@ -1,0 +1,3 @@
+"source","object","verdict","evidence"
+"plm","Wages","flat","595 PSID men of 7 rows each stored in row order, but no column indexes the man (plm's vignette builds the index from row order, index = 595), so the replication has no replicate column, as wooldridge crime2 and datasets rock; no other column groups the rows."
+"DAAG","nswdemo","flat","One row per man of the NSW experiment with his real earnings in 1974 and 1975 beside the 1978 outcome: a baseline-outcome pair, as ros chile, since the documented analyses regress re78 on trt with the earlier years as covariates; trt is the treatment, and no column indexes a unit the rows repeat within."
