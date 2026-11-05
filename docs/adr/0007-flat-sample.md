@@ -227,3 +227,6 @@ the registry. Grilled on 2026-10-24 ([#72](https://github.com/adkipnis/mixedbenc
 - Decision: a corrected edition of a table (a few cells revised) copies it, and a table whose
   rows another frame table or registry object holds leaves for that superset, as a registry
   copy does (#168).
+- Decision: a column the source names as the outcome (`response`, `depvar`) names the response
+  of a table with no documented model, since the name is the source's statement, not a reading
+  of the values.

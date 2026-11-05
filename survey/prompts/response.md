@@ -37,8 +37,8 @@ Per object of the worklist:
    A model fitted on a subset, a renaming or a re-export of this table's rows documents this
    table too; test code does not.
    Without a model, an outcome the documentation names in words counts: a column it calls the
-   response or the outcome, or the quantity it says an analysis of this table relates to the
-   other columns.
+   response or the outcome, a column the source names so (`response`, `depvar`), or the
+   quantity it says an analysis of this table relates to the other columns.
 2. **Its outcome** is the response, named exactly as the dtypes at the page's end name the
    column. A transformed outcome (`log(y)`) names the raw column `y`; successes out of trials
    name the successes, and the trials stay a column.
