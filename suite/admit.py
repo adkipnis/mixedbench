@@ -261,7 +261,7 @@ FIDELITY: dict[str, Fidelity] = {
     'nlmeU/prt/1': 'approximate',  # the fiber.f:occ.f slope
     'gamlss.data/Leukemia/1': 'approximate',  # the splines
     'nlmeU/SIIdata/1': 'approximate',  # the cubic in mathkind linear
-    'MASS/Sitka/1': 'approximate',  # Time categorical in the main effect, linear in the ozone slope
+    'MASS/Sitka/1': 'approximate',  # ordered(Time) as linear
     'faraway/hprice/1': 'approximate',  # the yearly ypc for the first year's income
     'fitzmaurice_cd4/cd4.dta/1': 'approximate',  # the hinge, triple therapy as group by week
     'pmlb_boxing1/analcatdata_boxing1.tsv.gz/1': 'approximate',  # the probit's fixed scales
