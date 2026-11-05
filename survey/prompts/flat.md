@@ -39,8 +39,9 @@ documentation's words for them.
   where some plots are observed once.
 - `flat`: everything else. No documented model fits the table with a random effect and no
   column indexes a unit the rows repeat within. A design factor of fixed levels (treatment,
-  dose, sex), a field coordinate that each plot holds once, a count and an id with one row per
-  unit are no grouping factor.
+  dose, sex), a field coordinate that each plot holds once, a count, an id with one row per
+  unit and an attribute that takes one value per unit no column holds (a team's payroll, a
+  state's tax) are no grouping factor.
 
 The flag is a reason to look, never evidence: a flagged column `trials` that counts
 trials is no grouping factor.
@@ -61,7 +62,9 @@ They merge after the verdict shard.
 
 A hidden grouping whose only repeated unit is a wave that a documented model fits as fixed or
 separately per wave keeps its filing, with no re-file shard; the verdict keeps it out of the
-sample. A wave that no documented model fits groups.
+sample. A wave that no documented model fits groups. So does a hidden grouping whose repeated
+unit holds a single value of the response throughout, or a lookup table with no response whose
+rows repeat within a unit: the read prompt files both `no grouping structure`.
 
 ## Output - shards only
 
