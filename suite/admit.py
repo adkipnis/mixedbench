@@ -53,7 +53,6 @@ HAZARD = 'hazard_model: a discrete-time hazard without a person intercept (#161)
 # an empty `random_slopes` there is no approved intercept-only model (#27, #45).
 REFUSED = {
     'nlme/Cefamandole/1': 'nonlinear_parameter_model: random effects on nonlinear parameters (#27)',
-    'nlme/IGF/1': 'nonlinear_parameter_model: random effects on nonlinear parameters (#27)',
     'nlme/Muscle/1': 'nonlinear_parameter_model: random effects on nonlinear parameters (#27)',
     'nlme/Soybean/1': 'nonlinear_parameter_model: random effects on nonlinear parameters (#27)',
     # one-compartment pharmacokinetic models (notes)
@@ -157,10 +156,8 @@ REFUSED = {
     'MASS/gehan/1': 'censored_response: a censored time filed as continuous (#61)',
     'rabe_hesketh/bladder.dta/1': 'censored_response: a censored time filed as continuous (#61)',
     'rabe_hesketh/blindness.dta/1': 'censored_response: a censored time filed as continuous (#61)',
-    'rabe_hesketh/divorce2.dta/1': 'censored_response: a censored time filed as continuous (#61)',
     'rabe_hesketh/infections.dta/1': 'censored_response: a censored time filed as continuous (#61)',
     'rabe_hesketh/mortality.dta/1': 'censored_response: a censored time filed as continuous (#61)',
-    'rabe_hesketh/recurrent.dta/1': 'censored_response: a censored time filed as continuous (#61)',
     'hox/SibDiv.sav/1': 'censored_response: a censored time filed as continuous (#61)',
     'pymc_examples/examples/data/external_pp.csv/1': (
         'censored_response: a censored score filed as continuous (#61)'
@@ -255,9 +252,25 @@ FIDELITY: dict[str, Fidelity] = {
     'weaving_2023_osf/df_ALL/1': 'approximate',
     # an observation-level term or a mapping the table lacks, dropped (#45)
     'lme4/grouseticks/1': 'approximate',
-    'rethinking/kl_dyads/1': 'approximate',
-    'rethinking/kl_dyads/2': 'approximate',
     'stan_arm/ARM/Ch.14/polls.dta/1': 'approximate',
+    # a term the contract cannot write, dropped or simplified (#197)
+    'fitzmaurice_progesterone/progesterone.dta/1': 'approximate',  # the hinge and the spline
+    'rethinking/data/Achehunting.csv/1': 'approximate',  # one family for the hurdle, linear slopes
+    'nlme/Spruce/1': 'approximate',  # the smoothing spline
+    'mixedmodels_jl/mrk17_exp1.arrow/1': 'approximate',  # the uncorrelated lT slope correlated
+    'nlmeU/prt/1': 'approximate',  # the fiber.f:occ.f slope
+    'gamlss.data/Leukemia/1': 'approximate',  # the splines
+    'nlmeU/SIIdata/1': 'approximate',  # the cubic in mathkind linear
+    'MASS/Sitka/1': 'approximate',  # ordered(Time) as linear
+    'faraway/hprice/1': 'approximate',  # the yearly ypc for the first year's income
+    'fitzmaurice_cd4/cd4.dta/1': 'approximate',  # the hinge, triple therapy as group by week
+    'pmlb_boxing1/analcatdata_boxing1.tsv.gz/1': 'approximate',  # the probit's fixed scales
+    'pmlb_boxing2/analcatdata_boxing2.tsv.gz/1': 'approximate',  # the probit's fixed scales
+    'fitzmaurice_muscatine/muscatine.dta/1': 'approximate',  # the quadratic in age
+    'west_welch_galecki/autism/1': 'approximate',  # the quadratic, a random intercept added
+    'diggle_cd4/CD4_data.txt/1': 'approximate',  # the hinge
+    'rethinking/data/Wines2012.csv/1': 'approximate',  # the fixed SDs
+    'datasets/ChickWeight/1': 'approximate',  # the quadratic and AR(1), a random intercept added
 }
 
 

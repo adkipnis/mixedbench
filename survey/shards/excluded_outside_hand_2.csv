@@ -1,0 +1,2 @@
+"source","object","reason","detail"
+"rethinking","data/Monks.csv","no grouping structure","wide: each dyad's two directions are columns, like_AB and like_BA (and dislike_AB, dislike_BA), one row per pair of 18 monks, which McElreath's 2022 course (week 8) models jointly as binomial counts of three with correlated dyad effects; the wide rule holds although the monks A and B repeat across rows (outside check)"
