@@ -1,0 +1,2 @@
+"source","object","reason","detail"
+"rethinking","kl_dyads","no grouping structure","wide: each dyad's two directions are columns, giftsAB and giftsBA, one row per pair of 25 households (300 dyads), which McElreath's R code 14.31 (m14.7) models jointly as a bivariate Poisson with correlated giving and receiving effects per household and correlated dyad effects; the wide rule holds although the households hidA and hidB repeat across rows, as for Monks (outside check)"
