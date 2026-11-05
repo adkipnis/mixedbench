@@ -99,6 +99,9 @@ REFUSED = {
     'rethinking/data/Primates301.csv/2': (
         'covariance_structured_effect: species correlated by phylogenetic distance (#61)'
     ),
+    'spaMM/arabidopsis/1': (
+        'covariance_structured_effect: sites correlated by a Matern field over LAT and LONG (#170)'
+    ),
     'rabe_hesketh/family.dta/1': (
         'covariance_structured_effect: genetic effects shared by mother, father and child (#82)'
     ),
@@ -214,6 +217,10 @@ REFUSED = {
     # a table whose rows stack posterior draws of the same units (#161)
     'koczynska_2026_osf_49/merge_iter_20241030/1': (
         'stacked_draws: 100 posterior draws of the same country-years stacked as rows (#161)'
+    ),
+    # a table whose rows repeat its unit, which the contract cannot drop (#170)
+    'bayesrules/moma/1': (
+        'repeated_units: an artist repeated over the departments of its works (#170)'
     ),
 }
 
