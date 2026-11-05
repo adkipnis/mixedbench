@@ -29,9 +29,8 @@ import shutil
 from pathlib import Path
 
 import pandas as pd
-from measure import Measurer
 from mixedbench import registry
-from mixedbench.contract import FAMILY, digestId, withComposites
+from mixedbench.contract import FAMILY, digestId, findHolders, withComposites
 from mixedbench.datasets import Loader
 from mixedbench.frequentist import Fit, fit
 from mixedbench.registry.installed import Preparations
@@ -166,8 +165,7 @@ def groupsAlike(table: pd.DataFrame, a: str, b: str) -> bool:
     if set(parts(a)) == set(parts(b)):
         return True
     composed = withComposites(table, (a, b))
-    levels = composed[[a, b]].dropna().drop_duplicates()
-    return Measurer.hasOneParent(levels, a, b) and Measurer.hasOneParent(levels, b, a)
+    return len(findHolders(composed, a, b)) == 2
 
 
 # =====================================================================================

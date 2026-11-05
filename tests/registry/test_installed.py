@@ -97,6 +97,15 @@ def test_a_url_sources_pin_is_its_checksum() -> None:
     assert deposit.checksum == deposit.pin == 'ab' * 32
 
 
+def test_every_line_of_a_fitted_row_carries_the_status_fits_gives_it() -> None:
+    """fits.csv has a line per factor of a row and `fits` keys them by the row's id, which holds
+    only while each line of one fit carries the fit's status."""
+    statuses = registry.fits()
+    for line in readCsv(registry.path('fits.csv')).to_dict('records'):
+        id = f'{line["source"]}/{line["object"]}/{line["model_index"]}'
+        assert statuses[id] == line['status'], id
+
+
 # =====================================================================================
 # the rows a registry fit read
 # =====================================================================================

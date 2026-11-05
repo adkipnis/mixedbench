@@ -19,7 +19,7 @@ import pytest
 from hypothesis import given
 from hypothesis import strategies as st
 from mixedbench import frequentist
-from mixedbench.contract import Prior, Problem, Refused, Scale, codeCovariate
+from mixedbench.contract import Dimensions, Prior, Problem, Refused, Scale, codeCovariate
 from mixedbench.registry.row import Row, SlopeTerm
 
 NAN = float('nan')
@@ -811,3 +811,47 @@ def test_a_factors_slopes_follow_its_sd_parameters_not_the_design() -> None:
     problem = Problem.build(row, fixtureTable())
     assert problem.slopes('block') == ('sex', 'x')
     assert problem.slopes('block:plot') == ('diet[b]', 'diet[c]')
+
+
+# ==============================================================================================
+# dimensions
+# ==============================================================================================
+# a factor crossing `block`: site s1 lies in blocks A, B and E, block A holds sites s1-s3
+SITE = ['s1', 's2', 's3', 's4', 's5'] * 2 + ['s1', 's2', 's1', 's2']
+HERD = ['u', 'v'] * 7  # two levels, so the five-level rule makes it a covariate
+
+
+@pytest.mark.parametrize(
+    'overrides, columns, dimensions',
+    [
+        pytest.param(
+            {}, {},
+            Dimensions(n=12, d=8, grouping='nested', m=(5, 7), q=(2, 1), n_i_min=(2, 1), n_i_max=(3, 2)),
+            id='the fixture, its two missing rows dropped and its slope x on block',
+        ),
+        pytest.param(
+            {'random_slopes': (SlopeTerm('diet', 'block', correlated=True),)}, {},
+            Dimensions(n=12, d=8, grouping='nested', m=(5, 7), q=(3, 1), n_i_min=(2, 1), n_i_max=(3, 2)),
+            id='a slope on a categorical counts its two contrasts',
+        ),
+        pytest.param(
+            {'grouping_factors': ('block', 'site')}, {'site': SITE},
+            Dimensions(n=12, d=8, grouping='crossed', m=(5, 5), q=(2, 1), n_i_min=(2, 2), n_i_max=(3, 3)),
+            id='a factor crossing block',
+        ),
+        pytest.param(
+            {'grouping_factors': ('block', 'herd')}, {'herd': HERD},
+            Dimensions(n=12, d=9, grouping='single', m=(5,), q=(2,), n_i_min=(2,), n_i_max=(3,)),
+            id='a two-level factor made a covariate leaves one factor and adds a column',
+        ),
+    ],
+)  # fmt: skip
+def test_a_problem_measures_its_dimensions_after_the_drop_and_the_five_level_rule(
+    overrides: dict, columns: dict, dimensions: Dimensions
+) -> None:
+    """The candidate list's axes (#193) describe the problem a user loads.
+    That is the kept rows and the factors left after the five-level rule, not the registry
+    row's table, which `dimensions.csv` measures."""
+    row = fixtureRow(**overrides)
+    problem = Problem.build(row, fixtureTable().assign(**columns))
+    assert problem.measureDimensions() == dimensions

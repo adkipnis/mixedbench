@@ -59,6 +59,11 @@ def splitList(text: str) -> tuple[str, ...]:
     return tuple(t.strip() for t in text.split(';') if t.strip())
 
 
+def joinList(values: tuple) -> str:
+    """A `;`-list as `splitList` reads it: (a, b) -> `a;b`."""
+    return ';'.join(str(value) for value in values)
+
+
 def parts(term: str) -> tuple[str, ...]:
     """A term `a:b` names the columns it combines: a grouping factor on their combination
     (`(1|Block:Variety)`) or an interaction; a plain column is a term of one part."""
