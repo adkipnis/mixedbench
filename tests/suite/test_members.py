@@ -113,8 +113,8 @@ KNOWN = (DYESTUFF, SLEEPSTUDY_ID, ARABIDOPSIS, PASTES, WINE)
         ),
         pytest.param(
             ARABIDOPSIS,
-            {'tier': 'R', 'family': 'poisson', 'grouping': 'single', 'n': 625, 'd': 7, 'factors': ('gen',), 'm': (24,), 'q': (3,), 'n_i_min': (11,), 'n_i_max': (47,), 'fit': ('lme4',)},
-            id='Arabidopsis: 24 genotypes, slopes on nutrient and clipping',
+            {'tier': 'R', 'family': 'poisson', 'grouping': 'single', 'n': 625, 'd': 7, 'factors': ('gen',), 'm': (24,), 'q': (3,), 'n_i_min': (11,), 'n_i_max': (47,), 'fit': ()},
+            id='Arabidopsis: 24 genotypes, slopes on nutrient and clipping lme4 does not converge on',
         ),
         pytest.param(
             PASTES,
@@ -145,7 +145,7 @@ def test_select_without_axes_lists_each_candidate_with_its_axes(id: str, axes: d
         pytest.param({'m': (11, None)}, {SLEEPSTUDY_ID, ARABIDOPSIS}, id='every factor: Pastes has 10 batches, 30 casks'),
         pytest.param({'n_i': (None, 8)}, {DYESTUFF, PASTES, WINE}, id='every group: none of sleepstudy has fewer than 10'),
         pytest.param({'grouping': 'nested', 'tier': 'R'}, {PASTES}, id='two axes together'),
-        pytest.param({'fit': 'lme4'}, {DYESTUFF, SLEEPSTUDY_ID, ARABIDOPSIS, PASTES}, id='lme4 fits no ordinal model'),
+        pytest.param({'fit': 'lme4'}, {DYESTUFF, SLEEPSTUDY_ID, PASTES}, id='lme4 fits no ordinal model and misses Arabidopsis'),
     ],
 )  # fmt: skip
 def test_select_keeps_the_known_rows_whose_axes_match(axes: dict, kept: set[str]) -> None:
