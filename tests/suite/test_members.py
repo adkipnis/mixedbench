@@ -93,8 +93,9 @@ def test_a_problem_that_builds_off_its_listed_hash_raises_and_writes_nothing(
 DYESTUFF = 'lme4/Dyestuff/1'
 SLEEPSTUDY_ID = 'lme4/sleepstudy/1'
 ARABIDOPSIS = 'lme4/Arabidopsis/1'
+PASTES = 'lme4/Pastes/1'
 WINE = 'ordinal/wine/1'
-KNOWN = (DYESTUFF, SLEEPSTUDY_ID, ARABIDOPSIS, WINE)
+KNOWN = (DYESTUFF, SLEEPSTUDY_ID, ARABIDOPSIS, PASTES, WINE)
 
 
 @pytest.mark.parametrize(
@@ -112,12 +113,17 @@ KNOWN = (DYESTUFF, SLEEPSTUDY_ID, ARABIDOPSIS, WINE)
         ),
         pytest.param(
             ARABIDOPSIS,
-            {'tier': 'R', 'family': 'poisson', 'grouping': 'nested', 'n': 625, 'd': 7, 'factors': ('popu', 'gen'), 'm': (9, 24), 'q': (1, 1), 'n_i_min': (32, 11), 'n_i_max': (137, 47), 'fit': ('lme4',)},
-            id='Arabidopsis: 24 genotypes within 9 populations',
+            {'tier': 'R', 'family': 'poisson', 'grouping': 'single', 'n': 625, 'd': 7, 'factors': ('gen',), 'm': (24,), 'q': (3,), 'n_i_min': (11,), 'n_i_max': (47,), 'fit': ('lme4',)},
+            id='Arabidopsis: 24 genotypes, slopes on nutrient and clipping',
+        ),
+        pytest.param(
+            PASTES,
+            {'tier': 'R', 'family': 'gaussian', 'grouping': 'nested', 'n': 60, 'd': 1, 'factors': ('batch', 'batch:cask'), 'm': (10, 30), 'q': (1, 1), 'n_i_min': (6, 2), 'n_i_max': (6, 2), 'fit': ('lme4',)},
+            id='Pastes: 30 casks within 10 batches',
         ),
         pytest.param(
             WINE,
-            {'tier': 'R', 'family': 'cumulative', 'grouping': 'single', 'n': 72, 'd': 4, 'factors': ('judge',), 'm': (9,), 'q': (1,), 'n_i_min': (8,), 'n_i_max': (8,), 'fit': ()},
+            {'tier': 'R', 'family': 'cumulative', 'grouping': 'single', 'n': 72, 'd': 3, 'factors': ('judge',), 'm': (9,), 'q': (1,), 'n_i_min': (8,), 'n_i_max': (8,), 'fit': ()},
             id='wine: nine judges, an ordinal rating lme4 does not fit',
         ),
     ],
@@ -131,15 +137,15 @@ def test_select_without_axes_lists_each_candidate_with_its_axes(id: str, axes: d
 @pytest.mark.parametrize(
     'axes, kept',
     [
-        pytest.param({'q': 1}, {DYESTUFF, ARABIDOPSIS, WINE}, id='an int matches exactly'),
+        pytest.param({'q': 1}, {DYESTUFF, PASTES, WINE}, id='an int matches exactly'),
         pytest.param({'n': np.int64(30)}, {DYESTUFF}, id='a numpy int matches as an int'),
         pytest.param({'n': (100, None)}, {SLEEPSTUDY_ID, ARABIDOPSIS}, id='a range with an open end'),
-        pytest.param({'d': (2, 4)}, {SLEEPSTUDY_ID, WINE}, id='a range includes both ends'),
-        pytest.param({'family': ['gaussian', 'cumulative']}, {DYESTUFF, SLEEPSTUDY_ID, WINE}, id='a list of values'),
-        pytest.param({'m': (10, None)}, {SLEEPSTUDY_ID}, id='every factor: popu has 9 groups, gen 24'),
-        pytest.param({'n_i': (None, 8)}, {DYESTUFF, WINE}, id='every group: none of sleepstudy has fewer than 10'),
-        pytest.param({'grouping': 'nested', 'tier': 'R'}, {ARABIDOPSIS}, id='two axes together'),
-        pytest.param({'fit': 'lme4'}, {DYESTUFF, SLEEPSTUDY_ID, ARABIDOPSIS}, id='lme4 fits no ordinal model'),
+        pytest.param({'d': (2, 3)}, {SLEEPSTUDY_ID, WINE}, id='a range includes both ends'),
+        pytest.param({'family': ['gaussian', 'cumulative']}, {DYESTUFF, SLEEPSTUDY_ID, PASTES, WINE}, id='a list of values'),
+        pytest.param({'m': (11, None)}, {SLEEPSTUDY_ID, ARABIDOPSIS}, id='every factor: Pastes has 10 batches, 30 casks'),
+        pytest.param({'n_i': (None, 8)}, {DYESTUFF, PASTES, WINE}, id='every group: none of sleepstudy has fewer than 10'),
+        pytest.param({'grouping': 'nested', 'tier': 'R'}, {PASTES}, id='two axes together'),
+        pytest.param({'fit': 'lme4'}, {DYESTUFF, SLEEPSTUDY_ID, ARABIDOPSIS, PASTES}, id='lme4 fits no ordinal model'),
     ],
 )  # fmt: skip
 def test_select_keeps_the_known_rows_whose_axes_match(axes: dict, kept: set[str]) -> None:
