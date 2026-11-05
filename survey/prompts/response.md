@@ -16,6 +16,8 @@ Per object of the worklist:
   first rows. Read a page longer than 20,000 characters in parts. A Tier D page opens with the
   path of its deposit page, which runs to hundreds of kilobytes: search it for the table's file
   name and its model, once per deposit;
+- its source's host page `registry/help/_sources/<source>.md`, where a survey pass fetched one:
+  the OpenML, UCI or Kaggle description or the OSF readme;
 - the files its source ships at its pin in the source's tree under `registry/cache/`: example
   and chapter scripts, vignettes, demos, notebooks, Stan programs, do-files, a deposit's code.
   Search them for the table's name or file name;

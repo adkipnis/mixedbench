@@ -17,7 +17,9 @@ Per object of the worklist:
   response reading flagged it;
 - its help page `registry/help/<source>/<object>.txt`, which ends with the table's dtypes and
   first rows. A Tier D page opens with the path of its deposit page, which runs to hundreds of
-  kilobytes: search it for the table's file name and its model, once per deposit.
+  kilobytes: search it for the table's file name and its model, once per deposit;
+- its source's host page `registry/help/_sources/<source>.md`, where a survey pass fetched one:
+  the OpenML, UCI or Kaggle description or the OSF readme.
 
 ## Verdict
 
