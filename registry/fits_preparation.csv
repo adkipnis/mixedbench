@@ -8,3 +8,4 @@
 "mixor","concen","1","","freq","ID","freq counts the twin pairs of each response pattern and stands on both members of its pair, as the help example's weights = freq"
 "mixor","irt.data","1","","freq","ID","freq counts the examinees of each response pattern and stands on its four item rows, as the help example's weights = freq"
 "Ecdat","PSID","1","age == 36 and earnings > 0 and educatn not in [0, 98, 99]","","","mma09p1np.do fits the women aged 36 with positive earnings, educatn 0, 98 and 99 coded missing"
+"bayesrules","moma","1","count == count","","","the extra department rows repeat an artist with count missing, so the fit keeps one row per artist"
