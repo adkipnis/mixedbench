@@ -1,0 +1,3 @@
+"source","object","response","evidence","response_type","trials"
+"StroupGLMM","DataSet7.4rsm","response","the source names its outcome by the column's name: the page names the table as data for Stroup's Example 7.4, a response surface over a and b, with no model documented, and the column `response` holds the outcome (a column's name counts as naming the outcome, #170)","continuous",""
+"DAAG","nswdemo","re78","the authors' 2024 book code fits gam(log(re78+30) ~ trt + ethnicid + z75 + nodeg + s(age) + ...) on nswdemo itself (Maindonald, Braun and Andrews, ch. 9, https://github.com/jhmaindonald/Rcode/blob/main/ch9.qmd); the help page has no example","continuous",""
