@@ -136,6 +136,7 @@ EXCLUSION_REASONS = (
     'no grouping structure', 'time series without replication', 'fewer than two groups',
     'response missing or undocumented', 'derived or duplicated table', 'simulated data',
     'unreadable format', 'license forbids redistribution', 'too large', 'not the paper\'s data',
+    'wide without a long form',
 )  # fmt: skip
 
 ALLOWED: dict[str, dict[str, tuple[str, ...]]] = {

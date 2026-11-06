@@ -69,6 +69,7 @@ Key `source`, `object`, `model_index`. Agent columns, in order:
 | `random_slopes` | `;`-list of `x\|g` (correlated with the intercept of `g`) and `x\|\|g` (uncorrelated) terms, `x` a covariate and `g` a grouping factor of the row, a factor's terms all of one kind; blank for an intercept-only model (ADR 0001) |
 | `ignore` | `;`-list of columns no model should use: ids, weights, alternate responses, coordinates |
 | `types` | `;`-list of `column=categorical` / `ordered` / `continuous` where the file carries no type, `ordered` for an R ordered factor, and `column=ordered:a<b<c` for an ordinal text column, its levels lowest first; covariates and the response |
+| `stack` | a wide table's long form (ADR 0007), named after the arguments of R's `stats::reshape`: `varying=bdi:bdi.2m<bdi.4m` per measure, its columns in occasion order, `times=time:2<4` the occasion column with its value per position, `idvar=subject` the unit column, an existing one or a new one that numbers the wide rows; blank loads the object as it is |
 | `formula` | the documented model, lme4 syntax where given, its columns named as the table names them and a variable the source derives from columns written as its expression (`I(age - 12)`); a nonlinear model in words; a remark goes to `notes` |
 | `documented_prior` | the prior as the source states it, one line; only on a `published_model` `yes` row |
 | `published_model` | `yes` when a published model specification exists; else `no` |
@@ -88,7 +89,7 @@ Key `source`, `object`. Agent columns `source`, `object`, `reason` and `detail`,
 adds `tier`. `reason` ∈ `no grouping structure`, `time series without replication`,
 `fewer than two groups`, `response missing or undocumented`, `derived or duplicated table`,
 `simulated data`, `unreadable format`, `license forbids redistribution`, `too large`,
-`not the paper's data` (Tier D).
+`not the paper's data` (Tier D), `wide without a long form` (ADR 0007).
 
 ## `manifest.csv`
 
