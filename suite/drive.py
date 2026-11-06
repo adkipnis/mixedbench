@@ -1,10 +1,12 @@
-"""drive.py defines suite 1.1's reference runs: one candidate's run, and every record collected.
+"""drive.py defines suite 1.1's reference runs: one candidate's run, every record collected,
+and the problems frozen from them.
 
 A cluster job runs a single candidate.
 The candidate is named by its id,
 or by its 0-based index in the list as a scheduler array task knows it.
 The draws stay under `references/`.
 `references.csv` is the suite's record of every run (including failed ones).
+`problems.csv` lists the suite's members, the candidates whose run passed.
 
 pipeline:
 ---------
@@ -12,11 +14,13 @@ a candidate id or its index in the list           _resolveId
 -> its reference run, a directory with run.json   run
 -> the record of each run, by its id and hash     _records
 -> one row per candidate, in list order           collect
+-> the candidates whose run passed                freeze
 
 Run from the repo root:
 
     uv run python suite/drive.py run 17
     uv run python suite/drive.py collect
+    uv run python suite/drive.py freeze
 """
 
 from __future__ import annotations
@@ -59,7 +63,7 @@ class Driver:
         return name
 
     # ---------------------------------------------------------------------------------
-    # records -> rows -> references.csv
+    # records -> rows -> references.csv -> problems.csv
     # ---------------------------------------------------------------------------------
 
     def collect(self, file: Path) -> None:
@@ -81,6 +85,17 @@ class Driver:
         table = table.astype({'divergences': 'Int64'})
         writeCsv(table, file)
 
+    def freeze(self, references: Path, file: Path) -> None:
+        """Writes the candidates whose run passed, in list order with the list's columns.
+        Raises where `references` was collected for another list."""
+        records = readCsv(references)
+        listed = list(zip(self.candidates['id'], self.candidates['contract_hash']))
+        recorded = list(zip(records['id'], records['contract_hash']))
+        if recorded != listed:
+            raise ValueError(f'{references} records another candidate list: collect it again')
+        passed = (records['outcome'] == 'passed').to_numpy()
+        writeCsv(self.candidates[passed], file)
+
     def _records(self) -> dict[tuple[str, str], dict]:
         """Keyed by id and contract hash: a run made before its problem's hash moved is
         no record of the listed problem."""
@@ -95,7 +110,8 @@ class Driver:
 # =====================================================================================
 # main
 # =====================================================================================
-# a candidate's run, or every record collected into the suite's references.csv
+# a candidate's run, every record collected into the suite's references.csv,
+# or the candidates that passed frozen into its problems.csv
 ROOT = Path(__file__).resolve().parents[1]
 CACHE = ROOT / 'registry' / 'cache'
 SUITE = ROOT / 'suite' / '1.1'
@@ -108,10 +124,14 @@ if __name__ == '__main__':
     single = commands.add_parser('run', help='one candidate')
     single.add_argument('name', help='an id or a 0-based index')
     commands.add_parser('collect', help='every record into references.csv')
+    commands.add_parser('freeze', help='the candidates that passed into problems.csv')
     args = parser.parse_args()
     # fmt: on
     driver = Driver(SUITE / 'candidates.csv', REFERENCES)
-    if args.command == 'run':
-        print(driver.run(args.name, CACHE))
-    else:
-        driver.collect(SUITE / 'references.csv')
+    match args.command:
+        case 'run':
+            print(driver.run(args.name, CACHE))
+        case 'collect':
+            driver.collect(SUITE / 'references.csv')
+        case 'freeze':
+            driver.freeze(SUITE / 'references.csv', SUITE / 'problems.csv')
