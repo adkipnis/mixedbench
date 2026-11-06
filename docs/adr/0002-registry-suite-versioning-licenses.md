@@ -1,5 +1,5 @@
 ---
-status: accepted, amended 2026-10-09, 2026-10-10, 2026-10-18, 2026-10-19, 2026-10-20 and 2026-10-30
+status: accepted, amended 2026-10-09, 2026-10-10, 2026-10-18, 2026-10-19, 2026-10-20, 2026-10-30 and 2026-11-06
 date: 2026-10-08
 ---
 
@@ -152,3 +152,19 @@ correction a benchmark change.
   minutes for its record stays within a day. This replaces the 12 hours above.
 - Why: suite 1.1's first run stopped 8 of 595 candidates at 12 hours, among them the largest
   tables, and the cluster's standard queue allows a job one day.
+
+## Amendment 2026-11-06: saturated designs and the freeze (#160)
+
+**Admission.**
+
+- Decision: a problem with no more rows than design columns is refused.
+- Why: its likelihood alone identifies no fixed effect, so its reference rests on the prior.
+  Of suite 1.1's 907 candidates, only wids_diabetes_mellitus was one, with 63 rows kept for 63
+  design columns.
+
+**The freeze.**
+
+- Decision: `suite/drive.py freeze` writes `suite/<version>/problems.csv`, the candidates whose
+  run passed. The wheel and `suite.load` switch to it in release 1.1.0 (#203), and a patch
+  before it ships the registry and the references without the switch.
+- Why: a suite is named after the release that freezes it, and a patch names no suite.

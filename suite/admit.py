@@ -1,13 +1,15 @@
 """admit.py defines the admission of suite 1.1: registry rows in, candidates and refusals out.
 
 Every row the family rule covers is built into its problem and materialized under the cache.
-Its contract hash and its dimensions go into the candidate list. Five decisions guide admission:
+Its contract hash and its dimensions go into the candidate list. Six decisions guide admission:
 - hand decisions first: a row whose documented model does not survive into the contract
   is refused by id, or by its notes' marker when the model is nonlinear;
   a row whose random effects were changed carries its fidelity:
   `structure_equivalent` (the same structure in another basis)
   or `approximate` (terms changed or dropped);
 - a refusal is kept with its reason beside the candidates;
+- a problem with no more rows than design columns is refused,
+  since its likelihood alone identifies no fixed effect;
 - a table that fails to load is a failure and stops the run before writing,
   so the list never misses a row silently;
 - the list and the refusals keep registry order, not sorted by id;
@@ -21,6 +23,7 @@ the registry's rows
 -> refused as nonlinear by its notes' marker   NONLINEAR
 -> the loaded table, or a failure              loadTable
 -> the problem, or refused by the contract     Problem.build
+-> refused with no more rows than columns      Problem.measureDimensions
 -> materialized, its candidate                 _candidate
 -> the candidate list and the refusals         Admitted.write
 
@@ -39,7 +42,7 @@ from typing import Literal
 
 import pandas as pd
 from mixedbench import registry
-from mixedbench.contract import Problem, Refused, materialize
+from mixedbench.contract import Dimensions, Problem, Refused, materialize
 from mixedbench.registry.row import Row, joinList, writeCsv
 
 # =====================================================================================
@@ -353,15 +356,21 @@ class Admission:
             except Refused as refusal:  # the family rule, a table with no complete row (#29)
                 refused[id] = refusal.reason
                 continue
-            candidates.append(self._candidate(row, problem))
+            dimensions = problem.measureDimensions()
+            if dimensions.n <= dimensions.d:
+                refused[id] = (
+                    'saturated_design: no more rows than design columns, '
+                    'so the posterior rests on the prior'
+                )
+                continue
+            candidates.append(self._candidate(row, problem, dimensions))
         return Admitted(pd.DataFrame(candidates), refused, failed)
 
     # ---------------------------------------------------------------------------------
     # problem -> materialized files -> candidate
     # ---------------------------------------------------------------------------------
     # the step that turns a built problem into its row of the list
-    def _candidate(self, row: Row, problem: Problem) -> dict:
-        dimensions = problem.measureDimensions()
+    def _candidate(self, row: Row, problem: Problem, dimensions: Dimensions) -> dict:
         return {
             'id': problem.id,
             'contract_hash': materialize(problem, self.cache),
