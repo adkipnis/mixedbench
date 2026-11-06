@@ -31,6 +31,7 @@ from mixedbench.registry.row import (
     COLUMN_LIST_COLUMNS,
     TERM_COLUMNS,
     Row,
+    parseStack,
     parts,
     readCsv,
     writeCsv,
@@ -162,6 +163,7 @@ class Merger:
         if name == 'registry':
             problems += self.grammarProblems()
             problems += self.modelIndexProblems()
+            problems += self.stackAgreementProblems()
             prior = self.shard['documented_prior'] != ''
             unpublished = self.shard['published_model'] == 'no'
             problems += self.flag(prior & unpublished, 'documented_prior', 'only on a published model')  # fmt: skip
@@ -179,6 +181,17 @@ class Merger:
         number = pd.to_numeric(self.shard['model_index'], errors='coerce')
         outside = number.notna() & ~number.between(1, MAX_MODELS_PER_OBJECT)
         return self.flag(outside, 'model_index', f'at most {MAX_MODELS_PER_OBJECT} models per object')  # fmt: skip
+
+    def stackAgreementProblems(self) -> list[dict]:
+        """A table has one long form: the rows of an object, in the shard and already in the
+        registry but for those the shard replaces, carry the same stack."""
+        registry = self.canonical(TABLES['registry'])
+        key = ['source', 'object', 'model_index']
+        replaced = registry.set_index(key).index.isin(self.shard.set_index(key).index)
+        rows = pd.concat([registry[~replaced], self.shard])
+        stacks = rows.groupby(['source', 'object'])['stack'].nunique()
+        disagreeing = set(stacks[stacks > 1].index)
+        return self.flag(self.keysOf(self.shard).isin(disagreeing), 'stack', 'the rows of the object disagree')  # fmt: skip
 
     def licenseProblems(self) -> list[dict]:
         """Every registry source's license is in the lookup, the shard's and those merged
@@ -290,11 +303,15 @@ class Merger:
         if row.object not in self.objects(row.source):
             return [self.problem(line, 'object', f'not an object of {row.source}')]
         source = self.frame.sources[row.source]
-        untyped = self.loader.load(source, row.object)
+        wide = self.loader.load(source, row.object)
+        problems = self.stackProblems(line, row, set(wide.columns))
+        if problems:
+            return problems
+        untyped = self.loader.load(source, row.object, stack=row.stack)
         problems = self.missingColumns(line, row, set(untyped.columns))
         if problems:
             return problems
-        loaded = self.loader.load(source, row.object, row.types)
+        loaded = self.loader.load(source, row.object, row.types, row.stack)
         table = withComposites(loaded, row.grouping_factors)
         problems += self.groupingProblems(line, row, table)
         problems += self.responseProblems(line, table, row.response, row.response_type, row.trials)
@@ -302,6 +319,20 @@ class Merger:
 
     def objects(self, label: str) -> dict[str, DataObject]:
         return {o.name: o for o in self.loader.objects(self.frame.sources[label])}
+
+    def stackProblems(self, line: int, row: Row, columns: set[str]) -> list[dict]:
+        """The stack's own names, on the wide table: every measure's columns exist and the
+        occasion column does not, since the stack would overwrite it."""
+        if row.stack is None:
+            return []
+        problems = []
+        for listed in row.stack.varying.values():
+            for name in listed:
+                if name not in columns:
+                    problems.append(self.problem(line, 'stack', f'no such column: {name}'))
+        if row.stack.timevar in columns:
+            problems.append(self.problem(line, 'stack', f'{row.stack.timevar} is a column of the table'))  # fmt: skip
+        return problems
 
     def missingColumns(self, line: int, row: Row, columns: set[str]) -> list[dict]:
         """Every column a row names, with the shard column it was named in."""
@@ -484,9 +515,11 @@ class Merger:
         """Pairs of registry objects that may be copies and no verdict row covers yet, earliest
         tier first."""
         profiles = {}
+        stacks = dict(zip(self.keysOf(registry), registry['stack']))  # one per object
         for label, name in sorted(set(self.keysOf(registry)), key=self.frame.rank):
             if (label, name) not in self.profiles:
-                table = self.loader.load(self.frame.sources[label], name)
+                stack = parseStack(stacks[label, name])
+                table = self.loader.load(self.frame.sources[label], name, stack=stack)
                 self.profiles[label, name] = copies.profileTable(table)
             profiles[label, name] = self.profiles[label, name]
         first = zip(duplicates['source_a'], duplicates['object_a'])

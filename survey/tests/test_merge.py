@@ -10,8 +10,19 @@ import copies
 import pandas as pd
 import pytest
 import yaml
-from conftest import FIXTURES, MEASURED, SURVEY, emptyCensus, mergeShard, readRows, runMeasure
+from conftest import (
+    FIXTURES,
+    MEASURED,
+    SURVEY,
+    emptyCensus,
+    mergeShard,
+    readRows,
+    runMeasure,
+    scratchMerger,
+    servePlots,
+)
 from merge import Merger, ShardRefused
+from mixedbench.datasets import Loader
 from mixedbench.registry.row import readCsv, writeCsv
 from mixedbench.suite.members import Tier
 from schema import TIERS
@@ -49,6 +60,79 @@ def test_select_takes_the_tiers_the_merge_fills_in():
 def writeShard(path: Path, rows: list[dict]) -> Path:
     writeCsv(pd.DataFrame(rows), path)
     return path
+
+
+RENAMED_TYPES = 'area=categorical;farm=categorical;type=categorical;diet=categorical'
+# a wide table, repeated measures as columns, and the row of its long form: its response, its
+# grouping factor and the occasion are columns of the long form alone
+BDI = 'subject,treatment,bdi.pre,bdi.2m,bdi.4m,wt2,wt4\ns1,TAU,29,2,,60,61\ns2,BtheB,32,16,24,70,72\ns3,TAU,25,20,19,80,79\n'
+STACK = 'varying=bdi:bdi.2m<bdi.4m;varying=wt:wt2<wt4;times=time:2<4;idvar=subject'
+BDI_ROW = {
+    'source': 'plots', 'object': 'bdi.csv', 'model_index': '1', 'response': 'bdi',
+    'response_type': 'continuous', 'trials': '', 'family': '', 'grouping_factors': 'subject',
+    'covariates': 'time;treatment', 'interactions': '', 'random_slopes': '',
+    'ignore': 'bdi.pre;wt', 'types': 'subject=categorical;treatment=categorical',
+    'stack': STACK, 'formula': 'bdi ~ time + treatment + (1 | subject)', 'documented_prior': '',
+    'published_model': 'yes', 'domain': 'biomedicine', 'confidence': 'high', 'verified': 'hand',
+    'notes': 'reshaped as the vignette does',
+}  # fmt: skip
+
+
+def wideMerger(tmp_path: Path) -> Merger:
+    """The scratch merger with one more url source, `plots` (Tier O), serving the wide table."""
+    merger = scratchMerger(tmp_path, tmp_path)
+    entry, fetch = servePlots({'bdi.csv': BDI})
+    sources = yaml.safe_load((merger.registry / 'sources.yaml').read_text())
+    sources['tiers']['O'] = {'plots': entry}
+    (merger.registry / 'sources.yaml').write_text(yaml.safe_dump(sources, sort_keys=False))
+    return Merger(merger.registry, merger.survey, loader=Loader(merger.registry / 'cache', fetch=fetch))  # fmt: skip
+
+
+def test_a_stacked_row_is_checked_on_its_long_form_and_merges_with_its_stack(tmp_path):
+    """A wide table's row names the long form's columns (ADR 0007): the response `bdi`, the
+    unit `subject` and the occasion `time` exist only once the stack is applied, and the row
+    lands with its stack cell as written."""
+    merger = wideMerger(tmp_path)
+    mergeShard(merger, writeShard(merger.survey / 'shards' / 'registry_bdi.csv', [BDI_ROW]))
+    [merged] = readRows(merger.registry / 'registry.csv')
+    assert (merged['object'], merged['stack']) == ('bdi.csv', STACK)
+
+
+@pytest.mark.parametrize(
+    'stack, problem',
+    [
+        ('varying=bdi:bdi.2m<bdi.6m;times=time:2<4;idvar=subject', 'no such column: bdi.6m'),
+        (
+            'varying=bdi:bdi.2m<bdi.4m;times=treatment:2<4;idvar=subject',
+            'treatment is a column of the table',
+        ),  # fmt: skip
+    ],
+)
+def test_a_stack_the_wide_table_contradicts_is_refused(tmp_path, stack, problem):
+    """The stack's own names are checked on the wide table before any other name is checked
+    on the long form: a measure's column must exist, and the occasion column must not, since
+    the stack would overwrite it."""
+    merger = wideMerger(tmp_path)
+    shard = writeShard(merger.survey / 'shards' / 'registry_bad.csv', [BDI_ROW | {'stack': stack}])
+    problems = refusal(merger, shard)
+    assert problems[['line', 'column', 'problem']].values.tolist() == [[2, 'stack', problem]]
+
+
+def test_rows_of_one_object_that_disagree_on_the_stack_are_refused(tmp_path):
+    """A table has one long form: every model row of an object, in the shard and already
+    merged, carries the same stack."""
+    merger = wideMerger(tmp_path)
+    other = STACK.replace('idvar=subject', 'idvar=person')
+    second = BDI_ROW | {'model_index': '2', 'stack': other}
+    shard = writeShard(merger.survey / 'shards' / 'registry_two.csv', [BDI_ROW, second])
+    problems = refusal(merger, shard)
+    assert problems[['line', 'column', 'problem']].values.tolist() == [
+        [2, 'stack', 'the rows of the object disagree'],
+        [3, 'stack', 'the rows of the object disagree'],
+    ]
+    mergeShard(merger, writeShard(merger.survey / 'shards' / 'registry_one.csv', [BDI_ROW]))
+    problems = refusal(merger, writeShard(merger.survey / 'shards' / 'registry_second.csv', [second]))  # fmt: skip
+    assert problems[['line', 'column', 'problem']].values.tolist() == [[2, 'stack', 'the rows of the object disagree']]  # fmt: skip
 
 
 def test_a_cran_sources_license_is_read_from_its_description(merger):
