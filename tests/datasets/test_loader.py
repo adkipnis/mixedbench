@@ -20,7 +20,7 @@ from pathlib import Path
 
 import pytest
 from mixedbench import registry
-from mixedbench.datasets import DataObject, Loader, ManifestRow, Source, fetch
+from mixedbench.datasets import DataObject, Loader, ManifestRow, Source, Stack, fetch
 
 
 def tarMember(archive: bytes, name: str) -> bytes:
@@ -37,6 +37,8 @@ OBJECTS = {'growth', 'pets', 'plots', 'scores', 'trials', 'visits', 'wide'}
 
 DEPOSIT = (FIXTURES / 'deposit.zip').read_bytes()
 DEPOSIT_URL = 'https://example.org/deposit.zip'
+WIDE = (FIXTURES / 'wide.zip').read_bytes()
+WIDE_URL = 'https://example.org/wide.zip'
 EXAMPLE = (FIXTURES / 'example-c0ffee1.tar.gz').read_bytes()
 EXAMPLE_REPO = 'https://github.com/acme/example'
 EXAMPLE_ARCHIVE = 'https://github.com/acme/example/archive/c0ffee1.tar.gz'
@@ -290,6 +292,58 @@ def test_a_value_outside_the_declared_order_raises(tmp_path):
     loader = Loader(tmp_path, fetch=Server({DEPOSIT_URL: DEPOSIT}))
     with pytest.raises(ValueError, match=r"school holds \['C'\] outside its declared levels"):
         loader.load(deposit, 'data/schools.csv', types={'school': ('A', 'B')})
+
+
+def test_a_stack_makes_the_long_form_one_row_per_unit_and_occasion(tmp_path):
+    """A wide table's row declares its stack (ADR 0007) and the loader returns the long form as
+    R's `reshape(direction = 'long')` lays it out: the constant columns, the occasion, then the
+    measures, each occasion's block of rows after the one before. A missing measure keeps its
+    row, for the contract to drop; an occasion whose values are numbers arrives numeric."""
+    wide = urlSource(WIDE_URL, WIDE)
+    loader = Loader(tmp_path, fetch=Server({WIDE_URL: WIDE}))
+    stack = Stack(
+        varying={'bdi': ('bdi.2m', 'bdi.4m'), 'wt': ('wt2', 'wt4')},
+        timevar='time',
+        times=('2', '4'),
+        idvar='subject',
+    )
+    table = loader.load(wide, 'bdi.csv', stack=stack)
+    assert list(table.columns) == ['subject', 'treatment', 'bdi.pre', 'time', 'bdi', 'wt']
+    assert list(table['subject']) == ['s1', 's2', 's3', 's1', 's2', 's3']
+    assert list(table['time']) == [2, 2, 2, 4, 4, 4]
+    assert list(table['bdi'].fillna(-1)) == [2, 16, 20, -1, 24, 19]
+    assert list(table['wt']) == [60, 70, 80, 61, 72, 79]
+
+
+def test_a_column_may_sit_in_two_measures_and_a_new_unit_column_numbers_the_rows(tmp_path):
+    """A dyad's two ids swap between its directions, so each id column is the actor in one
+    measure and the partner in the other; a unit column the table lacks numbers its rows, as
+    R's `ids` does, and comes last."""
+    wide = urlSource(WIDE_URL, WIDE)
+    loader = Loader(tmp_path, fetch=Server({WIDE_URL: WIDE}))
+    stack = Stack(
+        varying={'actor': ('a', 'b'), 'partner': ('b', 'a'), 'gift': ('gift_ab', 'gift_ba')},
+        timevar='direction',
+        times=('ab', 'ba'),
+        idvar='dyad',
+    )
+    table = loader.load(wide, 'dyads.csv', stack=stack)
+    assert list(table.columns) == ['pair', 'direction', 'actor', 'partner', 'gift', 'dyad']
+    assert list(table['actor']) == ['x', 'y', 'y', 'z']
+    assert list(table['partner']) == ['y', 'z', 'x', 'y']
+    assert list(table['gift']) == [1, 2, 3, 4]
+    assert list(table['direction']) == ['ab', 'ab', 'ba', 'ba']
+    assert list(table['dyad']) == [1, 2, 1, 2]
+
+
+def test_declared_types_name_the_long_forms_columns(tmp_path):
+    """`types` is read after the stack: a row declares the occasion column categorical, a
+    column the wide table never had."""
+    wide = urlSource(WIDE_URL, WIDE)
+    loader = Loader(tmp_path, fetch=Server({WIDE_URL: WIDE}))
+    stack = Stack(varying={'bdi': ('bdi.2m', 'bdi.4m')}, timevar='time', times=('2', '4'), idvar='subject')  # fmt: skip
+    table = loader.load(wide, 'bdi.csv', stack=stack, types={'time': 'categorical'})
+    assert list(table['time'].cat.categories) == [2, 4]
 
 
 def test_git_source_is_fetched_as_an_archive_at_its_revision(tmp_path):
