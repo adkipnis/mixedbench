@@ -221,7 +221,7 @@ describeDesign <- function(built) {
   list(
     rows = as.integer(rownames(built$fr)),
     y = unname(y),
-    columns = I(colnames(built$X)),  # none for `0 + (1 | g)`
+    columns = I(as.character(colnames(built$X))),  # character(0) for `0 + (1 | g)`
     X = matrix(built$X, nrow(built$X)),
     offset = unname(offset),
     factors = describeFactors(built$reTrms)
