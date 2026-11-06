@@ -109,7 +109,7 @@ class Measurement:
         row = self.rows[index]
         records = self.findRecords(row)
         records.unlink(missing_ok=True)  # a run killed for memory leaves no earlier record behind
-        table = self.loader.load(self.sources[row.source], row.object, row.types)
+        table = self.loader.load(self.sources[row.source], row.object, row.types, row.stack)
         measurer = Measurer(table, row)
         measured = {
             'cells': self.cells[index],

@@ -18,7 +18,7 @@ ROW = Row(
     source='fixture', tier='R', sources=('fixture:trial',), object='trial', reader='pandas',
     license='MIT', model_index=1, response='y', response_type='continuous', trials='', family='',
     grouping_factors=('block',), covariates=('x', 'sex'), interactions=(), random_slopes=(),
-    ignore=(), types={}, formula='y ~ x + sex + (1 | block)', documented_prior='',
+    ignore=(), types={}, stack=None, formula='y ~ x + sex + (1 | block)', documented_prior='',
     published_model='yes', domain='test', confidence='high', verified='hand', notes='',
 )  # fmt: skip
 

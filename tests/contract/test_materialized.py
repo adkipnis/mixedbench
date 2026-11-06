@@ -30,6 +30,7 @@ ROW = Row(
     trials='', family='', grouping_factors=('g', 'h'), covariates=('x', 'diet', 'dose'),
     interactions=(), random_slopes=(SlopeTerm('x', 'g', correlated=True),), ignore=(),
     types={'diet': 'categorical'}, formula='y ~ x + diet + dose + (x | g) + (1 | h)',
+    stack=None,
     documented_prior='', published_model='yes', domain='test', confidence='high',
     verified='hand', notes='',
 )  # fmt: skip
