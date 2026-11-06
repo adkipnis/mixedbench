@@ -113,6 +113,39 @@ def test_collect_refuses_while_a_candidate_has_no_record_of_its_listed_hash(tmp_
 
 
 # =====================================================================================
+# freeze
+# =====================================================================================
+def test_freeze_writes_the_candidates_whose_record_passed_in_list_order(tmp_path):
+    """`problems.csv` lists the suite's members, the candidates whose reference passed
+    (ADR 0002), with the list's columns."""
+    references = tmp_path / 'references'
+    writeRecord(references, '0a', 'mid/c/1', outcome='passed')
+    writeRecord(references, '0b', 'alpha/b/1', outcome='bar', level=3)
+    writeRecord(references, '0c', 'zeta/a/1', outcome='passed')
+    driver = Driver(candidateList(tmp_path), references)
+    driver.collect(tmp_path / 'references.csv')
+    driver.freeze(tmp_path / 'references.csv', tmp_path / 'problems.csv')
+    written = readCsv(tmp_path / 'problems.csv')
+    assert list(written.columns) == ['id', 'contract_hash']
+    assert list(written['id']) == ['zeta/a/1', 'mid/c/1']
+
+
+def test_freeze_refuses_references_collected_for_another_list(tmp_path):
+    """An admission after the collect leaves `references.csv` stale, as refusing
+    wids_diabetes_mellitus did (#160), so nothing is written until it is collected again."""
+    references = tmp_path / 'references'
+    for name, id in zip(['0a', '0b', '0c'], CANDIDATES):
+        writeRecord(references, name, id)
+    driver = Driver(candidateList(tmp_path), references)
+    driver.collect(tmp_path / 'references.csv')
+    readmitted = tmp_path / 'readmitted.csv'
+    writeCsv(readCsv(tmp_path / 'candidates.csv').iloc[1:], readmitted)
+    with pytest.raises(ValueError, match='collect'):
+        Driver(readmitted, references).freeze(tmp_path / 'references.csv', tmp_path / 'p.csv')
+    assert not (tmp_path / 'p.csv').exists()
+
+
+# =====================================================================================
 # run
 # =====================================================================================
 def test_an_index_names_the_candidate_at_that_position_and_an_id_names_itself(tmp_path):
