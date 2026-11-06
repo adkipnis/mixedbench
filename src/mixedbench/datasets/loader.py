@@ -326,12 +326,14 @@ class Loader:
     @staticmethod
     def _stacked(table: pd.DataFrame, stack: Stack) -> pd.DataFrame:
         """The long form as R's `reshape(direction = 'long')` lays it out: the constant columns
-        in the table's order, the occasion, the measures and a unit column the table lacks,
-        each occasion's block of rows after the one before. A row with a missing measure
-        stays."""
+        in the table's order with their types, the occasion, the measures and a unit column the
+        table lacks, each occasion's block of rows after the one before. A row with a missing
+        measure stays."""
         varying = {column for columns in stack.varying.values() for column in columns}
         constant = [column for column in table.columns if column not in varying]
         long = pd.lreshape(table, stack.varying, dropna=False)
+        # lreshape repeats a constant column through numpy, which drops a factor's levels
+        long = long.astype(table[constant].dtypes.to_dict())
         times = pd.Series(list(stack.times))
         if pd.to_numeric(times, errors='coerce').notna().all():  # as a text file's column arrives
             times = readers.numbers(times)
