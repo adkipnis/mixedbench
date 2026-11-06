@@ -11,10 +11,11 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 from mixedbench import registry
 from mixedbench.contract import contractHash, load
-from mixedbench.registry.row import COLUMNS, Row, readCsv, writeCsv
+from mixedbench.registry.row import COLUMNS, Row, joinList, readCsv, writeCsv
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # the suite's scripts
 
@@ -153,6 +154,29 @@ def test_a_row_whose_random_effects_were_changed_carries_its_fidelity(tmp_path):
     admission = Admission(rows, tables, tmp_path / 'cache', fidelity=fidelity)
     candidates = admission.admit().candidates
     assert list(candidates['fidelity']) == ['approximate', '']
+
+
+def designTable(rows: int) -> pd.DataFrame:
+    """`rows` rows over six groups with five covariates, so the design has six columns."""
+    generator = np.random.default_rng(0)
+    covariates = generator.normal(size=(rows, 5))  # (n, 5)
+    table = pd.DataFrame(covariates, columns=[f'x{i}' for i in range(1, 6)])
+    table['g'] = [f'g{i % 6}' for i in range(rows)]
+    table['y'] = generator.normal(size=rows)
+    return table
+
+
+def test_a_problem_with_no_more_rows_than_design_columns_is_refused(tmp_path):
+    """Its likelihood alone identifies no fixed effect, so its posterior rests on the prior:
+    wids_diabetes_mellitus kept 63 rows for 63 design columns (#160).
+    One row more keeps a problem."""
+    covariates = joinList([f'x{i}' for i in range(1, 6)])
+    rows = scratchRegistry(tmp_path, ['saturated', 'kept'], covariates=covariates)
+    tables = Tables({'saturated': designTable(6), 'kept': designTable(7)})
+    admission = Admission(rows, tables, tmp_path / 'cache')
+    admitted = admission.admit()
+    assert list(admitted.candidates['id']) == ['fixture/kept/1']
+    assert admitted.refused['fixture/saturated/1'].startswith('saturated_design')
 
 
 class FailingTables(Tables):
