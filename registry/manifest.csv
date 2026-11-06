@@ -937,3 +937,6 @@
 "osf_confidence_teuchies_2019","data_Teuchies_2019.csv","data_Teuchies_2019.csv","f0d6824c803325c2b2e1577ec76d9153c60586e88587958677d08be14cd0862b","226524"
 "FAwR","herbdata","data/herbdata.txt.bz2","dbe42847c4bc71719347c115c0927bd7cec702799901c4990f9eae3d64cad7c0","6171"
 "mlmRev","Socatt","data/Socatt.rda","3a11b807e3b2c0ef2bfb06e583764b1d3e01327c2767067a3b315a3bc0d06f4a","4747"
+"bayesrules","moma","data/moma.rda","6aed2d32d8c6166101eac13eae453fb552edc26aa8da4e01a6f68589ac356a5c","143208"
+"beyondmlr","data/campuscrime09.csv","data/campuscrime09.csv","77cbd2062bc987928e77f6f871ffe6a81b964e17d994b107b5ef87d605080efa","4210"
+"spaMM","arabidopsis","data/arabidopsis.RData","bac5244d49002bdc1d7ff53f5f06d184c8737e306b0bf70372593fa4da425eb3","22180"

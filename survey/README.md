@@ -78,7 +78,7 @@ uv run python survey/mirror.py --tag mirror-<n>
 | `deposits.csv`, `deposit_files.csv` | Tier D's frame: the drawn papers and every file their deposits list |
 | `sample.csv`, `agreement.csv` | the second hand sample (#61): 100 candidates not yet hand-checked with their readings at draw time, and the share of readings that stood per field |
 | `practice_quantiles.yaml` | the practice survey's `quantiles.yaml` (metabeta-v3), the practice column of `SUMMARY.md` |
-| `registry/help/`, `registry/cache/` | untracked: one help page per object read or stopped at `no repeated column`; the downloads |
+| `registry/help/`, `registry/cache/` | untracked: one help page per object read or stopped at `no repeated column`, and in `registry/help/_sources/` a host page per source a survey pass fetched one for, which the pull never erases; the downloads |
 | [`archive/`](https://github.com/adkipnis/mixedbench/tree/survey-archive-3/survey/archive) | finished scripts and their outputs, kept at tag `survey-archive-3` and reproducible at tags `survey-archive` and `survey-archive-2` ([README](https://github.com/adkipnis/mixedbench/blob/survey-archive-3/survey/archive/README.md)) |
 | `tests/` | `uv run pytest survey/tests`, by hand; the root run never recurses here |
 

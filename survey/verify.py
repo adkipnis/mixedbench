@@ -107,9 +107,9 @@ PAGES = {
 }  # fmt: skip
 DOI = re.compile(r'10\.\d{4,}/\S+')  # a DOI anywhere in a deposit's link
 HELP_CHARACTERS = 20_000  # a help page can hold a whole table, which would drown a handoff
-# the host's description of a source (an OpenML, UCI or Kaggle page), fetched by a survey pass
-# into the source's help directory
-SOURCE_PAGE = '_source.md'
+# the host's description of a source (an OpenML, UCI or Kaggle page, an OSF readme), fetched by
+# a survey pass into one folder beside the help pages, which the pull never erases
+SOURCE_PAGES = '_sources'
 # the pull opens a deposit's help page with the local path of its deposit page, which the
 # deposit's page URL replaces in a handoff
 DEPOSIT_LINE = re.compile(r'^# deposit page: [^\n]*\n\n')
@@ -313,7 +313,7 @@ def _foldPage(summary: str, text: str) -> str:
 
 def renderSourcePage(registry: Path, label: str) -> str:
     """The host's description of the source, folded, or nothing where no pass fetched one."""
-    path = registry / 'help' / label / SOURCE_PAGE
+    path = registry / 'help' / SOURCE_PAGES / f'{label}.md'
     if not path.exists():
         return ''
     return _foldPage('source documentation', path.read_text())

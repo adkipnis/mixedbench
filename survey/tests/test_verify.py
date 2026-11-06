@@ -282,7 +282,9 @@ def test_handoff_renders_the_documentation_the_call_and_the_source_page_where_a_
         'stratum': 'O/low', 'batch': '1', 'file': 'winemag.csv',
     }  # fmt: skip
     verifier = unmergedVerifier(tmp_path, [documented, plain])
-    (tmp_path / 'registry/help/kaggle_wine_reviews/_source.md').write_text('130k wine reviews\n')
+    source_page = tmp_path / 'registry/help/_sources/kaggle_wine_reviews.md'
+    source_page.parent.mkdir()
+    source_page.write_text('130k wine reviews\n')
 
     text = verifier.handoff(1)
 

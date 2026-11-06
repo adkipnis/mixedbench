@@ -216,3 +216,17 @@ the registry. Grilled on 2026-10-24 ([#72](https://github.com/adkipnis/mixedbenc
   failures without a trials column are `count`, as `faraway · soybean` is in the registry.
 - Rejected: a hand check of the types, since the merge refuses a type its column contradicts,
   and only an ordinal response read as a count or a measurement changes how it is measured.
+
+## Amendment 2026-11-05: #162's flat tables ([#170](https://github.com/adkipnis/mixedbench/issues/170))
+
+- Decision: a `hidden grouping` whose repeated unit holds one value of the response throughout,
+  or a lookup table with no response whose rows repeat within a unit, keeps its exclusion, out
+  of the sample with no registry row, as a fixed wave does.
+- Why: its rows repeat within a unit, so it is not flat, but the registry's one-label and
+  lookup rules file it `no grouping structure`.
+- Decision: a corrected edition of a table (a few cells revised) copies it, and a table whose
+  rows another frame table or registry object holds leaves for that superset, as a registry
+  copy does (#168).
+- Decision: a column the source names as the outcome (`response`, `depvar`) names the response
+  of a table with no documented model, since the name is the source's statement, not a reading
+  of the values.

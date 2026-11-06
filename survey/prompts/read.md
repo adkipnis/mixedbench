@@ -7,7 +7,8 @@ tell. Vocabulary follows `CONTEXT.md`.
 
 ## Input
 
-Per object: its `candidates.csv` row and its help page `registry/help/<source>/<object>.txt`.
+Per object: its `candidates.csv` row, its help page `registry/help/<source>/<object>.txt` and
+its source's host page `registry/help/_sources/<source>.md`, where a survey pass fetched one.
 Columns and allowed values are in `docs/registry.md` and `schema.py`; the merge refuses a value
 outside them or a column the table lacks.
 
