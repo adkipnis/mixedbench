@@ -764,6 +764,38 @@ reading's open disagreements, four to eight per tier.
   earlier row of the five measured files stayed byte for byte.
 - `suite/admit.py` admits herbdata, and no other candidate or refusal moved.
 
+## Flat tables of #162 (#170, 2026-11-05 to 2026-11-06)
+
+- `flat.py screen` took the 565 tables #162 filed `no grouping structure` into the frame of
+  1,406 and flagged 203 of them. The 841 screened before stayed as they were.
+- `copies.py`'s profiles paired 119 tables of the frame and the registry, and a reading kept 66
+  pairs as copies: 64 tables left the frame as `derived or duplicated table`, 9 of them screened
+  before (MASS ships copies the registry's COUNT ships). A corrected edition copies its first,
+  and a subset leaves for its superset (ADR 0007, amended 2026-11-05).
+- Six reading runs by `prompts/flat.md` gave 228 tables a verdict: 117 `flat`, 93 `wide` and 18
+  `hidden grouping`. Three wide copies, two simulated tables and two subsets of the NSW tables
+  left the frame too.
+- Of the 18, a fixed wave keeps 4 out of the sample, one label per group 5 and a lookup 6, with
+  their filing (ADR 0007, amended 2026-11-05). Three were re-filed: moma by country,
+  campuscrime09 by state and arabidopsis by collection site. An outside reader let all three
+  stand. moma's fit keeps one row per artist, and admission refuses moma for its repeated
+  artists and arabidopsis for its Matern field.
+- An attribute that stands in for a unit no column holds is no id (mlb1, alcohol,
+  CollegeDistance). A table whose rows repeat within a unit no column indexes is `flat` (plm
+  Wages, as crime2), and so is a baseline beside an outcome measured once (DAAG nswdemo, as ros
+  chile).
+- Eight reading runs by `prompts/response.md` read 440 sample tables and named 241 responses. A
+  column the source names as the outcome names the response (Ecdat HC, StroupGLMM
+  DataSet7.4rsm).
+- The registry shard cut the remarks in twin_hay's and Wines2012's formula cells, and Wines2012
+  standardizes by `scale()`, which lme4 evaluates. Wines2012 now fits; twin_hay's ADE grouping
+  stays beyond lme4 (#175).
+- `measure.py` measured the three re-filed rows, and every other row of the five measured files
+  stayed byte for byte. `flat.py measure` wrote 1,111 tables into `flat.csv`; three kept tables'
+  `condition_all` moved in the tenth significant digit, the cluster's linear algebra against the
+  laptop's, which reproduces the earlier values.
+- `suite/admit.py` admits campuscrime09, and no other candidate or refusal moved.
+
 ## Reading rulings (m3#22 to #15)
 
 The rulings [`prompts/read.md`](prompts/read.md) does not carry, from the agents' `RULE GAP` notes and Alex's checks, each with an example
