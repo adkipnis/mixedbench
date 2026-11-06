@@ -393,6 +393,15 @@ def test_the_design_holds_the_kept_rows_x_the_offset_and_each_factors_z_in_lme4s
 
 
 @pytest.mark.lme4
+def test_the_design_of_a_model_without_fixed_effects_has_an_x_without_columns() -> None:
+    """lme4's X of `y ~ 0 + (1 | g)` has no column names, which R once refused to write (#207)."""
+    built = buildDesign(designTable(), 'y ~ 0 + (1 | g)', 'gaussian')
+
+    assert built.columns == ()
+    assert built.X.shape == (10, 0)
+
+
+@pytest.mark.lme4
 @pytest.mark.parametrize(
     'response, y',
     [
