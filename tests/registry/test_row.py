@@ -8,6 +8,7 @@ from pathlib import Path
 import pandas as pd
 import pytest
 from mixedbench import registry
+from mixedbench.datasets import Stack
 from mixedbench.registry.row import Row, SlopeTerm, parts, readCsv, writeCsv
 
 from .conftest import installedRow
@@ -72,6 +73,15 @@ def verbAggCells() -> dict[str, str]:
         ('interactions', 'Anger:resp', 'resp is not a covariate'),
         ('grouping_factors', 'id;item;Anger', 'Anger is also a covariate'),
         ('covariates', 'Anger;Gender;btype;situ;r2', 'r2 is also the response'),
+        # a stack is one `varying` per measure, `times` and `idvar`, every list as long as `times`
+        ('stack', 'varying=bdi:a<b;times=t:1<2;idvar=id;sep=.', 'not a stack key: sep'),
+        ('stack', 'times=t:1<2;idvar=id', 'varying missing'),
+        ('stack', 'varying=bdi:a<b;idvar=id', 'times missing'),
+        ('stack', 'varying=bdi:a<b;times=t:1<2', 'idvar missing'),
+        ('stack', 'varying=bdi:a<b;times=t:1<2;times=t:1<2;idvar=id', 'times repeated'),
+        ('stack', 'varying=bdi:a<b<c;times=t:1<2;idvar=id', 'bdi lists 3 columns for 2 times'),
+        ('stack', 'varying=bdi:<b;times=t:1<2;idvar=id', 'an empty name: varying=bdi:<b'),
+        ('stack', 'varying=bdi:a<b;times=t:1<1;idvar=id', 'a repeated time: 1'),
     ],
 )
 def test_a_cell_the_grammar_refuses_raises_naming_the_row_and_the_column(
@@ -112,6 +122,21 @@ def test_a_declared_order_parses_into_the_columns_levels_lowest_first() -> None:
     cells = verbAggCells() | {'types': 'resp=ordered:no<perhaps<yes'}
     row = Row.parse(cells)
     assert row.types == {'resp': ('no', 'perhaps', 'yes')}
+
+
+def test_a_stack_cell_parses_into_its_measures_its_occasion_and_its_unit() -> None:
+    """A wide table's row declares its stack (ADR 0007): the columns of each measure in
+    occasion order, the occasion column with its values and the unit column, named after the
+    arguments of R's `stats::reshape`; the loader stacks by it and the blank cell is no stack."""
+    cell = 'varying=bdi:bdi.2m<bdi.4m;varying=wt:wt2<wt4;times=time:2<4;idvar=subject'
+    row = Row.parse(verbAggCells() | {'stack': cell})
+    assert row.stack == Stack(
+        varying={'bdi': ('bdi.2m', 'bdi.4m'), 'wt': ('wt2', 'wt4')},
+        timevar='time',
+        times=('2', '4'),
+        idvar='subject',
+    )
+    assert Row.parse(verbAggCells() | {'stack': ''}).stack is None
 
 
 def test_a_slope_on_a_column_whose_name_has_spaces_is_one_covariate() -> None:

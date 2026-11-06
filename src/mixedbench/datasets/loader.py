@@ -5,7 +5,8 @@ a CRAN package, a GitHub repository at a revision, or a file at a URL with its s
 It is downloaded once into the cache and checked against its pin on every load, without R.
 With a manifest, only the file holding an object is fetched and read, against its own sha256;
 without one (the survey), every data file of the source is enumerated.
-The formats are readers.py's; the loader applies the column types a registry row declares.
+The formats are readers.py's; the loader stacks a wide table by the stack a registry row
+declares and applies the row's column types.
 
 pipeline:
 ---------
@@ -14,7 +15,7 @@ a pinned Source
 -> its tree (the source's files on disk)                       tree
 -> the files holding data                                      _fetchFile | _files
 -> every object of those files as a table (by name)            readers.read
--> one object as a typed table                                 load
+-> one object, a wide one stacked, as a typed table            load, _stacked
 """
 
 from __future__ import annotations
@@ -33,6 +34,7 @@ from pathlib import Path
 from typing import Literal
 from urllib.parse import quote, urlparse
 
+import numpy as np
 import pandas as pd
 from mixedbench.datasets import readers
 
@@ -70,6 +72,17 @@ def fetch(url: str) -> bytes | None:
 # what the registry pins, what the loader finds in it, and the column types a row declares.
 ColumnType = Literal['categorical', 'ordered', 'continuous']
 Levels = tuple[str, ...]  # an ordered column's declared levels, lowest first
+
+
+@dataclass(frozen=True)
+class Stack:
+    """A wide table's long form, the fields named after the arguments of R's
+    `stats::reshape(direction = 'long')`."""
+
+    varying: dict[str, tuple[str, ...]]  # each measure's columns, in occasion order
+    timevar: str  # the occasion column
+    times: tuple[str, ...]  # its value per position
+    idvar: str  # the unit column; one the table lacks numbers its rows
 
 
 @dataclass(frozen=True)
@@ -274,11 +287,19 @@ class Loader:
     # ------------------------------------------------------------------------------------------
 
     def load(
-        self, source: Source, name: str, types: Mapping[str, ColumnType | Levels] | None = None
+        self,
+        source: Source,
+        name: str,
+        types: Mapping[str, ColumnType | Levels] | None = None,
+        stack: Stack | None = None,
     ) -> pd.DataFrame:
+        """The object's table, a wide one as its long form; `types` names the long form's
+        columns."""
         file, table = self._object(source, name)
         if table is None:
             raise ValueError(f'{source.name} {source.pin} {file}: {name!r} is no DataFrame')
+        if stack is not None:
+            table = self._stacked(table, stack)
         return table.assign(**self._declared(table, types or {}))
 
     def _object(self, source: Source, name: str) -> tuple[str, pd.DataFrame | None]:
@@ -301,6 +322,25 @@ class Loader:
             revision = f'https://raw.githubusercontent.com/{self._repo(source)}/{source.pin}'
             self._write(file, self._fetchFirst(source, [f'{revision}/{quote(row.file)}']))
         return file
+
+    @staticmethod
+    def _stacked(table: pd.DataFrame, stack: Stack) -> pd.DataFrame:
+        """The long form as R's `reshape(direction = 'long')` lays it out: the constant columns
+        in the table's order, the occasion, the measures and a unit column the table lacks,
+        each occasion's block of rows after the one before. A row with a missing measure
+        stays."""
+        varying = {column for columns in stack.varying.values() for column in columns}
+        constant = [column for column in table.columns if column not in varying]
+        long = pd.lreshape(table, stack.varying, dropna=False)
+        times = pd.Series(list(stack.times))
+        if pd.to_numeric(times, errors='coerce').notna().all():  # as a text file's column arrives
+            times = readers.numbers(times)
+        long[stack.timevar] = np.repeat(times.to_numpy(), len(table))
+        columns = constant + [stack.timevar, *stack.varying]
+        if stack.idvar not in table.columns:  # R's `ids`: the wide rows numbered from 1
+            long[stack.idvar] = np.tile(np.arange(1, len(table) + 1), len(stack.times))
+            columns.append(stack.idvar)
+        return long[columns]
 
     @staticmethod
     def _declared(

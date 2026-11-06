@@ -6,6 +6,7 @@ from mixedbench.datasets.loader import (
     Manifest,
     ManifestRow,
     Source,
+    Stack,
     fetch,
 )
 
@@ -17,5 +18,6 @@ __all__ = [
     'Manifest',
     'ManifestRow',
     'Source',
+    'Stack',
     'fetch',
 ]
