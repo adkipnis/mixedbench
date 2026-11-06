@@ -133,6 +133,7 @@
 "kaggle_behavioral_risk_factor_surveillance_system/2015.csv/2","a categorical response is outside suite 1.1 (ADR 0001)"
 "beyondarena_early_learning_predictors/early_learning_predictors.pq/1","no row has every model value"
 "beyondarena_sepsis_prediction/sepsis_prediction.pq/1","no row has every model value"
+"beyondarena_wids_diabetes_mellitus/wids_diabetes_mellitus.pq/1","saturated_design: no more rows than design columns, so the posterior rests on the prior"
 "beyondarena_asp_potassco_classification/asp_potassco_classification.pq/1","a categorical response is outside suite 1.1 (ADR 0001)"
 "beyondarena_sat11_hand_algo_runtime/sat11_hand_algo_runtime.pq/1","censored_response: a log runtime censored at log(5000) filed as continuous (#162)"
 "uci_349/studentInfo.csv/1","a categorical response is outside suite 1.1 (ADR 0001)"
