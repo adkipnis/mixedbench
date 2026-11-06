@@ -336,6 +336,21 @@ def test_a_column_may_sit_in_two_measures_and_a_new_unit_column_numbers_the_rows
     assert list(table['dyad']) == [1, 2, 1, 2]
 
 
+def test_a_factor_outside_the_measures_keeps_its_levels_in_their_order(tmp_path):
+    """R's `reshape` copies the columns outside the measures as they are, so a factor's first
+    level, the reference of its contrasts, stays the wide table's: HSAUR3's BtheB had lost TAU
+    as the first level of its treatment."""
+    loader = Loader(tmp_path, fetch=Server({CURRENT: TARBALL}))
+    stack = Stack(
+        varying={'value': ('age', 'weight')},
+        timevar='trait',
+        times=('age', 'weight'),
+        idvar='pet',
+    )
+    pets = loader.load(FIXTURE, 'pets', stack=stack)
+    assert list(pets['species'].cat.categories) == ['dog', 'cat', 'fish', 'bird']
+
+
 def test_declared_types_name_the_long_forms_columns(tmp_path):
     """`types` is read after the stack: a row declares the occasion column categorical, a
     column the wide table never had."""
