@@ -291,7 +291,7 @@ The words are [`CONTEXT.md`](../CONTEXT.md)'s.
 | `references/runner.py` | a problem's reference run: the pinned R stack, the ladder, the bar and the cap, the run's directory and its record | `references`, through it `suite/drive.py` |
 | `frequentist/lme4.py` | a mixed model's fit by lme4: the table and model handed to `lme4.R`, the fit read back, lme4's pin, the statuses | `frequentist`, through it `survey/fits.py` |
 | `frequentist/lme4.R` | one fit within its time limit: how it ended, the estimates, the variance components | `lme4.py`, as a subprocess |
-| `suite/drive.py` | suite 1.1's reference runs: one candidate by id or index, every record collected into `references.csv` | run as a script, by `suite/drive.sbatch` |
+| `suite/drive.py` | suite 1.1's reference runs: one candidate by id or index, every record collected into `references.csv`, the candidates that passed frozen into `problems.csv` | run as a script, by `suite/drive.sbatch` |
 
 ### Names
 
