@@ -167,3 +167,5 @@
 "FAwR/gutten/1","nonlinear_model: the documented model is nonlinear in its parameters"
 "osf_confidence_siedlecka_2019/data_Siedlecka_2019.csv/1","computed_response: the accuracy, Response equal to Stimulus (#162)"
 "stan_arm/ARM/Ch.13/earnings.data.json/2","random slopes on eth, which has fewer than 5 levels"
+"bayesrules/moma/1","repeated_units: an artist repeated over the departments of its works (#170)"
+"spaMM/arabidopsis/1","covariance_structured_effect: sites correlated by a Matern field over LAT and LONG (#170)"
