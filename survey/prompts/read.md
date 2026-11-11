@@ -9,6 +9,8 @@ tell. Vocabulary follows `CONTEXT.md`.
 
 Per object: its `candidates.csv` row, its help page `registry/help/<source>/<object>.txt` and
 its source's host page `registry/help/_sources/<source>.md`, where a survey pass fetched one.
+A wide table also comes with its `wide` verdict's evidence from `survey/flat_verdicts.csv` and
+its source's files in the cache, where its reshape code lives.
 Columns and allowed values are in `docs/registry.md` and `schema.py`; the merge refuses a value
 outside them or a column the table lacks.
 
@@ -72,6 +74,53 @@ File the object in the excluded shard with its reason when:
    (book and section in `notes`); `low` when you inferred the grouping factor from column
    names. `notes` say what you read; `RULE GAP:` opens any case these rules do not settle.
 
+## Stack a wide table
+
+A table the flat pass judged `wide` holds each unit's repeated measures as columns (ADR 0007).
+Read its long form first, then the row on the long form.
+
+1. **Long form.** A reshape of the table's own columns, whether or not the source describes
+   one; where the help page or the source's code gives it (`reshape long`, `pivot_longer`,
+   `melt`, `gather`, `to.long`), it sets the stack. A table without one is excluded as `wide
+   without a long form`, `detail` naming why: its observations outside the table, or its long
+   form only in another file.
+2. **Stack** in `stack`, named after the arguments of R's `stats::reshape(direction = 'long')`:
+   - `varying=<measure>:<first>< ... <last>`, one per measure, its columns in occasion order,
+     the measure named as the source's reshape code names it, else by the documentation's word
+     for the quantity (`deaths`), else by the columns' shared stem, never as a column outside
+     the stack;
+   - `times=<occasion>:<first>< ... <last>`, a name the table lacks, one value per position:
+     the documentation's (2 for two months, an arm's label), else the column names';
+   - `idvar=<unit>`, an existing column whose values each name one wide row, else a new name
+     that numbers the wide rows.
+3. **Other columns** repeat to each occasion. A column may sit in two measures, as a dyad's ids
+   swap between its two directions. A column the stack cannot place at an occasion (a
+   baseline before the repeated measures, their total) stays outside it.
+4. **Row.** Every other column names the long form's columns: `response`, `grouping_factors`,
+   `covariates`, `types`, `ignore` and `formula`.
+   - The unit is a grouping factor. The occasion enters as the documented model has it; a
+     proposed model takes it as a covariate, or as a grouping factor by the five-level rule
+     above.
+   - A few exhaustive series (the prices of two metals, a country's regions by year) are a
+     design factor, not a unit, and their long form is `time series without replication`; many
+     sampled units (countries, names, firms) by year are a panel, the unit a grouping factor.
+   - A count of the units each row stands for (`freq` of a response pattern) goes to `ignore`,
+     and `notes` name it.
+5. **Published model and confidence.**
+   - A documented model of the occasions themselves (an arm-level `rma.glmm`, a GLMM on the
+     long form) is published; one of a contrast between them (a log risk ratio per trial) is
+     not: `published_model` `no`, the documented model in `notes`.
+   - Confidence covers the stack and the row, the lower of the two. A stack read off column
+     names alone, its occasions undocumented, is `low`; a documented model lme4 can only
+     approximate (a correlation across two grouping factors) is at most `medium`.
+
+`RULE GAP:` opens `notes` where the stack falls short, the row filed as far as it goes:
+
+- a measure absent at some occasion;
+- two dimensions (year by visit) the model needs apart, stacked as one;
+- a binomial response stored as events and non-events with no column of their total,
+  `trials` blank.
+
 ## Special cases
 
 - **Further models.** A second or third row (`model_index` 2, 3) only when the response or the
@@ -81,7 +130,9 @@ File the object in the excluded shard with its reason when:
   named in the first row's `notes`, every response not filed in that row's `ignore`.
 - **Undocumented response.** A grouped table with no documented response or model is filed
   with the response a reader would model, at `low`, `notes` opening `RESPONSE INFERRED:`. Only
-  a table with no defensible response is `response missing or undocumented`.
+  a table with no defensible response is `response missing or undocumented`. A measurement the
+  documentation names (a wide table's one repeated measure) is a documented response though no
+  model is fitted: no marker, at `medium`.
 - **Nonlinear models** (PK or growth curves in `nlme`) stay for their grouping: `formula` names
   the class and inputs in words (`conc ~ one-compartment IV PK model (dose, time);
   subject-specific clearance and volume`), `notes` open `NONLINEAR:`, confidence at most
