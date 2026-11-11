@@ -251,6 +251,21 @@ def test_handoff_renders_a_reading_the_registry_does_not_hold_yet(tmp_path):
     assert 'points: int64' in text
 
 
+def test_handoff_renders_a_stacked_reading_with_its_stack(tmp_path):
+    """A wide table's row names its long form's columns, so the hand check reads the stack and
+    the row in one place (ADR 0007)."""
+    stack = 'varying=points:points1<points2;times=tasting:1<2;idvar=wine'
+    wines = reading(
+        'kaggle_wine_reviews', 'winemag.csv', response='points', grouping_factors='wine',
+        formula='points ~ tasting + (1 | wine)', stack=stack,
+    ) | {'stratum': 'O/low', 'batch': '1', 'file': 'winemag.csv'}  # fmt: skip
+    verifier = unmergedVerifier(tmp_path, [wines])
+
+    text = verifier.handoff(1)
+
+    assert f'- stack: {stack}\n' in text
+
+
 def test_handoff_renders_an_exclusion_by_its_reason_and_detail(tmp_path):
     """A pass's exclusions are checked too: a table filed out shows the reader's reason and what
     it saw, in place of a model."""
