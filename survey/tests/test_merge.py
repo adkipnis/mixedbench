@@ -106,12 +106,21 @@ def test_a_stacked_row_is_checked_on_its_long_form_and_merges_with_its_stack(tmp
             'varying=bdi:bdi.2m<bdi.4m;times=treatment:2<4;idvar=subject',
             'treatment is a column of the table',
         ),  # fmt: skip
+        (
+            'varying=treatment:bdi.2m<bdi.4m;times=time:2<4;idvar=subject',
+            'treatment is a column outside the stack',
+        ),  # fmt: skip
+        (
+            'varying=bdi:bdi.2m<bdi.4m;times=time:2<4;idvar=treatment',
+            'treatment repeats a value',
+        ),  # fmt: skip
     ],
 )
 def test_a_stack_the_wide_table_contradicts_is_refused(tmp_path, stack, problem):
     """The stack's own names are checked on the wide table before any other name is checked
-    on the long form: a measure's column must exist, and the occasion column must not, since
-    the stack would overwrite it."""
+    on the long form: a measure's column must exist, the occasion column must not, and a
+    measure must not be named as a column outside the stack, since the stack would write it
+    twice. An existing unit column names each wide row once, as R's `reshape` requires."""
     merger = wideMerger(tmp_path)
     shard = writeShard(merger.survey / 'shards' / 'registry_bad.csv', [BDI_ROW | {'stack': stack}])
     problems = refusal(merger, shard)
