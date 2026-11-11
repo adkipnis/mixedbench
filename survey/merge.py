@@ -304,7 +304,7 @@ class Merger:
             return [self.problem(line, 'object', f'not an object of {row.source}')]
         source = self.frame.sources[row.source]
         wide = self.loader.load(source, row.object)
-        problems = self.stackProblems(line, row, set(wide.columns))
+        problems = self.stackProblems(line, row, wide)
         if problems:
             return problems
         untyped = self.loader.load(source, row.object, stack=row.stack)
@@ -320,18 +320,26 @@ class Merger:
     def objects(self, label: str) -> dict[str, DataObject]:
         return {o.name: o for o in self.loader.objects(self.frame.sources[label])}
 
-    def stackProblems(self, line: int, row: Row, columns: set[str]) -> list[dict]:
-        """The stack's own names, on the wide table: every measure's columns exist and the
-        occasion column does not, since the stack would overwrite it."""
+    def stackProblems(self, line: int, row: Row, wide: pd.DataFrame) -> list[dict]:
+        """The stack's own names, on the wide table: every measure's columns exist, a measure
+        is named as no column outside the stack and the occasion as no column at all, since the
+        stack would write it twice, and an existing unit column names each wide row once, as R's
+        `reshape` requires."""
         if row.stack is None:
             return []
         problems = []
-        for listed in row.stack.varying.values():
+        columns = set(wide.columns)
+        stacked = {name for listed in row.stack.varying.values() for name in listed}
+        for measure, listed in row.stack.varying.items():
             for name in listed:
                 if name not in columns:
                     problems.append(self.problem(line, 'stack', f'no such column: {name}'))
+            if measure in columns - stacked:
+                problems.append(self.problem(line, 'stack', f'{measure} is a column outside the stack'))  # fmt: skip
         if row.stack.timevar in columns:
             problems.append(self.problem(line, 'stack', f'{row.stack.timevar} is a column of the table'))  # fmt: skip
+        if row.stack.idvar in columns and wide[row.stack.idvar].duplicated().any():
+            problems.append(self.problem(line, 'stack', f'{row.stack.idvar} repeats a value'))
         return problems
 
     def missingColumns(self, line: int, row: Row, columns: set[str]) -> list[dict]:
