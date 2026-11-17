@@ -796,6 +796,47 @@ reading's open disagreements, four to eight per tier.
   laptop's, which reproduces the earlier values.
 - `suite/admit.py` admits campuscrime09, and no other candidate or refusal moved.
 
+## Long forms (#129, 2026-11-06 to 2026-11-17)
+
+- The loader stacks a wide table by its row's `stack` cell, named after the arguments of R's
+  `stats::reshape(direction = 'long')` (ADR 0007, amended 2026-11-06). A blank cell loads the
+  table as before, so the header-only `shards/registry_stack.csv` brought the cell in blank on
+  every row, and no contract hash moved.
+- A reading by `prompts/read.md`'s *Stack a wide table* gave each of the 205 tables `flat.py
+  wide` lists a long form or an exclusion. A blind second reading of 188 agreed with it on the
+  filing, the stack, the response and the grouping factors of 157, and the rest were
+  adjudicated by hand. Events and non-events without their total are a `count` with the total's
+  log as an offset (eggprod), and missing codes an `unreadable format` (#210).
+- An outside reader checked 20 stacked tables drawn with seed 2 (`long_forms/`): response 1.0,
+  grouping factors 0.95 (0.8 among the published models), formula 0.8, so no stratum is under
+  ADR 0002's bar of 0.8. `shards/registry_long_forms_hand.csv` holds the corrections: RAO.DAT
+  takes Embrace Uncertainty's correlated intercept and age slope per boy, dat.linde2015 drops
+  its fixed trial indicators, Monks takes the dyad and receiving effects of the course's
+  solutions, and crossbill takes the 2001 season's occupancy model, which is nonlinear.
+- The merge filed 179 rows on 150 tables, re-filed 55 exclusions and flagged five pairs.
+  fitzmaurice_rat rat.dta folds into faraway ratdrink, a corrected edition in which one rat's
+  weeks 3 and 4 differ. camerondata patentsrd holds rabe_hesketh patents.dta's firm-years and
+  comes first in the frame, but it leaves as an exclusion, since suite 1.1 holds patents.dta's
+  problem. The other three pairs differ.
+- ros Names' long form holds 12,857,388 rows, and its measurement ran out of memory at 20, 96
+  and 320 GB, so it left as `too large`, as safecast did.
+- The measurement records written before the stack column lacked its cell, so the collect
+  refused them. A script gave 1,075 of them the blank cell after 27 rows measured again (25
+  drawn with seed 129, ratdrink and patents.dta) matched their records. Every earlier row of
+  the five measured files stayed byte for byte.
+- `fits_preparation.csv` weights twin.dta's patterns by num2 and keeps seeds2's leadplants; the
+  ordinal potuse and MoviesData have no fit.
+- `suite/admit.py` admits 162 long forms and refuses 14. It refuses by hand four
+  frequency-weighted tables, two computed responses (promotion, Narrative_codes' communion), a
+  factor model (sem_data), mean differences with their confidence limits (lloyd2010) and a
+  lagged detection (Mtbh), by their marker two nonlinear rows (dogs, crossbill), and by the
+  contract vlt's categorical response and frank2008's two rows with slopes on a study of fewer
+  than five levels. 25 admitted rows
+  carry a fidelity: fixed study intercepts written as a random one (nielweise, blocker,
+  magnesium, collins1985a, oxford) and fixed terms the contract cannot write (fosterhanson's
+  recode of its trials, arthritis's square root of month, volpertesmond's BMI) are
+  `approximate`, as ChickWeight and #197's rows are. No listed hash moved.
+
 ## Reading rulings (m3#22 to #15)
 
 The rulings [`prompts/read.md`](prompts/read.md) does not carry, from the agents' `RULE GAP` notes and Alex's checks, each with an example
