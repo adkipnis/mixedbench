@@ -461,6 +461,26 @@ def test_agree_gives_the_share_of_rows_whose_reading_stood_per_stratum_tier_veri
     assert all(table[p][f] == 1 for p in table for f in untouched)
 
 
+def test_agree_pools_a_survey_pass_sample_by_its_own_strata(tmp_path):
+    """A survey pass draws its sample over strata of its own (#129's published and proposed
+    models), which name no tier, so they pool only into themselves and the whole sample."""
+    registry = tmp_path / 'registry'
+    survey = tmp_path / 'survey'
+    survey.mkdir()
+    writeSample(survey, [
+        reading('r', 'a') | {'stratum': 'published'},
+        reading('r', 'b') | {'stratum': 'proposed'},
+        reading('r', 'c') | {'stratum': 'proposed'},
+    ])  # fmt: skip
+    writeRegistry(registry, [reading('r', 'a'), reading('r', 'b'), reading('r', 'c', response='z')])
+
+    table = agreement(registry, survey)
+
+    assert list(table) == ['published', 'proposed', 'all']
+    assert [table[p]['rows'] for p in table] == [1, 2, 3]
+    assert table['proposed']['response'] == 0.5
+
+
 def test_agree_reads_lists_as_sets_terms_as_unordered_and_formulas_without_whitespace(tmp_path):
     """A reading the hand check rewrote in another order or spacing still stood: `;`-lists are
     sets, the random slopes too, `a:b` names the same term as `b:a`, and a formula's spaces carry
