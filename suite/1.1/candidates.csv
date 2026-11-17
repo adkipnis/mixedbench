@@ -1046,7 +1046,6 @@
 "rethinking/kl_dyads/1","e2795be238a17a96aab15d4583f38867922b43dd6abe53439f00faae6da6dfa6","second-reading","0.0","approximate","600","1","giver;receiver;did","crossed","25;25;300","1;1;1","24;24;2","24;24;2"
 "ros/ChileSchools/data/chile_full.dta/1","ed4d583cd58020cc4cc36b176db25909345c42e7a8fe3513f43e8293fa830b0a","second-reading","0.27193259610321224","","13826","6","rbd","single","5105","1","1","3"
 "ros/Congress/data/congress.csv/1","3fa6e1cda66cd42c6ced4b0de926031657d4420ace73a384f7977904bf2987ee","hand","0.0","","1305","4","district","single","435","1","3","3"
-"ros/Names/data/SSA-longtail-names.csv/1","03e0eda3c385624ed59dfe992716d12e60d950abf87b0b0d20e2fb603fe4524b","second-reading","0.0","","12857388","3","name_id","single","98148","2","131","131"
 "ros/Student/data/student-mat.csv/1","33d9b718da3e2c75237d2d1127fa23f5d0ae28c05981c00a815d12c751c98d77","second-reading","0.0","","1185","28","student","single","395","1","3","3"
 "ros/Student/data/student-por.csv/1","9ef62bb3df1ad4d78bffd14e297d2d4525e6798aac08e05e228be96265434b4f","second-reading","0.0","","1947","28","student","single","649","1","3","3"
 "ros/riverbay/1","676d66dc8af39ce47bde33316ea7be7ea820396e8636087132063ecfc0e67f6d","second-reading","0.0","","162","1","V1","single","27","1","6","6"
