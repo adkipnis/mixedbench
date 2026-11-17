@@ -414,14 +414,18 @@ class Verifier:
             )
         stood = pd.DataFrame(compared).where(kept, False, axis=0)
         strata = readings['stratum']
-        tiers = strata.str.partition('/')[0]
-        verifications = strata.str.partition('/')[2]
         everything = pd.Series('all', index=readings.index)
-        pools = [strata, tiers, verifications, everything]
+        pools = [strata, everything]
+        if strata.str.contains('/').all():  # tier / `verified`
+            tiers = strata.str.partition('/')[0]
+            verifications = strata.str.partition('/')[2]
+            pools[1:1] = [tiers, verifications]
         pooled = pd.concat([stood.assign(pool=pool) for pool in pools]).groupby('pool')
         table = pooled.mean().round(3)
         table.insert(0, 'rows', pooled.size())
-        table = table.loc[[pool for pool in POOLS if pool in table.index]]
+        # a survey pass's own strata (published, proposed) first, in their order of appearance
+        own = [pool for pool in strata.unique() if pool not in POOLS]
+        table = table.loc[own + [pool for pool in POOLS if pool in table.index]]
         table.to_csv(self.survey / 'agreement.csv', quoting=csv.QUOTE_ALL)
         print(f'agree: {len(sample)} rows')
 
