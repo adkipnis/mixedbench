@@ -1,0 +1,2 @@
+"source","object","reason","detail"
+"camerondata","patentsrd","derived or duplicated table","copies rabe_hesketh:patents.dta: the same 1,730 years of 346 firms' patents and log R&D, 1975 to 1979, stored wide with the patents of 1970 to 1974 as columns; patents.dta stays, though camerondata comes first in the frame, since suite 1.1 holds its problem"
