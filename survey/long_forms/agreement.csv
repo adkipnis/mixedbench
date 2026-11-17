@@ -1,0 +1,4 @@
+"pool","rows","response","response_type","trials","grouping_factors","covariates","interactions","random_slopes","stack","formula","published_model"
+"proposed","15","1.0","1.0","1.0","1.0","1.0","1.0","0.933","1.0","0.867","0.933"
+"published","5","1.0","1.0","1.0","0.8","0.8","1.0","0.8","0.8","0.6","1.0"
+"all","20","1.0","1.0","1.0","0.95","0.95","1.0","0.9","0.95","0.8","0.95"
