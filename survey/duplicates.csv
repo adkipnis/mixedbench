@@ -617,3 +617,8 @@
 "spaMM","salamander","hglm.data","salamander","same","360 rows each, 8 of the narrower table's 8 columns equal a column of the other (option 3 sample #162)"
 "languageR","lexdec","languageR","sizeRatings","different","the same words and frequencies, other subjects and responses (look #168)"
 "languageR","sizeRatings","languageR","weightRatings","different","the same words and frequencies, other subjects and responses (look #168)"
+"faraway","ratdrink","fitzmaurice_rat","rat.dta","same","the same 27 rats' weights over weeks 0 to 4 (Box 1950), rat.dta wide and its treatments coded 1 to 3; one rat weighs 116 and 140 at weeks 3 and 4 in ratdrink, 114 and 138 in rat.dta"
+"camerondata","patentsrd","rabe_hesketh","patents.dta","same","the same 1,730 years of 346 firms in every shared column, patentsrd wide; patentsrd leaves as an exclusion first, so patents.dta, a suite 1.1 member, stays"
+"metadat","dat.linde2015","metadat","dat.linde2016","different","linde2015 holds 198 arms of 3-arm and 2-arm trials with five outcomes, linde2016 201 arms of early response only, the trial sets overlapping"
+"ros","Congress/data/congress.csv","beyondarena_mice_protein_trisomy_discriminant","mice_protein_trisomy_discriminant.pq","different","congressional vote shares by district against protein expression levels of mice"
+"uci_440","sgemm_product.csv","github_force2020","train.csv","different","GPU kernel run times against well log measurements"
