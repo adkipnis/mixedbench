@@ -1,0 +1,2 @@
+"source","object","reason","detail"
+"ros","Names/data/SSA-longtail-names.csv","too large","98,148 names by 131 years (1880 to 2010) stack into 12,857,388 rows: its measurement runs out of memory at 20, 96 and 320 GB"
