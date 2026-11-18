@@ -35,6 +35,8 @@ dropped:
   version of its source tarball. `checksum` (optional) pins a CRAN or git archive.
 - `path` narrows a git or url tree, and `file` names a suffix-less download (figshare's
   `files/<id>`) so the loader knows the format.
+- A Kaggle download names its version (`?datasetVersionNumber=10`), since the bare link serves
+  the latest version, which breaks the pin when the owner uploads a new one (#209).
 - `cap`: the most objects read from one source, drawn with `random.Random(seed)` over the sorted
   names, `seed` set at the top. Only agridat is capped ([history](../survey/HISTORY.md#tier-r-m320-m322-m323-2026-10-07)).
 - `mirror` (url only): the package's copy of a CC0 file whose host refuses scripts, tried after
