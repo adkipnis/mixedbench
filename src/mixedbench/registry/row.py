@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Literal, get_args
 
 import pandas as pd
-from mixedbench.datasets import ColumnType, Levels
+from mixedbench.datasets import ColumnType, Levels, Stack
 
 # =====================================================================================
 # vocabularies
@@ -109,6 +109,35 @@ def splitTypes(text: str) -> list[tuple[str, str, str]]:
     return entries
 
 
+# a `stack` cell: one `varying=measure:a<b<c` per measure, `times=occasion:1<2<3` and
+# `idvar=unit`, every list as long as `times`
+STACK_KEYS = ('varying', 'times', 'idvar')
+
+
+def parseStack(text: str) -> Stack | None:
+    """`varying=bdi:bdi.2m<bdi.4m;times=time:2<4;idvar=subject` -> a Stack; the empty cell None."""
+    if text == '':
+        return None
+    varying = {}
+    for entry in splitList(text):
+        key, name, listed = stackEntry(entry)
+        if key == 'varying':
+            varying[name] = listed
+        elif key == 'times':
+            timevar, times = name, listed
+        else:
+            idvar = name
+    return Stack(varying, timevar, times, idvar)
+
+
+def stackEntry(entry: str) -> tuple[str, str, tuple[str, ...]]:
+    """`key=name:a<b` -> (key, name, (a, b)); `idvar=name` -> ('idvar', name, ())."""
+    key, _, declared = entry.partition('=')
+    name, _, order = declared.partition(':')
+    listed = tuple(order.split('<')) if order else ()
+    return key.strip(), name.strip(), listed
+
+
 # =====================================================================================
 # row class
 # =====================================================================================
@@ -136,6 +165,7 @@ class Row:
     random_slopes: tuple[SlopeTerm, ...]
     ignore: tuple[str, ...]
     types: dict[str, ColumnType | Levels]
+    stack: Stack | None  # a wide table's long form; None loads the object as it is
     formula: str
     documented_prior: str
     published_model: str
@@ -160,6 +190,7 @@ class Row:
             typed[column] = splitList(cells[column])
         typed['model_index'] = int(cells['model_index'])
         typed['types'] = parseTypes(cells['types'])
+        typed['stack'] = parseStack(cells['stack'])
         typed['random_slopes'] = tuple(
             SlopeTerm.parse(t) for t in splitList(cells['random_slopes'])
         )
@@ -205,8 +236,41 @@ class Row:
         # a model never takes its response as a covariate
         if cells['response'] in covariates:
             refusals.append(('covariates', f'{cells["response"]} is also the response'))
+        refusals += Row.stackRefusals(cells['stack'])
         if cells['verified'] not in get_args(Verified):
             refusals.append(('verified', f'not a verification: {cells["verified"]}'))
+        return refusals
+
+    @staticmethod
+    def stackRefusals(text: str) -> list[tuple[str, str]]:
+        """A stack names `times` and `idvar` once and at least one `varying`, each list as long
+        as `times`, every name filled and no time twice."""
+        if text == '':
+            return []
+        refusals = []
+        entries = []
+        for entry in splitList(text):
+            key, name, listed = stackEntry(entry)
+            entries.append((key, name, listed))
+            if key not in STACK_KEYS:
+                refusals.append(('stack', f'not a stack key: {key}'))
+            elif name == '' or '' in listed:
+                refusals.append(('stack', f'an empty name: {entry}'))
+        keys = [key for key, _, _ in entries]
+        for key in STACK_KEYS:
+            if key not in keys:
+                refusals.append(('stack', f'{key} missing'))
+            elif key != 'varying' and keys.count(key) > 1:
+                refusals.append(('stack', f'{key} repeated'))
+        if keys.count('times') != 1:
+            return refusals
+        [times] = [listed for key, _, listed in entries if key == 'times']
+        for key, name, listed in entries:
+            if key == 'varying' and len(listed) != len(times):
+                refusals.append(('stack', f'{name} lists {len(listed)} columns for {len(times)} times'))  # fmt: skip
+        for time in sorted(set(times)):
+            if times.count(time) > 1:
+                refusals.append(('stack', f'a repeated time: {time}'))
         return refusals
 
     @staticmethod

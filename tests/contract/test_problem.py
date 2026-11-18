@@ -38,7 +38,7 @@ ROW = Row(
     license='MIT', model_index=1, response='y', response_type='continuous', trials='', family='',
     grouping_factors=('block', 'block:plot'), covariates=('x', 'sex', 'diet', 'grade'),
     interactions=('x:sex',), random_slopes=(SlopeTerm('x', 'block', correlated=True),),
-    ignore=(), types={'diet': 'categorical', 'grade': 'ordered'},
+    ignore=(), types={'diet': 'categorical', 'grade': 'ordered'}, stack=None,
     formula='y ~ x * sex + diet + grade + (x | block) + (1 | block:plot)', documented_prior='',
     published_model='yes', domain='test', confidence='high', verified='hand', notes='',
 )  # fmt: skip

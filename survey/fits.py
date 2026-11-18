@@ -85,7 +85,7 @@ class Fitter:
         if dir.exists():  # no file of an earlier run stays beside this run's records
             shutil.rmtree(dir)
         dir.mkdir(parents=True)
-        loaded = self.loader.load(self.sources[row.source], row.object, row.types)
+        loaded = self.loader.load(self.sources[row.source], row.object, row.types, row.stack)
         table = self.preparations.prepare(row, loaded)
         fitted = fit(table, row.formula, FAMILY[row.response_type][0], dir, TIMEOUT)
         records = measureFit(row, fitted, table)

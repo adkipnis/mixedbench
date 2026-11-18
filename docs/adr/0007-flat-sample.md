@@ -230,3 +230,43 @@ the registry. Grilled on 2026-10-24 ([#72](https://github.com/adkipnis/mixedbenc
 - Decision: a column the source names as the outcome (`response`, `depvar`) names the response
   of a table with no documented model, since the name is the source's statement, not a reading
   of the values.
+
+## Amendment 2026-11-06: the stack ([#129](https://github.com/adkipnis/mixedbench/issues/129))
+
+- Decision: every wide table whose long form is a reshape of its own columns is stacked and read
+  through the registry's path, which files its long form's rows or excludes it under the
+  registry's reasons. A model a reader proposes is marked so, as on any table.
+- Why: the registry is a census of grouped tables, and 369 of its 1,077 rows already rest on a
+  proposed model.
+- Rejected: only the tables whose documentation fits a grouped model to the long form, or any
+  documented model, a rule the registry applies to no other table.
+- Decision: a wide table with no long form, or with one only in another file, is excluded as
+  `wide without a long form`, since `no grouping structure` is false for grouped data.
+- Decision: a table is one loaded object or the long form its stack makes of it, and a problem
+  id keeps the object's name. The stack is a `stack` column of `registry.csv` beside `types`,
+  on each model row of the table, and the merge refuses a table whose rows disagree on it.
+- Why: the reading that writes a row writes its stack, so a hand sample checks both in one
+  place. `types` already declares what a file cannot carry, and the manifest stays the list of
+  the file to fetch, so an object name returns one table with or without it.
+- Rejected: the manifest, whose loader would return the long form under the name the survey's
+  loader returns the wide table for; a file of its own keyed by table, a second place a reader
+  of a row would look.
+- Decision: a stack lists the columns that repeat each measure in occasion order, the occasion
+  column with one value per position (the documentation's, else the column names'), and the
+  unit column, an existing one or a new one that numbers the wide rows. Every other column
+  repeats to each occasion, and a column may sit in two measures, as a dyad's ids swap between
+  its two directions. A row with a missing measure stays, for the contract to drop. A measure
+  absent at one occasion waits for a table that needs it.
+- Decision: the loader stacks with pandas' `lreshape`, the stack's fields named after the
+  arguments of R's `stats::reshape(direction = 'long')`, and the package stays without R
+  (ADR 0003).
+- Why: an established routine over explicit column lists, onto which a source's own R or Stata
+  reshape maps one to one.
+- Decision: an agent reads each table's stack and its long form's row in one pass, from the help
+  page and the reshape code the source ships (`reshape long`, `pivot_longer`, `melt`). Rows are
+  verified as ADR 0002 says, and a seeded hand sample of 20 stacked tables, stratified by
+  published and proposed model, checks the stack and the row at ADR 0002's bar of 0.8.
+- Why a reading, not a rule on column names: a rule misses `bdi.pre` to `bdi.8m`, arms stored as
+  `rc`, `nc`, `rt` and `nt`, and the occasions' values, which only the documentation states.
+- Decision: a long form passes the merge's duplicate and copy checks as any table does (#168),
+  so the copy rules decide an inexact twin of a registry object.

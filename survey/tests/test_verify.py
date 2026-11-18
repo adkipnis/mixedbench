@@ -251,6 +251,21 @@ def test_handoff_renders_a_reading_the_registry_does_not_hold_yet(tmp_path):
     assert 'points: int64' in text
 
 
+def test_handoff_renders_a_stacked_reading_with_its_stack(tmp_path):
+    """A wide table's row names its long form's columns, so the hand check reads the stack and
+    the row in one place (ADR 0007)."""
+    stack = 'varying=points:points1<points2;times=tasting:1<2;idvar=wine'
+    wines = reading(
+        'kaggle_wine_reviews', 'winemag.csv', response='points', grouping_factors='wine',
+        formula='points ~ tasting + (1 | wine)', stack=stack,
+    ) | {'stratum': 'O/low', 'batch': '1', 'file': 'winemag.csv'}  # fmt: skip
+    verifier = unmergedVerifier(tmp_path, [wines])
+
+    text = verifier.handoff(1)
+
+    assert f'- stack: {stack}\n' in text
+
+
 def test_handoff_renders_an_exclusion_by_its_reason_and_detail(tmp_path):
     """A pass's exclusions are checked too: a table filed out shows the reader's reason and what
     it saw, in place of a model."""
@@ -444,6 +459,26 @@ def test_agree_gives_the_share_of_rows_whose_reading_stood_per_stratum_tier_veri
     assert table['all']['random_slopes'] == 0.8
     untouched = ('response_type', 'trials', 'covariates', 'interactions', 'formula', 'published_model')  # fmt: skip
     assert all(table[p][f] == 1 for p in table for f in untouched)
+
+
+def test_agree_pools_a_survey_pass_sample_by_its_own_strata(tmp_path):
+    """A survey pass draws its sample over strata of its own (#129's published and proposed
+    models), which name no tier, so they pool only into themselves and the whole sample."""
+    registry = tmp_path / 'registry'
+    survey = tmp_path / 'survey'
+    survey.mkdir()
+    writeSample(survey, [
+        reading('r', 'a') | {'stratum': 'published'},
+        reading('r', 'b') | {'stratum': 'proposed'},
+        reading('r', 'c') | {'stratum': 'proposed'},
+    ])  # fmt: skip
+    writeRegistry(registry, [reading('r', 'a'), reading('r', 'b'), reading('r', 'c', response='z')])
+
+    table = agreement(registry, survey)
+
+    assert list(table) == ['published', 'proposed', 'all']
+    assert [table[p]['rows'] for p in table] == [1, 2, 3]
+    assert table['proposed']['response'] == 0.5
 
 
 def test_agree_reads_lists_as_sets_terms_as_unordered_and_formulas_without_whitespace(tmp_path):

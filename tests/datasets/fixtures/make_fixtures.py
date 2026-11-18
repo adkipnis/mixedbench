@@ -3,6 +3,8 @@ survey/tests/test_help.py (m3#16). Rerun from the repo root:
     uv run python tests/datasets/fixtures/make_fixtures.py
 
 `deposit.zip` is a data deposit: one `.csv` under `data/` and a codebook at the root.
+`wide.zip` holds two wide tables: repeated measures as columns with one value missing, and
+dyads whose two id columns swap between the directions.
 `example-c0ffee1.tar.gz` is a GitHub archive of repository `example` at revision `c0ffee1`:
 `data/` holds a `.csv` with its own README, `formats/` an Excel, JSON and Stata file and the
 awkward text files met in the pull (whitespace-aligned, latin-1, padded, a banner above the
@@ -33,6 +35,10 @@ EPOCH = datetime(2026, 1, 1, tzinfo=UTC)
 
 CODEBOOK = 'school: one of three schools A, B, C\nscore: test score\nsize: class size\n'
 SCHOOLS = 'school;score;size\nA;10.5;20\nB;12.0;25\nA;9.5;20\nC;15.0;30\nB;11.0;25\n'
+# repeated measures as columns, as HSAUR3's BtheB: a baseline, two occasions of two measures
+BDI = 'subject,treatment,bdi.pre,bdi.2m,bdi.4m,wt2,wt4\ns1,TAU,29,2,,60,61\ns2,BtheB,32,16,24,70,72\ns3,TAU,25,20,19,80,79\n'
+# one row per pair with a value in each direction, as a dyad study ships
+DYADS = 'pair,a,b,gift_ab,gift_ba\np1,x,y,1,3\np2,y,z,2,4\n'
 README = '# example\n\nRadon measurements by county.\n'
 DATA_README = 'county: county name\nlog_radon: log radon level\nfloor: 0 basement, 1 first floor\n'
 RADON = 'county,log_radon,floor\nAnoka,0.8,0\nAnoka,1.1,1\nClay,1.9,0\nClay,1.6,0\nClay,2.1,1\n'
@@ -197,6 +203,9 @@ if __name__ == '__main__':
         'deposit/data/schools.csv': SCHOOLS.encode(),
     }
     writeZip(FIXTURES / 'deposit.zip', deposit)
+    writeZip(
+        FIXTURES / 'wide.zip', {'wide/bdi.csv': BDI.encode(), 'wide/dyads.csv': DYADS.encode()}
+    )
     example = {
         'example-c0ffee1/README.md': README.encode(),
         'example-c0ffee1/.gitattributes': b'* text=auto\n',  # no documentation

@@ -15,8 +15,9 @@ repository at a revision or a url with a sha256. A source is fetched, never redi
 _Avoid_: dataset (one source holds many), mirror
 
 **Table**:
-One loaded data object, the rows of a grouped dataset with its grouping factors among the
-columns. A source holds many tables, and a table can carry several documented models.
+One loaded data object, or the long form its stack makes of it, the rows of a grouped dataset
+with its grouping factors among the columns. A source holds many tables, and a table can carry
+several documented models.
 _Avoid_: dataset, hierarchical dataset (a table with a grouping factor), data frame
 
 **Manifest**:
@@ -139,9 +140,15 @@ no column indexes a unit the rows repeat within. A wide table is not flat.
 _Avoid_: i.i.d. table, unclustered, exclusion (the bookkeeping entry)
 
 **Wide table**:
-Grouped data stored with one row per unit and its repeated measures as columns. Its long form
-stacks them, one row per unit and occasion, and is the table the registry would hold.
+Grouped data stored with one row per unit and its repeated measures as columns. Its stack makes
+the long form, one row per unit and occasion, which is the table the registry holds.
 _Avoid_: unstacked table, pivoted table
+
+**Stack**:
+The declared columns of a wide table that repeat each measure, in occasion order, with the
+occasion's values and the unit the occasions repeat within. An occasion is what the columns
+repeat over: a time, an arm, an item or a direction.
+_Avoid_: reshape, pivot, melt
 
 **Flat sample**:
 Every flat table of the survey's frame, measured by script with the registry's per-column

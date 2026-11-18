@@ -117,6 +117,14 @@ REFUSED = {
     'mixor/concen/1': 'frequency_weighted: each response pattern weighted by freq (#162)',
     'mixor/norcag/1': 'frequency_weighted: each response pattern weighted by freq (#162)',
     'mixor/irt.data/1': 'frequency_weighted: each response pattern weighted by freq (#162)',
+    'faraway/potuse/1': 'frequency_weighted: each response pattern weighted by count (#129)',
+    'pymc_examples/examples/data/MoviesData.csv/1': (
+        'frequency_weighted: each rating level weighted by its raters n (#129)'
+    ),
+    'rabe_hesketh/twin.dta/1': 'frequency_weighted: each response pattern weighted by num2 (#129)',
+    'posteriordb/posterior_database/data/data/lsat_data.json.zip/1': (
+        'frequency_weighted: each response pattern weighted by its students, from culm (#129)'
+    ),
     # a documented model whose likelihood the filed rows do not hold (#61)
     'rabe_hesketh/elections.dta/1': (
         'choice_model: rank == 1 in conditional and mixed logits over choice sets (#61)'
@@ -139,8 +147,14 @@ REFUSED = {
     'goldstein_msm/HTBONEBoys.xls/1': (
         'multivariate_response: height and bone age stacked, each with its own residual (#82)'
     ),
+    'pymc_examples/examples/data/sem_data.csv/1': (
+        'multivariate_response: 15 indicators stacked, each with a loading and residual (#129)'
+    ),
     'hox/AstLrd.sav/1': (
         'known_sampling_variance: meta-analysis log odds ratios with variances VarLor (#82)'
+    ),
+    'metadat/dat.lloyd2010/1': (
+        'known_sampling_variance: mean differences with confidence limits lower and upper (#129)'
     ),
     'rabe_hesketh/ecls_child.dta/1': (
         'joined_covariate: nbhoodcl comes from ecls_school.dta, merged by s4_id (#82)'
@@ -148,7 +162,7 @@ REFUSED = {
     'liutu_2026_zenodo_3/Measurement_plots.xlsx/1': (
         'recoded_covariate: a two-level peat thickness, the table nine measured classes (#151)'
     ),
-    # a vector autoregression, whose predictors are the series' lags, no columns of the table (#120)
+    # predictors that are lags of the response, no columns of the table (#120)
     'pymc_examples/examples/data/gdp_data_hierarchical_clean.csv/1': (
         'lagged_predictors: a hierarchical VAR(2) of dl_gdp, dl_cons and dl_gfcf (#120)'
     ),
@@ -157,6 +171,9 @@ REFUSED = {
     ),
     'pymc_examples/examples/data/gdp_data_hierarchical_clean.csv/3': (
         'lagged_predictors: a hierarchical VAR(2) of dl_gdp, dl_cons and dl_gfcf (#120)'
+    ),
+    'posteriordb/posterior_database/data/data/Mtbh_data.json.zip/1': (
+        'lagged_predictors: the detection at the previous occasion, a lag of the response (#129)'
     ),
     # a censored time filed as a continuous response, whose Gaussian fit ignores the censoring (#61)
     'MASS/gehan/1': 'censored_response: a censored time filed as continuous (#61)',
@@ -206,6 +223,12 @@ REFUSED = {
     'osf_manylabs3/ML3AllSites.csv/1': (
         'computed_response: the prime-consistent answer, SRMeetingResponse by SRCondition (#162)'
     ),
+    'rabe_hesketh/promotion.dta/1': (
+        'computed_response: the promotion, event in the year dur alone (#129)'
+    ),
+    'gumundsdottir_2026_osf_7/Narrative_codes/2': (
+        'computed_response: communion with its codes 9 recoded to 2 (#129)'
+    ),
     # a person-period table of a discrete-time hazard, which its source fits without a person
     # intercept, since a person holds at most one event (#161)
     'alda/aldatxt/teachers_pp.txt/1': HAZARD,
@@ -244,6 +267,8 @@ FIDELITY: dict[str, Fidelity] = {
     'avetisyan_2020_osf_2/E3_data.csv/1': 'structure_equivalent',
     'avetisyan_2020_osf/E2_data.csv/1': 'structure_equivalent',
     'lagisz_2020_osf_3/MA_dataset_with_ES.csv/1': 'structure_equivalent',  # sigma absorbs EffectID
+    'beyondmlr/data/seeds2.csv/1': 'structure_equivalent',  # the slope on time - 13 (#129)
+    'metadat/dat.kearon1998/1': 'structure_equivalent',  # (0 + group | id) with an intercept (#129)
     'nlme/Dialyzer/1': 'approximate',
     'nlme/Wafer/1': 'approximate',
     'HLMdiag/autism/1': 'approximate',
@@ -281,6 +306,32 @@ FIDELITY: dict[str, Fidelity] = {
     'diggle_cd4/CD4_data.txt/1': 'approximate',  # the hinge
     'rethinking/data/Wines2012.csv/1': 'approximate',  # the fixed SDs
     'datasets/ChickWeight/1': 'approximate',  # the quadratic and AR(1), a random intercept added
+    # the long forms of wide tables (#129): random effects the fields cannot write
+    'rethinking/data/Monks.csv/1': 'approximate',  # dyad pair unstructured, a correlation dropped
+    'rethinking/data/Monks.csv/2': 'approximate',  # dyad pair unstructured, a correlation dropped
+    'rethinking/kl_dyads/1': 'approximate',  # did:direction and the giving-receiving correlation
+    'metadat/dat.ishak2007/1': 'approximate',  # the HAR occasion effects unstructured
+    'metadat/dat.rivera2025/1': 'approximate',  # independent group effects as intercept and slope
+    'posteriordb/posterior_database/data/data/butterfly.json.zip/1': 'approximate',  # occupancy
+    # fixed study intercepts as a random intercept (#129)
+    'metadat/dat.nielweise2007/1': 'approximate',
+    'metadat/dat.nielweise2008/1': 'approximate',
+    'stan_bugs/bugs_examples/vol1/blocker/blocker.data.json/1': 'approximate',
+    'stan_bugs/bugs_examples/vol1/magnesium/magnesium.data.json/1': 'approximate',
+    'metadat/dat.collins1985a/1': 'approximate',
+    'stan_bugs/bugs_examples/vol1/oxford/oxford.data.json/1': 'approximate',  # year^2 dropped too
+    # a fixed term the contract cannot write, dropped (#129)
+    'fitzmaurice_arthritis/arthritis.dta/1': 'approximate',  # sqrt(month) as linear
+    'fosterhanson_2022_osf/Study4_keepers.csv/1': 'approximate',  # the time recode of trial
+    'fosterhanson_2022_osf/Study4_keepers.csv/2': 'approximate',  # the time recode of trial
+    'fosterhanson_2022_osf/Study4_keepers.csv/3': 'approximate',  # the time recode of trial
+    'fosterhanson_2022_osf_3/Study2_keepers.csv/1': 'approximate',  # the time recode of trial
+    'fosterhanson_2022_osf_3/Study2_keepers.csv/2': 'approximate',  # the time recode of trial
+    'fosterhanson_2022_osf_3/Study2_keepers.csv/3': 'approximate',  # the time recode of trial
+    'leder_2020_osf_2/SVO_ProtectionBehavior.csv/1': 'approximate',  # svo, no column
+    'volpertesmond_2024_osf/CV_DST_MergedData_wide.txt/1': 'approximate',  # BMI, no column
+    'volpertesmond_2024_osf/CV_DST_MergedData_wide.txt/2': 'approximate',  # BMI, no column
+    'volpertesmond_2024_osf/CV_DST_MergedData_wide.txt/3': 'approximate',  # BMI, no column
 }
 
 

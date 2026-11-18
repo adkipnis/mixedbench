@@ -57,7 +57,7 @@ SAMPLE_SIZE = 100
 BATCH_SIZE = 25
 SEED = 1  # the first hand sample's was 0
 # the fields the agreement step compares, recorded at draw time
-COMPARED = ('response', 'response_type', 'trials', 'grouping_factors', 'covariates', 'interactions', 'random_slopes', 'formula', 'published_model')  # fmt: skip
+COMPARED = ('response', 'response_type', 'trials', 'grouping_factors', 'covariates', 'interactions', 'random_slopes', 'stack', 'formula', 'published_model')  # fmt: skip
 # the reading a handoff shows per registry row, and per excluded table
 READING = (*COMPARED, 'confidence', 'notes')
 EXCLUSION = ('reason', 'detail')
@@ -133,6 +133,10 @@ source, and check the reading field by field.
 - **covariates, interactions:** the main-effect columns; the `a:b` interaction terms.
 - **random_slopes:** `x|g` for a slope correlated with the intercept of `g`, `x||g` for an
   uncorrelated one; blank for intercepts only.
+- **stack:** a wide table's long form, after R's `stats::reshape`: per measure `varying=` its
+  columns in occasion order, `times=` the occasion column with its values, `idvar=` the unit
+  column, an existing one or a new one that numbers the wide rows. The other fields name the
+  long form's columns.
 - **formula:** the documented model in lme4 syntax, its columns named as the table names them
   and a derived variable written as its expression (`I(age - 12)`).
 - **published_model:** `yes` when the source, or a paper, package or tutorial on this table,
@@ -155,8 +159,8 @@ These rules settle what groups:
   group as `row:col`, even where some plots are observed once.
 - **Waves:** a wave that a documented model fits as fixed, or separately per wave, groups
   nothing.
-- **Wide:** grouped data stored wide, its repeated measures as columns, has no row, whether or
-  not a column also groups its rows.
+- **Wide:** grouped data stored wide, its repeated measures as columns, is read as its long
+  form where that is a reshape of its own columns, else filed `wide without a long form`.
 - **One label per group:** a factor whose groups each hold a single value of the response
   carries no random effect on it. A table grouped only by such factors has no grouping
   structure, unless another documented response varies within the groups.
@@ -410,14 +414,18 @@ class Verifier:
             )
         stood = pd.DataFrame(compared).where(kept, False, axis=0)
         strata = readings['stratum']
-        tiers = strata.str.partition('/')[0]
-        verifications = strata.str.partition('/')[2]
         everything = pd.Series('all', index=readings.index)
-        pools = [strata, tiers, verifications, everything]
+        pools = [strata, everything]
+        if strata.str.contains('/').all():  # tier / `verified`
+            tiers = strata.str.partition('/')[0]
+            verifications = strata.str.partition('/')[2]
+            pools[1:1] = [tiers, verifications]
         pooled = pd.concat([stood.assign(pool=pool) for pool in pools]).groupby('pool')
         table = pooled.mean().round(3)
         table.insert(0, 'rows', pooled.size())
-        table = table.loc[[pool for pool in POOLS if pool in table.index]]
+        # a survey pass's own strata (published, proposed) first, in their order of appearance
+        own = [pool for pool in strata.unique() if pool not in POOLS]
+        table = table.loc[own + [pool for pool in POOLS if pool in table.index]]
         table.to_csv(self.survey / 'agreement.csv', quoting=csv.QUOTE_ALL)
         print(f'agree: {len(sample)} rows')
 
