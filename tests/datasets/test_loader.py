@@ -168,6 +168,42 @@ def test_checksum_mismatch_is_refused(tmp_path):
         loader.objects(bad)
 
 
+def test_a_download_that_misses_its_pin_stays_out_of_the_cache(tmp_path, monkeypatch):
+    """A file in the cache is checked on every load, so a bot check served once in its place
+    would fail the source until the cache is deleted. The error shows what came back."""
+
+    def sleep(seconds):
+        pass
+
+    monkeypatch.setattr(time, 'sleep', sleep)
+    schools = urlSource(SCHOOLS_URL, SCHOOLS, file='schools.csv')
+    check = Server({SCHOOLS_URL: b'<html>bot check</html>'})
+    with pytest.raises(ValueError, match='bot check'):
+        Loader(tmp_path, fetch=check).load(schools, 'schools.csv')
+    table = Loader(tmp_path, fetch=Server({SCHOOLS_URL: SCHOOLS})).load(schools, 'schools.csv')
+    assert list(table['school']) == ['A', 'B', 'A', 'C', 'B']
+
+
+def test_a_download_that_misses_its_pin_is_fetched_again(tmp_path, monkeypatch):
+    """highstat.com served the Ubuntu runner other bytes for zuur_zim in 2 of 5 runs and the
+    pinned zip to the next request, so a mismatch is asked again before the load fails."""
+    answers = [b'<html>bot check</html>', SCHOOLS]
+    asked = []
+
+    def fetch(url):
+        asked.append(url)
+        return answers.pop(0)
+
+    def sleep(seconds):
+        pass
+
+    monkeypatch.setattr(time, 'sleep', sleep)
+    schools = urlSource(SCHOOLS_URL, SCHOOLS, file='schools.csv')
+    table = Loader(tmp_path, fetch=fetch).load(schools, 'schools.csv')
+    assert list(table['school']) == ['A', 'B', 'A', 'C', 'B']
+    assert asked == [SCHOOLS_URL, SCHOOLS_URL]
+
+
 def test_one_loader_checks_each_file_against_its_digest_once(tmp_path, monkeypatch):
     """Every manifest load passes through the source's archive; hashing a 225 MB deposit again
     for each of its objects would dominate a run, so a loader checks a file once."""
