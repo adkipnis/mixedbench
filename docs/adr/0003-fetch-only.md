@@ -71,3 +71,10 @@ package's interface to a problem: `Problem` loads from them, and metabeta never 
 source. The weekly fetch opens one GitHub issue per failing source, labeled `registry`, and
 closes it when the source returns; item 9's retirements read that history. A committed log
 was rejected because it would make a bot the author of registry commits.
+
+## Amendment 2026-11-18: a 403 is a burst limit (#231)
+
+OSF answers a burst of scripted downloads with a 403 or a stalled read, so the weekly fetch of
+2026-11-18 opened 15 issues for files that matched their pins. `fetch` retries a 403 and a
+stalled read as it does a 429, and raises one that persists. A refusal is a 401 (Dryad's) or
+a 404, on which the mirror is asked.
