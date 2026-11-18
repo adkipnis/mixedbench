@@ -178,7 +178,7 @@ class Loader:
         filename = source.file or Path(urlparse(urls[0]).path).name
         file = self._dir(source) / filename
         if not file.exists():
-            self._write(file, self._fetchFirst(source, urls))
+            self._write(file, self._fetchChecked(source, urls, source.checksum))
         self._verify(file, source.checksum)
         return file
 
@@ -196,6 +196,25 @@ class Loader:
         if source.mirror is not None:  # asked after the host, which stays the source
             return [source.name, source.mirror]
         return [source.name]
+
+    def _fetchChecked(self, source: Source, urls: list[str], checksum: str | None) -> bytes:
+        """Checked before the cache holds it: a cached file is checked on every load,
+        so one bad download would fail its source until the cache is deleted."""
+        # a host serves other bytes now and then (highstat.com to a CI runner),
+        # so a mismatch is asked again as `fetch` asks again after a 429
+        for attempt in range(5):
+            if attempt > 0:
+                time.sleep(10)
+            data = self._fetchFirst(source, urls)
+            if checksum is None:
+                return data
+            digest = hashlib.sha256(data).hexdigest()
+            if digest == checksum:
+                return data
+        raise ValueError(
+            f'{source.name} {source.pin}: {len(data)} bytes with checksum {digest}, '
+            f'not the pinned {checksum}, beginning {data[:80]!r}'
+        )
 
     def _fetchFirst(self, source: Source, urls: list[str]) -> bytes:
         for url in urls:
@@ -325,7 +344,8 @@ class Loader:
         file = self._dir(source) / 'files' / row.file
         if not file.exists():
             revision = f'https://raw.githubusercontent.com/{self._repo(source)}/{source.pin}'
-            self._write(file, self._fetchFirst(source, [f'{revision}/{quote(row.file)}']))
+            url = f'{revision}/{quote(row.file)}'
+            self._write(file, self._fetchChecked(source, [url], row.sha256))
         return file
 
     @staticmethod
