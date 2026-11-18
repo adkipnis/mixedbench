@@ -840,6 +840,24 @@ reading's open disagreements, four to eight per tier.
   3); dat.ishak2007 ended at the bar on level 3 and uci_440 sgemm at the cap on level 0, so
   `problems.csv` lists 1,001 problems. No earlier reference or problem moved.
 
+## Corrections before the freeze (#237, 2026-11-18)
+
+- nlme Spruce holds MASS Sitka's and Sitka89's log sizes together, all 1,027 equal, and geepack
+  spruce differs from it in one value (tree 15 on day 152, 3.6 for 4.6), so four problems held
+  one table. #168's flag missed them.
+- `shards/duplicates_corrections.csv` folds geepack spruce into nlme Spruce, and datasets attenu
+  and Stata's earthquake.dta into nlme Earthquake, whose 182 records both hold. Sitka and
+  Sitka89 leave as `derived or duplicated table`, since a subset leaves for its superset (#133).
+- rm_anova and rm_anova2 carry a stratum per within factor in their grouping cells, as Alex's
+  spot check of rm_anova2 asked (#24); the fits pass had written them into rm_anova2's formula
+  only. dat.tian2009 is `approximate`, as nielweise2007 is.
+- `measure.py` measured the four changed rows again, and every other row of the five measured
+  files stayed byte for byte.
+- `suite/admit.py` drops the three spruce copies from the candidates and the two earthquake
+  copies from the refusals, and only rm_anova's and rm_anova2's hashes moved.
+- The reference runs passed for rm_anova at level 3 and rm_anova2 at level 1, so
+  `problems.csv` lists 998 problems. No other reference or hash moved.
+
 ## Reading rulings (m3#22 to #15)
 
 The rulings [`prompts/read.md`](prompts/read.md) does not carry, from the agents' `RULE GAP` notes and Alex's checks, each with an example
