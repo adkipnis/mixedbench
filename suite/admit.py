@@ -296,7 +296,6 @@ FIDELITY: dict[str, Fidelity] = {
     'nlmeU/prt/1': 'approximate',  # the fiber.f:occ.f slope
     'gamlss.data/Leukemia/1': 'approximate',  # the splines
     'nlmeU/SIIdata/1': 'approximate',  # the cubic in mathkind linear
-    'MASS/Sitka/1': 'approximate',  # ordered(Time) as linear
     'faraway/hprice/1': 'approximate',  # the yearly ypc for the first year's income
     'fitzmaurice_cd4/cd4.dta/1': 'approximate',  # the hinge, triple therapy as group by week
     'pmlb_boxing1/analcatdata_boxing1.tsv.gz/1': 'approximate',  # the probit's fixed scales
@@ -313,11 +312,12 @@ FIDELITY: dict[str, Fidelity] = {
     'metadat/dat.ishak2007/1': 'approximate',  # the HAR occasion effects unstructured
     'metadat/dat.rivera2025/1': 'approximate',  # independent group effects as intercept and slope
     'posteriordb/posterior_database/data/data/butterfly.json.zip/1': 'approximate',  # occupancy
-    # fixed study intercepts as a random intercept (#129)
+    # fixed study intercepts as a random intercept (#129, #237)
     'metadat/dat.nielweise2007/1': 'approximate',
     'metadat/dat.nielweise2008/1': 'approximate',
     'stan_bugs/bugs_examples/vol1/blocker/blocker.data.json/1': 'approximate',
     'stan_bugs/bugs_examples/vol1/magnesium/magnesium.data.json/1': 'approximate',
+    'metadat/dat.tian2009/1': 'approximate',
     'metadat/dat.collins1985a/1': 'approximate',
     'stan_bugs/bugs_examples/vol1/oxford/oxford.data.json/1': 'approximate',  # year^2 dropped too
     # a fixed term the contract cannot write, dropped (#129)
