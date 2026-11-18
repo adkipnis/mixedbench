@@ -459,18 +459,25 @@ def test_a_cran_or_url_archive_object_loads_its_file_from_the_extracted_tree(tmp
 # ==============================================================================================
 
 
+def _httpError(code: int) -> urllib.error.HTTPError:
+    return urllib.error.HTTPError('u', code, 'Error', {}, None)
+
+
 @pytest.mark.parametrize(
-    'codes',
+    'errors',
     [
-        pytest.param([429], id='osf_answers_a_burst_with_429'),
-        pytest.param([522] * 4, id='cloudflare_answers_522_while_stata_press_times_out'),
+        pytest.param([_httpError(429)], id='osf_answers_a_burst_with_429'),
+        pytest.param([_httpError(403)], id='osf_answers_a_burst_with_403'),
+        pytest.param([TimeoutError('The read operation timed out')], id='osf_stalls_a_read'),
+        pytest.param(
+            [_httpError(522)] * 4, id='cloudflare_answers_522_while_stata_press_times_out'
+        ),
     ],
 )
-def test_fetch_waits_and_retries_after_a_429_or_a_server_error(monkeypatch, codes):
+def test_fetch_waits_and_retries_a_throttled_download(monkeypatch, errors):
     """The default fetch waits the `Retry-After` seconds, or ten, and tries again up to five
     times instead of failing the pull."""
-    answers = [urllib.error.HTTPError('u', code, 'Error', {}, None) for code in codes]
-    answers.append(io.BytesIO(b'content'))
+    answers = [*errors, io.BytesIO(b'content')]
 
     def urlopen(req, timeout, context):
         answer = answers.pop(0)
@@ -486,12 +493,11 @@ def test_fetch_waits_and_retries_after_a_429_or_a_server_error(monkeypatch, code
     assert fetch('https://www.stata-press.com/data/r18/union.dta') == b'content'
 
 
-@pytest.mark.parametrize('code', [401, 403])
-def test_fetch_takes_a_refusal_as_a_miss(monkeypatch, code):
+def test_fetch_takes_a_refusal_as_a_miss(monkeypatch):
     """Dryad answers 401 to a script; like a 404 the next location (the mirror) is asked."""
 
     def urlopen(req, timeout, context):
-        raise urllib.error.HTTPError('u', code, 'Unauthorized', {}, None)
+        raise urllib.error.HTTPError('u', 401, 'Unauthorized', {}, None)
 
     monkeypatch.setattr(urllib.request, 'urlopen', urlopen)
     assert fetch('https://datadryad.org/api/v2/files/1/download') is None

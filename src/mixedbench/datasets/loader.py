@@ -57,13 +57,18 @@ def fetch(url: str) -> bytes | None:
             with urllib.request.urlopen(req, timeout=120, context=TLS) as r:
                 return r.read()
         except urllib.error.HTTPError as e:
-            if e.code in (401, 403, 404):
+            if e.code in (401, 404):
                 return None
-            # a burst limit (429) or a server error passes, e.g. Cloudflare's 522 for a slow origin
-            passing = e.code == 429 or e.code >= 500
+            # a burst limit (429, or OSF's 403) or a server error passes,
+            # e.g. Cloudflare's 522 for a slow origin
+            passing = e.code in (403, 429) or e.code >= 500
             if not passing or attempt == 4:
                 raise
             time.sleep(int(e.headers.get('Retry-After', 10)))
+        except TimeoutError:  # OSF stalls a read in a burst
+            if attempt == 4:
+                raise
+            time.sleep(10)
 
 
 # =====================================================================================
