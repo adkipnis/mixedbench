@@ -836,6 +836,9 @@ reading's open disagreements, four to eight per tier.
   magnesium, collins1985a, oxford) and fixed terms the contract cannot write (fosterhanson's
   recode of its trials, arthritis's square root of month, volpertesmond's BMI) are
   `approximate`, as ChickWeight and #197's rows are. No listed hash moved.
+- The reference runs of the 162 passed for 160 (109 at level 0, 13 at 1, 25 at 2 and 13 at
+  3); dat.ishak2007 ended at the bar on level 3 and uci_440 sgemm at the cap on level 0, so
+  `problems.csv` lists 1,001 problems. No earlier reference or problem moved.
 
 ## Reading rulings (m3#22 to #15)
 
