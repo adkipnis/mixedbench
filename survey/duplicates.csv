@@ -622,3 +622,6 @@
 "metadat","dat.linde2015","metadat","dat.linde2016","different","linde2015 holds 198 arms of 3-arm and 2-arm trials with five outcomes, linde2016 201 arms of early response only, the trial sets overlapping"
 "ros","Congress/data/congress.csv","beyondarena_mice_protein_trisomy_discriminant","mice_protein_trisomy_discriminant.pq","different","congressional vote shares by district against protein expression levels of mice"
 "uci_440","sgemm_product.csv","github_force2020","train.csv","different","GPU kernel run times against well log measurements"
+"nlme","Spruce","geepack","spruce","same","geepack spruce is nlme Spruce with chamber (= plot), ozone and wave added: 1,026 of the 1,027 log sizes equal, tree 15's on day 152 is 3.6 here and 4.6 in nlme Spruce and MASS (#237)"
+"nlme","Earthquake","datasets","attenu","same","datasets attenu holds nlme Earthquake's 182 records under other names (event, mag, dist), with station for soil (#237)"
+"nlme","Earthquake","stata_earthquake","earthquake.dta","same","Stata's earthquake.dta holds nlme Earthquake's 182 records, soil coded rock or soil and laccel = log10(accel) added (#237)"
