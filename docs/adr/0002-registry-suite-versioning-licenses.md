@@ -1,5 +1,5 @@
 ---
-status: accepted, amended 2026-10-09, 2026-10-10, 2026-10-18, 2026-10-19, 2026-10-20, 2026-10-30 and 2026-11-06
+status: accepted, amended 2026-10-09, 2026-10-10, 2026-10-18, 2026-10-19, 2026-10-20, 2026-10-30, 2026-11-06 and 2026-11-19
 date: 2026-10-08
 ---
 
@@ -168,3 +168,23 @@ correction a benchmark change.
   run passed. The wheel and `suite.load` switch to it in release 1.1.0 (#203), and a patch
   before it ships the registry and the references without the switch.
 - Why: a suite is named after the release that freezes it, and a patch names no suite.
+
+## Amendment 2026-11-19: the dropped share and the group sizes stay uncapped
+
+**Dropped rows.**
+
+- Decision: the share of dropped rows stays uncapped, as decided on 2026-10-09, now with the
+  case observed.
+- Why: 21 of suite 1.1's 998 problems keep under half of their rows. In 11 of them the response
+  or a grouping factor is missing, and no fit keeps such a row; in 7 the covariate that drops
+  the rows belongs to the source's own model. A cap on the share would refuse those.
+- Decision: a covariate missing from most rows of a model its reader proposed is a misfiled
+  row, corrected in the registry: 5g_energy_consumption and ghanas_indigenous_intel.
+- Why: a user would leave such a column out, and the source documents no model that keeps it.
+
+**Rows per group.**
+
+- Decision: a suite sets no minimum of rows per group.
+- Why: in 143 of the 998 problems the largest group of some factor holds two rows. Pairs are a
+  documented design, their references passed the bar, and the list carries each factor's
+  smallest and largest group for a user who filters.
