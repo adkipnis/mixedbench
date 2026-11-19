@@ -175,13 +175,21 @@ with no divergences.
 _Avoid_: threshold, convergence check
 
 **Chain-split null**:
-The score of half the reference chains against the other half. It is the floor a metric has on
-that problem, below which differences are Monte Carlo noise.
+The score of two of the reference's chains against the other two, averaged over the three ways
+to split four chains. It is the floor a metric has on that problem, below which differences are
+Monte Carlo noise, and a conservative one, since half the draws carry more noise than all.
+
+**Class**:
+The kind of a parameter, as brms classes it: a fixed effect, a random effect's standard
+deviation, a correlation of random effects, the residual standard deviation or a factor's
+random effects. Scores are never pooled across classes.
+_Avoid_: block (a factor's correlated random-effect terms), type, group
 
 **Track**:
 One way of scoring a method on a problem. The posterior track scores draws against the
-reference, the predictive track held-out rows and held-out groups, and the oracle track a
-semi-synthetic replicate with known parameters.
+reference, the predictive track held-out rows and held-out groups, the oracle track a
+semi-synthetic replicate with known parameters, and the decision track a point estimate and
+its interval.
 
 **Opponent line**:
 A method's scores over the suite, published with the suite so that a new method is read
