@@ -142,6 +142,10 @@ date: 2026-10-08
 - Decision: the chain-split null scores two of the reference's chains against the other two,
   averaged over the three ways to split four chains. It is a conservative floor, since 2,000
   draws carry more noise than 4,000.
+- Decision: the null of a signed number is its mean absolute size over the three splits: the
+  absolute mean difference, and the absolute logarithm of the SD ratio, reported as a ratio of
+  at least 1.
+- Why: a signed number averages to about zero over the splits, which is no floor.
 - Decision: the nulls are frozen: a script computes them once per problem, they are stored
   beside the problem's draws, and they are recomputed only when the code of a metric changes.
 - Why: every user reads the same floor, and it is published before any method is scored.
@@ -152,9 +156,20 @@ date: 2026-10-08
   reference draws of every problem of suite 1.1, with its rules fixed here before it runs.
 - Two of a problem's chains are perturbed in a known way and scored against the other two: a
   shifted mean, an inflated and a deflated scale, a marginal replaced by a Gaussian of its mean
-  and SD, the correlations broken by permuting each column, each over a grid of sizes. A
-  perturbation is detected on a problem when its score exceeds the largest of the problem's
-  three null scores.
+  and SD, the correlations broken by permuting each column, each over a grid of sizes.
+- Each of the three splits is perturbed in turn, in the half that holds chain 0, and the three
+  scores are averaged, as the null is. A perturbation is detected on a problem when this
+  average exceeds the largest of the problem's three null scores.
+- Why the average: one perturbed split shares its draws with one of the three null scores, and
+  where that score is the largest, any rise counts as detected.
+- The grid: a shift of 0.05, 0.1, 0.2 and 0.5 reference SDs; a scale multiplied and divided by
+  1.1, 1.25, 1.5 and 2; the Gaussian marginal and the permuted columns in a quarter, a half and
+  all of the perturbed draws.
+- Every global parameter is perturbed the same way. Under a metric per parameter, a problem
+  counts by the share of its global parameters on which the perturbation is detected, each
+  against its own null.
+- A margin is read per size of a perturbation. A challenger replaces a default if it leads by
+  10 points at some size and trails by 10 points at none.
 - Classifier: scikit-learn's random forest with its defaults, as TabDGP's ADR 0008 chose it,
   unless sbibm's MLP detects the broken correlations on at least 10 points more of the problems.
   The forest grows the same trees under any monotone transform, so its inputs need no scale.
