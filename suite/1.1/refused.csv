@@ -182,3 +182,4 @@
 "pymc_examples/examples/data/sem_data.csv/1","multivariate_response: 15 indicators stacked, each with a loading and residual (#129)"
 "rabe_hesketh/promotion.dta/1","computed_response: the promotion, event in the year dur alone (#129)"
 "rabe_hesketh/twin.dta/1","frequency_weighted: each response pattern weighted by num2 (#129)"
+"posteriordb/posterior_database/data/data/ecdc0501.json.zip/1","nonlinear_model: the documented model is nonlinear in its parameters"
