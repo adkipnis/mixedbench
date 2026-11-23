@@ -1,4 +1,5 @@
 from mixedbench.datasets.loader import (
+    Codes,
     ColumnType,
     DataObject,
     Levels,
@@ -11,6 +12,7 @@ from mixedbench.datasets.loader import (
 )
 
 __all__ = [
+    'Codes',
     'ColumnType',
     'DataObject',
     'Levels',

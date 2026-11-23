@@ -82,6 +82,10 @@ def verbAggCells() -> dict[str, str]:
         ('stack', 'varying=bdi:a<b<c;times=t:1<2;idvar=id', 'bdi lists 3 columns for 2 times'),
         ('stack', 'varying=bdi:<b;times=t:1<2;idvar=id', 'an empty name: varying=bdi:<b'),
         ('stack', 'varying=bdi:a<b;times=t:1<1;idvar=id', 'a repeated time: 1'),
+        # a missing code is `column=code`, both filled
+        ('missing', 'dep', 'not a column and its code: dep'),
+        ('missing', 'dep=', 'not a column and its code: dep='),
+        ('missing', 'dep=-9;=-9', 'not a column and its code: =-9'),
     ],
 )
 def test_a_cell_the_grammar_refuses_raises_naming_the_row_and_the_column(
@@ -157,3 +161,12 @@ def test_a_row_names_its_problem() -> None:
     it, so it is written once."""
     row = installedRow('lme4/VerbAgg/1')
     assert row.id == 'lme4/VerbAgg/1'
+
+
+def test_a_missing_cell_parses_into_each_columns_codes() -> None:
+    """A source may write a missing value as an ordinary one, which the row declares per
+    column of its table (#210); a column's second code is a second entry, the loader reads
+    each as missing and the blank cell declares none."""
+    row = Row.parse(verbAggCells() | {'missing': 'dep=-9;dep=-8;score=?'})
+    assert row.missing == {'dep': ('-9', '-8'), 'score': ('?',)}
+    assert Row.parse(verbAggCells() | {'missing': ''}).missing == {}

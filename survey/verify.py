@@ -57,7 +57,7 @@ SAMPLE_SIZE = 100
 BATCH_SIZE = 25
 SEED = 1  # the first hand sample's was 0
 # the fields the agreement step compares, recorded at draw time
-COMPARED = ('response', 'response_type', 'trials', 'grouping_factors', 'covariates', 'interactions', 'random_slopes', 'stack', 'formula', 'published_model')  # fmt: skip
+COMPARED = ('response', 'response_type', 'trials', 'grouping_factors', 'covariates', 'interactions', 'random_slopes', 'stack', 'missing', 'formula', 'published_model')  # fmt: skip
 # the reading a handoff shows per registry row, and per excluded table
 READING = (*COMPARED, 'confidence', 'notes')
 EXCLUSION = ('reason', 'detail')

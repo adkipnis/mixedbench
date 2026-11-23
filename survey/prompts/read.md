@@ -59,17 +59,25 @@ File the object in the excluded shard with its reason when:
 6. **Types the file cannot carry**, for covariates only. Text, Excel and JSON: `categorical`,
    `ordered` or `continuous` in `types` as documented. R, Stata and SPSS: only `ordered`
    factors, and `categorical` for a numeric column the model wraps in `factor()`.
-7. **Published model.** `yes` when a published specification exists for this table: a
+7. **Missing codes.** A value the source writes where a measurement is missing (`-9`, `?`)
+   goes in `missing` as `column=code`, on the long form's columns, a second code of a column as
+   a second entry.
+   - Declare only a code the documentation names, with its evidence in `notes`, a text among a
+     column's numbers, or a value outside the range the documentation gives for the column (999
+     in a rating from 1 to 6).
+   - A value that looks like a code and is documented nowhere stays a value: `notes` open
+     `MISSING SUSPECTED:` with the column and the value.
+8. **Published model.** `yes` when a published specification exists for this table: a
    posterior, a Stan example, a textbook's worked example, a documentation example stating the
    model. `no` for data only in tests or a docstring; a `no` row still carries your proposed
    formula.
-8. **Documented prior**, only on a `yes` row, in the source's notation on one line:
+9. **Documented prior**, only on a `yes` row, in the source's notation on one line:
    - the prior passed to this row's model call, trimmed to this row's response in a
      multivariate fit;
    - blank for package defaults, priors only in a supplement, and priors in words without
      parameters;
    - an unbounded Stan scale without a sampling statement is written as such.
-9. **Domain, confidence, notes.** One domain tag. `high` when the documentation states the
+10. **Domain, confidence, notes.** One domain tag. `high` when the documentation states the
    model; `medium` when it describes only the design, or you recall the model from a cited book
    (book and section in `notes`); `low` when you inferred the grouping factor from column
    names. `notes` say what you read; `RULE GAP:` opens any case these rules do not settle.
@@ -131,8 +139,9 @@ Read its long form first, then the row on the long form.
 - **Undocumented response.** A grouped table with no documented response or model is filed
   with the response a reader would model, at `low`, `notes` opening `RESPONSE INFERRED:`. Only
   a table with no defensible response is `response missing or undocumented`. A measurement the
-  documentation names (a wide table's one repeated measure) is a documented response though no
-  model is fitted: no marker, at `medium`.
+  documentation names with its unit of observation (a wide table's one repeated measure, a
+  codebook's entry for the column) is a documented response though no model is fitted: no
+  marker, at `medium`.
 - **Nonlinear models** (PK or growth curves in `nlme`) stay for their grouping: `formula` names
   the class and inputs in words (`conc ~ one-compartment IV PK model (dose, time);
   subject-specific clearance and volume`), `notes` open `NONLINEAR:`, confidence at most

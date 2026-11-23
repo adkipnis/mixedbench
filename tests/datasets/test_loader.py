@@ -397,6 +397,60 @@ def test_declared_types_name_the_long_forms_columns(tmp_path):
     assert list(table['time'].cat.categories) == [2, 4]
 
 
+def test_a_declared_missing_code_reads_as_missing_in_its_column_alone(tmp_path):
+    """A source may write a missing value as an ordinary one, which the row declares per column
+    (#210): rabe_hesketh's postnatal.dta holds -9 in its depression scores. The same value in
+    a column that declares no code stays a measurement, here a change score of -9."""
+    wide = urlSource(WIDE_URL, WIDE)
+    loader = Loader(tmp_path, fetch=Server({WIDE_URL: WIDE}))
+    missing = {'pre': ('-9',), 'dep1': ('-9',), 'dep2': ('-9',)}
+    table = loader.load(wide, 'coded.csv', missing=missing)
+    assert table['pre'].isna().tolist() == [False, True, False]
+    assert table['dep1'].isna().tolist() == [False, False, True]
+    assert table['dep2'].isna().tolist() == [True, False, False]
+    assert list(table['change']) == [-9, 3, -1]
+
+
+def test_a_declared_text_among_numbers_reads_as_missing_and_the_column_as_numbers(tmp_path):
+    """uci_349's scores hold `?` where none was recorded, so the column arrives as text: the
+    code is read as missing before the types, and the column declared continuous is numeric."""
+    wide = urlSource(WIDE_URL, WIDE)
+    loader = Loader(tmp_path, fetch=Server({WIDE_URL: WIDE}))
+    table = loader.load(wide, 'coded.csv', types={'score': 'continuous'}, missing={'score': ('?',)})
+    assert table['score'].dtype.kind == 'f'
+    assert list(table['score'].fillna(-1)) == [55, -1, 70]
+
+
+def test_a_missing_code_names_the_long_forms_column(tmp_path):
+    """`missing` is read after the stack, as `types` is: one entry for the measure stands for
+    every occasion's column, as R2MLwiN's reading1 needs for its six reading scores."""
+    wide = urlSource(WIDE_URL, WIDE)
+    loader = Loader(tmp_path, fetch=Server({WIDE_URL: WIDE}))
+    stack = Stack(varying={'dep': ('dep1', 'dep2')}, timevar='visit', times=('1', '2'), idvar='subject')  # fmt: skip
+    table = loader.load(wide, 'coded.csv', stack=stack, missing={'dep': ('-9',)})
+    assert list(table['dep'].fillna(0)) == [10, 14, 0, 0, 11, 8]
+    assert list(table['pre']) == [12, -9, 9, 12, -9, 9]
+
+
+def test_a_missing_code_is_read_in_a_column_named_self(tmp_path):
+    """leder_2020's ratings of oneself are a column `self`, a name a keyword argument of pandas'
+    `assign` cannot carry."""
+    wide = urlSource(WIDE_URL, WIDE)
+    loader = Loader(tmp_path, fetch=Server({WIDE_URL: WIDE}))
+    table = loader.load(wide, 'coded.csv', missing={'self': ('-9',)})
+    assert table['self'].isna().tolist() == [False, True, False]
+
+
+def test_a_missing_code_among_a_factors_levels_is_no_level_any_more(tmp_path):
+    """A survey file may keep a non-answer as a level of a factor (`dk/refused` in Pew's
+    income): the declared code is read as missing and leaves the levels, which keep their
+    order, so the contract codes no level without a row."""
+    loader = Loader(tmp_path, fetch=Server({CURRENT: TARBALL}))
+    pets = loader.load(FIXTURE, 'pets', missing={'species': ('fish',)})
+    assert list(pets['species'].cat.categories) == ['dog', 'cat', 'bird']
+    assert pets['species'].isna().sum() == 1
+
+
 def test_git_source_is_fetched_as_an_archive_at_its_revision(tmp_path):
     """A repository pinned to a revision comes as GitHub's archive tarball of that revision, so
     one fetch serves every file and README; the pinned path narrows the objects to its folder."""
