@@ -161,6 +161,20 @@ def test_tables_load_the_rows_each_fit_read(tmp_path: Path) -> None:
     pd.testing.assert_frame_equal(tables.loadFitted(sleepstudy), tables.load(sleepstudy))
 
 
+@pytest.mark.network
+def test_a_rows_missing_codes_load_as_missing(tmp_path: Path) -> None:
+    """R2MLwiN's reading1 writes -10 where a pupil has no score or age at an occasion (#210):
+    its row declares the code on the long form's two measures, so the table a user loads holds
+    no -10 and the contract drops those rows as missing."""
+    tables = registry.Tables(tmp_path)
+    reading1 = installedRow('R2MLwiN/reading1/1')
+
+    table = tables.load(reading1)
+
+    assert not (table[['reading', 'age']] == -10).any(axis=None)
+    assert table['reading'].isna().sum() == 684
+
+
 def test_every_preparation_names_a_registry_row() -> None:
     """A preparation of a row the registry lacks, mistyped or of a row since removed, would go
     unused by `loadFitted`; the fits pass refuses it only when it runs."""

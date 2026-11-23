@@ -147,7 +147,9 @@ class Tables:
         self.preparations = Preparations()
 
     def load(self, row: Row) -> pd.DataFrame:
-        return self.loader.load(self.sources[row.source], row.object, row.types, row.stack)
+        return self.loader.load(
+            self.sources[row.source], row.object, row.types, row.stack, row.missing
+        )
 
     def loadFitted(self, row: Row) -> pd.DataFrame:
         """The rows the row's fit in fits.csv read. A problem builds from `load`'s whole table."""

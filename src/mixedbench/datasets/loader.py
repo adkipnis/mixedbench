@@ -6,7 +6,7 @@ It is downloaded once into the cache and checked against its pin on every load, 
 With a manifest, only the file holding an object is fetched and read, against its own sha256;
 without one (the survey), every data file of the source is enumerated.
 The formats are readers.py's; the loader stacks a wide table by the stack a registry row
-declares and applies the row's column types.
+declares, reads the row's missing codes as missing and applies its column types.
 
 pipeline:
 ---------
@@ -15,7 +15,7 @@ a pinned Source
 -> its tree (the source's files on disk)                       tree
 -> the files holding data                                      _fetchFile | _files
 -> every object of those files as a table (by name)            readers.read
--> one object, a wide one stacked, as a typed table            load, _stacked
+-> one object, a wide one stacked, as a typed table            load, _stacked, _uncoded
 """
 
 from __future__ import annotations
@@ -74,9 +74,11 @@ def fetch(url: str) -> bytes | None:
 # =====================================================================================
 # sources and objects
 # =====================================================================================
-# what the registry pins, what the loader finds in it, and the column types a row declares.
+# what the registry pins, what the loader finds in it,
+# and the column types and missing codes a row declares.
 ColumnType = Literal['categorical', 'ordered', 'continuous']
 Levels = tuple[str, ...]  # an ordered column's declared levels, lowest first
+Codes = tuple[str, ...]  # the values a column writes where a measurement is missing
 
 
 @dataclass(frozen=True)
@@ -316,14 +318,16 @@ class Loader:
         name: str,
         types: Mapping[str, ColumnType | Levels] | None = None,
         stack: Stack | None = None,
+        missing: Mapping[str, Codes] | None = None,
     ) -> pd.DataFrame:
-        """The object's table, a wide one as its long form; `types` names the long form's
-        columns."""
+        """The object's table, a wide one as its long form; `types` and `missing` name the
+        long form's columns."""
         file, table = self._object(source, name)
         if table is None:
             raise ValueError(f'{source.name} {source.pin} {file}: {name!r} is no DataFrame')
         if stack is not None:
             table = self._stacked(table, stack)
+        table = self._uncoded(table, missing or {})
         return table.assign(**self._declared(table, types or {}))
 
     def _object(self, source: Source, name: str) -> tuple[str, pd.DataFrame | None]:
@@ -368,6 +372,23 @@ class Loader:
             long[stack.idvar] = np.tile(np.arange(1, len(table) + 1), len(stack.times))
             columns.append(stack.idvar)
         return long[columns]
+
+    @staticmethod
+    def _uncoded(table: pd.DataFrame, missing: Mapping[str, Codes]) -> pd.DataFrame:
+        """The table with each declared missing code read as missing: a code is a number in a
+        column of numbers and text in any other, and no level of a factor any more."""
+        uncoded = table.copy(deep=False)  # the columns are replaced, never written into
+        for column, codes in missing.items():
+            values = table[column]
+            if pd.api.types.is_numeric_dtype(values):
+                codes = [float(code) for code in codes]
+            if isinstance(values.dtype, pd.CategoricalDtype):
+                # the other levels stay in their order, which `remove_categories` would sort
+                levels = [level for level in values.cat.categories if level not in codes]
+                uncoded[column] = values.cat.set_categories(levels)
+            else:
+                uncoded[column] = values.mask(values.isin(codes))
+        return uncoded
 
     @staticmethod
     def _declared(

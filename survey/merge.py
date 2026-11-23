@@ -311,7 +311,10 @@ class Merger:
         problems = self.missingColumns(line, row, set(untyped.columns))
         if problems:
             return problems
-        loaded = self.loader.load(source, row.object, row.types, row.stack)
+        problems = self.codeProblems(line, row, untyped)
+        if problems:
+            return problems
+        loaded = self.loader.load(source, row.object, row.types, row.stack, row.missing)
         table = withComposites(loaded, row.grouping_factors)
         problems += self.groupingProblems(line, row, table)
         problems += self.responseProblems(line, table, row.response, row.response_type, row.trials)
@@ -351,11 +354,30 @@ class Merger:
             for term in getattr(row, col):
                 named += [(col, name) for name in parts(term)]
         named += [('types', name) for name in row.types]
+        named += [('missing', name) for name in row.missing]
         return [
             self.problem(line, col, f'no such column: {name}')
             for col, name in named
             if name != '' and name not in columns
         ]
+
+    def codeProblems(self, line: int, row: Row, untyped: pd.DataFrame) -> list[dict]:
+        """A missing code no value of its column equals, by the loader's own reading of it:
+        the column gains no missing value. A load reads one code per column, so a survey table
+        with codes in dozens of columns is loaded once per code of its longest list."""
+        source = self.frame.sources[row.source]
+        problems = []
+        longest = max((len(codes) for codes in row.missing.values()), default=0)
+        for position in range(longest):
+            single = {}
+            for column, codes in row.missing.items():
+                if position < len(codes):
+                    single[column] = (codes[position],)
+            coded = self.loader.load(source, row.object, stack=row.stack, missing=single)
+            for column, (code,) in single.items():
+                if coded[column].isna().sum() == untyped[column].isna().sum():
+                    problems.append(self.problem(line, 'missing', f'no value of {column} equals {code}'))  # fmt: skip
+        return problems
 
     def groupingProblems(self, line: int, row: Row, table: pd.DataFrame) -> list[dict]:
         """A grouping factor has at least two levels and a level with two or more rows."""

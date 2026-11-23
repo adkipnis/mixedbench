@@ -858,6 +858,43 @@ reading's open disagreements, four to eight per tier.
 - The reference runs passed for rm_anova at level 3 and rm_anova2 at level 1, so
   `problems.csv` lists 998 problems. No other reference or hash moved.
 
+## Missing codes (#210, 2026-11-23)
+
+- Five tables were excluded as `unreadable format` because they write a missing value as a value
+  (`-10`, `-9`, `-1`, `?`, `destroyed`). A row now declares such codes in `missing`
+  ([ADR 0003](../docs/adr/0003-fetch-only.md)), and two blind readings read the five again
+  (`shards/dropped_missing_codes.csv`, `registry_missing_codes.csv`, `excluded_missing_codes.csv`).
+- Both readings file R2MLwiN reading1, rabe_hesketh postnatal.dta, posteriordb ecdc0501 (as
+  `NONLINEAR:`) and uci_349 studentAssessment.csv, and exclude walker_2021b_zenodo's
+  Cage_Burrows_all_NS.csv as `response missing or undocumented`, since the paper fits nothing
+  on the burrow counts.
+- The readings differed on two cells, which an outside check settled: reading1 takes section
+  13.3's linear growth curve, the last fit of its chapter that lme4 states in full, and
+  studentAssessment's `score` is a documented response, since the codebook defines it. Both are
+  `hand` rows. `shards/registry_documented_response.csv` files the sibling studentVle.csv the
+  same way, without its `RESPONSE INFERRED:` marker.
+- `shards/registry_sparse_covariates.csv` moves the covariates missing from most rows out of
+  two models, into `ignore` ([ADR 0002](../docs/adr/0002-registry-suite-versioning-licenses.md),
+  amendment of 2026-11-19): the five `_Cell1` columns of 5g_energy_consumption and `indicator`,
+  `indicator_description` and `time_observed` of ghanas_indigenous_intel.
+- A screen of every row's model columns for values that look like an undeclared code flagged
+  126 columns. `shards/registry_missing_screen.csv` declares the documented ones, in
+  leder_2020_osf_2 (`-9`), rabe_hesketh sex.dta (`scpar` 99), Ecdat PSID (`educatn` 0, 98 and
+  99) and both BRFSS models (38 codes of its formats file), and opens the notes of 23 rows whose
+  value nothing at hand documents with `MISSING SUSPECTED:`.
+- A search for those sources' documentation found a code documented in four rows that are no
+  candidates (`?` in openml_4541 and in studentInfo.csv's `imd_band`, `UNK` in openml_46630,
+  `dk/refused` in the Pew table's income) and in none of the nine candidates. Rouault 2020's
+  `Confidence`, a rating from 1 to 6, holds 999 on 19 rows, which the rule now covers as a value
+  outside the documented range. `shards/registry_missing_documented.csv` declares the five. The
+  other eight candidates keep their mark, the two radon tables' `floor` 9 among them.
+- `measure.py` measured every row again, since each record predates the new column: only the
+  rows whose data changed moved, four rows are new, and every other row of the five measured
+  files stayed byte for byte. `fits.py` refitted the changed rows.
+- `suite/admit.py` moved five hashes (5g_energy_consumption, ghanas_indigenous_intel,
+  leder_2020_osf_2, sex.dta, Rouault 2020), admitted reading1, postnatal.dta and
+  studentAssessment.csv, and refused ecdc0501 as nonlinear. No other hash moved.
+
 ## Reading rulings (m3#22 to #15)
 
 The rulings [`prompts/read.md`](prompts/read.md) does not carry, from the agents' `RULE GAP` notes and Alex's checks, each with an example

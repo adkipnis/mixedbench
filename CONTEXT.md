@@ -150,6 +150,11 @@ occasion's values and the unit the occasions repeat within. An occasion is what 
 repeat over: a time, an arm, an item or a direction.
 _Avoid_: reshape, pivot, melt
 
+**Missing code**:
+A value a source writes in a column where a measurement is missing (`-9`, `?`), declared per
+column by the table's registry row and read as missing by the loader.
+_Avoid_: sentinel, NA value, placeholder
+
 **Flat sample**:
 Every flat table of the survey's frame, measured by script with the registry's per-column
 statistics and kept beside the registry, never in it. It is the reference for a generator's

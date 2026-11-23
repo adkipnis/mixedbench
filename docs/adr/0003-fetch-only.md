@@ -1,5 +1,5 @@
 ---
-status: accepted, amended 2026-10-08 and 2026-10-09
+status: accepted, amended 2026-10-08, 2026-10-09, 2026-11-18 and 2026-11-23
 date: 2026-10-08
 ---
 
@@ -78,3 +78,29 @@ OSF answers a burst of scripted downloads with a 403 or a stalled read, so the w
 2026-11-18 opened 15 issues for files that matched their pins. `fetch` retries a 403 and a
 stalled read as it does a 429, and raises one that persists. A refusal is a 401 (Dryad's) or
 a 404, on which the mirror is asked.
+
+## Amendment 2026-11-23: a row declares its table's missing codes ([#210](https://github.com/adkipnis/mixedbench/issues/210))
+
+Five tables write a missing value as an ordinary one (`-10`, `-9`, `-1`, `?`, `destroyed`).
+The loader kept it as a value, so each was excluded as `unreadable format`.
+
+- Decision: a registry row declares its table's missing codes in a `missing` column of
+  `registry.csv` beside `types` and `stack`, one `column=code` per code, on the long form's
+  columns. The loader reads each as missing after the stack and before the types.
+- Why: the codes are read off the documentation the types are read off, so one reading, one
+  shard and one merge check cover them.
+- Rejected: `sources.yaml`, which pins sources and holds nothing per column, and the manifest,
+  which the merge rewrites from the files.
+- Decision: a code belongs to a column, never to the whole table.
+- Why: a table-wide `-9` would turn another column's measured -9 missing, with no one having
+  read that column.
+- Decision: a reader declares only a code the source documents, a text among a column's
+  numbers, or a value outside the range the source documents for the column. A value that only
+  looks like a code stays a value, and the row's `notes` open `MISSING SUSPECTED:`.
+- Why: a rule on the loaded values deletes measurements where it guesses wrong. A documented
+  range is the source's own word on what a measurement can be: Rouault et al. (2020) rate
+  confidence from 1 to 6, and 19 responses hold 999.
+- Decision: the merge refuses a code whose column the table lacks, and one that no value of
+  its column equals.
+- Why: a typo, or a code the pinned file does not write, would otherwise declare nothing
+  unseen.

@@ -72,13 +72,14 @@ Key `source`, `object`, `model_index`. Agent columns, in order:
 | `ignore` | `;`-list of columns no model should use: ids, weights, alternate responses, coordinates |
 | `types` | `;`-list of `column=categorical` / `ordered` / `continuous` where the file carries no type, `ordered` for an R ordered factor, and `column=ordered:a<b<c` for an ordinal text column, its levels lowest first; covariates and the response |
 | `stack` | a wide table's long form (ADR 0007), named after the arguments of R's `stats::reshape`: `varying=bdi:bdi.2m<bdi.4m` per measure, its columns in occasion order, `times=time:2<4` the occasion column with its value per position, `idvar=subject` the unit column, an existing one that names each wide row once or a new one that numbers the wide rows; a measure is named as no column outside the stack; blank loads the object as it is |
+| `missing` | `;`-list of `column=code`, a value the source writes in that column where a measurement is missing (`dep=-9`, `score=?`), a second code of a column as a second entry; the long form's columns; only a code the source documents, a text among a column's numbers, or a value outside the range the source documents for the column; blank where the table codes none |
 | `formula` | the documented model, lme4 syntax where given, its columns named as the table names them and a variable the source derives from columns written as its expression (`I(age - 12)`); a nonlinear model in words; a remark goes to `notes` |
 | `documented_prior` | the prior as the source states it, one line; only on a `published_model` `yes` row |
 | `published_model` | `yes` when a published model specification exists; else `no` |
 | `domain` | `ecology_biology` / `psychology_neuroscience` / `biomedicine` / `social_humanities` / `agriculture` / `education` / `economics` / `industry` / `other` |
 | `confidence` | `high` / `medium` / `low` |
 | `verified` | why the row counts as verified (ADR 0002): `hand` (the hand sample or Tier D) / `high` (confidence `high`) / `second-reading` (a blind second reading) |
-| `notes` | what was read; `RULE GAP:` for an unsettled case; `NONLINEAR:` and `RESPONSE INFERRED:` open their rows' notes |
+| `notes` | what was read; `RULE GAP:` for an unsettled case; `NONLINEAR:`, `RESPONSE INFERRED:` and `MISSING SUSPECTED:` (a value that looks like an undocumented missing code) open their rows' notes |
 
 The merge fills `tier`, `sources` (the `source:object` of every duplicate folded in, its own
 first), `reader` and `license`. The license is the `license:` key or a CRAN DESCRIPTION's

@@ -72,16 +72,26 @@ BDI_ROW = {
     'response_type': 'continuous', 'trials': '', 'family': '', 'grouping_factors': 'subject',
     'covariates': 'time;treatment', 'interactions': '', 'random_slopes': '',
     'ignore': 'bdi.pre;wt', 'types': 'subject=categorical;treatment=categorical',
-    'stack': STACK, 'formula': 'bdi ~ time + treatment + (1 | subject)', 'documented_prior': '',
+    'stack': STACK, 'missing': '', 'formula': 'bdi ~ time + treatment + (1 | subject)',
+    'documented_prior': '',
     'published_model': 'yes', 'domain': 'biomedicine', 'confidence': 'high', 'verified': 'hand',
     'notes': 'reshaped as the vignette does',
+}  # fmt: skip
+# a table that writes `?` where a score is missing, and its row, which declares the code
+SCORES = 'student,test,score\na,1,55\na,2,?\nb,1,70\nb,2,58\nc,1,61\nc,2,64\n'
+SCORES_ROW = BDI_ROW | {
+    'object': 'scores.csv', 'response': 'score', 'grouping_factors': 'student',
+    'covariates': 'test', 'ignore': '', 'types': 'student=categorical;score=continuous',
+    'stack': '', 'missing': 'score=?', 'formula': 'score ~ test + (1 | student)',
+    'notes': 'the codebook names ? as not recorded',
 }  # fmt: skip
 
 
 def wideMerger(tmp_path: Path) -> Merger:
-    """The scratch merger with one more url source, `plots` (Tier O), serving the wide table."""
+    """The scratch merger with one more url source, `plots` (Tier O), serving the wide table
+    and the table with a missing code."""
     merger = scratchMerger(tmp_path, tmp_path)
-    entry, fetch = servePlots({'bdi.csv': BDI})
+    entry, fetch = servePlots({'bdi.csv': BDI, 'scores.csv': SCORES})
     sources = yaml.safe_load((merger.registry / 'sources.yaml').read_text())
     sources['tiers']['O'] = {'plots': entry}
     (merger.registry / 'sources.yaml').write_text(yaml.safe_dump(sources, sort_keys=False))
@@ -142,6 +152,33 @@ def test_rows_of_one_object_that_disagree_on_the_stack_are_refused(tmp_path):
     mergeShard(merger, writeShard(merger.survey / 'shards' / 'registry_one.csv', [BDI_ROW]))
     problems = refusal(merger, writeShard(merger.survey / 'shards' / 'registry_second.csv', [second]))  # fmt: skip
     assert problems[['line', 'column', 'problem']].values.tolist() == [[2, 'stack', 'the rows of the object disagree']]  # fmt: skip
+
+
+def test_a_row_is_checked_on_its_table_without_the_missing_codes_and_merges_with_them(tmp_path):
+    """A row declares the values its table writes for a missing one (#210): the scores load
+    as numbers only once `?` reads as missing, so the response is checked on that table, and
+    the row lands with its cell as written."""
+    merger = wideMerger(tmp_path)
+    mergeShard(merger, writeShard(merger.survey / 'shards' / 'registry_scores.csv', [SCORES_ROW]))
+    [merged] = readRows(merger.registry / 'registry.csv')
+    assert (merged['object'], merged['missing']) == ('scores.csv', 'score=?')
+
+
+@pytest.mark.parametrize(
+    'missing, problem',
+    [
+        ('score=?;scor=?', 'no such column: scor'),
+        ('score=?;test=9', 'no value of test equals 9'),
+    ],
+)
+def test_a_missing_code_the_table_contradicts_is_refused(tmp_path, missing, problem):
+    """A code names a column of the table and a value the column holds: one that equals no
+    value is a typo, or a code the pinned file does not write."""
+    merger = wideMerger(tmp_path)
+    row = SCORES_ROW | {'missing': missing}
+    shard = writeShard(merger.survey / 'shards' / 'registry_bad.csv', [row])
+    problems = refusal(merger, shard)
+    assert problems[['line', 'column', 'problem']].values.tolist() == [[2, 'missing', problem]]
 
 
 def test_a_cran_sources_license_is_read_from_its_description(merger):
