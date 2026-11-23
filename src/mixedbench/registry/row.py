@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Literal, get_args
 
 import pandas as pd
-from mixedbench.datasets import ColumnType, Levels, Stack
+from mixedbench.datasets import Codes, ColumnType, Levels, Stack
 
 # =====================================================================================
 # vocabularies
@@ -49,7 +49,7 @@ def writeCsv(table: pd.DataFrame, path: Path) -> None:
 # cell formats
 # =====================================================================================
 # a cell holding more than one value writes it as text
-# (;-list, an a:b term, an x|g slope, col=kind types).
+# (;-list, an a:b term, an x|g slope, col=kind types, col=code missing codes).
 COLUMN_LIST_COLUMNS = ('covariates', 'ignore')
 TERM_COLUMNS = ('grouping_factors', 'interactions')
 
@@ -138,6 +138,22 @@ def stackEntry(entry: str) -> tuple[str, str, tuple[str, ...]]:
     return key.strip(), name.strip(), listed
 
 
+def parseMissing(text: str) -> dict[str, Codes]:
+    """`dep=-9;dep=-8;score=?` -> {dep: (-9, -8), score: (?,)}: a column's second code is a
+    second entry."""
+    missing = {}
+    for entry in splitList(text):
+        column, code = missingEntry(entry)
+        missing[column] = (*missing.get(column, ()), code)
+    return missing
+
+
+def missingEntry(entry: str) -> tuple[str, str]:
+    """`column=code` -> (column, code)."""
+    column, _, code = entry.partition('=')
+    return column.strip(), code.strip()
+
+
 # =====================================================================================
 # row class
 # =====================================================================================
@@ -166,6 +182,7 @@ class Row:
     ignore: tuple[str, ...]
     types: dict[str, ColumnType | Levels]
     stack: Stack | None  # a wide table's long form; None loads the object as it is
+    missing: dict[str, Codes]  # per column of the table, the values that stand for a missing one
     formula: str
     documented_prior: str
     published_model: str
@@ -191,6 +208,7 @@ class Row:
         typed['model_index'] = int(cells['model_index'])
         typed['types'] = parseTypes(cells['types'])
         typed['stack'] = parseStack(cells['stack'])
+        typed['missing'] = parseMissing(cells['missing'])
         typed['random_slopes'] = tuple(
             SlopeTerm.parse(t) for t in splitList(cells['random_slopes'])
         )
@@ -237,6 +255,9 @@ class Row:
         if cells['response'] in covariates:
             refusals.append(('covariates', f'{cells["response"]} is also the response'))
         refusals += Row.stackRefusals(cells['stack'])
+        for entry in splitList(cells['missing']):
+            if '' in missingEntry(entry):
+                refusals.append(('missing', f'not a column and its code: {entry}'))
         if cells['verified'] not in get_args(Verified):
             refusals.append(('verified', f'not a verification: {cells["verified"]}'))
         return refusals
