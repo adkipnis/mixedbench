@@ -16859,3 +16859,7 @@
 "uci_349","studentAssessment.csv","1","O","date_submitted","id_assessment","0.8619","","","-0.3972","1.1112"
 "uci_349","studentAssessment.csv","1","O","is_banked","id_student","0.4347","","0.4901","0.0342","6.8048"
 "uci_349","studentAssessment.csv","1","O","is_banked","id_assessment","0.0151","","0.1809","0.4609","0.9766"
+"agridat","shaw.oats","1","R","env","env:year:block","1.0","-0.2609","0.5","",""
+"agridat","shaw.oats","1","R","year","env:year:block","","","0.6667","",""
+"agridat","shaw.oats","1","R","block","env:year:block","","","0.8","",""
+"agridat","shaw.oats","1","R","gen","env:year:block","","","0.0","",""
