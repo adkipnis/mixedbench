@@ -894,6 +894,11 @@ reading's open disagreements, four to eight per tier.
 - `suite/admit.py` moved five hashes (5g_energy_consumption, ghanas_indigenous_intel,
   leder_2020_osf_2, sex.dta, Rouault 2020), admitted reading1, postnatal.dta and
   studentAssessment.csv, and refused ecdc0501 as nonlinear. No other hash moved.
+- The reference runs passed for sex.dta, ghanas_indigenous_intel and postnatal.dta at level 0,
+  reading1 at level 1, leder_2020_osf_2 at level 2 and Rouault 2020 at level 3.
+- The run of 5g_energy_consumption, which now keeps the rows its sparse covariates dropped,
+  ended at the cap at level 2, and the run of studentAssessment.csv ran out of memory at level 3.
+  Both leave the suite, so `problems.csv` lists 999 problems. No other reference or hash moved.
 
 ## Reading rulings (m3#22 to #15)
 
