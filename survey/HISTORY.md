@@ -900,6 +900,18 @@ reading's open disagreements, four to eight per tier.
   ended at the cap at level 2, and the run of studentAssessment.csv ran out of memory at level 3.
   Both leave the suite, so `problems.csv` lists 999 problems. No other reference or hash moved.
 
+## One more agridat draw (#252, 2026-11-24)
+
+- agridat's cap rises from 50 to 51, the smallest cap whose draw yields a 1,000th problem.
+  `random.Random(0).sample` keeps its first 50 draws at any larger cap, so the 50 objects read
+  stay as they are.
+- Two blind readings read draws 51 to 60. Both file draw 51, shaw.oats, with Shaw's fixed
+  ANOVA rendered with the blocks of each location and year random, and the rule for fixed
+  blocks sets it at `low`. The nine later draws stay capped.
+- `measure.py` and `fits.py` measured and fitted the new row, and every other row of the
+  measured files stayed byte for byte. `suite/admit.py` admitted shaw.oats, and no hash moved.
+- The reference run of shaw.oats passed at level 0, so `problems.csv` lists 1,000 problems.
+
 ## Reading rulings (m3#22 to #15)
 
 The rulings [`prompts/read.md`](prompts/read.md) does not carry, from the agents' `RULE GAP` notes and Alex's checks, each with an example

@@ -1067,3 +1067,4 @@
 "R2MLwiN/reading1/1","87ae07b0dcd02ad85e122613eec8791d599c359766b451917c1d3aa77387b766","hand","0.2800982800982801","","1758","2","id","single","407","2","1","6"
 "rabe_hesketh/postnatal.dta/1","e4f881731cf499e6d885e61a271d53019bc33d9d1f11e85cd3d4e30673c8934d","high","0.19398907103825136","","295","4","subj","single","61","2","1","6"
 "uci_349/studentAssessment.csv/1","328c8b6ee204240ed5568755ebc99ca0441b8cf0663d572d9a2912037a7fed52","hand","0.0009947559685358112","","173739","3","id_student;id_assessment","crossed","23351;188","1;1","1;278","28;1917"
+"agridat/shaw.oats/1","615f54f9b7376d844891bc0d8bc3a3b15c30caacf975877f760d1446ffa4e9f8","second-reading","0.0","","390","78","env:year:block","single","30","1","13","13"

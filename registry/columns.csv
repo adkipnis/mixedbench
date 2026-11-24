@@ -12919,3 +12919,7 @@
 "posteriordb","posterior_database/data/data/ecdc0501.json.zip","1","E","f","continuous","","within","","0.0","yes","0.9532","-0.554","0.0","0.0","0.0009","0.0009","0.9981","","0.6625"
 "uci_349","studentAssessment.csv","1","O","date_submitted","continuous","","within","","0.0","yes","0.179","-0.8915","0.0003","0.0004","0.0","0.0","0.0018","","0.1802"
 "uci_349","studentAssessment.csv","1","O","is_banked","binary","2","within","","0.0","yes","","","","","","","0.0","0.011","0.1802"
+"agridat","shaw.oats","1","R","env","binary","2","group","env:year:block","0.0","yes","","","","","","","0.0051","0.5",""
+"agridat","shaw.oats","1","R","year","categorical","3","group","env:year:block","0.0","yes","","","","","","","0.0077","0.3333",""
+"agridat","shaw.oats","1","R","block","categorical","5","group","env:year:block","0.0","no","","","","","","","0.0128","0.2",""
+"agridat","shaw.oats","1","R","gen","categorical","13","within","","0.0","yes","","","","","","","0.0333","0.0769",""
