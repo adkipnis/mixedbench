@@ -321,8 +321,8 @@ The words are [`CONTEXT.md`](../CONTEXT.md)'s.
 
 - `README.md`: badges, a short what and why, install, one quickstart box, contributing,
   citing, license.
-- Counts live in `SUMMARY.md`; the one exception, the README's dataset count, is pinned by an
-  offline test against `quantiles.yaml`.
+- Counts live in `SUMMARY.md`; the two exceptions, the README's dataset and problem counts,
+  are pinned by offline tests against `quantiles.yaml` and `suite/1.1/problems.csv`.
 
 ### Data
 

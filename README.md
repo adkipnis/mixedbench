@@ -12,8 +12,8 @@ A benchmark of posterior approximation and prediction for real grouped data.
 
 - Bayesian methods for grouped data are hard to compare: each paper and released method tests them on its own few datasets. This benchmark aims to fix that.
 - MixedBench lists the documented mixed-effects models of 1088 public tabular datasets with grouping structure, each downloaded at a fixed version.
-- A fixed set of rules turns each dataset into an inference problem ready to fit. Results of different methods are comparable.
-- From release 1.1, suites add reference posteriors to score against.
+- A fixed set of rules turns each dataset into an inference problem ready to fit, so results of different methods are comparable.
+- Suite 1.1 holds the 1000 problems whose reference posterior converged, which release 1.1 ships to score against.
 
 ## Overview
 

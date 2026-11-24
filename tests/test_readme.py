@@ -1,9 +1,10 @@
 """The README's loading examples run as printed (#3, #33), in order in one namespace, since the
 problem's builds on the object's; they fetch lme4 from CRAN, so they are marked network.
-Its one count is the registry's, checked offline."""
+Its two counts, the registry's datasets and suite 1.1's problems, are checked offline."""
 
 from __future__ import annotations
 
+import csv
 import re
 from pathlib import Path
 
@@ -13,6 +14,7 @@ import yaml
 ROOT = Path(__file__).parents[1]
 README = ROOT / 'README.md'
 QUANTILES = ROOT / 'registry' / 'quantiles.yaml'
+PROBLEMS = ROOT / 'suite' / '1.1' / 'problems.csv'
 
 
 @pytest.mark.network
@@ -30,4 +32,12 @@ def test_readme_dataset_count_is_the_registry_count() -> None:
     until the README follows."""
     typed = re.search(r'(\d+) public tabular datasets', README.read_text())
     counted = yaml.safe_load(QUANTILES.read_text())['n_objects']
+    assert int(typed.group(1)) == counted
+
+
+def test_readme_problem_count_is_the_suite_count() -> None:
+    """A freeze that changes suite 1.1's problems fails here until the README follows."""
+    typed = re.search(r'the (\d+) problems', README.read_text())
+    with PROBLEMS.open() as file:
+        counted = len(list(csv.DictReader(file)))
     assert int(typed.group(1)) == counted
