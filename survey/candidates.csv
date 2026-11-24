@@ -492,7 +492,7 @@
 "R","agridat","1.26","shafi.tomato.uniformity","data/shafi.tomato.uniformity.txt","200","3","3","0","0","0","pandas","pass","yes"
 "R","agridat","1.26","shafii.rapeseed","data/shafii.rapeseed.txt","648","5","2","3","0","0","pandas","pass","yes"
 "R","agridat","1.26","sharma.met","data/sharma.met.txt","126","5","1","4","0","0","pandas","pass","yes"
-"R","agridat","1.26","shaw.oats","data/shaw.oats.txt","390","5","2","3","0","0","pandas","pass","yes"
+"R","agridat","1.26","shaw.oats","data/shaw.oats.txt","390","5","2","3","0","0","pandas","pass","no"
 "R","agridat","1.26","siao.cotton.uniformity","data/siao.cotton.uniformity.txt","858","4","3","1","0","0","pandas","pass","yes"
 "R","agridat","1.26","silva.cotton","data/silva.cotton.txt","250","9","7","2","0","0","pandas","pass","yes"
 "R","agridat","1.26","sinclair.clover","data/sinclair.clover.txt","25","3","3","0","0","0","pandas","pass","yes"
