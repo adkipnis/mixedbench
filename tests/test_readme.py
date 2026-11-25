@@ -27,17 +27,17 @@ def test_readme_examples_run(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) ->
     assert namespace['problem'].id == 'lme4/sleepstudy/1'
 
 
-def test_readme_dataset_count_is_the_registry_count() -> None:
-    """The README types one count; a merge that changes the number of datasets fails here
-    until the README follows."""
-    typed = re.search(r'(\d+) public tabular datasets', README.read_text())
+def test_readme_dataset_bound_is_below_the_registry_count() -> None:
+    """The README types a round lower bound, so only a merge that drops the datasets to it
+    fails here."""
+    typed = re.search(r'over (\d+) public tabular datasets', README.read_text())
     counted = yaml.safe_load(QUANTILES.read_text())['n_objects']
-    assert int(typed.group(1)) == counted
+    assert int(typed.group(1)) < counted
 
 
 def test_readme_problem_count_is_the_suite_count() -> None:
     """A freeze that changes suite 1.1's problems fails here until the README follows."""
-    typed = re.search(r'the (\d+) problems', README.read_text())
+    typed = re.search(r'Suite 1\.1 holds (\d+)', README.read_text())
     with PROBLEMS.open() as file:
         counted = len(list(csv.DictReader(file)))
     assert int(typed.group(1)) == counted

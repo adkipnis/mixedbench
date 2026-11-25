@@ -13,11 +13,11 @@ A benchmark of posterior approximation and prediction for real grouped data.
 - Bayesian methods for grouped data are hard to compare: each paper and released method tests them on its own few datasets. This benchmark aims to fix that.
 - MixedBench lists the documented mixed-effects models of over 1000 public tabular datasets with grouping structure, each downloaded at a fixed version.
 - A fixed set of rules turns each dataset into an inference task ready to fit.
-- Suite 1.1 holds 1000 taks with a converged NUTS posterior (to be shipped in release 1.1).
+- Suite 1.1 holds 1000 tasks with a converged NUTS posterior (to be shipped in release 1.1).
 
 ## Overview
 
-<img src="https://raw.githubusercontent.com/adkipnis/mixedbench/main/assets/pipeline.png" width="100%" alt="We searched several publicly available sources for grouped tabular data. Duplicates across sources were removed. The registry contains every dataset and their documented metadata. The contract transforms each dataset into an inference problem. MixedBench currently has two tracks: the posterior track compares a method's posterior with a documented converged NUTS posterior. The predictive track does a 5-fold CV on left out rows or groups.">
+<img src="https://raw.githubusercontent.com/adkipnis/mixedbench/main/assets/pipeline.png" width="100%" alt="We searched several publicly available sources for grouped tabular data. Duplicates across sources were removed. The registry contains every dataset and its documented metadata. The contract transforms each dataset into an inference task. MixedBench currently has two tracks: the posterior track compares a method's posterior with a documented converged NUTS posterior. The predictive track does a 5-fold CV on left-out rows or groups.">
 
 ## Install
 
@@ -44,7 +44,7 @@ Check out the [demo](https://colab.research.google.com/github/adkipnis/mixedbenc
 
 ## Contributing
 
-Interested in becoming part of `mixedbench`? Check out [`CONTRIBUTING.md`](https://github.com/adkipnis/mixedbench/blob/main/CONTRIBUTING.md).
+Interested in becoming part of MixedBench? Check out [`CONTRIBUTING.md`](https://github.com/adkipnis/mixedbench/blob/main/CONTRIBUTING.md).
 
 ## Citing
 
